@@ -17,12 +17,11 @@ function detectInitial(): Lang {
   if (typeof window === "undefined") return "ko";
   try {
     const stored = window.localStorage.getItem(STORAGE_KEY);
-    if (stored === "ko" || stored === "en") return stored;
+    if (stored === "en") return "en";
   } catch {
     // ignore
   }
-  const nav = (typeof navigator !== "undefined" && navigator.language) || "";
-  return nav.toLowerCase().startsWith("ko") ? "ko" : "en";
+  return "ko";
 }
 
 type Ctx = {
