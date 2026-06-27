@@ -6,18 +6,16 @@ import { lovable } from "@/integrations/lovable/index";
 import { useT } from "@/lib/i18n";
 
 export const Route = createFileRoute("/auth")({
-  head: () => ({
-    meta: [
-      { title: "Sign in — ItJima" },
-      { name: "description", content: "Sign in to ItJima and sync across devices." },
-    ],
-  }),
   component: AuthPage,
 });
 
 function AuthPage() {
   const t = useT();
   const navigate = useNavigate();
+
+  useEffect(() => {
+    document.title = t("로그인 — ItJima", "Sign in — ItJima");
+  }, [t]);
   const [mode, setMode] = useState<"signin" | "signup">("signin");
   const [email, setEmail] = useState("");
   const [pw, setPw] = useState("");
