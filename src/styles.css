@@ -1,0 +1,248 @@
+@import "tailwindcss" source(none);
+@source "../src";
+@import "tw-animate-css";
+
+/* ItJima — Nike Run Club inspired light mono system.
+ * White bg · heavy black type · #FFD233 accent only.
+ * All color tokens defined here; never hardcode in components. */
+
+@theme inline {
+  --font-sans: "Pretendard", "Pretendard Variable", "Archivo", -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+  --font-display: "Bebas Neue", "Archivo Black", "Pretendard", system-ui, sans-serif;
+  --font-num: "Archivo Black", "Bebas Neue", system-ui, sans-serif;
+
+  --radius-button: 999px;
+  --radius-card: 4px;
+  --radius-sheet: 24px;
+
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-glass: var(--glass);
+  --color-glass-border: var(--glass-border);
+  --color-ink: var(--ink);
+  --color-ink-soft: var(--ink-soft);
+  --color-sky: var(--sky);
+  --color-yellow: var(--brand-yellow);
+}
+
+:root {
+  --radius: 4px;
+
+  /* Brand */
+  --brand-yellow: oklch(0.88 0.16 92);     /* #FFD233 */
+  --brand-yellow-soft: oklch(0.95 0.10 95);
+  --sky: oklch(0.85 0.07 235);
+  --sky-deep: oklch(0.72 0.10 235);
+  --sky-mist: oklch(0.96 0.025 230);
+
+  /* Surfaces — pure mono */
+  --background: oklch(1 0 0);              /* #FFFFFF */
+  --foreground: oklch(0.12 0 0);           /* near-black */
+  --ink: oklch(0.10 0 0);                  /* #0A0A0A */
+  --ink-soft: oklch(0.45 0 0);             /* mid grey */
+
+  --glass: oklch(1 0 0 / 0.92);
+  --glass-border: oklch(0 0 0 / 0.08);
+
+  --card: oklch(1 0 0);
+  --card-foreground: oklch(0.10 0 0);
+  --popover: oklch(1 0 0);
+  --popover-foreground: oklch(0.10 0 0);
+
+  --primary: oklch(0.88 0.16 92);          /* yellow */
+  --primary-foreground: oklch(0.10 0 0);
+  --secondary: oklch(0.96 0 0);
+  --secondary-foreground: oklch(0.10 0 0);
+  --muted: oklch(0.96 0 0);
+  --muted-foreground: oklch(0.45 0 0);
+  --accent: oklch(0.96 0 0);
+  --accent-foreground: oklch(0.10 0 0);
+  --destructive: oklch(0.60 0.23 27);
+  --destructive-foreground: oklch(1 0 0);
+
+  --border: oklch(0 0 0 / 0.08);
+  --input: oklch(0.97 0 0);
+  --ring: oklch(0.10 0 0);
+
+  /* Flat white bg — no gradient */
+  --bg-gradient: #ffffff;
+
+  /* Shadows — minimal, NRC has almost none */
+  --shadow-card: 0 1px 0 0 oklch(0 0 0 / 0.06);
+  --shadow-float: 0 12px 32px -12px oklch(0 0 0 / 0.25);
+  --shadow-yellow: 0 0 0 3px oklch(0.88 0.16 92 / 0.45), 0 12px 30px -8px oklch(0.88 0.16 92 / 0.45);
+  --shadow-red: 0 0 0 3px oklch(0.60 0.23 27 / 0.40), 0 12px 30px -8px oklch(0.60 0.23 27 / 0.35);
+}
+
+@layer base {
+  * {
+    border-color: var(--color-border);
+  }
+  html, body, #root {
+    height: 100%;
+  }
+  body {
+    font-family: var(--font-sans);
+    color: var(--color-foreground);
+    background: #ffffff;
+    -webkit-font-smoothing: antialiased;
+    overscroll-behavior: none;
+  }
+  button { font-family: inherit; }
+  textarea, input { font-family: inherit; }
+}
+
+/* Display & numeric utilities (NRC vibe) */
+@utility font-display {
+  font-family: var(--font-display);
+  letter-spacing: 0.01em;
+}
+@utility font-num {
+  font-family: var(--font-num);
+  letter-spacing: -0.02em;
+}
+@utility nrc-eyebrow {
+  font-family: var(--font-sans);
+  font-weight: 900;
+  font-size: 11px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--ink-soft);
+}
+@utility nrc-headline {
+  font-family: var(--font-display);
+  font-weight: 400; /* Bebas is already heavy */
+  font-size: clamp(34px, 9vw, 44px);
+  line-height: 0.95;
+  letter-spacing: 0.01em;
+  text-transform: uppercase;
+  color: var(--ink);
+}
+
+/* Surfaces */
+@utility glass {
+  background: var(--glass);
+  backdrop-filter: blur(20px) saturate(160%);
+  border: 1px solid var(--glass-border);
+}
+@utility glass-soft {
+  background: oklch(1 0 0 / 0.85);
+  backdrop-filter: blur(14px) saturate(140%);
+  border: 1px solid oklch(0 0 0 / 0.06);
+}
+@utility glass-strong {
+  background: oklch(1 0 0 / 0.97);
+  backdrop-filter: blur(28px) saturate(180%);
+  border-bottom: 1px solid oklch(0 0 0 / 0.06);
+}
+@utility card-radius { border-radius: 4px; }
+@utility btn-radius { border-radius: 999px; }
+@utility shadow-card { box-shadow: var(--shadow-card); }
+@utility shadow-float { box-shadow: var(--shadow-float); }
+
+/* NRC pills — black bg primary, yellow accent */
+@utility pill-yellow {
+  background: var(--brand-yellow);
+  color: var(--ink);
+  border-radius: 999px;
+  padding: 0.7rem 1.25rem;
+  font-weight: 800;
+  font-size: 0.8125rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+  &:active { transform: scale(0.96); }
+}
+@utility pill-black {
+  background: var(--ink);
+  color: #fff;
+  border-radius: 999px;
+  padding: 0.7rem 1.25rem;
+  font-weight: 800;
+  font-size: 0.8125rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  transition: transform 0.15s ease;
+  &:active { transform: scale(0.96); }
+}
+@utility pill-ghost {
+  background: transparent;
+  color: var(--ink);
+  border-radius: 999px;
+  padding: 0.55rem 1.05rem;
+  font-weight: 700;
+  font-size: 0.8125rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  border: 1.5px solid oklch(0 0 0 / 0.12);
+}
+
+/* App container — phone frame on mobile, ChatGPT-style wide column on desktop */
+@utility phone-frame {
+  width: 100%;
+  max-width: 430px;
+  height: 100dvh;
+  margin: 0 auto;
+  position: relative;
+  overflow: hidden;
+  background: #ffffff;
+}
+@media (min-width: 768px) {
+  .phone-frame {
+    max-width: min(880px, 100vw);
+    height: 100dvh;
+    margin: 0 auto;
+    border-radius: 0;
+    box-shadow: none;
+    border-left: 1px solid oklch(0 0 0 / 0.06);
+    border-right: 1px solid oklch(0 0 0 / 0.06);
+  }
+}
+
+/* Wheel picker — Apple-style */
+@utility wheel-col {
+  height: 220px;
+  overflow-y: scroll;
+  scroll-snap-type: y mandatory;
+  scroll-behavior: smooth;
+  scrollbar-width: none;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+  -webkit-mask-image: linear-gradient(180deg, transparent 0%, rgba(0,0,0,0.35) 15%, #000 40%, #000 60%, rgba(0,0,0,0.35) 85%, transparent 100%);
+          mask-image: linear-gradient(180deg, transparent 0%, rgba(0,0,0,0.35) 15%, #000 40%, #000 60%, rgba(0,0,0,0.35) 85%, transparent 100%);
+}
+.wheel-col::-webkit-scrollbar { display: none; }
+
+
+@keyframes fade-in {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+@keyframes slide-up {
+  from { transform: translateY(100%); }
+  to   { transform: translateY(0); }
+}
+@keyframes pop {
+  0%   { transform: scale(0.92); opacity: 0; }
+  100% { transform: scale(1); opacity: 1; }
+}
+@utility animate-fade-in { animation: fade-in 0.25s ease-out both; }
+@utility animate-slide-up { animation: slide-up 0.3s cubic-bezier(0.2, 0.8, 0.2, 1) both; }
+@utility animate-pop { animation: pop 0.2s ease-out both; }

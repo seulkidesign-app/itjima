@@ -1,0 +1,1 @@
+ALTER TYPE feedback_category ADD VALUE IF NOT EXISTS 'question';
