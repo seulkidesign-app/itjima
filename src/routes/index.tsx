@@ -8,6 +8,8 @@ import { ScheduleSheet } from "@/components/ScheduleSheet";
 import { LoginSheet } from "@/components/LoginSheet";
 import { FocusMode } from "@/components/FocusMode";
 import { AIOrganizeButton, useOrganizeFx } from "@/components/AIOrganize";
+import { BrainMirrorPlaceholder, BrainMirrorSummary } from "@/components/BrainMirrorSummary";
+import { isBrainMirrorCandidate } from "@/lib/brainMirror";
 import {
   useInbox,
   useSchedules,
@@ -89,6 +91,7 @@ function Inbox() {
       has_images: images.length > 0,
       image_count: images.length,
     });
+    toast.success(t("인박스에 담았어요", "Saved to your inbox"), { duration: 1500 });
     // Date detection
     const det = detectDate(text);
     if (det) {
@@ -118,7 +121,7 @@ function Inbox() {
     if (!text && !images.length) return;
     haptic(6);
     await inbox.add({ text, images } as any);
-    toast(t("저장됨", "Saved"), { duration: 1200 });
+    toast.success(t("인박스에 담았어요", "Saved to your inbox"), { duration: 1200 });
     maybeNudgeLogin();
   };
 
@@ -401,6 +404,11 @@ function CardBody({
       <p className={`whitespace-pre-wrap text-ink ${big ? "text-[17px] font-semibold leading-snug" : "text-[14px] leading-snug"}`}>
         {item.text || t("(이미지만)", "(image only)")}
       </p>
+      {item.brain_mirror ? (
+        <BrainMirrorSummary result={item.brain_mirror} />
+      ) : isBrainMirrorCandidate(item.text) ? (
+        <BrainMirrorPlaceholder />
+      ) : null}
       <div className="mt-2 flex items-center justify-between text-[11px] text-ink-soft">
         <span>{new Date(item.created_at).toLocaleString(locale, { month: "numeric", day: "numeric", hour: "2-digit", minute: "2-digit" })}</span>
         <MoreHorizontal size={14} />
@@ -467,6 +475,3 @@ function OrganizeFxWrapper({ id, fallback, children }: { id: string; fallback: s
     </div>
   );
 }
-
-// Suppress unused warning for useEffect import
-useEffect;

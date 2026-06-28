@@ -253,12 +253,14 @@
 }
 @utility animate-scale-in { animation: scale-in 0.25s ease-out both; }
 
-/* Hide Lovable preview/dev badge if injected by external scripts */
+/* Hide externally injected dev/preview badges (not ItJima branding) */
 a[href*="lovable.dev"][target="_blank"],
 a[href*="gpteng.co"],
 #lovable-badge,
 [data-lovable-badge],
-[data-gpteng-badge] {
+[data-gpteng-badge],
+iframe[src*="lovable.dev"] {
   display: none !important;
   pointer-events: none !important;
+  visibility: hidden !important;
 }

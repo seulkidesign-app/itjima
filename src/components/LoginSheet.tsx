@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Link } from "@tanstack/react-router";
+import { toast } from "sonner";
 import { signInWithGoogle, mapAuthError } from "@/lib/oauth";
 import { dismissLogin } from "@/lib/store";
 import { useLang, useT } from "@/lib/i18n";
@@ -13,9 +14,9 @@ export function LoginSheet({ open, onClose }: { open: boolean; onClose: () => vo
 
   const onGoogle = async () => {
     setLoading(true);
-    const r = await signInWithGoogle();
+    const r = await signInWithGoogle(window.location.pathname);
     if (r.error) {
-      alert(mapAuthError(r.error.message, lang));
+      toast.error(mapAuthError(r.error.message, lang));
       setLoading(false);
       return;
     }

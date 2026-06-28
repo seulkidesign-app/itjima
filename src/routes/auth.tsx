@@ -5,7 +5,6 @@ import { supabase } from "@/integrations/supabase/client";
 import { useLang, useT } from "@/lib/i18n";
 import {
   mapAuthError,
-  recoverAuthSession,
   signInWithEmail,
   signInWithGoogle,
   signUpWithEmail,
@@ -31,22 +30,11 @@ function AuthPage() {
   }, [t]);
 
   useEffect(() => {
-    let alive = true;
-    recoverAuthSession().then(({ data, error }) => {
-      if (!alive) return;
-      if (error) {
-        toast.error(mapAuthError(error.message, lang));
-      }
-      if (data.session?.user) {
-        navigate({ to: "/" });
-      } else {
-        setReady(true);
-      }
+    supabase.auth.getSession().then(({ data }) => {
+      if (data.session?.user) navigate({ to: "/" });
+      else setReady(true);
     });
-    return () => {
-      alive = false;
-    };
-  }, [navigate, lang]);
+  }, [navigate]);
 
   useEffect(() => {
     const { data: sub } = supabase.auth.onAuthStateChange((event, session) => {
@@ -60,7 +48,7 @@ function AuthPage() {
   const onGoogle = async () => {
     setGoogleLoading(true);
     try {
-      const r = await signInWithGoogle();
+      const r = await signInWithGoogle("/auth");
       if (r.error) {
         toast.error(mapAuthError(r.error.message, lang));
         setGoogleLoading(false);
