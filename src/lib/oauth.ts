@@ -9,6 +9,7 @@ export const AUTH_REDIRECT_PATHS = {
 
 const AUTH_NEXT_KEY = "itjima.auth.next";
 const OAUTH_HANDLED_CODE_KEY = "itjima.oauth.handledCode";
+const OAUTH_ERROR_KEY = "itjima.oauth.lastError";
 
 function hasOAuthReturnInUrl() {
   const params = new URLSearchParams(window.location.search);
@@ -110,7 +111,43 @@ export function consumeAuthReturnPath() {
   if (typeof window === "undefined") return "/";
   const next = sessionStorage.getItem(AUTH_NEXT_KEY) || "/";
   sessionStorage.removeItem(AUTH_NEXT_KEY);
+  if (next === "/auth" || next.startsWith("/auth/callback")) return "/";
   return next.startsWith("/") ? next : "/";
+}
+
+export function stashOAuthError(message: string) {
+  if (typeof window === "undefined") return;
+  sessionStorage.setItem(OAUTH_ERROR_KEY, message);
+}
+
+export function consumeOAuthError() {
+  if (typeof window === "undefined") return null;
+  const message = sessionStorage.getItem(OAUTH_ERROR_KEY);
+  sessionStorage.removeItem(OAUTH_ERROR_KEY);
+  return message;
+}
+
+function waitForAuthSession(timeoutMs = 12000): Promise<boolean> {
+  return new Promise((resolve) => {
+    let settled = false;
+    const finish = (ok: boolean) => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timer);
+      sub.subscription.unsubscribe();
+      resolve(ok);
+    };
+
+    supabase.auth.getSession().then(({ data }) => {
+      if (data.session) finish(true);
+    });
+
+    const { data: sub } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (session) finish(true);
+    });
+
+    const timer = setTimeout(() => finish(false), timeoutMs);
+  });
 }
 
 export async function signInWithGoogle(returnPath?: string) {
@@ -228,6 +265,13 @@ export type AuthCallbackResult =
   | { ok: true; nextPath: string }
   | { ok: false; message: string };
 
+function failCallback(message: string, code?: string | null): AuthCallbackResult {
+  if (code) markOAuthCodeHandled(code);
+  stashOAuthError(message);
+  purgeOAuthFromUrl();
+  return { ok: false, message };
+}
+
 /** OAuth/email confirmation callback — call only on /auth/callback */
 export async function completeAuthCallback(): Promise<AuthCallbackResult> {
   const params = new URLSearchParams(window.location.search);
@@ -236,21 +280,16 @@ export async function completeAuthCallback(): Promise<AuthCallbackResult> {
   const oauthError = params.get("error") || hashParams.get("error");
   const oauthDescription = params.get("error_description") || hashParams.get("error_description");
   if (oauthError) {
-    purgeOAuthFromUrl();
-    return {
-      ok: false,
-      message: mapAuthError(oauthDescription || oauthError, "ko"),
-    };
+    return failCallback(mapAuthError(oauthDescription || oauthError, "ko"));
   }
 
   const code = params.get("code");
 
   if (code && sessionStorage.getItem(OAUTH_HANDLED_CODE_KEY) === code) {
-    purgeOAuthFromUrl();
-    return {
-      ok: false,
-      message: "로그인 세션이 만료됐어요. 다시 Google 로그인을 시도해 주세요.",
-    };
+    return failCallback(
+      "로그인 세션이 만료됐어요. 다시 Google 로그인을 시도해 주세요.",
+      code,
+    );
   }
 
   const { data: existing } = await supabase.auth.getSession();
@@ -260,36 +299,25 @@ export async function completeAuthCallback(): Promise<AuthCallbackResult> {
     return { ok: true, nextPath: consumeAuthReturnPath() };
   }
 
-  if (code) {
-    markOAuthCodeHandled(code);
+  // detectSessionInUrl exchanges ?code= on client init; wait before manual fallback
+  let hasSession = await waitForAuthSession();
+
+  if (!hasSession && code) {
     const { data, error } = await supabase.auth.exchangeCodeForSession(code);
     if (error) {
-      purgeOAuthFromUrl();
-      return { ok: false, message: mapAuthError(error.message, "ko") };
+      return failCallback(mapAuthError(error.message, "ko"), code);
     }
-    if (!data.session) {
-      purgeOAuthFromUrl();
-      return { ok: false, message: mapAuthError("Auth session missing!", "ko") };
-    }
+    hasSession = !!data.session;
   } else if (
-    hashParams.has("access_token") ||
-    hashParams.has("refresh_token") ||
-    hashParams.has("type")
+    !hasSession &&
+    (hashParams.has("access_token") || hashParams.has("refresh_token") || hashParams.has("type"))
   ) {
-    const { error } = await supabase.auth.getSession();
-    if (error) {
-      purgeOAuthFromUrl();
-      return { ok: false, message: mapAuthError(error.message, "ko") };
-    }
-  } else {
-    purgeOAuthFromUrl();
-    return { ok: false, message: mapAuthError("Auth session missing!", "ko") };
+    hasSession = await waitForAuthSession(4000);
   }
 
   const { data: sessionCheck } = await supabase.auth.getSession();
   if (!sessionCheck.session) {
-    purgeOAuthFromUrl();
-    return { ok: false, message: mapAuthError("Auth session missing!", "ko") };
+    return failCallback(mapAuthError("Auth session missing!", "ko"), code);
   }
 
   purgeOAuthFromUrl();

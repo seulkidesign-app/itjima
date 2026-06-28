@@ -4,6 +4,7 @@ import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useLang, useT } from "@/lib/i18n";
 import {
+  consumeOAuthError,
   mapAuthError,
   signInWithEmail,
   signInWithGoogle,
@@ -24,10 +25,19 @@ function AuthPage() {
   const [loading, setLoading] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
   const [ready, setReady] = useState(false);
+  const [oauthError, setOauthError] = useState<string | null>(null);
 
   useEffect(() => {
     document.title = t("로그인 — ItJima", "Sign in — ItJima");
   }, [t]);
+
+  useEffect(() => {
+    const message = consumeOAuthError();
+    if (message) {
+      setOauthError(message);
+      toast.error(message, { duration: 10000 });
+    }
+  }, []);
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => {
@@ -131,6 +141,12 @@ function AuthPage() {
         </div>
         <div className="w-12" />
       </div>
+
+      {oauthError && (
+        <div className="mt-6 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-left text-[13px] leading-relaxed text-red-800">
+          {oauthError}
+        </div>
+      )}
 
       <div className="mt-10 text-center">
         <div className="text-[26px] font-extrabold leading-tight text-ink">
