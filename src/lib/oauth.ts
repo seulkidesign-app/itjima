@@ -2,15 +2,17 @@ import { supabase } from "@/integrations/supabase/client";
 
 /** Supabase Dashboard → Authentication → URL Configuration 에 등록 필요 */
 export const AUTH_REDIRECT_PATHS = {
-  production: "https://itjima.com/auth/callback",
+  production: "https://itjima.app/auth/callback",
   local: "http://localhost:5173/auth/callback",
+  supabaseCallback: "https://qikgvovbzliqcfcfgvcd.supabase.co/auth/v1/callback",
 } as const;
 
 const AUTH_NEXT_KEY = "itjima.auth.next";
 
 function allowedOrigin(origin: string) {
   return (
-    origin === "https://itjima.com" ||
+    origin === "https://itjima.app" ||
+    origin === "https://www.itjima.app" ||
     origin === "http://localhost:5173" ||
     origin.endsWith(".vercel.app") ||
     origin.endsWith(".lovable.app") ||
@@ -27,6 +29,36 @@ export function authRedirectUrl() {
   return `${origin}/auth/callback`;
 }
 
+export function validateSupabaseConfig(): { ok: true } | { ok: false; message: string } {
+  const url = import.meta.env.VITE_SUPABASE_URL as string | undefined;
+  const key = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY as string | undefined;
+
+  if (!url || !key) {
+    return {
+      ok: false,
+      message: "Supabase 연결 정보가 없어요. VITE_SUPABASE_URL과 VITE_SUPABASE_PUBLISHABLE_KEY를 확인해 주세요.",
+    };
+  }
+
+  if (!/^https:\/\/[a-z0-9-]+\.supabase\.co\/?$/i.test(url)) {
+    return {
+      ok: false,
+      message: "Supabase URL 형식이 올바르지 않아요. 프로젝트 URL을 다시 확인해 주세요.",
+    };
+  }
+
+  // Common typo: ...fcgvcd (gv) vs correct ...fcfgvcd (fg)
+  if (url.includes("qikgvovbzliqcfcgvcd")) {
+    return {
+      ok: false,
+      message:
+        "Supabase URL 오타예요. qikgvovbzliqcfcfgvcd (fg)로 수정한 뒤 Vercel에서 Redeploy 해 주세요.",
+    };
+  }
+
+  return { ok: true };
+}
+
 export function saveAuthReturnPath(path = "/") {
   if (typeof window === "undefined") return;
   sessionStorage.setItem(AUTH_NEXT_KEY, path.startsWith("/") ? path : "/");
@@ -40,6 +72,11 @@ export function consumeAuthReturnPath() {
 }
 
 export async function signInWithGoogle(returnPath?: string) {
+  const config = validateSupabaseConfig();
+  if (!config.ok) {
+    return { error: new Error(config.message), redirected: false as const, url: null };
+  }
+
   saveAuthReturnPath(returnPath ?? window.location.pathname);
 
   const { data, error } = await supabase.auth.signInWithOAuth({
@@ -101,6 +138,11 @@ export function mapAuthError(message: string, lang: "ko" | "en") {
     "OAuth callback error": "로그인 중 오류가 발생했어요. 다시 시도해 주세요.",
     "Request rate limit reached": "요청이 너무 많아요. 잠시 후 다시 시도해 주세요.",
     "Auth session missing!": "로그인 세션이 없어요. 다시 로그인해 주세요.",
+    "PKCE code verifier not found in storage":
+      "로그인 세션이 만료됐어요. 다시 Google 로그인을 시도해 주세요.",
+    "Unsupported provider: missing OAuth secret":
+      "Google 로그인 설정이 아직 완료되지 않았어요. Supabase에서 Google Client ID/Secret을 등록해 주세요.",
+    validation_failed: "로그인 설정 오류예요. Supabase Google OAuth 설정을 확인해 주세요.",
   };
 
   const en: Record<string, string> = {
@@ -116,6 +158,9 @@ export function mapAuthError(message: string, lang: "ko" | "en") {
     "OAuth callback error": "Something went wrong during sign-in.",
     "Request rate limit reached": "Too many attempts. Please wait and try again.",
     "Auth session missing!": "No active session. Please sign in again.",
+    "Unsupported provider: missing OAuth secret":
+      "Google sign-in is not configured yet. Add Google Client ID/Secret in Supabase.",
+    validation_failed: "Sign-in configuration error. Check Supabase Google OAuth settings.",
   };
 
   const table = lang === "ko" ? ko : en;
@@ -125,6 +170,13 @@ export function mapAuthError(message: string, lang: "ko" | "en") {
   if (lower.includes("exchange") && lower.includes("code")) return table["Unable to exchange external code"];
   if (lower.includes("email") && lower.includes("provider")) {
     return table["Error getting user email from external provider"];
+  }
+
+  if (lower.includes("missing oauth secret")) {
+    return table["Unsupported provider: missing OAuth secret"];
+  }
+  if (lower.includes("validation_failed") || lower.includes("unsupported provider")) {
+    return table.validation_failed;
   }
 
   return lang === "ko" ? `로그인 오류: ${message}` : message;
@@ -150,9 +202,12 @@ export async function completeAuthCallback(): Promise<AuthCallbackResult> {
 
   const code = params.get("code");
   if (code) {
-    const { error } = await supabase.auth.exchangeCodeForSession(code);
+    const { data, error } = await supabase.auth.exchangeCodeForSession(code);
     if (error) {
       return { ok: false, message: mapAuthError(error.message, "ko") };
+    }
+    if (!data.session) {
+      return { ok: false, message: mapAuthError("Auth session missing!", "ko") };
     }
   } else if (
     hashParams.has("access_token") ||
@@ -172,5 +227,11 @@ export async function completeAuthCallback(): Promise<AuthCallbackResult> {
   }
 
   window.history.replaceState({}, document.title, "/auth/callback");
+
+  const { data: sessionCheck } = await supabase.auth.getSession();
+  if (!sessionCheck.session) {
+    return { ok: false, message: mapAuthError("Auth session missing!", "ko") };
+  }
+
   return { ok: true, nextPath: consumeAuthReturnPath() };
 }

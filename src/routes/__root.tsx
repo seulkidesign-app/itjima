@@ -1,4 +1,5 @@
 import { Outlet, createRootRoute, useRouterState } from "@tanstack/react-router";
+import { useEffect } from "react";
 import { Toaster } from "sonner";
 import { InstallPrompt } from "@/components/InstallPrompt";
 import { SideNav } from "@/components/SideNav";
@@ -14,6 +15,21 @@ function RootLayout() {
   const isFullPage = pathname.startsWith("/about");
   const isAdmin = pathname.startsWith("/admin");
   const isAuth = pathname.startsWith("/auth");
+
+  // Supabase may return ?code= to Site URL instead of /auth/callback
+  useEffect(() => {
+    if (pathname.startsWith("/auth/callback")) return;
+    const params = new URLSearchParams(window.location.search);
+    const hash = window.location.hash;
+    const hasOAuthReturn =
+      params.has("code") ||
+      params.has("error") ||
+      hash.includes("access_token") ||
+      hash.includes("error");
+    if (hasOAuthReturn) {
+      window.location.replace(`/auth/callback${window.location.search}${hash}`);
+    }
+  }, [pathname]);
 
   if (isAuth) {
     return (
