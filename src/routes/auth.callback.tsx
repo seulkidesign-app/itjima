@@ -1,8 +1,8 @@
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
+import { createFileRoute } from "@tanstack/react-router";
+import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { completeAuthCallback } from "@/lib/oauth";
-import { useLang, useT } from "@/lib/i18n";
+import { useT } from "@/lib/i18n";
 
 export const Route = createFileRoute("/auth/callback")({
   component: AuthCallbackPage,
@@ -10,35 +10,31 @@ export const Route = createFileRoute("/auth/callback")({
 
 function AuthCallbackPage() {
   const t = useT();
-  const { lang } = useLang();
-  const navigate = useNavigate();
   const [message, setMessage] = useState<string | null>(null);
+  const started = useRef(false);
 
   useEffect(() => {
     document.title = t("로그인 처리 중 — ItJima", "Signing in — ItJima");
   }, [t]);
 
   useEffect(() => {
-    let alive = true;
+    if (started.current) return;
+    started.current = true;
+
     (async () => {
       const result = await completeAuthCallback();
-      if (!alive) return;
 
       if (!result.ok) {
         setMessage(result.message);
-        toast.error(result.message);
-        window.setTimeout(() => navigate({ to: "/auth" }), 1800);
+        toast.error(result.message, { duration: 8000 });
+        window.location.replace("/auth");
         return;
       }
 
       toast.success(t("로그인됐어요. 다시 만나서 반가워요!", "Signed in. Welcome back!"));
-      navigate({ to: result.nextPath as "/" });
+      window.location.replace(result.nextPath || "/");
     })();
-
-    return () => {
-      alive = false;
-    };
-  }, [navigate, t, lang]);
+  }, [t]);
 
   return (
     <div className="flex h-full min-h-full flex-col items-center justify-center px-6 text-center">

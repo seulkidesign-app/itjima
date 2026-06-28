@@ -8,6 +8,48 @@ export const AUTH_REDIRECT_PATHS = {
 } as const;
 
 const AUTH_NEXT_KEY = "itjima.auth.next";
+const OAUTH_HANDLED_CODE_KEY = "itjima.oauth.handledCode";
+
+function hasOAuthReturnInUrl() {
+  const params = new URLSearchParams(window.location.search);
+  const hash = window.location.hash;
+  return (
+    params.has("code") ||
+    params.has("error") ||
+    hash.includes("access_token") ||
+    hash.includes("error")
+  );
+}
+
+export function purgeOAuthFromUrl() {
+  if (typeof window === "undefined") return;
+  window.history.replaceState({}, document.title, window.location.pathname);
+}
+
+/** Send ?code= / hash tokens to /auth/callback once — prevents redirect loops. */
+export function maybeRouteOAuthCallback() {
+  if (typeof window === "undefined") return;
+  if (window.location.pathname === "/auth/callback") return;
+  if (!hasOAuthReturnInUrl()) return;
+
+  const code = new URLSearchParams(window.location.search).get("code");
+  if (code && sessionStorage.getItem(OAUTH_HANDLED_CODE_KEY) === code) {
+    purgeOAuthFromUrl();
+    return;
+  }
+
+  window.location.replace(
+    `/auth/callback${window.location.search}${window.location.hash}`,
+  );
+}
+
+function markOAuthCodeHandled(code: string | null) {
+  if (code) sessionStorage.setItem(OAUTH_HANDLED_CODE_KEY, code);
+}
+
+export function clearOAuthCodeHandled() {
+  sessionStorage.removeItem(OAUTH_HANDLED_CODE_KEY);
+}
 
 function allowedOrigin(origin: string) {
   return (
@@ -194,6 +236,7 @@ export async function completeAuthCallback(): Promise<AuthCallbackResult> {
   const oauthError = params.get("error") || hashParams.get("error");
   const oauthDescription = params.get("error_description") || hashParams.get("error_description");
   if (oauthError) {
+    purgeOAuthFromUrl();
     return {
       ok: false,
       message: mapAuthError(oauthDescription || oauthError, "ko"),
@@ -201,12 +244,31 @@ export async function completeAuthCallback(): Promise<AuthCallbackResult> {
   }
 
   const code = params.get("code");
+
+  if (code && sessionStorage.getItem(OAUTH_HANDLED_CODE_KEY) === code) {
+    purgeOAuthFromUrl();
+    return {
+      ok: false,
+      message: "로그인 세션이 만료됐어요. 다시 Google 로그인을 시도해 주세요.",
+    };
+  }
+
+  const { data: existing } = await supabase.auth.getSession();
+  if (existing.session) {
+    purgeOAuthFromUrl();
+    clearOAuthCodeHandled();
+    return { ok: true, nextPath: consumeAuthReturnPath() };
+  }
+
   if (code) {
+    markOAuthCodeHandled(code);
     const { data, error } = await supabase.auth.exchangeCodeForSession(code);
     if (error) {
+      purgeOAuthFromUrl();
       return { ok: false, message: mapAuthError(error.message, "ko") };
     }
     if (!data.session) {
+      purgeOAuthFromUrl();
       return { ok: false, message: mapAuthError("Auth session missing!", "ko") };
     }
   } else if (
@@ -216,22 +278,21 @@ export async function completeAuthCallback(): Promise<AuthCallbackResult> {
   ) {
     const { error } = await supabase.auth.getSession();
     if (error) {
+      purgeOAuthFromUrl();
       return { ok: false, message: mapAuthError(error.message, "ko") };
     }
   } else {
-    const { data, error } = await supabase.auth.getSession();
-    if (error) return { ok: false, message: mapAuthError(error.message, "ko") };
-    if (!data.session) {
-      return { ok: false, message: mapAuthError("Auth session missing!", "ko") };
-    }
-  }
-
-  window.history.replaceState({}, document.title, "/auth/callback");
-
-  const { data: sessionCheck } = await supabase.auth.getSession();
-  if (!sessionCheck.session) {
+    purgeOAuthFromUrl();
     return { ok: false, message: mapAuthError("Auth session missing!", "ko") };
   }
 
+  const { data: sessionCheck } = await supabase.auth.getSession();
+  if (!sessionCheck.session) {
+    purgeOAuthFromUrl();
+    return { ok: false, message: mapAuthError("Auth session missing!", "ko") };
+  }
+
+  purgeOAuthFromUrl();
+  clearOAuthCodeHandled();
   return { ok: true, nextPath: consumeAuthReturnPath() };
 }

@@ -30,20 +30,6 @@ function AuthPage() {
   }, [t]);
 
   useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    const hash = window.location.hash;
-    const hasOAuthReturn =
-      params.has("code") ||
-      params.has("error") ||
-      hash.includes("access_token") ||
-      hash.includes("error");
-
-    if (hasOAuthReturn) {
-      const next = `/auth/callback${window.location.search}${hash}`;
-      window.location.replace(next);
-      return;
-    }
-
     supabase.auth.getSession().then(({ data }) => {
       if (data.session?.user) navigate({ to: "/" });
       else setReady(true);
