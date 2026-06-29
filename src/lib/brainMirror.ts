@@ -7,9 +7,9 @@ export type BrainMirrorResult = {
 
 export function isBrainMirrorCandidate(text: string): boolean {
   const trimmed = text.trim();
-  if (trimmed.length >= 120) return true;
-  const lines = trimmed.split(/\r?\n/).filter(Boolean);
-  return lines.length >= 3;
+  if (trimmed.length >= 50) return true;
+  const lineBreaks = (trimmed.match(/\r?\n/g) || []).length;
+  return lineBreaks >= 2;
 }
 
 export function parseBrainMirrorResult(raw: unknown): BrainMirrorResult | null {
@@ -20,9 +20,9 @@ export function parseBrainMirrorResult(raw: unknown): BrainMirrorResult | null {
   return { title: o.title, tasks, message: o.message };
 }
 
-/** Example shape for future AI integration */
+/** Example shape for docs / tests */
 export const BRAIN_MIRROR_EXAMPLE: BrainMirrorResult = {
   title: "엄마 생일 준비",
   tasks: ["꽃 구매", "케이크 구매", "병원 예약"],
-  message: "하나의 생각으로 읽었어요.",
+  message: "잊지 않게 제가 기억해둘게요.",
 };

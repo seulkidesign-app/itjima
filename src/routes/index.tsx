@@ -8,8 +8,7 @@ import { ScheduleSheet } from "@/components/ScheduleSheet";
 import { LoginSheet } from "@/components/LoginSheet";
 import { FocusMode } from "@/components/FocusMode";
 import { AIOrganizeButton, useOrganizeFx } from "@/components/AIOrganize";
-import { BrainMirrorPlaceholder, BrainMirrorSummary } from "@/components/BrainMirrorSummary";
-import { isBrainMirrorCandidate } from "@/lib/brainMirror";
+import { BrainMirrorPanel } from "@/components/BrainMirrorSummary";
 import {
   useInbox,
   useSchedules,
@@ -18,6 +17,7 @@ import {
   getUsageCount,
   isLoginDismissed,
   type InboxItem,
+  type BrainMirrorResult,
 } from "@/lib/store";
 import { detectDate } from "@/lib/dateDetect";
 import { useT, useLang } from "@/lib/i18n";
@@ -238,6 +238,11 @@ function Inbox() {
                     <CardBody
                       item={it}
                       big={isNewest}
+                      inbox={inbox}
+                      onScheduleFromMirror={(item, result) => {
+                        const text = formatMirrorScheduleText(item.text, result);
+                        setScheduleSheet({ open: true, item: { ...item, text }, date: detectDate(text)?.start });
+                      }}
                       onLongPressStart={startLongPress}
                       onLongPressEnd={cancelLongPress}
                     />
@@ -373,14 +378,24 @@ function Inbox() {
   );
 }
 
+function formatMirrorScheduleText(original: string, result: BrainMirrorResult) {
+  if (result.tasks.length === 0) return result.title || original;
+  const lines = [result.title, ...result.tasks.map((task) => `- ${task}`)].filter(Boolean);
+  return lines.join("\n");
+}
+
 function CardBody({
   item,
   big,
+  inbox,
+  onScheduleFromMirror,
   onLongPressStart,
   onLongPressEnd,
 }: {
   item: InboxItem;
   big?: boolean;
+  inbox: ReturnType<typeof useInbox>;
+  onScheduleFromMirror: (item: InboxItem, result: BrainMirrorResult) => void;
   onLongPressStart?: (id: string) => void;
   onLongPressEnd?: () => void;
 }) {
@@ -404,11 +419,7 @@ function CardBody({
       <p className={`whitespace-pre-wrap text-ink ${big ? "text-[17px] font-semibold leading-snug" : "text-[14px] leading-snug"}`}>
         {item.text || t("(이미지만)", "(image only)")}
       </p>
-      {item.brain_mirror ? (
-        <BrainMirrorSummary result={item.brain_mirror} />
-      ) : isBrainMirrorCandidate(item.text) ? (
-        <BrainMirrorPlaceholder />
-      ) : null}
+      <BrainMirrorPanel item={item} inbox={inbox} onSchedule={onScheduleFromMirror} />
       <div className="mt-2 flex items-center justify-between text-[11px] text-ink-soft">
         <span>{new Date(item.created_at).toLocaleString(locale, { month: "numeric", day: "numeric", hour: "2-digit", minute: "2-digit" })}</span>
         <MoreHorizontal size={14} />
