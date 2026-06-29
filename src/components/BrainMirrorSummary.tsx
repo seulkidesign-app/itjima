@@ -34,7 +34,7 @@ function BrainMirrorResultView({
   const t = useT();
 
   return (
-    <div className="mt-3 animate-fade-in border-t border-ink/[0.06] pt-3">
+    <div className="mt-3 animate-[fade-in-soft_0.45s_ease-out] border-t border-ink/[0.06] pt-3">
       <p className="text-[12px] leading-relaxed text-ink-soft/85">
         {t("🧠 이렇게 이해했어요.", "🧠 Here's how I read it.")}
       </p>
@@ -68,7 +68,7 @@ function BrainMirrorResultView({
           onClick={onSchedule}
           className="rounded-full border border-ink/10 bg-white/70 px-3.5 py-1.5 text-[12px] font-medium text-ink/80 transition active:scale-[0.98]"
         >
-          {t("일정으로 만들기", "Add to schedule")}
+          {t("때로 남기기", "Save for when")}
         </button>
         <button
           type="button"

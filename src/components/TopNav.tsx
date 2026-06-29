@@ -14,9 +14,9 @@ export function TopNav() {
   const path = useRouterState({ select: (s) => s.location.pathname });
   const userId = useUserId();
   const tabs = [
-    { to: "/", label: t("생각", "Inbox") },
-    { to: "/schedule", label: t("일정", "Schedule") },
-    { to: "/archive", label: t("보관", "Archive") },
+    { to: "/", label: t("지금", "Now") },
+    { to: "/schedule", label: t("때", "When") },
+    { to: "/archive", label: t("기억", "Memory") },
   ] as const;
 
   // Subtle scroll shadow once scrolled past 4px
@@ -33,7 +33,7 @@ export function TopNav() {
 
   return (
     <div
-      className={`absolute left-0 right-0 top-0 z-40 md:hidden bg-white transition-shadow ${
+      className={`absolute left-0 right-0 top-0 z-40 bg-white transition-shadow ${
         scrolled ? "border-b border-ink/10" : ""
       }`}
       style={{ paddingTop: "env(safe-area-inset-top)" }}
@@ -78,9 +78,9 @@ export function TopNav() {
             <Link
               to="/auth"
               onClick={tap}
-              className="flex h-8 items-center rounded-full bg-ink px-3 text-[10px] font-extrabold uppercase tracking-widest text-white"
+              className="flex h-8 items-center px-2 text-[11px] font-semibold text-ink-soft"
             >
-              {t("로그인", "Sign in")}
+              {t("이어가기", "Continue")}
             </Link>
           )}
         </div>

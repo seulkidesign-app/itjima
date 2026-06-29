@@ -27,6 +27,20 @@ export function InputBar({ onAdd, onPasteMulti }: Props) {
   const fileRef = useRef<HTMLInputElement>(null);
   const recogRef = useRef<any>(null);
 
+  const placeholders = [
+    t("뭐든 던져보세요", "Drop anything here"),
+    t("기억하기 싫은 것", "Something you want off your mind"),
+    t("나중에 생각할 것", "For later-you"),
+  ];
+  const [placeholderIdx, setPlaceholderIdx] = useState(0);
+
+  useEffect(() => {
+    const id = window.setInterval(() => {
+      setPlaceholderIdx((i) => (i + 1) % placeholders.length);
+    }, 5000);
+    return () => window.clearInterval(id);
+  }, [placeholders.length]);
+
   textRef.current = text;
   imagesRef.current = images;
   onAddRef.current = onAdd;
@@ -206,7 +220,7 @@ export function InputBar({ onAdd, onPasteMulti }: Props) {
           }
         }}
         rows={1}
-        placeholder={t("메시지 입력", "Message")}
+        placeholder={placeholders[placeholderIdx]}
         className="block w-full resize-none bg-transparent px-4 pt-2.5 pb-1 text-[15px] leading-snug text-ink placeholder:text-ink-soft/70 focus:outline-none max-h-32"
       />
       <div className="flex items-center gap-1 px-2 pb-1.5 pt-0.5">

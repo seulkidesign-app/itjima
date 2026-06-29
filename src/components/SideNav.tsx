@@ -1,5 +1,5 @@
 import { Link, useRouterState } from "@tanstack/react-router";
-import { Inbox, Calendar, Archive, Info, Shield, LogIn, LogOut } from "lucide-react";
+import { Inbox, Calendar, Archive, Shield, LogIn, LogOut } from "lucide-react";
 import { toast } from "sonner";
 import { useEffect, useState } from "react";
 import { useT, LanguageToggle } from "@/lib/i18n";
@@ -33,10 +33,9 @@ export function SideNav() {
   }, [userId]);
 
   const items = [
-    { to: "/", label: t("생각", "Inbox"), Icon: Inbox },
-    { to: "/schedule", label: t("일정", "Schedule"), Icon: Calendar },
-    { to: "/archive", label: t("보관", "Archive"), Icon: Archive },
-    { to: "/about", label: "About", Icon: Info },
+    { to: "/", label: t("지금", "Now"), Icon: Inbox },
+    { to: "/schedule", label: t("때", "When"), Icon: Calendar },
+    { to: "/archive", label: t("기억", "Memory"), Icon: Archive },
   ] as const;
 
   return (
@@ -95,7 +94,7 @@ export function SideNav() {
             to="/auth"
             className="flex items-center gap-2 rounded-2xl bg-primary shadow-card px-3.5 py-2.5 text-[13px] font-bold text-ink"
           >
-            <LogIn size={16} /> {t("로그인", "Sign in")}
+            <LogIn size={16} /> {t("이어가기", "Continue")}
           </Link>
         )}
       </div>

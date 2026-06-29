@@ -3,9 +3,9 @@ import { Archive, Calendar, Home, Info } from "lucide-react";
 import { useT } from "@/lib/i18n";
 
 const tabs = [
-  { to: "/", icon: Home, labelKo: "인박스", labelEn: "Inbox" },
-  { to: "/schedule", icon: Calendar, labelKo: "일정", labelEn: "Schedule" },
-  { to: "/archive", icon: Archive, labelKo: "보관", labelEn: "Archive" },
+  { to: "/", icon: Home, labelKo: "지금", labelEn: "Now" },
+  { to: "/schedule", icon: Calendar, labelKo: "때", labelEn: "When" },
+  { to: "/archive", icon: Archive, labelKo: "기억", labelEn: "Memory" },
   { to: "/about", icon: Info, labelKo: "정보", labelEn: "About" },
 ] as const;
 

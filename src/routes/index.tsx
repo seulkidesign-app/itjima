@@ -1,13 +1,10 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
-import { MoreHorizontal, Sparkles, Trash2, Calendar, Archive as ArchiveIcon } from "lucide-react";
+import { MoreHorizontal, Trash2, Calendar, Archive as ArchiveIcon } from "lucide-react";
 import { InputBar } from "@/components/InputBar";
-import { SwipeCard } from "@/components/SwipeCard";
 import { ScheduleSheet } from "@/components/ScheduleSheet";
 import { LoginSheet } from "@/components/LoginSheet";
-import { FocusMode } from "@/components/FocusMode";
-import { AIOrganizeButton, useOrganizeFx } from "@/components/AIOrganize";
 import { BrainMirrorPanel } from "@/components/BrainMirrorSummary";
 import {
   useInbox,
@@ -25,10 +22,10 @@ import { track } from "@/lib/analytics";
 import { haptic } from "@/lib/haptics";
 
 export const Route = createFileRoute("/")({
-  component: Inbox,
+  component: Stream,
 });
 
-function Inbox() {
+function Stream() {
   const t = useT();
   const inbox = useInbox();
   const schedules = useSchedules();
@@ -39,14 +36,11 @@ function Inbox() {
     open: false,
   });
   const [loginOpen, setLoginOpen] = useState(false);
-  
-  const [focusOpen, setFocusOpen] = useState(false);
   const [menuFor, setMenuFor] = useState<string | null>(null);
   const [pasteSheet, setPasteSheet] = useState<{ chunks: string[]; original: string } | null>(null);
   const pressTimer = useRef<number | null>(null);
 
   const items = inbox.items;
-  // KakaoTalk-style: oldest at top, newest at bottom
   const itemsAsc = [...items].slice().reverse();
   const newestId = items[0]?.id;
   const listEndRef = useRef<HTMLDivElement | null>(null);
@@ -54,7 +48,6 @@ function Inbox() {
 
   useEffect(() => {
     if (items.length > prevCountRef.current) {
-      // new item added → scroll to bottom
       requestAnimationFrame(() => {
         listEndRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
       });
@@ -62,24 +55,11 @@ function Inbox() {
     prevCountRef.current = items.length;
   }, [items.length]);
 
-  const moveToSchedule = async (it: InboxItem, start?: Date, end?: Date) => {
-    const s = start ?? new Date();
-    const e = end ?? new Date(s.getTime() + 60 * 60 * 1000);
-    await schedules.add({
-      text: it.text,
-      start_time: s.toISOString(),
-      end_time: e.toISOString(),
-      alarm: false,
-    } as any);
-    await inbox.remove(it.id);
-    track("thought_swiped_schedule", { text_length: it.text.length });
-    toast.success(t("일정으로 옮겼어요", "Moved to schedule"));
-  };
-  const moveToArchive = async (it: InboxItem) => {
+  const moveToMemory = async (it: InboxItem) => {
     await archive.add({ text: it.text, images: it.images } as any);
     await inbox.remove(it.id);
-    track("thought_swiped_archive", { text_length: it.text.length });
-    toast.success(t("보관함에 넣었어요", "Added to archive"));
+    track("thought_to_memory", { text_length: it.text.length });
+    haptic([4, 12, 6]);
   };
 
   const handleAdd = async (text: string, images: string[]) => {
@@ -91,37 +71,6 @@ function Inbox() {
       has_images: images.length > 0,
       image_count: images.length,
     });
-    toast.success(t("인박스에 담았어요", "Saved to your inbox"), { duration: 1500 });
-    // Date detection
-    const det = detectDate(text);
-    if (det) {
-      toast.custom(
-        (id) => (
-          <div className="flex items-center gap-3 rounded-2xl bg-ink px-4 py-3 text-white shadow-float">
-            <div className="text-sm">📅 {det.label} — {t("일정으로 등록할까요?", "Add as a schedule?")}</div>
-            <button
-              onClick={() => {
-                const latest = items[0] ?? { id: "", text, images, created_at: "" };
-                setScheduleSheet({ open: true, item: latest, date: det.start });
-                toast.dismiss(id);
-              }}
-              className="rounded-full bg-primary px-3 py-1 text-xs font-bold text-ink"
-            >
-              {t("등록", "Add")}
-            </button>
-          </div>
-        ),
-        { duration: 6000 },
-      );
-    }
-    maybeNudgeLogin();
-  };
-
-  const handleQuick = async (text: string, images: string[]) => {
-    if (!text && !images.length) return;
-    haptic(6);
-    await inbox.add({ text, images } as any);
-    toast.success(t("인박스에 담았어요", "Saved to your inbox"), { duration: 1200 });
     maybeNudgeLogin();
   };
 
@@ -129,29 +78,34 @@ function Inbox() {
     if (userId) return;
     if (isLoginDismissed()) return;
     const u = getUsageCount();
-    if (u === 3) {
+    if (u === 5) {
       toast.custom(
         (id) => (
-          <div className="flex items-center gap-3 rounded-2xl bg-ink px-4 py-3 text-white shadow-float">
-            <div className="text-sm">💾 {t("다른 기기에서도 이어가려면 로그인하세요", "Sign in to keep your thoughts on other devices")}</div>
+          <div className="flex items-center gap-3 rounded-2xl bg-ink/95 px-4 py-3 text-white shadow-float">
+            <div className="text-sm">
+              {t("다른 기기에서도 이어갈까요?", "Continue on another device?")}
+            </div>
             <button
               onClick={() => {
                 setLoginOpen(true);
                 toast.dismiss(id);
               }}
-              className="rounded-full bg-primary px-3 py-1 text-xs font-bold text-ink"
+              className="shrink-0 rounded-full bg-primary px-3 py-1 text-xs font-bold text-ink"
             >
-              {t("로그인", "Sign in")}
+              {t("이어가기", "Continue")}
             </button>
           </div>
         ),
-        { duration: 6000 },
+        { duration: 8000 },
       );
     }
   };
 
   const startLongPress = (id: string) => {
-    pressTimer.current = window.setTimeout(() => setMenuFor(id), 500);
+    pressTimer.current = window.setTimeout(() => {
+      haptic([8, 12, 8]);
+      setMenuFor(id);
+    }, 500);
   };
   const cancelLongPress = () => {
     if (pressTimer.current) {
@@ -162,63 +116,15 @@ function Inbox() {
 
   return (
     <div className="flex h-full min-h-full flex-col bg-white pt-2">
-      {/* NRC-style hero block */}
-      <div className="px-5 pb-3 pt-2">
-        <div className="nrc-eyebrow">{t("오늘의 인박스", "Today's Inbox")}</div>
-        <div className="mt-1 flex items-end justify-between gap-3">
-          <h1 className="nrc-headline">
-            {items.length > 0
-              ? t("생각 정리하기", "Clear Your Mind")
-              : t("던져보세요", "Drop A Thought")}
-          </h1>
-          <div className="text-right leading-none">
-            <div className="font-num text-[40px] text-ink">{items.length}</div>
-            <div className="nrc-eyebrow mt-0.5">{t("개", "Notes")}</div>
-          </div>
-        </div>
+      <div className="px-5 pb-4 pt-2">
+        <h1 className="nrc-headline">{t("던져보세요", "Drop a thought")}</h1>
+        {items.length > 0 && (
+          <p className="mt-1.5 text-[13px] leading-relaxed text-ink-soft/80">
+            {t("잊어도 괜찮아요. 제가 기억하고 있을게요.", "Forget it — I'll remember for you.")}
+          </p>
+        )}
       </div>
 
-      {/* AI Organize */}
-      <AIOrganizeButton
-        items={items}
-        onCommit={async (plan) => {
-          // Commit all moves silently after fly-out animation completes.
-          for (const { id, bucket } of plan) {
-            const it = items.find((x) => x.id === id);
-            if (!it) continue;
-            if (bucket === "schedule") {
-              const s = new Date();
-              const e = new Date(s.getTime() + 60 * 60 * 1000);
-              await schedules.add({
-                text: it.text,
-                start_time: s.toISOString(),
-                end_time: e.toISOString(),
-                alarm: false,
-              } as any);
-            } else {
-              await archive.add({ text: it.text, images: it.images } as any);
-            }
-            await inbox.remove(id);
-          }
-        }}
-        label={t("✨ AI로 정리하기", "✨ AI Organize")}
-        analyzing={t("분석 중...", "Analyzing...")}
-      />
-
-      {/* Sort mode pill */}
-      {items.length >= 2 && (
-        <div className="px-5 pb-2">
-          <button
-            onClick={() => setFocusOpen(true)}
-            className="pill-ghost inline-flex items-center gap-1.5"
-          >
-            <Sparkles size={14} /> {t("정리 모드", "Focus mode")}
-          </button>
-        </div>
-      )}
-
-
-      {/* Cards */}
       <div className="flex-1 px-4 pb-4">
         {items.length === 0 ? (
           <EmptyState />
@@ -227,27 +133,28 @@ function Inbox() {
             {itemsAsc.map((it) => {
               const isNewest = it.id === newestId;
               return (
-                <OrganizeFxWrapper key={it.id} id={it.id} fallback={isNewest ? "animate-pop" : "animate-fade-in"}>
-                  <SwipeCard
-                    onSwipe={(dir) =>
-                      dir === "right"
-                        ? setScheduleSheet({ open: true, item: it })
-                        : moveToArchive(it)
-                    }
-                  >
-                    <CardBody
-                      item={it}
-                      big={isNewest}
-                      inbox={inbox}
-                      onScheduleFromMirror={(item, result) => {
-                        const text = formatMirrorScheduleText(item.text, result);
-                        setScheduleSheet({ open: true, item: { ...item, text }, date: detectDate(text)?.start });
-                      }}
-                      onLongPressStart={startLongPress}
-                      onLongPressEnd={cancelLongPress}
-                    />
-                  </SwipeCard>
-                </OrganizeFxWrapper>
+                <div
+                  key={it.id}
+                  className={`rounded-2xl border border-ink/[0.06] bg-white/90 shadow-[0_1px_8px_rgba(0,0,0,0.04)] ${
+                    isNewest ? "animate-pop" : "animate-fade-in"
+                  }`}
+                >
+                  <CardBody
+                    item={it}
+                    big={isNewest}
+                    inbox={inbox}
+                    onScheduleFromMirror={(item, result) => {
+                      const text = formatMirrorScheduleText(item.text, result);
+                      setScheduleSheet({
+                        open: true,
+                        item: { ...item, text },
+                        date: detectDate(text)?.start,
+                      });
+                    }}
+                    onLongPressStart={startLongPress}
+                    onLongPressEnd={cancelLongPress}
+                  />
+                </div>
               );
             })}
             <div ref={listEndRef} />
@@ -255,20 +162,16 @@ function Inbox() {
         )}
       </div>
 
-
-      {/* Input */}
       <div className="sticky bottom-0 z-20 pb-[env(safe-area-inset-bottom)]">
         <InputBar
           onAdd={handleAdd}
-          onQuickSave={handleQuick}
           onPasteMulti={(chunks, original) => setPasteSheet({ chunks, original })}
         />
       </div>
 
-      {/* Context menu */}
       {menuFor && (
         <div className="absolute inset-0 z-50 flex flex-col" onClick={() => setMenuFor(null)}>
-          <div className="flex-1 bg-ink/30 backdrop-blur-sm animate-fade-in" />
+          <div className="flex-1 bg-ink/25 backdrop-blur-sm animate-fade-in" />
           <div
             className="glass-strong animate-slide-up mx-3 mb-[100px] rounded-3xl p-2 shadow-float"
             onClick={(e) => e.stopPropagation()}
@@ -280,7 +183,7 @@ function Inbox() {
                 <>
                   <MenuItem
                     icon={<Calendar size={18} />}
-                    label={t("일정으로", "To schedule")}
+                    label={t("때로 남기기", "Save for when")}
                     onClick={() => {
                       setMenuFor(null);
                       setScheduleSheet({ open: true, item: it });
@@ -288,19 +191,20 @@ function Inbox() {
                   />
                   <MenuItem
                     icon={<ArchiveIcon size={18} />}
-                    label={t("보관하기", "Archive")}
+                    label={t("기억으로 보내기", "Move to memory")}
                     onClick={() => {
                       setMenuFor(null);
-                      moveToArchive(it);
+                      moveToMemory(it);
                     }}
                   />
                   <MenuItem
                     icon={<Trash2 size={18} />}
-                    label={t("삭제", "Delete")}
+                    label={t("지우기", "Delete")}
                     danger
                     onClick={() => {
                       setMenuFor(null);
                       inbox.remove(it.id);
+                      haptic(6);
                     }}
                   />
                 </>
@@ -310,35 +214,41 @@ function Inbox() {
         </div>
       )}
 
-      {/* Paste sheet */}
       {pasteSheet && (
         <div className="absolute inset-0 z-50 flex flex-col" onClick={() => setPasteSheet(null)}>
-          <div className="flex-1 bg-ink/30 backdrop-blur-sm animate-fade-in" />
+          <div className="flex-1 bg-ink/25 backdrop-blur-sm animate-fade-in" />
           <div
             className="glass-strong animate-slide-up rounded-t-[28px] px-5 pb-[calc(env(safe-area-inset-bottom)+1.25rem)] pt-3"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="mx-auto mb-3 h-1.5 w-10 rounded-full bg-ink/15" />
-            <div className="text-[17px] font-bold text-ink">{t("붙여넣은 텍스트를 어떻게 할까요?", "What to do with the pasted text?")}</div>
-            <div className="mt-1 text-sm text-ink-soft">{t(`${pasteSheet.chunks.length}개 줄이 감지됐어요.`, `${pasteSheet.chunks.length} lines detected.`)}</div>
+            <div className="text-[17px] font-bold text-ink">
+              {t("붙여넣은 글, 어떻게 담을까요?", "How should we save this paste?")}
+            </div>
+            <div className="mt-1 text-sm text-ink-soft">
+              {t(`${pasteSheet.chunks.length}줄이에요.`, `${pasteSheet.chunks.length} lines.`)}
+            </div>
             <button
               onClick={async () => {
-                for (const c of pasteSheet.chunks) await inbox.add({ text: c, images: [] } as any);
+                for (const c of pasteSheet.chunks) {
+                  await inbox.add({ text: c, images: [] } as any);
+                }
                 setPasteSheet(null);
-                toast.success(t(`${pasteSheet.chunks.length}개로 나눠 담았어요`, `Split into ${pasteSheet.chunks.length} items`));
+                haptic([6, 14, 8]);
               }}
               className="mt-4 w-full rounded-2xl bg-primary py-3.5 text-[15px] font-bold text-ink"
             >
-              {t("항목별로 나누기", "Split into items")}
+              {t("나눠서 담기", "Split into notes")}
             </button>
             <button
               onClick={async () => {
                 await inbox.add({ text: pasteSheet.original, images: [] } as any);
                 setPasteSheet(null);
+                haptic(6);
               }}
               className="mt-2 w-full rounded-2xl bg-white/70 py-3.5 text-[15px] font-semibold text-ink"
             >
-              {t("한 덩어리로", "Keep as one")}
+              {t("한 번에 담기", "Keep as one")}
             </button>
           </div>
         </div>
@@ -358,22 +268,14 @@ function Inbox() {
               alarm: false,
             } as any);
             await inbox.remove(scheduleSheet.item!.id);
-            track("schedule_created", { source: "inbox_swipe", text_length: text.length });
+            track("schedule_created", { source: "stream", text_length: text.length });
             setScheduleSheet({ open: false });
-            toast.success(t("일정으로 등록됐어요", "Scheduled"));
+            haptic([6, 16, 10]);
           }}
         />
       )}
 
       <LoginSheet open={loginOpen} onClose={() => setLoginOpen(false)} />
-      {focusOpen && (
-        <FocusMode
-          items={items}
-          onSchedule={(it) => moveToSchedule(it)}
-          onArchive={(it) => moveToArchive(it)}
-          onClose={() => setFocusOpen(false)}
-        />
-      )}
     </div>
   );
 }
@@ -404,10 +306,11 @@ function CardBody({
   const locale = lang === "en" ? "en-US" : "ko-KR";
   return (
     <div
-      className={`px-4 ${big ? "py-6 min-h-[150px]" : "py-3.5"}`}
+      className={`px-4 ${big ? "py-5 min-h-[120px]" : "py-3.5"}`}
       onPointerDown={() => onLongPressStart?.(item.id)}
       onPointerUp={onLongPressEnd}
       onPointerLeave={onLongPressEnd}
+      onContextMenu={(e) => e.preventDefault()}
     >
       {item.images?.length > 0 && (
         <div className="mb-2 flex gap-2 overflow-x-auto">
@@ -420,9 +323,16 @@ function CardBody({
         {item.text || t("(이미지만)", "(image only)")}
       </p>
       <BrainMirrorPanel item={item} inbox={inbox} onSchedule={onScheduleFromMirror} />
-      <div className="mt-2 flex items-center justify-between text-[11px] text-ink-soft">
-        <span>{new Date(item.created_at).toLocaleString(locale, { month: "numeric", day: "numeric", hour: "2-digit", minute: "2-digit" })}</span>
-        <MoreHorizontal size={14} />
+      <div className="mt-2 flex items-center justify-between text-[11px] text-ink-soft/70">
+        <span>
+          {new Date(item.created_at).toLocaleString(locale, {
+            month: "numeric",
+            day: "numeric",
+            hour: "2-digit",
+            minute: "2-digit",
+          })}
+        </span>
+        <MoreHorizontal size={14} className="opacity-40" aria-hidden />
       </div>
     </div>
   );
@@ -431,13 +341,13 @@ function CardBody({
 function EmptyState() {
   const t = useT();
   return (
-    <div className="flex h-full min-h-[50dvh] flex-col items-center justify-center px-6 text-center">
-      <div className="text-5xl">💭</div>
-      <div className="mt-3 text-[17px] font-bold text-ink">{t("텅 비었어요", "Empty for now")}</div>
-      <div className="mt-1 text-sm text-ink-soft">
-        {t("지금 떠오르는 생각을 아래에 던져 보세요. 오른쪽으로 밀면 일정, 왼쪽으로 밀면 보관.",
-          "Throw a thought into the box below. Swipe right to schedule, left to archive.")}
-      </div>
+    <div className="flex h-full min-h-[45dvh] flex-col items-center justify-center px-6 text-center">
+      <p className="text-[15px] leading-relaxed text-ink-soft">
+        {t(
+          "머릿속에 있는 것, 아래에 던져두세요.\n기억은 제가 할게요.",
+          "Drop what's on your mind below.\nI'll hold the memory.",
+        )}
+      </p>
     </div>
   );
 }
@@ -463,26 +373,5 @@ function MenuItem({
       {icon}
       {label}
     </button>
-  );
-}
-
-function OrganizeFxWrapper({ id, fallback, children }: { id: string; fallback: string; children: React.ReactNode }) {
-  const fx = useOrganizeFx(id);
-  const flyClass = fx.flying === "schedule"
-    ? "translate-x-[120vw] -translate-y-[60vh] rotate-12 opacity-0"
-    : fx.flying === "archive"
-    ? "translate-x-[120vw] translate-y-[60vh] -rotate-6 opacity-0"
-    : "";
-  const glowClass = fx.glow === "schedule"
-    ? "ring-4 ring-[#FFD233]/70 shadow-[0_0_30px_rgba(255,210,51,0.6)]"
-    : fx.glow === "archive"
-    ? "ring-4 ring-[#87CEEB]/70 shadow-[0_0_30px_rgba(135,206,235,0.6)]"
-    : "";
-  return (
-    <div
-      className={`rounded-2xl transition-all duration-500 ease-out ${fx.flying ? "" : fallback} ${glowClass} ${flyClass}`}
-    >
-      {children}
-    </div>
   );
 }

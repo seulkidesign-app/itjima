@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
-import { Search, Trash2, Sparkles, ChevronDown, X, FolderPlus, Check } from "lucide-react";
+import { Search, Trash2, ChevronDown, X, FolderPlus, Check } from "lucide-react";
 import { useArchive, useSchedules, type ArchiveItem } from "@/lib/store";
 import { archiveGroup, detectDate } from "@/lib/dateDetect";
 import { useT, useLang } from "@/lib/i18n";
@@ -16,11 +16,10 @@ export const Route = createFileRoute("/archive")({
 type GroupDef = { key: string; ko: string; en: string; emoji: string; custom?: boolean };
 
 const BUILTIN_GROUPS: GroupDef[] = [
-  { key: "todo", ko: "할 일", en: "To-do", emoji: "✅" },
-  { key: "idea", ko: "아이디어", en: "Ideas", emoji: "💡" },
-  { key: "place", ko: "장소", en: "Places", emoji: "📍" },
-  { key: "read", ko: "읽기·보기", en: "Read/Watch", emoji: "📚" },
-  { key: "etc", ko: "기타", en: "Other", emoji: "🗂" },
+  { key: "idea", ko: "떠오른 것", en: "Sparks", emoji: "💡" },
+  { key: "place", ko: "다녀온 곳", en: "Places", emoji: "📍" },
+  { key: "read", ko: "읽고 싶은 것", en: "To explore", emoji: "📚" },
+  { key: "etc", ko: "그밖에", en: "More", emoji: "🌿" },
 ];
 
 const OVERRIDE_KEY = "itjima.archive_group_overrides";
@@ -54,9 +53,6 @@ function Archive() {
   const [newName, setNewName] = useState("");
   const [newEmoji, setNewEmoji] = useState("✨");
   const pressTimer = useRef<number | null>(null);
-
-  // AI organize visual state
-  const [aiPhase, setAiPhase] = useState<"idle" | "analyzing" | "shimmer">("idle");
 
   useEffect(() => {
     setOverrides(readJSON<Record<string, string>>(OVERRIDE_KEY, {}));
@@ -109,26 +105,6 @@ function Archive() {
   }, [filtered, lang, overrides, allGroups]);
 
   const locale = lang === "en" ? "en-US" : "ko-KR";
-
-  // ---- AI 그룹 정리 ----
-  const runAIOrganize = async () => {
-    if (aiPhase !== "idle" || items.length === 0) return;
-    haptic([6, 18, 10]);
-    setAiPhase("analyzing");
-    await new Promise((r) => setTimeout(r, 1200));
-    setAiPhase("shimmer");
-    // Clear overrides that pointed to built-in groups so AI re-classifies.
-    // Keep overrides pointing to custom groups.
-    const customKeys = new Set(customGroups.map((g) => g.key));
-    const next: Record<string, string> = {};
-    Object.entries(overrides).forEach(([id, k]) => {
-      if (customKeys.has(k)) next[id] = k;
-    });
-    persistOverrides(next);
-    await new Promise((r) => setTimeout(r, 800));
-    setAiPhase("idle");
-    haptic([6, 20, 8]);
-  };
 
   // ---- Selection / long-press ----
   const startLongPress = (id: string) => {
@@ -222,35 +198,9 @@ function Archive() {
   return (
     <div className="flex h-full flex-col bg-white pt-2">
       <div className="px-5 pb-2 pt-2">
-        <div className="nrc-eyebrow">{t("보관함", "Archive")}</div>
-        <div className="mt-1 flex items-end justify-between gap-3">
-          <h1 className="nrc-headline">{t("기억", "Memory")}</h1>
-          <div className="text-right leading-none">
-            <div className="font-num text-[40px] text-ink">{items.length}</div>
-            <div className="nrc-eyebrow mt-0.5">{t("개", "Saved")}</div>
-          </div>
-        </div>
+        <div className="nrc-eyebrow">{t("잊지 않을 것들", "Things remembered")}</div>
+        <h1 className="nrc-headline mt-1">{t("기억", "Memory")}</h1>
       </div>
-      {/* AI 그룹 정리 button */}
-      {items.length > 0 && (
-        <div className="px-5 pb-3">
-          <button
-            onClick={runAIOrganize}
-            disabled={aiPhase !== "idle"}
-            className={`w-full bg-ink py-4 text-[13px] font-extrabold uppercase tracking-[0.18em] text-white transition active:scale-[0.98] disabled:opacity-80 ${
-              aiPhase === "analyzing" ? "animate-pulse" : ""
-            }`}
-            style={{ borderRadius: 999 }}
-          >
-            <span className="inline-flex items-center justify-center gap-2">
-              <Sparkles size={14} className={`text-primary ${aiPhase === "analyzing" ? "animate-spin" : ""}`} />
-              {aiPhase === "analyzing"
-                ? t("분석 중...", "Analyzing...")
-                : t("✨ AI 그룹 정리", "✨ AI Re-group")}
-            </span>
-          </button>
-        </div>
-      )}
 
       <div className="px-4 pb-3">
         <div className="flex items-center gap-2 rounded-2xl border border-ink/10 bg-white px-3.5 py-2.5 shadow-card">
@@ -258,14 +208,9 @@ function Archive() {
           <input
             value={q}
             onChange={(e) => setQ(e.target.value)}
-            placeholder={t("보관한 생각 검색", "Search archived thoughts")}
+            placeholder={t("기억 찾아보기", "Search memories")}
             className="flex-1 bg-transparent text-[14px] text-ink placeholder:text-ink-soft/70 focus:outline-none"
           />
-        </div>
-        <div className="mt-2 flex items-center gap-1.5 px-1 text-[11px] text-ink-soft">
-          <Sparkles size={11} className="text-primary" />
-          {t("→ 일정으로 보내기 · ← 삭제 · 길게 눌러 다중 선택 · 그룹 헤더 길게 눌러 해제",
-             "Swipe → Schedule · ← Delete · long-press to multi-select · long-press header to ungroup")}
         </div>
       </div>
 
@@ -307,7 +252,7 @@ function Archive() {
                   />
                 </div>
                 {!isCollapsed && (
-                  <div className={`space-y-2 ${aiPhase === "shimmer" ? "animate-pulse" : ""}`}>
+                  <div className="space-y-2">
                     {g.items.map((it) => {
                       const isSel = selected.has(it.id);
                       const isDragging = dragId === it.id;
@@ -454,8 +399,10 @@ function Empty() {
   return (
     <div className="flex h-full min-h-[50dvh] flex-col items-center justify-center text-center">
       <div className="text-5xl">🗂</div>
-      <div className="mt-3 text-[17px] font-bold text-ink">{t("보관함이 비어 있어요", "Your archive is empty")}</div>
-      <div className="mt-1 text-sm text-ink-soft">{t("생각을 왼쪽으로 밀면 여기에 모여요.", "Swipe a thought left to send it here.")}</div>
+      <div className="mt-3 text-[17px] font-bold text-ink">{t("아직 비어 있어요", "Nothing here yet")}</div>
+      <div className="mt-1 text-sm text-ink-soft">
+        {t("길게 눌러 기억으로 보낼 수 있어요.", "Long-press a thought on 지금 to send it here.")}
+      </div>
     </div>
   );
 }
