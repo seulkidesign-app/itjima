@@ -206,12 +206,13 @@
 }
 @media (min-width: 768px) {
   .phone-frame {
-    max-width: min(480px, 100vw);
+    max-width: min(880px, 100vw);
     height: 100dvh;
     margin: 0 auto;
     border-radius: 0;
     box-shadow: none;
-    border: none;
+    border-left: 1px solid oklch(0 0 0 / 0.06);
+    border-right: 1px solid oklch(0 0 0 / 0.06);
   }
 }
 

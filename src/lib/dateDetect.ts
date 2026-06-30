@@ -79,9 +79,9 @@ export function dDay(target: Date): { label: string; tone: "normal" | "soon" | "
 /** Naive keyword auto-group for archive. */
 export function archiveGroup(text: string): { key: string; label: string; emoji: string } {
   const t = text.toLowerCase();
-  if (/해야|todo|할일|할 일|마감|제출|확인/.test(t)) return { key: "idea", label: "떠오른 것", emoji: "💡" };
-  if (/아이디어|idea|생각|컨셉|기획/.test(t)) return { key: "idea", label: "떠오른 것", emoji: "💡" };
-  if (/카페|식당|가게|주소|장소|매장|호텔/.test(t)) return { key: "place", label: "다녀온 곳", emoji: "📍" };
-  if (/읽|책|영화|드라마|보기|시청|영상|유튜브/.test(t)) return { key: "read", label: "읽고 싶은 것", emoji: "📚" };
-  return { key: "etc", label: "그밖에", emoji: "🌿" };
+  if (/해야|todo|할일|할 일|마감|제출|확인/.test(t)) return { key: "todo", label: "할 일", emoji: "✅" };
+  if (/아이디어|idea|생각|컨셉|기획/.test(t)) return { key: "idea", label: "아이디어", emoji: "💡" };
+  if (/카페|식당|가게|주소|장소|매장|호텔/.test(t)) return { key: "place", label: "장소", emoji: "📍" };
+  if (/읽|책|영화|드라마|보기|시청|영상|유튜브/.test(t)) return { key: "read", label: "읽기·보기", emoji: "📚" };
+  return { key: "etc", label: "기타", emoji: "🗂" };
 }

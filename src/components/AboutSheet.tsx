@@ -17,16 +17,17 @@ export function AboutSheet({ open, onClose }: { open: boolean; onClose: () => vo
         >
           <div className="mx-auto mb-4 h-1.5 w-10 rounded-full bg-ink/15" />
           <div className="text-[22px] font-bold text-ink">ItJima</div>
-          <div className="text-sm text-ink-soft">{t("AI Memory", "AI Memory")}</div>
+          <div className="text-sm text-ink-soft">{t("머릿속 인박스", "Mental Inbox")}</div>
           <p className="mt-4 text-[14px] leading-relaxed text-ink">
             {t(
-              "정리 앱이 아니에요. 머릿속에 떠다니는 생각을 던져두면, 잊어도 괜찮아요 — 제가 기억할게요.",
-              "Not a productivity app. Drop what's on your mind and forget it — I'll remember for you.",
+              "캘린더도 노트도 아닙니다. 머릿속에 떠다니는 생각을 빠르게 던져 두고, 오른쪽으로 밀면 일정, 왼쪽으로 밀면 보관.",
+              "Not a calendar, not a notes app. Throw thoughts into your inbox — swipe right for schedule, swipe left to archive.",
             )}
           </p>
           <div className="mt-5 space-y-2 text-[13px] text-ink-soft">
-            <div>{t("길게 누르면 때로 남기기 · 기억으로 보내기", "Long-press: save for when · move to memory")}</div>
-            <div>{t("긴 생각은 조용히 이해해 드려요", "Long thoughts get a quiet Brain Mirror")}</div>
+            <div>{t("→ 오른쪽 스와이프: 일정으로", "→ Swipe right: schedule it")}</div>
+            <div>{t("← 왼쪽 스와이프: 보관함으로", "← Swipe left: archive it")}</div>
+            <div>{t("길게 누르면 메뉴, 두 개 이상이면 정리 모드", "Long-press for menu, 2+ items unlock Focus mode")}</div>
           </div>
 
           <button

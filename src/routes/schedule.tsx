@@ -43,7 +43,7 @@ function usePins() {
 function Schedule() {
   const t = useT();
   const { items, update, remove, add } = useSchedules();
-  const [tab, setTab] = useState<"list" | "cal">("list");
+  const [tab, setTab] = useState<"list" | "cal">("cal");
   const [sheet, setSheet] = useState<{ open: boolean; edit?: ScheduleItem }>({ open: false });
   const [, tickN] = useState(0);
   const { pins, toggle: togglePin } = usePins();
@@ -108,8 +108,8 @@ function Schedule() {
   return (
     <div className="flex h-full flex-col bg-white pt-2">
       <div className="px-5 pb-3 pt-2">
-        <div className="nrc-eyebrow">{t("다시 돌아올 때", "When it resurfaces")}</div>
-        <h1 className="nrc-headline mt-1">{t("때", "When")}</h1>
+        <div className="nrc-eyebrow">{t("나의 일정", "My Schedule")}</div>
+        <h1 className="nrc-headline mt-1">{t("계획", "Plan")}</h1>
       </div>
       <div className="px-5 pb-3">
         <div className="inline-flex border-b border-ink/10">

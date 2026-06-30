@@ -4,10 +4,14 @@ import { isBrainMirrorCandidate } from "@/lib/brainMirror";
 import { fetchBrainMirror } from "@/lib/brainMirrorApi";
 import { setInboxBrainMirror, useInbox, type InboxItem } from "@/lib/store";
 import { useT } from "@/lib/i18n";
+import { haptic } from "@/lib/haptics";
 
 const MAGIC_DELAY_MS = 1200;
-const attempted = new Set<string>();
-const dismissed = new Set<string>();
+const SK = {
+  attempted: (id: string) => `itjima.bm.attempted.${id}`,
+  dismissed: (id: string) => `itjima.bm.dismissed.${id}`,
+  schedule: (id: string) => `itjima.bm.schedule.${id}`,
+};
 
 function BrainMirrorDots() {
   return (
@@ -44,12 +48,12 @@ function BrainMirrorResultView({
 
       {result.items.length > 0 && (
         <ul className="mt-2 space-y-1.5">
-          {result.items.map((item) => (
-            <li key={item} className="flex items-start gap-2 text-[13px] leading-snug text-ink-soft">
+          {result.items.map((line) => (
+            <li key={line} className="flex items-start gap-2 text-[13px] leading-snug text-ink-soft">
               <span className="mt-[3px] text-[11px] text-ink-soft/50" aria-hidden>
                 □
               </span>
-              <span>{item}</span>
+              <span>{line}</span>
             </li>
           ))}
         </ul>
@@ -77,18 +81,23 @@ type InboxHandle = Pick<ReturnType<typeof useInbox>, "update">;
 export function BrainMirrorPanel({
   item,
   inbox,
+  onAutoAct,
+  onCancelAct,
 }: {
   item: InboxItem;
   inbox: InboxHandle;
+  onAutoAct: (item: InboxItem, result: BrainMirrorResult) => Promise<string | null>;
+  onCancelAct: (scheduleId: string) => Promise<void>;
 }) {
   const [phase, setPhase] = useState<"idle" | "waiting" | "loading" | "ready" | "hidden">("idle");
   const [result, setResult] = useState<BrainMirrorResult | null>(
     item.brain_mirror ? normalizeStored(item.brain_mirror) : null,
   );
   const timerRef = useRef<number | null>(null);
+  const autoActStarted = useRef(false);
 
   useEffect(() => {
-    if (dismissed.has(item.id)) {
+    if (sessionStorage.getItem(SK.dismissed(item.id))) {
       setPhase("hidden");
       return;
     }
@@ -100,12 +109,12 @@ export function BrainMirrorPanel({
     }
 
     if (!isBrainMirrorCandidate(item.text)) return;
-    if (attempted.has(item.id)) return;
+    if (sessionStorage.getItem(SK.attempted(item.id))) return;
 
     setPhase("waiting");
 
     timerRef.current = window.setTimeout(async () => {
-      attempted.add(item.id);
+      sessionStorage.setItem(SK.attempted(item.id), "1");
       setPhase("loading");
 
       const mirror = await fetchBrainMirror(item.text);
@@ -124,6 +133,22 @@ export function BrainMirrorPanel({
     };
   }, [item.id, item.text, item.brain_mirror, inbox]);
 
+  // AI acts first — auto-create schedule when mirror is ready
+  useEffect(() => {
+    if (phase !== "ready" || !result || autoActStarted.current) return;
+    if (sessionStorage.getItem(SK.schedule(item.id))) return;
+    if (!shouldAutoAct(result)) return;
+
+    autoActStarted.current = true;
+    void (async () => {
+      const scheduleId = await onAutoAct(item, result);
+      if (scheduleId) {
+        sessionStorage.setItem(SK.schedule(item.id), scheduleId);
+        haptic([4, 10, 6]);
+      }
+    })();
+  }, [phase, result, item, onAutoAct]);
+
   if (phase === "idle" || phase === "hidden") return null;
   if (phase === "waiting" || phase === "loading") return <BrainMirrorDots />;
   if (!result) return null;
@@ -132,14 +157,25 @@ export function BrainMirrorPanel({
     <BrainMirrorResultView
       result={result}
       onCancel={() => {
-        dismissed.add(item.id);
+        sessionStorage.setItem(SK.dismissed(item.id), "1");
+        const scheduleId = sessionStorage.getItem(SK.schedule(item.id));
+        if (scheduleId) {
+          void onCancelAct(scheduleId).then(() => {
+            sessionStorage.removeItem(SK.schedule(item.id));
+          });
+        }
         setPhase("hidden");
       }}
     />
   );
 }
 
-/** Backward-compat for older localStorage shape */
+function shouldAutoAct(result: BrainMirrorResult): boolean {
+  if (result.suggestedDateText) return true;
+  if (/일정/.test(result.suggestedAction)) return true;
+  return result.confidence >= 0.65 && result.items.length > 0;
+}
+
 function normalizeStored(raw: BrainMirrorResult): BrainMirrorResult {
   if ("items" in raw && Array.isArray(raw.items)) return raw;
   const legacy = raw as BrainMirrorResult & { tasks?: string[]; message?: string };
