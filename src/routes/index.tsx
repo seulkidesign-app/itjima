@@ -14,9 +14,7 @@ import {
   getUsageCount,
   isLoginDismissed,
   type InboxItem,
-  type BrainMirrorResult,
 } from "@/lib/store";
-import { detectDate } from "@/lib/dateDetect";
 import { useT, useLang } from "@/lib/i18n";
 import { track } from "@/lib/analytics";
 import { haptic } from "@/lib/haptics";
@@ -143,14 +141,6 @@ function Stream() {
                     item={it}
                     big={isNewest}
                     inbox={inbox}
-                    onScheduleFromMirror={(item, result) => {
-                      const text = formatMirrorScheduleText(item.text, result);
-                      setScheduleSheet({
-                        open: true,
-                        item: { ...item, text },
-                        date: detectDate(text)?.start,
-                      });
-                    }}
                     onLongPressStart={startLongPress}
                     onLongPressEnd={cancelLongPress}
                   />
@@ -280,24 +270,16 @@ function Stream() {
   );
 }
 
-function formatMirrorScheduleText(original: string, result: BrainMirrorResult) {
-  if (result.tasks.length === 0) return result.title || original;
-  const lines = [result.title, ...result.tasks.map((task) => `- ${task}`)].filter(Boolean);
-  return lines.join("\n");
-}
-
 function CardBody({
   item,
   big,
   inbox,
-  onScheduleFromMirror,
   onLongPressStart,
   onLongPressEnd,
 }: {
   item: InboxItem;
   big?: boolean;
   inbox: ReturnType<typeof useInbox>;
-  onScheduleFromMirror: (item: InboxItem, result: BrainMirrorResult) => void;
   onLongPressStart?: (id: string) => void;
   onLongPressEnd?: () => void;
 }) {
@@ -322,7 +304,7 @@ function CardBody({
       <p className={`whitespace-pre-wrap text-ink ${big ? "text-[17px] font-semibold leading-snug" : "text-[14px] leading-snug"}`}>
         {item.text || t("(이미지만)", "(image only)")}
       </p>
-      <BrainMirrorPanel item={item} inbox={inbox} onSchedule={onScheduleFromMirror} />
+      <BrainMirrorPanel item={item} inbox={inbox} />
       <div className="mt-2 flex items-center justify-between text-[11px] text-ink-soft/70">
         <span>
           {new Date(item.created_at).toLocaleString(locale, {

@@ -1,6 +1,13 @@
-import { parseBrainMirrorResult, type BrainMirrorResult } from "@/lib/brainMirror";
+import {
+  mockBrainMirror,
+  parseBrainMirrorResult,
+  type BrainMirrorResult,
+} from "@/lib/brainMirror";
 
-/** Calls Vercel serverless function. Returns null on any failure (silent UX). */
+/**
+ * Calls POST /api/brain-mirror when deployed.
+ * Falls back to local mock so Magic Moment UX is testable without API keys.
+ */
 export async function fetchBrainMirror(text: string): Promise<BrainMirrorResult | null> {
   try {
     const res = await fetch("/api/brain-mirror", {
@@ -9,11 +16,14 @@ export async function fetchBrainMirror(text: string): Promise<BrainMirrorResult 
       body: JSON.stringify({ text }),
     });
 
-    if (!res.ok) return null;
-
-    const data = await res.json();
-    return parseBrainMirrorResult(data);
+    if (res.ok) {
+      const data = await res.json();
+      const parsed = parseBrainMirrorResult(data);
+      if (parsed) return parsed;
+    }
   } catch {
-    return null;
+    // fall through to mock
   }
+
+  return mockBrainMirror(text);
 }

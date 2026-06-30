@@ -3,29 +3,32 @@ import type { VercelRequest, VercelResponse } from "@vercel/node";
 /** Sonnet 4.6 — https://platform.claude.com/docs/en/about-claude/models/overview */
 const ANTHROPIC_MODEL = "claude-sonnet-4-6";
 
-const SYSTEM_PROMPT = `You are ItJima, a gentle AI memory assistant.
-사용자가 생각을 던지면, 그 안에 담긴 의도를 이해하고 가장 읽기 쉬운 형태로 정리해줘.
-절대 사용자를 바쁘게 만들지 마.
-절대 압박감을 주지 마.
-할 일처럼 보이는 내용이 있으면 부드럽게 정리하되, 강요하지 마.
-결과는 반드시 valid JSON으로만 반환해.
+const SYSTEM_PROMPT = `You are ItJima. The user drops a messy thought — you understand it first, quietly.
+Never pressure the user to organize. Never ask questions. Act with gentle confidence.
+Return ONLY valid JSON, no markdown.
+
 JSON schema:
 {
-  "title": "핵심 주제 한 줄",
-  "tasks": ["할 것 1", "할 것 2", "할 것 3"],
-  "message": "따뜻한 한 마디"
+  "title": "핵심 주제 (20자 이내, 필요하면 이모지 1개)",
+  "items": ["항목1", "항목2"],
+  "suggestedDateText": "내일",
+  "suggestedAction": "내일 일정으로 넣어둘게요.",
+  "confidence": 0.85
 }
+
 rules:
-- title은 20자 이내
-- tasks는 최대 5개
-- tasks가 없으면 빈 배열로 반환
-- message는 짧고 부담 없는 한 문장
-- 마크다운 없이 JSON만 반환`;
+- items: max 5, short action phrases (e.g. "꽃 구매", "병원 방문")
+- suggestedDateText: empty string if no date inferred
+- suggestedAction: one calm sentence, future tense, as if you will handle it (e.g. "내일 일정으로 넣어둘게요.")
+- confidence: 0.0-1.0
+- Korean unless input is clearly English`;
 
 type BrainMirrorPayload = {
   title: string;
-  tasks: string[];
-  message: string;
+  items: string[];
+  suggestedDateText: string;
+  suggestedAction: string;
+  confidence: number;
 };
 
 function extractJson(text: string): unknown {
@@ -42,16 +45,34 @@ function extractJson(text: string): unknown {
 function normalizePayload(raw: unknown): BrainMirrorPayload | null {
   if (!raw || typeof raw !== "object") return null;
   const o = raw as Record<string, unknown>;
-  if (typeof o.title !== "string" || typeof o.message !== "string") return null;
+  if (typeof o.title !== "string") return null;
 
-  const tasks = Array.isArray(o.tasks)
-    ? o.tasks.filter((t): t is string => typeof t === "string").slice(0, 5)
+  const itemsRaw = o.items ?? o.tasks;
+  const items = Array.isArray(itemsRaw)
+    ? itemsRaw.filter((t): t is string => typeof t === "string").slice(0, 5)
     : [];
 
+  const suggestedAction =
+    typeof o.suggestedAction === "string"
+      ? o.suggestedAction
+      : typeof o.message === "string"
+        ? o.message
+        : "";
+
+  if (!suggestedAction && items.length === 0) return null;
+
+  const confidence =
+    typeof o.confidence === "number"
+      ? Math.min(1, Math.max(0, o.confidence))
+      : 0.75;
+
   return {
-    title: o.title.trim().slice(0, 20),
-    tasks,
-    message: o.message.trim(),
+    title: o.title.trim().slice(0, 30),
+    items,
+    suggestedDateText:
+      typeof o.suggestedDateText === "string" ? o.suggestedDateText.trim() : "",
+    suggestedAction: suggestedAction.trim(),
+    confidence,
   };
 }
 
@@ -60,18 +81,18 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return res.status(405).json({ error: "Method not allowed" });
   }
 
-  const apiKey = process.env.ANTHROPIC_API_KEY;
-  if (!apiKey) {
-    console.error("[brain-mirror] Missing ANTHROPIC_API_KEY");
-    return res.status(500).json({ error: "Server misconfigured" });
-  }
-
   const text = typeof req.body?.text === "string" ? req.body.text.trim() : "";
   if (!text) {
     return res.status(400).json({ error: "text is required" });
   }
   if (text.length > 8000) {
     return res.status(400).json({ error: "text too long" });
+  }
+
+  const apiKey = process.env.ANTHROPIC_API_KEY;
+  if (!apiKey) {
+    console.error("[brain-mirror] Missing ANTHROPIC_API_KEY");
+    return res.status(503).json({ error: "API not configured" });
   }
 
   try {

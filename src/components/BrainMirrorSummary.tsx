@@ -5,6 +5,7 @@ import { fetchBrainMirror } from "@/lib/brainMirrorApi";
 import { setInboxBrainMirror, useInbox, type InboxItem } from "@/lib/store";
 import { useT } from "@/lib/i18n";
 
+const MAGIC_DELAY_MS = 1200;
 const attempted = new Set<string>();
 const dismissed = new Set<string>();
 
@@ -24,58 +25,47 @@ function BrainMirrorDots() {
 
 function BrainMirrorResultView({
   result,
-  onSchedule,
-  onDismiss,
+  onCancel,
 }: {
   result: BrainMirrorResult;
-  onSchedule: () => void;
-  onDismiss: () => void;
+  onCancel: () => void;
 }) {
   const t = useT();
 
   return (
     <div className="mt-3 animate-[fade-in-soft_0.45s_ease-out] border-t border-ink/[0.06] pt-3">
       <p className="text-[12px] leading-relaxed text-ink-soft/85">
-        {t("🧠 이렇게 이해했어요.", "🧠 Here's how I read it.")}
+        {t("🧠 이렇게 이해했어요", "🧠 Here's how I read it")}
       </p>
 
       <div className="my-2.5 h-px bg-ink/[0.05]" />
 
       <p className="text-[14px] font-semibold leading-snug text-ink/90">{result.title}</p>
 
-      {result.tasks.length > 0 && (
+      {result.items.length > 0 && (
         <ul className="mt-2 space-y-1.5">
-          {result.tasks.map((task) => (
-            <li key={task} className="flex items-start gap-2 text-[13px] leading-snug text-ink-soft">
+          {result.items.map((item) => (
+            <li key={item} className="flex items-start gap-2 text-[13px] leading-snug text-ink-soft">
               <span className="mt-[3px] text-[11px] text-ink-soft/50" aria-hidden>
                 □
               </span>
-              <span>{task}</span>
+              <span>{item}</span>
             </li>
           ))}
         </ul>
       )}
 
-      {result.message && (
-        <p className="mt-2.5 text-[12px] leading-relaxed text-ink-soft/75">{result.message}</p>
+      {result.suggestedAction && (
+        <p className="mt-3 text-[13px] leading-relaxed text-ink-soft/80">{result.suggestedAction}</p>
       )}
 
-      <div className="my-3 h-px bg-ink/[0.05]" />
-
-      <div className="flex flex-wrap gap-2">
+      <div className="mt-3">
         <button
           type="button"
-          onClick={onSchedule}
-          className="rounded-full border border-ink/10 bg-white/70 px-3.5 py-1.5 text-[12px] font-medium text-ink/80 transition active:scale-[0.98]"
+          onClick={onCancel}
+          className="rounded-full px-3 py-1.5 text-[12px] font-medium text-ink-soft/60 transition active:scale-[0.98] hover:text-ink-soft"
         >
-          {t("때로 남기기", "Save for when")}
-        </button>
-        <button
-          type="button"
-          onClick={onDismiss}
-          className="rounded-full px-3.5 py-1.5 text-[12px] font-medium text-ink-soft/70 transition active:scale-[0.98]"
-        >
-          {t("그냥 둘게요", "Leave it for now")}
+          {t("취소", "Cancel")}
         </button>
       </div>
     </div>
@@ -87,14 +77,14 @@ type InboxHandle = Pick<ReturnType<typeof useInbox>, "update">;
 export function BrainMirrorPanel({
   item,
   inbox,
-  onSchedule,
 }: {
   item: InboxItem;
   inbox: InboxHandle;
-  onSchedule: (item: InboxItem, result: BrainMirrorResult) => void;
 }) {
   const [phase, setPhase] = useState<"idle" | "waiting" | "loading" | "ready" | "hidden">("idle");
-  const [result, setResult] = useState<BrainMirrorResult | null>(item.brain_mirror ?? null);
+  const [result, setResult] = useState<BrainMirrorResult | null>(
+    item.brain_mirror ? normalizeStored(item.brain_mirror) : null,
+  );
   const timerRef = useRef<number | null>(null);
 
   useEffect(() => {
@@ -104,7 +94,7 @@ export function BrainMirrorPanel({
     }
 
     if (item.brain_mirror) {
-      setResult(item.brain_mirror);
+      setResult(normalizeStored(item.brain_mirror));
       setPhase("ready");
       return;
     }
@@ -127,7 +117,7 @@ export function BrainMirrorPanel({
       setResult(mirror);
       setPhase("ready");
       await setInboxBrainMirror(inbox, item.id, mirror);
-    }, 1500);
+    }, MAGIC_DELAY_MS);
 
     return () => {
       if (timerRef.current) window.clearTimeout(timerRef.current);
@@ -136,14 +126,12 @@ export function BrainMirrorPanel({
 
   if (phase === "idle" || phase === "hidden") return null;
   if (phase === "waiting" || phase === "loading") return <BrainMirrorDots />;
-
   if (!result) return null;
 
   return (
     <BrainMirrorResultView
       result={result}
-      onSchedule={() => onSchedule(item, result)}
-      onDismiss={() => {
+      onCancel={() => {
         dismissed.add(item.id);
         setPhase("hidden");
       }}
@@ -151,18 +139,15 @@ export function BrainMirrorPanel({
   );
 }
 
-/** @deprecated Use BrainMirrorPanel */
-export function BrainMirrorSummary({ result }: { result: BrainMirrorResult }) {
-  return (
-    <BrainMirrorResultView
-      result={result}
-      onSchedule={() => {}}
-      onDismiss={() => {}}
-    />
-  );
-}
-
-/** @deprecated Use BrainMirrorPanel */
-export function BrainMirrorPlaceholder() {
-  return null;
+/** Backward-compat for older localStorage shape */
+function normalizeStored(raw: BrainMirrorResult): BrainMirrorResult {
+  if ("items" in raw && Array.isArray(raw.items)) return raw;
+  const legacy = raw as BrainMirrorResult & { tasks?: string[]; message?: string };
+  return {
+    title: legacy.title,
+    items: legacy.items ?? legacy.tasks ?? [],
+    suggestedDateText: legacy.suggestedDateText ?? "",
+    suggestedAction: legacy.suggestedAction ?? legacy.message ?? "",
+    confidence: legacy.confidence ?? 0.75,
+  };
 }
