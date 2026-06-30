@@ -12,16 +12,34 @@ JSON schema:
   "title": "핵심 주제 (20자 이내, 필요하면 이모지 1개)",
   "items": ["항목1", "항목2"],
   "suggestedDateText": "내일",
-  "suggestedAction": "내일 일정으로 넣어둘게요.",
+  "suggestedAction": "내일과 관련된 생각 같아요.",
   "confidence": 0.85
 }
 
 rules:
 - items: max 5, short action phrases (e.g. "꽃 구매", "병원 방문")
 - suggestedDateText: empty string if no date inferred
-- suggestedAction: one calm sentence, future tense, as if you will handle it (e.g. "내일 일정으로 넣어둘게요.")
+- suggestedAction: one calm observational sentence (e.g. "내일과 관련된 생각 같아요.")
+- Never imply you already completed an action (no "넣어뒀어요", "등록했어요", "처리했어요")
 - confidence: 0.0-1.0
 - Korean unless input is clearly English`;
+
+const VALIDATOR_PROMPT = `You validate Brain Mirror output for ItJima.
+The user dropped a messy thought (rawText). A draft mirror was generated.
+
+Your job:
+1. Confirm EVERY item in items[] is directly grounded in rawText (same intent, not invented).
+2. Flag and REMOVE any invented actions not supported by rawText.
+3. Return a safe suggestedAction:
+   - Remove any phrasing that implies the app already completed an action
+     (e.g. "넣어뒀어요", "등록했어요", "처리했어요", "완료했어요").
+   - Keep calm, observational tone (e.g. "내일과 관련된 생각 같아요.").
+4. If title is not grounded in rawText, fix or reject.
+5. Keep suggestedDateText only if a date/time is clearly inferable from rawText; else "".
+
+Return ONLY valid JSON:
+{ "valid": true, "title": "...", "items": ["..."], "suggestedDateText": "...", "suggestedAction": "...", "confidence": 0.0-1.0 }
+If the draft cannot be made safe and fully grounded, return: { "valid": false }`;
 
 type BrainMirrorPayload = {
   title: string;
@@ -76,6 +94,80 @@ function normalizePayload(raw: unknown): BrainMirrorPayload | null {
   };
 }
 
+async function callAnthropicJson(
+  apiKey: string,
+  system: string,
+  userContent: string,
+): Promise<unknown> {
+  const upstream = await fetch("https://api.anthropic.com/v1/messages", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "x-api-key": apiKey,
+      "anthropic-version": "2023-06-01",
+    },
+    body: JSON.stringify({
+      model: ANTHROPIC_MODEL,
+      max_tokens: 512,
+      system,
+      messages: [{ role: "user", content: userContent }],
+    }),
+  });
+
+  if (!upstream.ok) {
+    const detail = await upstream.text();
+    throw new Error(`Anthropic ${upstream.status}: ${detail.slice(0, 200)}`);
+  }
+
+  const data = (await upstream.json()) as {
+    content?: Array<{ type: string; text?: string }>;
+  };
+  const block = data.content?.find((part) => part.type === "text");
+  return extractJson(block?.text ?? "");
+}
+
+async function generateBrainMirrorDraft(
+  apiKey: string,
+  rawText: string,
+): Promise<BrainMirrorPayload | null> {
+  try {
+    const raw = await callAnthropicJson(apiKey, SYSTEM_PROMPT, rawText);
+    return normalizePayload(raw);
+  } catch (error) {
+    console.error("[brain-mirror] generation error", error);
+    return null;
+  }
+}
+
+function parseValidatorResponse(raw: unknown): BrainMirrorPayload | null {
+  if (!raw || typeof raw !== "object") return null;
+  const o = raw as Record<string, unknown>;
+  if (o.valid !== true) return null;
+  return normalizePayload(o);
+}
+
+async function validateBrainMirror(
+  apiKey: string,
+  rawText: string,
+  draft: BrainMirrorPayload,
+): Promise<BrainMirrorPayload | null> {
+  const userContent = JSON.stringify({
+    rawText,
+    title: draft.title,
+    items: draft.items,
+    suggestedDateText: draft.suggestedDateText,
+    suggestedAction: draft.suggestedAction,
+  });
+
+  try {
+    const raw = await callAnthropicJson(apiKey, VALIDATOR_PROMPT, userContent);
+    return parseValidatorResponse(raw);
+  } catch (error) {
+    console.error("[brain-mirror] validator error", error);
+    return null;
+  }
+}
+
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method !== "POST") {
     return res.status(405).json({ error: "Method not allowed" });
@@ -95,43 +187,26 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return res.status(503).json({ error: "API not configured" });
   }
 
-  try {
-    const upstream = await fetch("https://api.anthropic.com/v1/messages", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "x-api-key": apiKey,
-        "anthropic-version": "2023-06-01",
-      },
-      body: JSON.stringify({
-        model: ANTHROPIC_MODEL,
-        max_tokens: 512,
-        system: SYSTEM_PROMPT,
-        messages: [{ role: "user", content: text }],
-      }),
-    });
-
-    if (!upstream.ok) {
-      const detail = await upstream.text();
-      console.error("[brain-mirror] Anthropic error", upstream.status, detail);
-      return res.status(502).json({ error: "upstream failed" });
-    }
-
-    const data = (await upstream.json()) as {
-      content?: Array<{ type: string; text?: string }>;
-    };
-    const block = data.content?.find((part) => part.type === "text");
-    const rawText = block?.text ?? "";
-    const parsed = normalizePayload(extractJson(rawText));
-
-    if (!parsed) {
-      console.error("[brain-mirror] Invalid model JSON:", rawText.slice(0, 200));
-      return res.status(502).json({ error: "invalid model response" });
-    }
-
-    return res.status(200).json(parsed);
-  } catch (error) {
-    console.error("[brain-mirror]", error);
-    return res.status(500).json({ error: "internal error" });
+  let draft = await generateBrainMirrorDraft(apiKey, text);
+  if (!draft) {
+    return res.status(502).json({ error: "invalid model response" });
   }
+
+  let validated = await validateBrainMirror(apiKey, text, draft);
+  if (validated) {
+    return res.status(200).json(validated);
+  }
+
+  console.warn("[brain-mirror] validation failed, regenerating draft");
+  draft = await generateBrainMirrorDraft(apiKey, text);
+  if (!draft) {
+    return res.status(200).json(null);
+  }
+
+  validated = await validateBrainMirror(apiKey, text, draft);
+  if (!validated) {
+    return res.status(200).json(null);
+  }
+
+  return res.status(200).json(validated);
 }

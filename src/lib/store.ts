@@ -1,14 +1,22 @@
 import { supabase } from "@/integrations/supabase/client";
-import { parseBrainMirrorResult, type BrainMirrorResult } from "@/lib/brainMirror";
+import {
+  parseBrainMirrorResult,
+  finalizeBrainMirror,
+  type BrainMirrorCore,
+  type BrainMirrorResult,
+} from "@/lib/brainMirror";
 import { useEffect, useState, useCallback, useRef } from "react";
 
 export type { BrainMirrorResult };
+
+export type ThoughtStatus = "active" | "done" | "archived" | "deleted";
 
 export type InboxItem = {
   id: string;
   text: string;
   images: string[];
   created_at: string;
+  status?: ThoughtStatus;
   brain_mirror?: BrainMirrorResult | null;
 };
 export type ScheduleItem = {
@@ -47,11 +55,11 @@ function storageKey(kind: ListKind, userId: string | null) {
   return `itjima.${userId ?? GUEST}.${kind}`;
 }
 
-function readLS<T>(key: string): T[] {
+function readLS<T>(key: string, table: TableName): T[] {
   if (typeof window === "undefined") return [];
   try {
     const raw = JSON.parse(localStorage.getItem(key) || "[]") as unknown[];
-    return raw.map(normalizeRow) as T[];
+    return raw.map((row) => normalizeRow(row, table)) as T[];
   } catch {
     return [];
   }
@@ -63,9 +71,12 @@ function writeLS<T>(key: string, items: T[]) {
   window.dispatchEvent(new CustomEvent("itjima:update", { detail: key }));
 }
 
-function normalizeRow(row: unknown) {
+function normalizeRow(row: unknown, table: TableName) {
   if (!row || typeof row !== "object") return row;
   const r = { ...(row as Record<string, unknown>) };
+  if (table === "inbox" && !r.status) {
+    r.status = "active";
+  }
   if ("brain_mirror" in r) {
     r.brain_mirror = parseBrainMirrorResult(r.brain_mirror);
   }
@@ -105,7 +116,7 @@ function stripCloudFields(item: Record<string, unknown>, table: TableName) {
 }
 
 function toCloudRow(table: TableName, item: Record<string, unknown>, userId: string) {
-  const { brain_mirror: _bm, ...rest } = item;
+  const { brain_mirror: _bm, status: _status, ...rest } = item;
   return { ...rest, user_id: userId };
 }
 
@@ -141,8 +152,8 @@ function useLocalList<T extends { id: string; created_at: string }>(kind: ListKi
   const key = storageKey(kind, userId);
 
   const reloadLocal = useCallback(() => {
-    setItems(readLS<T>(key));
-  }, [key]);
+    setItems(readLS<T>(key, table));
+  }, [key, table]);
 
   useEffect(() => {
     migrateAllBuckets(userId);
@@ -171,8 +182,8 @@ function useLocalList<T extends { id: string; created_at: string }>(kind: ListKi
       setSyncState("syncing");
 
       const guestKey = storageKey(kind, GUEST);
-      const localUser = readLS<T>(key);
-      const guestItems = readLS<T>(guestKey);
+      const localUser = readLS<T>(key, table);
+      const guestItems = readLS<T>(guestKey, table);
       const localAll = sortByCreated([...localUser, ...guestItems.filter((g) => !localUser.some((l) => l.id === g.id))]);
 
       const { data, error } = await supabase
@@ -237,10 +248,11 @@ function useLocalList<T extends { id: string; created_at: string }>(kind: ListKi
         id: uid(),
         created_at: new Date().toISOString(),
         images: [],
+        ...(table === "inbox" ? { status: "active" as ThoughtStatus } : {}),
         ...partial,
       } as unknown as T;
 
-      const next = sortByCreated([item, ...readLS<T>(key)]);
+      const next = sortByCreated([item, ...readLS<T>(key, table)]);
       writeLS(key, next);
 
       if (userId) {
@@ -262,11 +274,12 @@ function useLocalList<T extends { id: string; created_at: string }>(kind: ListKi
 
   const update = useCallback(
     async (id: string, patch: Partial<T>) => {
-      const next = readLS<T>(key).map((it) => (it.id === id ? { ...it, ...patch } : it));
+      const next = readLS<T>(key, table).map((it) => (it.id === id ? { ...it, ...patch } : it));
       writeLS(key, next);
       if (userId) {
         const cloudPatch = { ...(patch as Record<string, unknown>) };
         delete cloudPatch.brain_mirror;
+        delete cloudPatch.status;
         if (Object.keys(cloudPatch).length > 0) {
           const { error } = await supabase
             .from(table)
@@ -282,7 +295,7 @@ function useLocalList<T extends { id: string; created_at: string }>(kind: ListKi
 
   const remove = useCallback(
     async (id: string) => {
-      const next = readLS<T>(key).filter((it) => it.id !== id);
+      const next = readLS<T>(key, table).filter((it) => it.id !== id);
       writeLS(key, next);
       if (userId) {
         const { error } = await supabase.from(table).delete().eq("id", id).eq("user_id", userId);
@@ -295,7 +308,13 @@ function useLocalList<T extends { id: string; created_at: string }>(kind: ListKi
   return { items, add, update, remove, syncState };
 }
 
-export const useInbox = () => useLocalList<InboxItem>("inbox", "inbox");
+function useInboxList() {
+  const list = useLocalList<InboxItem>("inbox", "inbox");
+  const items = list.items.filter((it) => !it.status || it.status === "active");
+  return { ...list, items };
+}
+
+export const useInbox = () => useInboxList();
 export const useSchedules = () => useLocalList<ScheduleItem>("schedules", "schedules");
 export const useArchive = () => useLocalList<ArchiveItem>("archive", "archive");
 
@@ -315,7 +334,16 @@ export function dismissLogin() {
 export async function setInboxBrainMirror(
   inbox: ReturnType<typeof useInbox>,
   id: string,
-  result: BrainMirrorResult,
+  result: BrainMirrorCore | BrainMirrorResult,
 ) {
-  await inbox.update(id, { brain_mirror: result } as Partial<InboxItem>);
+  const existing = inbox.items.find((it) => it.id === id);
+  const core: BrainMirrorCore = {
+    title: result.title,
+    items: result.items,
+    suggestedDateText: result.suggestedDateText,
+    suggestedAction: result.suggestedAction,
+    confidence: result.confidence,
+  };
+  const snapshot = finalizeBrainMirror(core, existing?.brain_mirror);
+  await inbox.update(id, { brain_mirror: snapshot } as Partial<InboxItem>);
 }

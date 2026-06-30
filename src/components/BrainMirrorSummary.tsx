@@ -7,22 +7,47 @@ import { useT } from "@/lib/i18n";
 import { haptic } from "@/lib/haptics";
 
 const MAGIC_DELAY_MS = 1200;
+const THINKING_TIER_1_MS = 300;
+const THINKING_TIER_2_MS = 3000;
+const THINKING_TIER_3_MS = 8000;
+
 const SK = {
   attempted: (id: string) => `itjima.bm.attempted.${id}`,
   dismissed: (id: string) => `itjima.bm.dismissed.${id}`,
   schedule: (id: string) => `itjima.bm.schedule.${id}`,
 };
 
-function BrainMirrorDots() {
+type ThinkingTier = 0 | 1 | 2 | 3;
+
+function ThinkingIndicator({ tier }: { tier: ThinkingTier }) {
+  const t = useT();
+  if (tier === 0) return null;
+
+  const copy =
+    tier === 1
+      ? t("잠깐만요", "One moment")
+      : tier === 2
+        ? t("천천히 읽고 있어요", "Reading it slowly")
+        : t("조금 더 걸리네요", "Taking a bit longer");
+
   return (
-    <div className="mt-3 flex items-center gap-1.5 pt-0.5" aria-hidden>
-      {[0, 1, 2].map((i) => (
-        <span
-          key={i}
-          className="h-1.5 w-1.5 rounded-full bg-ink-soft/35 animate-bounce"
-          style={{ animationDelay: `${i * 0.18}s`, animationDuration: "0.9s" }}
-        />
-      ))}
+    <div
+      className="mt-3 animate-[fade-in-soft_0.35s_ease-out] border-t border-ink/[0.06] pt-3"
+      aria-live="polite"
+      aria-busy="true"
+    >
+      <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1.5" aria-hidden>
+          {[0, 1, 2].map((i) => (
+            <span
+              key={i}
+              className="h-1.5 w-1.5 rounded-full bg-ink-soft/35 animate-bounce"
+              style={{ animationDelay: `${i * 0.18}s`, animationDuration: "0.9s" }}
+            />
+          ))}
+        </div>
+        <p className="text-[12px] leading-relaxed text-ink-soft/75">{copy}</p>
+      </div>
     </div>
   );
 }
@@ -69,7 +94,7 @@ function BrainMirrorResultView({
           onClick={onCancel}
           className="rounded-full px-3 py-1.5 text-[12px] font-medium text-ink-soft/60 transition active:scale-[0.98] hover:text-ink-soft"
         >
-          {t("취소", "Cancel")}
+          {t("되돌리기", "Undo")}
         </button>
       </div>
     </div>
@@ -89,11 +114,11 @@ export function BrainMirrorPanel({
   onAutoAct: (item: InboxItem, result: BrainMirrorResult) => Promise<string | null>;
   onCancelAct: (scheduleId: string) => Promise<void>;
 }) {
-  const [phase, setPhase] = useState<"idle" | "waiting" | "loading" | "ready" | "hidden">("idle");
+  const [phase, setPhase] = useState<"idle" | "thinking" | "ready" | "hidden">("idle");
+  const [thinkingTier, setThinkingTier] = useState<ThinkingTier>(0);
   const [result, setResult] = useState<BrainMirrorResult | null>(
     item.brain_mirror ? normalizeStored(item.brain_mirror) : null,
   );
-  const timerRef = useRef<number | null>(null);
   const autoActStarted = useRef(false);
 
   useEffect(() => {
@@ -111,29 +136,68 @@ export function BrainMirrorPanel({
     if (!isBrainMirrorCandidate(item.text)) return;
     if (sessionStorage.getItem(SK.attempted(item.id))) return;
 
-    setPhase("waiting");
+    setPhase("thinking");
+    setThinkingTier(0);
 
-    timerRef.current = window.setTimeout(async () => {
+    const abortController = new AbortController();
+    const timeouts: number[] = [];
+    let finished = false;
+
+    const cleanup = () => {
+      finished = true;
+      abortController.abort();
+      for (const id of timeouts) window.clearTimeout(id);
+    };
+
+    const hideSilently = () => {
+      if (finished) return;
       sessionStorage.setItem(SK.attempted(item.id), "1");
-      setPhase("loading");
+      cleanup();
+      setPhase("hidden");
+      setThinkingTier(0);
+    };
 
-      const mirror = await fetchBrainMirror(item.text);
-      if (!mirror) {
-        setPhase("hidden");
-        return;
-      }
-
+    const showResult = (mirror: BrainMirrorResult) => {
+      if (finished) return;
+      sessionStorage.setItem(SK.attempted(item.id), "1");
+      cleanup();
       setResult(mirror);
       setPhase("ready");
-      await setInboxBrainMirror(inbox, item.id, mirror);
-    }, MAGIC_DELAY_MS);
-
-    return () => {
-      if (timerRef.current) window.clearTimeout(timerRef.current);
+      setThinkingTier(0);
+      void setInboxBrainMirror(inbox, item.id, mirror);
     };
+
+    timeouts.push(window.setTimeout(() => setThinkingTier(1), THINKING_TIER_1_MS));
+    timeouts.push(window.setTimeout(() => setThinkingTier(2), THINKING_TIER_2_MS));
+    timeouts.push(
+      window.setTimeout(() => {
+        setThinkingTier(3);
+        hideSilently();
+      }, THINKING_TIER_3_MS),
+    );
+
+    timeouts.push(
+      window.setTimeout(() => {
+        void (async () => {
+          if (finished) return;
+          try {
+            const mirror = await fetchBrainMirror(item.text, abortController.signal);
+            if (finished) return;
+            if (!mirror) {
+              hideSilently();
+              return;
+            }
+            showResult(mirror);
+          } catch {
+            if (!finished) hideSilently();
+          }
+        })();
+      }, MAGIC_DELAY_MS),
+    );
+
+    return cleanup;
   }, [item.id, item.text, item.brain_mirror, inbox]);
 
-  // AI acts first — auto-create schedule when mirror is ready
   useEffect(() => {
     if (phase !== "ready" || !result || autoActStarted.current) return;
     if (sessionStorage.getItem(SK.schedule(item.id))) return;
@@ -150,7 +214,7 @@ export function BrainMirrorPanel({
   }, [phase, result, item, onAutoAct]);
 
   if (phase === "idle" || phase === "hidden") return null;
-  if (phase === "waiting" || phase === "loading") return <BrainMirrorDots />;
+  if (phase === "thinking") return <ThinkingIndicator tier={thinkingTier} />;
   if (!result) return null;
 
   return (
@@ -171,13 +235,17 @@ export function BrainMirrorPanel({
 }
 
 function shouldAutoAct(result: BrainMirrorResult): boolean {
-  if (result.suggestedDateText) return true;
-  if (/일정/.test(result.suggestedAction)) return true;
-  return result.confidence >= 0.65 && result.items.length > 0;
+  return Boolean(result.suggestedDateText?.trim());
 }
 
 function normalizeStored(raw: BrainMirrorResult): BrainMirrorResult {
-  if ("items" in raw && Array.isArray(raw.items)) return raw;
+  if ("items" in raw && Array.isArray(raw.items)) {
+    return {
+      ...raw,
+      version: raw.version ?? 1,
+      isCurrent: raw.isCurrent !== false,
+    };
+  }
   const legacy = raw as BrainMirrorResult & { tasks?: string[]; message?: string };
   return {
     title: legacy.title,
@@ -185,5 +253,7 @@ function normalizeStored(raw: BrainMirrorResult): BrainMirrorResult {
     suggestedDateText: legacy.suggestedDateText ?? "",
     suggestedAction: legacy.suggestedAction ?? legacy.message ?? "",
     confidence: legacy.confidence ?? 0.75,
+    version: legacy.version ?? 1,
+    isCurrent: legacy.isCurrent !== false,
   };
 }

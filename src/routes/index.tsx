@@ -7,7 +7,7 @@ import { SwipeCard } from "@/components/SwipeCard";
 import { ScheduleSheet } from "@/components/ScheduleSheet";
 import { LoginSheet } from "@/components/LoginSheet";
 import { FocusMode } from "@/components/FocusMode";
-import { AIOrganizeButton, useOrganizeFx } from "@/components/AIOrganize";
+import { useOrganizeFx } from "@/components/AIOrganize";
 import { BrainMirrorPanel } from "@/components/BrainMirrorSummary";
 import { isBrainMirrorCandidate, type BrainMirrorResult } from "@/lib/brainMirror";
 import {
@@ -203,33 +203,6 @@ function Inbox() {
           </div>
         </div>
       </div>
-
-      {/* AI Organize */}
-      <AIOrganizeButton
-        items={items}
-        onCommit={async (plan) => {
-          // Commit all moves silently after fly-out animation completes.
-          for (const { id, bucket } of plan) {
-            const it = items.find((x) => x.id === id);
-            if (!it) continue;
-            if (bucket === "schedule") {
-              const s = new Date();
-              const e = new Date(s.getTime() + 60 * 60 * 1000);
-              await schedules.add({
-                text: it.text,
-                start_time: s.toISOString(),
-                end_time: e.toISOString(),
-                alarm: false,
-              } as any);
-            } else {
-              await archive.add({ text: it.text, images: it.images } as any);
-            }
-            await inbox.remove(id);
-          }
-        }}
-        label={t("✨ AI로 정리하기", "✨ AI Organize")}
-        analyzing={t("분석 중...", "Analyzing...")}
-      />
 
       {/* Sort mode pill */}
       {items.length >= 2 && (
