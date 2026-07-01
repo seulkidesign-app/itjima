@@ -39,7 +39,15 @@ export function WheelPicker({
   );
 }
 
-function Column({ col, value, onChange }: { col: Col; value: number; onChange: (v: number) => void }) {
+function Column({
+  col,
+  value,
+  onChange,
+}: {
+  col: Col;
+  value: number;
+  onChange: (v: number) => void;
+}) {
   const ref = useRef<HTMLDivElement>(null);
   const settleTimer = useRef<number | null>(null);
   const dragging = useRef(false);
@@ -48,7 +56,10 @@ function Column({ col, value, onChange }: { col: Col; value: number; onChange: (
   const scrollToValue = (v: number, smooth = false) => {
     const idx = col.values.indexOf(v);
     if (idx >= 0 && ref.current) {
-      ref.current.scrollTo({ top: idx * ROW_H, behavior: smooth ? "smooth" : "auto" });
+      ref.current.scrollTo({
+        top: idx * ROW_H,
+        behavior: smooth ? "smooth" : "auto",
+      });
       setInternal(v);
     }
   };
@@ -98,7 +109,9 @@ function Column({ col, value, onChange }: { col: Col; value: number; onChange: (
             <div
               key={v}
               className={`flex items-center justify-center font-num tabular-nums transition-all duration-150 ${
-                isActive ? "text-ink text-[32px] font-bold" : "text-ink-soft/40 text-[22px]"
+                isActive
+                  ? "text-ink text-[32px] font-bold"
+                  : "text-ink-soft/40 text-[22px]"
               }`}
               style={{ height: ROW_H, scrollSnapAlign: "center" }}
             >

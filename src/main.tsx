@@ -7,7 +7,10 @@ import { queryClient, router } from "./router";
 import "./styles.css";
 
 // Start PKCE exchange as early as possible on the OAuth callback route
-if (typeof window !== "undefined" && window.location.pathname === "/auth/callback") {
+if (
+  typeof window !== "undefined" &&
+  window.location.pathname === "/auth/callback"
+) {
   void supabase.auth.getSession();
 }
 

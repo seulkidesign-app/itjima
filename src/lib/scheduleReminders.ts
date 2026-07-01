@@ -28,7 +28,10 @@ export function clearReminderOffset(scheduleId: string) {
   localStorage.removeItem(OFFSET_KEY(scheduleId));
 }
 
-export function reminderFireTime(startIso: string, offset: ReminderOffset): Date {
+export function reminderFireTime(
+  startIso: string,
+  offset: ReminderOffset,
+): Date {
   const t = new Date(startIso);
   if (offset === "10m") t.setMinutes(t.getMinutes() - 10);
   else if (offset === "1h") t.setMinutes(t.getMinutes() - 60);
@@ -72,7 +75,11 @@ export function effectiveAlarmAt(s: ScheduleItem): Date | null {
   return reminderFireTime(s.start_time, getReminderOffset(s.id));
 }
 
-export function formatAlarmLabel(at: Date, lang: "ko" | "en", now = new Date()): string {
+export function formatAlarmLabel(
+  at: Date,
+  lang: "ko" | "en",
+  now = new Date(),
+): string {
   const diffMs = at.getTime() - now.getTime();
   if (diffMs > 0 && diffMs < 24 * 60 * 60 * 1000) {
     const mins = Math.round(diffMs / 60_000);
@@ -107,7 +114,12 @@ export function formatAlarmLabel(at: Date, lang: "ko" | "en", now = new Date()):
   }
 
   return lang === "en"
-    ? at.toLocaleString("en-US", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })
+    ? at.toLocaleString("en-US", {
+        month: "short",
+        day: "numeric",
+        hour: "2-digit",
+        minute: "2-digit",
+      })
     : `${at.getMonth() + 1}/${at.getDate()} ${time}`;
 }
 
@@ -118,7 +130,8 @@ export function bindInAppReminders(
   items: ScheduleItem[],
   notify: (title: string, body: string) => void,
 ): () => void {
-  if (typeof window === "undefined" || !("Notification" in window)) return () => {};
+  if (typeof window === "undefined" || !("Notification" in window))
+    return () => {};
 
   const timers: number[] = [];
 

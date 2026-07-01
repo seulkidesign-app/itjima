@@ -1,12 +1,22 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useEffect, useMemo, useRef, useState, type ComponentProps, type PointerEvent as ReactPointerEvent } from "react";
+import {
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type ComponentProps,
+  type PointerEvent as ReactPointerEvent,
+} from "react";
 import { Plus, Pin, Check, Bell, BellOff } from "lucide-react";
 import { useArchive, useSchedules, type ScheduleItem } from "@/lib/store";
 import { countdown } from "@/lib/dateDetect";
 import { ScheduleSheet } from "@/components/ScheduleSheet";
 import { ReminderSheet } from "@/components/ReminderSheet";
 import { ScheduleAlarmChips } from "@/components/ScheduleAlarmChips";
-import { CalendarDragLayer, CalendarDayCell } from "@/components/CalendarDragLayer";
+import {
+  CalendarDragLayer,
+  CalendarDayCell,
+} from "@/components/CalendarDragLayer";
 import { ScheduleListSkeleton } from "@/components/Skeleton";
 import {
   bindInAppReminders,
@@ -16,7 +26,12 @@ import {
   presetToAlarmAt,
   type AlarmPreset,
 } from "@/lib/scheduleReminders";
-import { groupSchedules, isMissed, sectionLabel, classifySchedule } from "@/lib/scheduleGroups";
+import {
+  groupSchedules,
+  isMissed,
+  sectionLabel,
+  classifySchedule,
+} from "@/lib/scheduleGroups";
 import { scheduleDisplayTitle, rawPreview } from "@/lib/thoughtProvenance";
 import { toast } from "sonner";
 import { useT, useLang } from "@/lib/i18n";
@@ -31,7 +46,11 @@ export const Route = createFileRoute("/schedule")({
 const PIN_KEY = "itjima.schedule.pinned";
 function readPins(): Set<string> {
   if (typeof window === "undefined") return new Set();
-  try { return new Set(JSON.parse(localStorage.getItem(PIN_KEY) || "[]")); } catch { return new Set(); }
+  try {
+    return new Set(JSON.parse(localStorage.getItem(PIN_KEY) || "[]"));
+  } catch {
+    return new Set();
+  }
 }
 function writePins(ids: Set<string>) {
   localStorage.setItem(PIN_KEY, JSON.stringify([...ids]));
@@ -48,7 +67,8 @@ function usePins() {
   }, []);
   const toggle = (id: string) => {
     const next = new Set(pins);
-    if (next.has(id)) next.delete(id); else next.add(id);
+    if (next.has(id)) next.delete(id);
+    else next.add(id);
     writePins(next);
   };
   return { pins, toggle };
@@ -60,13 +80,21 @@ function Schedule() {
   const { items, update, remove, add, syncState } = useSchedules();
   const archive = useArchive();
   const [tab, setTab] = useState<"today" | "list" | "cal">("list");
-  const [sheet, setSheet] = useState<{ open: boolean; edit?: ScheduleItem }>({ open: false });
+  const [sheet, setSheet] = useState<{ open: boolean; edit?: ScheduleItem }>({
+    open: false,
+  });
   const [reminderSheet, setReminderSheet] = useState<ScheduleItem | null>(null);
   const [, tickN] = useState(0);
   const { pins, toggle: togglePin } = usePins();
 
-  const activeItems = useMemo(() => items.filter((s) => s.status !== "done"), [items]);
-  const doneItems = useMemo(() => items.filter((s) => s.status === "done"), [items]);
+  const activeItems = useMemo(
+    () => items.filter((s) => s.status !== "done"),
+    [items],
+  );
+  const doneItems = useMemo(
+    () => items.filter((s) => s.status === "done"),
+    [items],
+  );
 
   useEffect(() => {
     const id = setInterval(() => tickN((n) => n + 1), 30_000);
@@ -86,7 +114,7 @@ function Schedule() {
       await Notification.requestPermission();
     }
     clearReminderOffset(s.id);
-    await update(s.id, { alarm: true, alarm_at: at.toISOString() } as any);
+    await update(s.id, { alarm: true, alarm_at: at.toISOString() });
     toast.success(t("알림을 예약했어요", "Reminder set"));
   };
 
@@ -96,10 +124,13 @@ function Schedule() {
 
   const disarmReminder = async (s: ScheduleItem) => {
     clearReminderOffset(s.id);
-    await update(s.id, { alarm: false, alarm_at: null } as any);
+    await update(s.id, { alarm: false, alarm_at: null });
   };
 
-  const listSections = useMemo(() => groupSchedules(activeItems, pins), [activeItems, pins]);
+  const listSections = useMemo(
+    () => groupSchedules(activeItems, pins),
+    [activeItems, pins],
+  );
 
   const todayTimerItems = useMemo(() => {
     return [...activeItems]
@@ -110,7 +141,12 @@ function Schedule() {
       .sort((a, b) => +new Date(a.start_time) - +new Date(b.start_time));
   }, [activeItems, pins]);
 
-  const moveEventToDate = async (id: string, day: number, month: number, year: number) => {
+  const moveEventToDate = async (
+    id: string,
+    day: number,
+    month: number,
+    year: number,
+  ) => {
     const it = items.find((x) => x.id === id);
     if (!it) return;
     const s = new Date(it.start_time);
@@ -118,13 +154,16 @@ function Schedule() {
     const dur = e.getTime() - s.getTime();
     const ns = new Date(year, month, day, s.getHours(), s.getMinutes());
     const ne = new Date(ns.getTime() + dur);
-    await update(id, { start_time: ns.toISOString(), end_time: ne.toISOString() } as any);
+    await update(id, {
+      start_time: ns.toISOString(),
+      end_time: ne.toISOString(),
+    });
     hapticConfirm();
     toast.success(t("날짜가 옮겨졌어요", "Date moved"));
   };
 
   const markDone = async (s: ScheduleItem) => {
-    await update(s.id, { status: "done" } as any);
+    await update(s.id, { status: "done" });
     hapticConfirm();
     track("schedule_completed", { text_length: s.text.length });
     toast.success(t("완료했어요", "Marked done"));
@@ -137,7 +176,7 @@ function Schedule() {
       source_id: s.source_id ?? s.id,
       raw_text: s.raw_text ?? s.text,
       brain_mirror: s.brain_mirror ?? null,
-    } as any);
+    });
     await remove(s.id);
     if (pins.has(s.id)) togglePin(s.id);
     toast.success(t("기억으로 옮겼어요", "Moved to Memory"));
@@ -148,7 +187,10 @@ function Schedule() {
     pinned: pins.has(s.id),
     missed: isMissed(s),
     done: s.status === "done",
-    onPin: () => { togglePin(s.id); haptic(8); },
+    onPin: () => {
+      togglePin(s.id);
+      haptic(8);
+    },
     onEdit: () => setSheet({ open: true, edit: s }),
     onComplete: () => markDone(s),
     onMoveToArchive: () => moveDoneToArchive(s),
@@ -171,11 +213,13 @@ function Schedule() {
         </div>
         <div className="px-5 pb-3">
           <div className="inline-flex border-b border-ink/10">
-            {([
-              ["list", t("리스트", "List")],
-              ["today", t("오늘", "Today")],
-              ["cal", t("캘린더", "Calendar")],
-            ] as const).map(([k, label]) => (
+            {(
+              [
+                ["list", t("리스트", "List")],
+                ["today", t("오늘", "Today")],
+                ["cal", t("캘린더", "Calendar")],
+              ] as const
+            ).map(([k, label]) => (
               <button
                 key={k}
                 onClick={() => setTab(k)}
@@ -223,7 +267,11 @@ function Schedule() {
                   </h2>
                   <div className="flex flex-col gap-3">
                     {sec.items.map((s) => (
-                      <ScheduleCard key={s.id} {...cardProps(s)} emphasize={sec.key === "now"} />
+                      <ScheduleCard
+                        key={s.id}
+                        {...cardProps(s)}
+                        emphasize={sec.key === "now"}
+                      />
                     ))}
                   </div>
                 </section>
@@ -237,7 +285,10 @@ function Schedule() {
           <CalendarGrid
             items={activeItems}
             pins={pins}
-            onTogglePin={(id) => { togglePin(id); haptic(8); }}
+            onTogglePin={(id) => {
+              togglePin(id);
+              haptic(8);
+            }}
             onEdit={(s) => setSheet({ open: true, edit: s })}
             onDropToDate={moveEventToDate}
           />
@@ -268,7 +319,9 @@ function Schedule() {
         <ScheduleSheet
           open
           initialText={sheet.edit?.text}
-          initialStart={sheet.edit ? new Date(sheet.edit.start_time) : undefined}
+          initialStart={
+            sheet.edit ? new Date(sheet.edit.start_time) : undefined
+          }
           initialEnd={sheet.edit ? new Date(sheet.edit.end_time) : undefined}
           initialAllDay={sheet.edit?.all_day}
           initialRepeat={sheet.edit?.repeat}
@@ -282,7 +335,7 @@ function Schedule() {
                 end_time: end.toISOString(),
                 all_day: opts?.allDay ?? false,
                 repeat: opts?.repeat ?? null,
-              } as any);
+              });
               toast.success(t("수정됐어요", "Updated"));
             } else {
               await add({
@@ -292,8 +345,11 @@ function Schedule() {
                 alarm: false,
                 all_day: opts?.allDay ?? false,
                 repeat: opts?.repeat ?? null,
-              } as any);
-              track("schedule_created", { source: "manual", text_length: text.length });
+              });
+              track("schedule_created", {
+                source: "manual",
+                text_length: text.length,
+              });
               toast.success(t("등록됐어요", "Added"));
             }
             setSheet({ open: false });
@@ -340,7 +396,8 @@ function ScheduleCard({
   const [showAlarmChips, setShowAlarmChips] = useState(false);
   const start = new Date(s.start_time);
   const end = new Date(s.end_time);
-  const rel = lang === "en" ? translateCountdown(countdown(start)) : countdown(start);
+  const rel =
+    lang === "en" ? translateCountdown(countdown(start)) : countdown(start);
   const title = scheduleDisplayTitle(s);
   const preview = rawPreview(s);
   const alarmAt = s.alarm ? effectiveAlarmAt(s) : null;
@@ -355,7 +412,10 @@ function ScheduleCard({
     }, 500);
   };
   const endPress = () => {
-    if (pressTimer.current) { clearTimeout(pressTimer.current); pressTimer.current = null; }
+    if (pressTimer.current) {
+      clearTimeout(pressTimer.current);
+      pressTimer.current = null;
+    }
   };
 
   return (
@@ -368,14 +428,22 @@ function ScheduleCard({
       onPointerDown={startPress}
       onPointerUp={endPress}
       onPointerLeave={endPress}
-      onClick={() => { if (!longFired.current) onEdit(); }}
+      onClick={() => {
+        if (!longFired.current) onEdit();
+      }}
     >
       <div className="flex items-start gap-3">
         <button
           type="button"
-          onClick={(e) => { e.stopPropagation(); if (done) onMoveToArchive?.(); else onComplete(); }}
+          onClick={(e) => {
+            e.stopPropagation();
+            if (done) onMoveToArchive?.();
+            else onComplete();
+          }}
           className={`mt-1 flex h-6 w-6 shrink-0 items-center justify-center rounded-full border-2 ${
-            done ? "border-primary bg-primary text-ink" : "border-ink/20 hover:border-primary"
+            done
+              ? "border-primary bg-primary text-ink"
+              : "border-ink/20 hover:border-primary"
           }`}
           aria-label={t("완료", "Done")}
         >
@@ -384,7 +452,9 @@ function ScheduleCard({
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-2">
             {pinned && <Pin size={12} className="fill-primary text-primary" />}
-            <span className={`font-num font-bold text-ink ${emphasize || timer ? "text-[18px]" : "text-[14px]"}`}>
+            <span
+              className={`font-num font-bold text-ink ${emphasize || timer ? "text-[18px]" : "text-[14px]"}`}
+            >
               {rel}
             </span>
             {missed && !done && (
@@ -393,9 +463,13 @@ function ScheduleCard({
               </span>
             )}
           </div>
-          <div className="mt-1 text-[15px] font-semibold leading-snug text-ink">{title}</div>
+          <div className="mt-1 text-[15px] font-semibold leading-snug text-ink">
+            {title}
+          </div>
           {preview && preview !== title && (
-            <p className="mt-0.5 line-clamp-1 text-[12px] text-ink-soft">{preview}</p>
+            <p className="mt-0.5 line-clamp-1 text-[12px] text-ink-soft">
+              {preview}
+            </p>
           )}
           <div className="mt-1.5 text-meta">
             {fmt(start)} → {fmt(end)}
@@ -403,7 +477,10 @@ function ScheduleCard({
           {alarmAt && (
             <button
               type="button"
-              onClick={(e) => { e.stopPropagation(); onDisarm(); }}
+              onClick={(e) => {
+                e.stopPropagation();
+                onDisarm();
+              }}
               className="mt-1.5 inline-flex items-center gap-1 rounded-full bg-primary/30 px-2 py-0.5 text-[11px] font-bold text-ink"
             >
               <Bell size={11} /> {formatAlarmLabel(alarmAt, lang)}
@@ -437,7 +514,10 @@ function ScheduleCard({
       {!done && (
         <div className="mt-3 flex justify-end gap-3">
           <button
-            onClick={(e) => { e.stopPropagation(); onDelete(); }}
+            onClick={(e) => {
+              e.stopPropagation();
+              onDelete();
+            }}
             className="text-[12px] font-medium text-ink-soft hover:text-ink"
           >
             {t("삭제", "Delete")}
@@ -454,7 +534,9 @@ function DoneSection({
   t,
 }: {
   items: ScheduleItem[];
-  cardProps: (s: ScheduleItem) => Omit<ComponentProps<typeof ScheduleCard>, "emphasize" | "timer">;
+  cardProps: (
+    s: ScheduleItem,
+  ) => Omit<ComponentProps<typeof ScheduleCard>, "emphasize" | "timer">;
   t: ReturnType<typeof useT>;
 }) {
   const [open, setOpen] = useState(false);
@@ -510,7 +592,10 @@ function CalendarGrid({
   const t = useT();
   const { lang } = useLang();
   const today = new Date();
-  const [view, setView] = useState({ y: today.getFullYear(), m: today.getMonth() });
+  const [view, setView] = useState({
+    y: today.getFullYear(),
+    m: today.getMonth(),
+  });
   const { y, m } = view;
   const first = new Date(y, m, 1);
   const startDay = first.getDay();
@@ -522,36 +607,62 @@ function CalendarGrid({
   const eventsOf = (day: number) =>
     items.filter((s) => {
       const dt = new Date(s.start_time);
-      return dt.getFullYear() === y && dt.getMonth() === m && dt.getDate() === day;
+      return (
+        dt.getFullYear() === y && dt.getMonth() === m && dt.getDate() === day
+      );
     });
   const [selected, setSelected] = useState<number | null>(today.getDate());
-  const monthLabel = lang === "en"
-    ? new Date(y, m, 1).toLocaleString("en-US", { month: "long", year: "numeric" })
-    : `${y}년 ${m + 1}월`;
-  const weekdays = lang === "en"
-    ? ["S", "M", "T", "W", "T", "F", "S"]
-    : ["일", "월", "화", "수", "목", "금", "토"];
+  const monthLabel =
+    lang === "en"
+      ? new Date(y, m, 1).toLocaleString("en-US", {
+          month: "long",
+          year: "numeric",
+        })
+      : `${y}년 ${m + 1}월`;
+  const weekdays =
+    lang === "en"
+      ? ["S", "M", "T", "W", "T", "F", "S"]
+      : ["일", "월", "화", "수", "목", "금", "토"];
 
   const selectedEvents = selected ? eventsOf(selected) : [];
   const locale = lang === "en" ? "en-US" : "ko-KR";
 
   return (
-    <CalendarDragLayer month={m} year={y} pinned={(id) => pins.has(id)} onDropToDate={onDropToDate}>
+    <CalendarDragLayer
+      month={m}
+      year={y}
+      pinned={(id) => pins.has(id)}
+      onDropToDate={onDropToDate}
+    >
       {({ startDrag, hoverDay, draggingId }) => (
         <div className="space-y-3">
           <div className="card-radius glass shadow-card p-3">
             <div className="mb-3 flex items-center justify-between px-1">
               <button
                 type="button"
-                onClick={() => setView((v) => ({ y: v.m === 0 ? v.y - 1 : v.y, m: (v.m + 11) % 12 }))}
+                onClick={() =>
+                  setView((v) => ({
+                    y: v.m === 0 ? v.y - 1 : v.y,
+                    m: (v.m + 11) % 12,
+                  }))
+                }
                 className="touch-press rounded-full px-2 py-0.5 text-sm text-ink-soft hover:bg-white/60"
-              >‹</button>
+              >
+                ‹
+              </button>
               <div className="text-sm font-bold text-ink">{monthLabel}</div>
               <button
                 type="button"
-                onClick={() => setView((v) => ({ y: v.m === 11 ? v.y + 1 : v.y, m: (v.m + 1) % 12 }))}
+                onClick={() =>
+                  setView((v) => ({
+                    y: v.m === 11 ? v.y + 1 : v.y,
+                    m: (v.m + 1) % 12,
+                  }))
+                }
                 className="touch-press rounded-full px-2 py-0.5 text-sm text-ink-soft hover:bg-white/60"
-              >›</button>
+              >
+                ›
+              </button>
             </div>
             <div className="grid grid-cols-7 gap-0.5 text-center text-[11px] text-ink-soft">
               {weekdays.map((d, i) => (
@@ -563,7 +674,9 @@ function CalendarGrid({
                 if (!c) return <div key={i} className="aspect-square" />;
                 const evs = eventsOf(c);
                 const isToday =
-                  c === today.getDate() && m === today.getMonth() && y === today.getFullYear();
+                  c === today.getDate() &&
+                  m === today.getMonth() &&
+                  y === today.getFullYear();
                 const isSel = c === selected;
                 const preview = evs.length
                   ? `${pins.has(evs[0].id) ? "📌" : ""}${evs[0].text}`
@@ -578,13 +691,19 @@ function CalendarGrid({
                     isSelected={isSel}
                     eventCount={evs.length}
                     preview={preview}
-                    onSelect={() => { setSelected(c); haptic(6); }}
+                    onSelect={() => {
+                      setSelected(c);
+                      haptic(6);
+                    }}
                   />
                 );
               })}
             </div>
             <div className="mt-2 px-1 text-[10px] text-ink-soft/80">
-              {t("💡 일정을 끌어 다른 날로 옮겨보세요", "💡 Drag an event onto another day")}
+              {t(
+                "💡 일정을 끌어 다른 날로 옮겨보세요",
+                "💡 Drag an event onto another day",
+              )}
             </div>
           </div>
 
@@ -596,7 +715,9 @@ function CalendarGrid({
                   day: "numeric",
                   weekday: "short",
                 })}
-                <span className="ml-1 text-ink-soft/70">· {selectedEvents.length}</span>
+                <span className="ml-1 text-ink-soft/70">
+                  · {selectedEvents.length}
+                </span>
               </div>
               {selectedEvents.length === 0 ? (
                 <div className="px-1 py-3 text-center text-[12px] text-ink-soft">
@@ -606,7 +727,10 @@ function CalendarGrid({
                 <ul className="space-y-1.5">
                   {selectedEvents
                     .slice()
-                    .sort((a, b) => +new Date(a.start_time) - +new Date(b.start_time))
+                    .sort(
+                      (a, b) =>
+                        +new Date(a.start_time) - +new Date(b.start_time),
+                    )
                     .map((s) => (
                       <DayEventChip
                         key={s.id}
@@ -650,7 +774,10 @@ function DayEventChip({
   const dragStarted = useRef(false);
 
   const clearTimer = () => {
-    if (timer.current) { clearTimeout(timer.current); timer.current = null; }
+    if (timer.current) {
+      clearTimeout(timer.current);
+      timer.current = null;
+    }
   };
 
   const onDown = (e: ReactPointerEvent) => {
@@ -658,7 +785,10 @@ function DayEventChip({
     dragStarted.current = false;
     start.current = { x: e.clientX, y: e.clientY };
     clearTimer();
-    timer.current = window.setTimeout(() => { fired.current = true; onLongPress(); }, 500);
+    timer.current = window.setTimeout(() => {
+      fired.current = true;
+      onLongPress();
+    }, 500);
   };
 
   const onMove = (e: ReactPointerEvent) => {
@@ -686,7 +816,11 @@ function DayEventChip({
       onPointerUp={onUp}
       onPointerLeave={onUp}
       className={`flex cursor-grab items-start gap-2 rounded-[24px] px-2.5 py-2 touch-none transition active:cursor-grabbing ${
-        dragging ? "opacity-30 scale-[0.98]" : pinned ? "bg-primary/30 ring-1 ring-primary" : "bg-white/70 hover:bg-white"
+        dragging
+          ? "opacity-30 scale-[0.98]"
+          : pinned
+            ? "bg-primary/30 ring-1 ring-primary"
+            : "bg-white/70 hover:bg-white"
       }`}
     >
       {pinned && <Pin size={11} className="mt-1 fill-primary text-primary" />}
@@ -708,7 +842,10 @@ function Empty() {
         {t("시간이 비어 있어요.", "Your calendar is open.")}
       </div>
       <div className="mt-1 text-sm text-ink-soft">
-        {t("생각을 오른쪽으로 밀거나 + 로 채워보세요.", "Swipe a thought right or tap + when you're ready.")}
+        {t(
+          "생각을 오른쪽으로 밀거나 + 로 채워보세요.",
+          "Swipe a thought right or tap + when you're ready.",
+        )}
       </div>
     </div>
   );

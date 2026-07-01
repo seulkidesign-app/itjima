@@ -28,10 +28,22 @@ function AboutPage() {
 
   const STORY = [
     { line: '아침에 일어나자마자 "아 맞다" 한 번.', cap: "" },
-    { line: "나에게 카톡 보내고 나중에 못 찾음.", cap: "카카오톡 나에게 보내기는 훌륭한 메모앱입니다. 찾기 전까지는." },
-    { line: "노션 새 페이지 열고 3초 만에 닫음.", cap: "빈 페이지는 생각보다 무겁습니다." },
-    { line: "알람 27개 설정. 전부 무시함.", cap: "이미 알고 있었죠. 알람은 끄려고 보는 거라는 걸." },
-    { line: "자기 전에 갑자기 할 일 8개가 생각남.", cap: "뇌는 당신이 쉬려는 순간을 좋아합니다." },
+    {
+      line: "나에게 카톡 보내고 나중에 못 찾음.",
+      cap: "카카오톡 나에게 보내기는 훌륭한 메모앱입니다. 찾기 전까지는.",
+    },
+    {
+      line: "노션 새 페이지 열고 3초 만에 닫음.",
+      cap: "빈 페이지는 생각보다 무겁습니다.",
+    },
+    {
+      line: "알람 27개 설정. 전부 무시함.",
+      cap: "이미 알고 있었죠. 알람은 끄려고 보는 거라는 걸.",
+    },
+    {
+      line: "자기 전에 갑자기 할 일 8개가 생각남.",
+      cap: "뇌는 당신이 쉬려는 순간을 좋아합니다.",
+    },
   ];
 
   const ME = [
@@ -45,9 +57,21 @@ function AboutPage() {
   ];
 
   const HOW = [
-    { n: "01", t: "떠오르면 그냥 던진다.", d: "카테고리 없음. 태그 없음. 생각 날 때 0.5초 안에 기록하는 게 전부입니다." },
-    { n: "02", t: "스와이프로 0.5초 결정.", d: "오른쪽 = 일정. 왼쪽 = 보관. 틴더처럼. 그게 전부입니다." },
-    { n: "03", t: "알람이 울리면 그때 생각한다.", d: "팝업이 아니라 알람처럼 울립니다. 그래야 실제로 움직이니까요." },
+    {
+      n: "01",
+      t: "떠오르면 그냥 던진다.",
+      d: "카테고리 없음. 태그 없음. 생각 날 때 0.5초 안에 기록하는 게 전부입니다.",
+    },
+    {
+      n: "02",
+      t: "스와이프로 0.5초 결정.",
+      d: "오른쪽 = 일정. 왼쪽 = 보관. 틴더처럼. 그게 전부입니다.",
+    },
+    {
+      n: "03",
+      t: "알람이 울리면 그때 생각한다.",
+      d: "팝업이 아니라 알람처럼 울립니다. 그래야 실제로 움직이니까요.",
+    },
   ];
 
   const PHIL = [
@@ -68,10 +92,14 @@ function AboutPage() {
       </div>
 
       <nav className="lnav">
-        <Link to="/about" className="lnav-logo">It<span>Jima.</span></Link>
+        <Link to="/about" className="lnav-logo">
+          It<span>Jima.</span>
+        </Link>
         <div className="lnav-right">
           <LanguageToggle />
-          <Link to="/" className="lnav-cta">{t("앱 열기 →", "Open app →")}</Link>
+          <Link to="/" className="lnav-cta">
+            {t("앱 열기 →", "Open app →")}
+          </Link>
         </div>
       </nav>
 
@@ -79,17 +107,26 @@ function AboutPage() {
       <section className="hero">
         <div className="badge reveal">Mental Inbox · Beta</div>
         <h1 className="reveal" style={{ transitionDelay: "70ms" }}>
-          기억하지 말고<br />
+          기억하지 말고
+          <br />
           <span className="hl">맡겨라.</span>
         </h1>
         <p className="hero-sub reveal" style={{ transitionDelay: "140ms" }}>
-          머릿속이 복잡한 건 의지력 문제가 아닙니다.<br />그냥 뇌가 저장공간이 아닌 거예요.
+          머릿속이 복잡한 건 의지력 문제가 아닙니다.
+          <br />
+          그냥 뇌가 저장공간이 아닌 거예요.
         </p>
         <div className="hero-btns reveal" style={{ transitionDelay: "210ms" }}>
-          <Link to="/" className="btn-yellow">지금 던지러 가기 →</Link>
-          <a href="#me" className="btn-ghost">이거 나인데?</a>
+          <Link to="/" className="btn-yellow">
+            지금 던지러 가기 →
+          </Link>
+          <a href="#me" className="btn-ghost">
+            이거 나인데?
+          </a>
         </div>
-        <div className="micro reveal" style={{ transitionDelay: "280ms" }}>무료 · 설치 없음 · 30초면 시작</div>
+        <div className="micro reveal" style={{ transitionDelay: "280ms" }}>
+          무료 · 설치 없음 · 30초면 시작
+        </div>
       </section>
 
       <div className="rule" />
@@ -100,7 +137,10 @@ function AboutPage() {
         <div className="story">
           {STORY.map((s, i) => (
             <div key={i}>
-              <div className="story-item reveal" style={{ transitionDelay: `${i * 70}ms` }}>
+              <div
+                className="story-item reveal"
+                style={{ transitionDelay: `${i * 70}ms` }}
+              >
                 <div className="story-line">{s.line}</div>
                 {s.cap && <div className="story-cap">{s.cap}</div>}
               </div>
@@ -117,7 +157,11 @@ function AboutPage() {
         <div className="eyebrow reveal">혹시 이런 사람?</div>
         <ul className="me-list">
           {ME.map((m, i) => (
-            <li key={m} className="me-item reveal" style={{ transitionDelay: `${i * 70}ms` }}>
+            <li
+              key={m}
+              className="me-item reveal"
+              style={{ transitionDelay: `${i * 70}ms` }}
+            >
               <span className="me-tag">나인데</span>
               <span className="me-text">{m}</span>
             </li>
@@ -130,12 +174,15 @@ function AboutPage() {
       {/* QUOTE */}
       <section className="sec quote-sec">
         <h2 className="quote reveal">
-          당신 머릿속은<br />
-          <span className="hl">꽉 찬 게 아니라</span><br />
+          당신 머릿속은
+          <br />
+          <span className="hl">꽉 찬 게 아니라</span>
+          <br />
           그냥 안 비운 거예요.
         </h2>
         <p className="quote-sub reveal" style={{ transitionDelay: "140ms" }}>
-          ItJima는 뇌의 저장공간 문제를 해결합니다.<br />
+          ItJima는 뇌의 저장공간 문제를 해결합니다.
+          <br />
           메모앱도, 일정관리 앱도 아닌 — 기억 외주 서비스.
         </p>
       </section>
@@ -148,7 +195,10 @@ function AboutPage() {
         <div className="how">
           {HOW.map((h, i) => (
             <div key={h.n}>
-              <div className="how-item reveal" style={{ transitionDelay: `${i * 70}ms` }}>
+              <div
+                className="how-item reveal"
+                style={{ transitionDelay: `${i * 70}ms` }}
+              >
                 <div className="how-n">Step {h.n}</div>
                 <div className="how-t">{h.t}</div>
                 <div className="how-d">{h.d}</div>
@@ -167,7 +217,10 @@ function AboutPage() {
         <div className="phil">
           {PHIL.map((p, i) => (
             <div key={p.n}>
-              <div className="phil-item reveal" style={{ transitionDelay: `${i * 70}ms` }}>
+              <div
+                className="phil-item reveal"
+                style={{ transitionDelay: `${i * 70}ms` }}
+              >
                 <span className="phil-n">{p.n}</span>
                 <span className="phil-sep">—</span>
                 <span className="phil-t">{p.t}</span>
@@ -183,19 +236,30 @@ function AboutPage() {
       {/* FINAL CTA */}
       <section className="sec cta">
         <h2 className="cta-h reveal">
-          지금 머릿속에<br />맴도는 거<br /><span className="hl">있잖아요.</span>
+          지금 머릿속에
+          <br />
+          맴도는 거<br />
+          <span className="hl">있잖아요.</span>
         </h2>
         <p className="cta-sub reveal" style={{ transitionDelay: "140ms" }}>
           그거 지금 던지세요. 30초면 됩니다.
         </p>
-        <Link to="/" className="btn-yellow big reveal" style={{ transitionDelay: "210ms" }}>
+        <Link
+          to="/"
+          className="btn-yellow big reveal"
+          style={{ transitionDelay: "210ms" }}
+        >
           뇌 비우러 가기 →
         </Link>
-        <div className="micro reveal" style={{ transitionDelay: "280ms" }}>무료 · 회원가입 없음 · 설치 없음</div>
+        <div className="micro reveal" style={{ transitionDelay: "280ms" }}>
+          무료 · 회원가입 없음 · 설치 없음
+        </div>
       </section>
 
       <footer className="lfoot">
-        <div className="lfoot-logo">ItJima<span className="hl-dot">.</span></div>
+        <div className="lfoot-logo">
+          ItJima<span className="hl-dot">.</span>
+        </div>
         <div className="lfoot-tag">기억하지 말고 맡겨라.</div>
         <div className="lfoot-cp">© 2026 ItJima</div>
       </footer>

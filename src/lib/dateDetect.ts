@@ -11,7 +11,11 @@ const EN_WEEKDAYS = [
   "saturday",
 ] as const;
 
-function nextWeekday(targetDay: number, from: Date, includeToday: boolean): Date {
+function nextWeekday(
+  targetDay: number,
+  from: Date,
+  includeToday: boolean,
+): Date {
   const d = new Date(from);
   d.setHours(0, 0, 0, 0);
   let diff = (targetDay - d.getDay() + 7) % 7;
@@ -20,7 +24,9 @@ function nextWeekday(targetDay: number, from: Date, includeToday: boolean): Date
   return d;
 }
 
-export function detectDate(text: string): { label: string; start: Date; end: Date } | null {
+export function detectDate(
+  text: string,
+): { label: string; start: Date; end: Date } | null {
   const now = new Date();
   let target = new Date(now);
   let matched = false;
@@ -115,7 +121,9 @@ export function detectDate(text: string): { label: string; start: Date; end: Dat
   }
 
   // Korean time: 오후 N시
-  const hmKo = text.match(/(오전|오후)?\s*(\d{1,2})\s*시(?:\s*(\d{1,2})\s*분)?/);
+  const hmKo = text.match(
+    /(오전|오후)?\s*(\d{1,2})\s*시(?:\s*(\d{1,2})\s*분)?/,
+  );
   if (hmKo) {
     let h = parseInt(hmKo[2], 10);
     const mn = hmKo[3] ? parseInt(hmKo[3], 10) : 0;
@@ -124,7 +132,8 @@ export function detectDate(text: string): { label: string; start: Date; end: Dat
     target.setHours(h, mn, 0, 0);
     matched = true;
     timeSet = true;
-    label = `${label ? label + " " : ""}${hmKo[1] ?? ""}${h % 12 || 12}시${mn ? ` ${mn}분` : ""}`.trim();
+    label =
+      `${label ? label + " " : ""}${hmKo[1] ?? ""}${h % 12 || 12}시${mn ? ` ${mn}분` : ""}`.trim();
   }
 
   // English time: 3pm, 3:30 pm, 15:00
@@ -177,7 +186,10 @@ export function countdown(target: Date): string {
   return `${m}분 남음`;
 }
 
-export function dDay(target: Date): { label: string; tone: "normal" | "soon" | "today" } {
+export function dDay(target: Date): {
+  label: string;
+  tone: "normal" | "soon" | "today";
+} {
   const today = new Date();
   today.setHours(0, 0, 0, 0);
   const t = new Date(target);
@@ -190,11 +202,19 @@ export function dDay(target: Date): { label: string; tone: "normal" | "soon" | "
 }
 
 /** Naive keyword auto-group for archive. */
-export function archiveGroup(text: string): { key: string; label: string; emoji: string } {
+export function archiveGroup(text: string): {
+  key: string;
+  label: string;
+  emoji: string;
+} {
   const t = text.toLowerCase();
-  if (/해야|todo|할일|할 일|마감|제출|확인/.test(t)) return { key: "todo", label: "할 일", emoji: "✅" };
-  if (/아이디어|idea|생각|컨셉|기획/.test(t)) return { key: "idea", label: "아이디어", emoji: "💡" };
-  if (/카페|식당|가게|주소|장소|매장|호텔/.test(t)) return { key: "place", label: "장소", emoji: "📍" };
-  if (/읽|책|영화|드라마|보기|시청|영상|유튜브/.test(t)) return { key: "read", label: "읽기·보기", emoji: "📚" };
+  if (/해야|todo|할일|할 일|마감|제출|확인/.test(t))
+    return { key: "todo", label: "할 일", emoji: "✅" };
+  if (/아이디어|idea|생각|컨셉|기획/.test(t))
+    return { key: "idea", label: "아이디어", emoji: "💡" };
+  if (/카페|식당|가게|주소|장소|매장|호텔/.test(t))
+    return { key: "place", label: "장소", emoji: "📍" };
+  if (/읽|책|영화|드라마|보기|시청|영상|유튜브/.test(t))
+    return { key: "read", label: "읽기·보기", emoji: "📚" };
   return { key: "etc", label: "기타", emoji: "🗂" };
 }

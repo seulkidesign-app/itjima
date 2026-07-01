@@ -1,6 +1,7 @@
 import type { InboxItem } from "@/lib/store";
 
-const KEYBOARD_MASH = /^(asdf|qwer|zxcv|ㅁㄴㅇ|ㅎㅎ|ㅋㅋ|test|aaa+|111+|\.{2,})$/i;
+const KEYBOARD_MASH =
+  /^(asdf|qwer|zxcv|ㅁㄴㅇ|ㅎㅎ|ㅋㅋ|test|aaa+|111+|\.{2,})$/i;
 const FRAGMENT = /^[^\p{L}\p{N}]{1,3}$/u;
 
 function normalize(text: string) {

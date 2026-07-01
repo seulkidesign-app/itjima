@@ -1,4 +1,10 @@
-import { useEffect, useRef, useState, type PointerEvent, type ReactNode } from "react";
+import {
+  useEffect,
+  useRef,
+  useState,
+  type PointerEvent,
+  type ReactNode,
+} from "react";
 import { useT } from "@/lib/i18n";
 import { tick, confirm as confirmHaptic } from "@/lib/haptics";
 import { Check, X } from "lucide-react";
@@ -119,7 +125,11 @@ export function SwipeCard({
         }}
       >
         <div
-          className={bare ? "overflow-visible" : "overflow-hidden rounded-[24px] bg-white shadow-card"}
+          className={
+            bare
+              ? "overflow-visible"
+              : "overflow-hidden rounded-[24px] bg-white shadow-card"
+          }
           style={
             bare
               ? undefined
@@ -155,7 +165,8 @@ export function SwipeCard({
             onClick={finish}
             className="pointer-events-auto flex items-center gap-1.5 rounded-full bg-primary px-4 py-2.5 text-[13px] font-bold text-ink shadow-float animate-pop active:scale-95"
           >
-            <Check size={16} strokeWidth={3} /> {t("일정 확정", "Confirm schedule")}
+            <Check size={16} strokeWidth={3} />{" "}
+            {t("일정 확정", "Confirm schedule")}
           </button>
           <button
             onClick={cancel}
@@ -179,7 +190,8 @@ export function SwipeCard({
             onClick={finish}
             className="pointer-events-auto flex items-center gap-1.5 rounded-full bg-ink px-4 py-2.5 text-[13px] font-bold text-white shadow-float animate-pop active:scale-95"
           >
-            <Check size={16} strokeWidth={3} /> {t("보관 확정", "Confirm archive")}
+            <Check size={16} strokeWidth={3} />{" "}
+            {t("보관 확정", "Confirm archive")}
           </button>
         </div>
       )}

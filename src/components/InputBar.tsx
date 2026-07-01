@@ -1,9 +1,20 @@
-import { useEffect, useRef, useState, type ChangeEvent, type ClipboardEvent, type FormEvent } from "react";
+import {
+  useEffect,
+  useRef,
+  useState,
+  type ChangeEvent,
+  type ClipboardEvent,
+  type FormEvent,
+} from "react";
 import { Mic, Image as ImageIcon, Plus, X, Pencil } from "lucide-react";
 import { toast } from "sonner";
 import { ScribbleCanvas } from "./ScribbleCanvas";
 import { useT, useLang } from "@/lib/i18n";
-import { compressDataUrl, compressImageFile, MAX_IMAGES } from "@/lib/imageCompress";
+import {
+  compressDataUrl,
+  compressImageFile,
+  MAX_IMAGES,
+} from "@/lib/imageCompress";
 
 type Props = {
   onAdd: (text: string, images: string[]) => void;
@@ -13,7 +24,12 @@ type Props = {
   onRestoreConsumed?: () => void;
 };
 
-export function InputBar({ onAdd, onPasteMulti, restoreText, onRestoreConsumed }: Props) {
+export function InputBar({
+  onAdd,
+  onPasteMulti,
+  restoreText,
+  onRestoreConsumed,
+}: Props) {
   const t = useT();
   const { lang } = useLang();
   const [text, setText] = useState("");
@@ -29,7 +45,7 @@ export function InputBar({ onAdd, onPasteMulti, restoreText, onRestoreConsumed }
   const keySubmitRef = useRef(false);
   const buttonSubmitRef = useRef(false);
   const fileRef = useRef<HTMLInputElement>(null);
-  const recogRef = useRef<any>(null);
+  const recogRef = useRef<SpeechRecognition | null>(null);
 
   textRef.current = text;
   imagesRef.current = images;
@@ -72,7 +88,8 @@ export function InputBar({ onAdd, onPasteMulti, restoreText, onRestoreConsumed }
 
   const handleAdd = (textSnapshot?: string) => {
     const currentImages = imagesRef.current;
-    const currentText = textSnapshot ?? textareaRef.current?.value ?? textRef.current;
+    const currentText =
+      textSnapshot ?? textareaRef.current?.value ?? textRef.current;
     const trimmedText = currentText.replace(/\s*\[…\]\s*$/, "").trim();
     if (!trimmedText && currentImages.length === 0) return;
     onAddRef.current(trimmedText, currentImages);
@@ -88,7 +105,13 @@ export function InputBar({ onAdd, onPasteMulti, restoreText, onRestoreConsumed }
     const onWindowKeyDown = (event: KeyboardEvent) => {
       const textarea = textareaRef.current;
       if (!textarea || document.activeElement !== textarea) return;
-      if (event.key !== "Enter" || (!event.metaKey && !event.ctrlKey) || composingRef.current || event.isComposing) return;
+      if (
+        event.key !== "Enter" ||
+        (!event.metaKey && !event.ctrlKey) ||
+        composingRef.current ||
+        event.isComposing
+      )
+        return;
       event.preventDefault();
       event.stopPropagation();
       handleAdd(textarea.value);
@@ -101,7 +124,9 @@ export function InputBar({ onAdd, onPasteMulti, restoreText, onRestoreConsumed }
     if (keySubmitRef.current) return;
     keySubmitRef.current = true;
     handleAdd(target.value);
-    window.setTimeout(() => { keySubmitRef.current = false; }, 0);
+    window.setTimeout(() => {
+      keySubmitRef.current = false;
+    }, 0);
   };
 
   const submitCommandEnter = (target: HTMLTextAreaElement) => {
@@ -111,7 +136,9 @@ export function InputBar({ onAdd, onPasteMulti, restoreText, onRestoreConsumed }
     const wasMetaSubmit = Boolean(commandSnapshotRef.current);
     if (wasMetaSubmit) {
       handleAdd(snapshot);
-      window.setTimeout(() => { keySubmitRef.current = false; }, 0);
+      window.setTimeout(() => {
+        keySubmitRef.current = false;
+      }, 0);
       return;
     }
     target.blur();
@@ -122,25 +149,40 @@ export function InputBar({ onAdd, onPasteMulti, restoreText, onRestoreConsumed }
   };
 
   const onMic = () => {
-    const W = window as any;
-    const SR = W.SpeechRecognition || W.webkitSpeechRecognition;
+    const SR =
+      window.SpeechRecognition ??
+      (
+        window as Window & {
+          webkitSpeechRecognition?: typeof SpeechRecognition;
+        }
+      ).webkitSpeechRecognition;
     if (!SR) {
-      toast.error(t("이 브라우저는 음성 입력을 지원하지 않아요.", "This browser doesn't support voice input."));
+      toast.error(
+        t(
+          "이 브라우저는 음성 입력을 지원하지 않아요.",
+          "This browser doesn't support voice input.",
+        ),
+      );
       return;
     }
-    if (listening) { recogRef.current?.stop(); return; }
+    if (listening) {
+      recogRef.current?.stop();
+      return;
+    }
     const r = new SR();
     r.lang = lang === "en" ? "en-US" : "ko-KR";
     r.interimResults = true;
     r.continuous = false;
-    r.onresult = (e: any) => {
+    r.onresult = (e: SpeechRecognitionEvent) => {
       const last = e.results[e.results.length - 1];
       const transcript = last[0].transcript as string;
-      if (last.isFinal) setText((prev) => (prev ? prev + " " : "") + transcript);
-      else setText((prev) => {
-        const base = prev.replace(/\s*\[…\]$/, "");
-        return (base ? base + " " : "") + transcript + " […]";
-      });
+      if (last.isFinal)
+        setText((prev) => (prev ? prev + " " : "") + transcript);
+      else
+        setText((prev) => {
+          const base = prev.replace(/\s*\[…\]$/, "");
+          return (base ? base + " " : "") + transcript + " […]";
+        });
     };
     r.onerror = () => {
       setListening(false);
@@ -188,8 +230,11 @@ export function InputBar({ onAdd, onPasteMulti, restoreText, onRestoreConsumed }
     }
     const t = e.clipboardData?.getData("text") ?? "";
     if (!t) return;
-    const lines = t.split(/\r?\n/).map((l) => l.trim()).filter(Boolean);
-    const bullety = /^[-•*·▪︎]\s/.test(lines[0] ?? "");
+    const lines = t
+      .split(/\r?\n/)
+      .map((l) => l.trim())
+      .filter(Boolean);
+    const bullety = /^[-•*·\u25AA]\s/.test(lines[0] ?? "");
     if (lines.length >= 3 || bullety) {
       e.preventDefault();
       onPasteMulti(lines, t);
@@ -197,15 +242,24 @@ export function InputBar({ onAdd, onPasteMulti, restoreText, onRestoreConsumed }
   };
 
   return (
-    <form onSubmit={onSubmit} className="border-t border-ink/5 bg-white/95 px-5 backdrop-blur-md shadow-[0_-4px_16px_-8px_rgba(0,0,0,0.06)]">
+    <form
+      onSubmit={onSubmit}
+      className="border-t border-ink/5 bg-white/95 px-5 backdrop-blur-md shadow-[0_-4px_16px_-8px_rgba(0,0,0,0.06)]"
+    >
       {images.length > 0 && (
         <div className="flex gap-2 overflow-x-auto pt-3">
           {images.map((src, i) => (
             <div key={i} className="relative">
-              <img src={src} alt="" className="h-16 w-16 rounded-[24px] object-cover" />
+              <img
+                src={src}
+                alt=""
+                className="h-16 w-16 rounded-[24px] object-cover"
+              />
               <button
                 type="button"
-                onClick={() => setImages((p) => p.filter((_, idx) => idx !== i))}
+                onClick={() =>
+                  setImages((p) => p.filter((_, idx) => idx !== i))
+                }
                 className="absolute -right-1 -top-1 rounded-full bg-ink p-0.5 text-white"
               >
                 <X size={12} />
@@ -219,8 +273,12 @@ export function InputBar({ onAdd, onPasteMulti, restoreText, onRestoreConsumed }
           ref={textareaRef}
           value={text}
           onChange={(e) => setText(e.target.value)}
-          onCompositionStart={() => { composingRef.current = true; }}
-          onCompositionEnd={() => { composingRef.current = false; }}
+          onCompositionStart={() => {
+            composingRef.current = true;
+          }}
+          onCompositionEnd={() => {
+            composingRef.current = false;
+          }}
           onPaste={onPaste}
           onKeyDownCapture={(e) => {
             if (e.key !== "Enter" || (!e.metaKey && !e.ctrlKey)) return;
@@ -229,8 +287,10 @@ export function InputBar({ onAdd, onPasteMulti, restoreText, onRestoreConsumed }
             submitCommandEnter(e.currentTarget);
           }}
           onKeyDown={(e) => {
-            const isComposing = composingRef.current || e.nativeEvent.isComposing;
-            if (e.key === "Meta" && !isComposing) primeCommandSubmit(e.currentTarget);
+            const isComposing =
+              composingRef.current || e.nativeEvent.isComposing;
+            if (e.key === "Meta" && !isComposing)
+              primeCommandSubmit(e.currentTarget);
             if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) {
               e.preventDefault();
               e.stopPropagation();
@@ -243,14 +303,18 @@ export function InputBar({ onAdd, onPasteMulti, restoreText, onRestoreConsumed }
             }
           }}
           onKeyUp={(e) => {
-            const isComposing = composingRef.current || e.nativeEvent.isComposing;
+            const isComposing =
+              composingRef.current || e.nativeEvent.isComposing;
             if (e.key === "Enter" && !e.shiftKey && !isComposing) {
               e.preventDefault();
               submitFromKeyboard(e.currentTarget);
             }
           }}
           rows={3}
-          placeholder={t("메시지 입력 · Shift+Enter 줄바꿈", "Message · Shift+Enter for new line")}
+          placeholder={t(
+            "메시지 입력 · Shift+Enter 줄바꿈",
+            "Message · Shift+Enter for new line",
+          )}
           className="block min-h-[72px] w-full resize-none bg-transparent text-[16px] leading-relaxed text-ink placeholder:text-ink-soft/70 focus:outline-none max-h-40"
         />
       </div>
@@ -259,7 +323,9 @@ export function InputBar({ onAdd, onPasteMulti, restoreText, onRestoreConsumed }
           type="button"
           onClick={onMic}
           className={`flex h-9 w-9 items-center justify-center rounded-full transition ${
-            listening ? "bg-ink text-white animate-pulse" : "text-ink-soft hover:bg-white/60"
+            listening
+              ? "bg-ink text-white animate-pulse"
+              : "text-ink-soft hover:bg-white/60"
           }`}
           aria-label={t("음성 입력", "Voice input")}
         >
@@ -273,7 +339,14 @@ export function InputBar({ onAdd, onPasteMulti, restoreText, onRestoreConsumed }
         >
           <ImageIcon size={18} />
         </button>
-        <input ref={fileRef} type="file" accept="image/*" multiple onChange={onFile} className="hidden" />
+        <input
+          ref={fileRef}
+          type="file"
+          accept="image/*"
+          multiple
+          onChange={onFile}
+          className="hidden"
+        />
         <button
           type="button"
           onClick={() => setScribbleOpen(true)}
@@ -290,13 +363,17 @@ export function InputBar({ onAdd, onPasteMulti, restoreText, onRestoreConsumed }
             if (buttonSubmitRef.current) return;
             buttonSubmitRef.current = true;
             handleAdd();
-            window.setTimeout(() => { buttonSubmitRef.current = false; }, 250);
+            window.setTimeout(() => {
+              buttonSubmitRef.current = false;
+            }, 250);
           }}
           onClick={() => {
             if (buttonSubmitRef.current) return;
             buttonSubmitRef.current = true;
             handleAdd();
-            window.setTimeout(() => { buttonSubmitRef.current = false; }, 250);
+            window.setTimeout(() => {
+              buttonSubmitRef.current = false;
+            }, 250);
           }}
           className="pill-yellow flex items-center gap-1"
         >

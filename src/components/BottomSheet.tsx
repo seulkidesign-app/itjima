@@ -10,7 +10,12 @@ type Props = {
   maxHeight?: string;
 };
 
-export function BottomSheet({ open, onClose, children, maxHeight = "72vh" }: Props) {
+export function BottomSheet({
+  open,
+  onClose,
+  children,
+  maxHeight = "72vh",
+}: Props) {
   const dragControls = useDragControls();
 
   useEffect(() => {

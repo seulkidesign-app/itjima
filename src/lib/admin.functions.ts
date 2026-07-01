@@ -22,8 +22,14 @@ export async function getAdminStats() {
   const { userId } = await requireAuth();
   await assertAdmin(userId);
 
-  const [{ count: inboxCount }, { count: scheduleCount }, { count: archiveCount }, inboxUsers, scheduleUsers, archiveUsers] =
-    await Promise.all([
+  const [
+    { count: inboxCount },
+    { count: scheduleCount },
+    { count: archiveCount },
+    inboxUsers,
+    scheduleUsers,
+    archiveUsers,
+  ] = await Promise.all([
     supabase.from("inbox").select("*", { count: "exact", head: true }),
     supabase.from("schedules").select("*", { count: "exact", head: true }),
     supabase.from("archive").select("*", { count: "exact", head: true }),
@@ -33,7 +39,11 @@ export async function getAdminStats() {
   ]);
 
   const userIds = new Set<string>();
-  for (const row of [...(inboxUsers.data ?? []), ...(scheduleUsers.data ?? []), ...(archiveUsers.data ?? [])]) {
+  for (const row of [
+    ...(inboxUsers.data ?? []),
+    ...(scheduleUsers.data ?? []),
+    ...(archiveUsers.data ?? []),
+  ]) {
     if (row.user_id) userIds.add(row.user_id);
   }
 
@@ -49,7 +59,9 @@ export async function listRecentUsers() {
   const { userId } = await requireAuth();
   await assertAdmin(userId);
 
-  const { data, error } = await supabase.from("user_roles").select("user_id, role, created_at");
+  const { data, error } = await supabase
+    .from("user_roles")
+    .select("user_id, role, created_at");
   if (error) throw new Error(error.message);
 
   return (data ?? []).map((row) => ({
@@ -91,7 +103,10 @@ export async function grantAdmin(data: { userId: string }) {
 
   const { error } = await supabase
     .from("user_roles")
-    .upsert({ user_id: parsed.userId, role: "admin" }, { onConflict: "user_id,role" });
+    .upsert(
+      { user_id: parsed.userId, role: "admin" },
+      { onConflict: "user_id,role" },
+    );
   if (error) throw new Error(error.message);
   return { ok: true as const };
 }
@@ -144,7 +159,9 @@ export async function listFeedback() {
 
   const { data, error } = await supabase
     .from("feedback")
-    .select("id, user_id, email, category, message, status, page_path, created_at")
+    .select(
+      "id, user_id, email, category, message, status, page_path, created_at",
+    )
     .order("created_at", { ascending: false })
     .limit(100);
   if (error) throw new Error(error.message);
@@ -164,7 +181,10 @@ export async function updateFeedbackStatus(data: {
   const { userId } = await requireAuth();
   await assertAdmin(userId);
 
-  const { error } = await supabase.from("feedback").update({ status: parsed.status }).eq("id", parsed.id);
+  const { error } = await supabase
+    .from("feedback")
+    .update({ status: parsed.status })
+    .eq("id", parsed.id);
   if (error) throw new Error(error.message);
   return { ok: true as const };
 }
@@ -174,7 +194,10 @@ export async function deleteFeedback(data: { id: string }) {
   const { userId } = await requireAuth();
   await assertAdmin(userId);
 
-  const { error } = await supabase.from("feedback").delete().eq("id", parsed.id);
+  const { error } = await supabase
+    .from("feedback")
+    .delete()
+    .eq("id", parsed.id);
   if (error) throw new Error(error.message);
   return { ok: true as const };
 }

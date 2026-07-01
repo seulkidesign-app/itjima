@@ -63,14 +63,23 @@ function BrainMirrorResultView({
         <p className="text-[11px] font-medium text-ink-soft">
           {t("🧠 이렇게 이해했어요", "🧠 Here's how I read it")}
         </p>
-        <p className="mt-1 text-[13px] font-semibold leading-snug text-ink">{result.title}</p>
+        <p className="mt-1 text-[13px] font-semibold leading-snug text-ink">
+          {result.title}
+        </p>
         {result.items.length > 0 && (
           <ul className="mt-1.5 space-y-1">
             {result.items.slice(0, 4).map((line) => {
               const done = completedItems.has(line);
               return (
-                <li key={line} className={`text-[12px] leading-relaxed ${done ? "text-ink-soft line-through" : "text-ink/80"}`}>
-                  <button type="button" onClick={() => onToggleItem(line)} className="text-left">
+                <li
+                  key={line}
+                  className={`text-[12px] leading-relaxed ${done ? "text-ink-soft line-through" : "text-ink/80"}`}
+                >
+                  <button
+                    type="button"
+                    onClick={() => onToggleItem(line)}
+                    className="text-left"
+                  >
                     {done ? "☑" : "·"} {line}
                   </button>
                 </li>
@@ -102,7 +111,9 @@ function BrainMirrorResultView({
 
       <div className="my-3 h-px bg-white/10" />
 
-      <p className="text-[16px] font-semibold leading-[1.7] text-white">{result.title}</p>
+      <p className="text-[16px] font-semibold leading-[1.7] text-white">
+        {result.title}
+      </p>
 
       {result.items.length > 0 && (
         <ul className="mt-3 space-y-2.5">
@@ -129,7 +140,9 @@ function BrainMirrorResultView({
       )}
 
       {result.suggestedAction && (
-        <p className="mt-4 text-[14px] leading-[1.7] text-white/65">{result.suggestedAction}</p>
+        <p className="mt-4 text-[14px] leading-[1.7] text-white/65">
+          {result.suggestedAction}
+        </p>
       )}
 
       <div className="mt-4">
@@ -159,12 +172,17 @@ export function BrainMirrorPanel({
   item: InboxItem;
   inbox: InboxHandle;
   eligible: boolean;
-  onAutoAct: (item: InboxItem, result: BrainMirrorResult) => Promise<string | null>;
+  onAutoAct: (
+    item: InboxItem,
+    result: BrainMirrorResult,
+  ) => Promise<string | null>;
   onCancelAct: (scheduleId: string) => Promise<void>;
   onMirrorMissed?: (item: InboxItem) => void;
   variant?: "inline" | "card";
 }) {
-  const [phase, setPhase] = useState<"idle" | "thinking" | "ready" | "hidden">("idle");
+  const [phase, setPhase] = useState<"idle" | "thinking" | "ready" | "hidden">(
+    "idle",
+  );
   const [result, setResult] = useState<BrainMirrorResult | null>(
     item.brain_mirror ? normalizeStored(item.brain_mirror) : null,
   );
@@ -235,7 +253,10 @@ export function BrainMirrorPanel({
         void (async () => {
           if (finished) return;
           try {
-            const mirror = await fetchBrainMirror(item.text, abortController.signal);
+            const mirror = await fetchBrainMirror(
+              item.text,
+              abortController.signal,
+            );
             if (finished) return;
             if (!mirror) {
               hideSilently(true);
@@ -268,7 +289,8 @@ export function BrainMirrorPanel({
   }, [phase, result, item, onAutoAct]);
 
   if (phase === "idle" || phase === "hidden") return null;
-  if (phase === "thinking") return <ThinkingIndicator inline={variant === "inline"} />;
+  if (phase === "thinking")
+    return <ThinkingIndicator inline={variant === "inline"} />;
   if (!result?.items.length) return null;
 
   const completedItems = new Set(result.completedItems ?? []);
@@ -316,7 +338,10 @@ function normalizeStored(raw: BrainMirrorResult): BrainMirrorResult {
       completedItems: raw.completedItems ?? [],
     };
   }
-  const legacy = raw as BrainMirrorResult & { tasks?: string[]; message?: string };
+  const legacy = raw as BrainMirrorResult & {
+    tasks?: string[];
+    message?: string;
+  };
   return {
     title: legacy.title,
     items: legacy.items ?? legacy.tasks ?? [],

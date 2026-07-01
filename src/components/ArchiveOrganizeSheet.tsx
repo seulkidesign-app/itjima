@@ -71,7 +71,9 @@ export function ArchiveOrganizeSheet({
         onClick={(e) => e.stopPropagation()}
       >
         <div className="mx-auto mb-4 h-1.5 w-10 rounded-full bg-ink/15" />
-        <h2 className="text-[17px] font-bold text-ink">{t("그룹 제안", "Group suggestions")}</h2>
+        <h2 className="text-[17px] font-bold text-ink">
+          {t("그룹 제안", "Group suggestions")}
+        </h2>
         <p className="mt-1 text-sm text-ink-soft">
           {t(
             "키워드로 다시 나눠요. 직접 만든 그룹은 그대로 둡니다. 적용 전에 확인해 주세요.",
@@ -85,7 +87,10 @@ export function ArchiveOrganizeSheet({
         ) : (
           <ul className="mt-4 space-y-2">
             {moves.slice(0, 8).map((m) => (
-              <li key={m.id} className="rounded-[16px] bg-white px-3 py-2.5 text-[13px] shadow-card">
+              <li
+                key={m.id}
+                className="rounded-[16px] bg-white px-3 py-2.5 text-[13px] shadow-card"
+              >
                 <p className="truncate font-medium text-ink">{m.preview}</p>
                 <p className="mt-0.5 text-[11px] text-ink-soft">
                   {m.fromLabel} → {m.toLabel}
@@ -100,7 +105,11 @@ export function ArchiveOrganizeSheet({
           </ul>
         )}
         <div className="mt-6 flex gap-2">
-          <button type="button" onClick={onClose} className="flex-1 rounded-full bg-white/70 py-3.5 text-[15px] font-semibold text-ink">
+          <button
+            type="button"
+            onClick={onClose}
+            className="flex-1 rounded-full bg-white/70 py-3.5 text-[15px] font-semibold text-ink"
+          >
             {t("취소", "Cancel")}
           </button>
           <button

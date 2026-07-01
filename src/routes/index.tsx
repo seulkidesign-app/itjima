@@ -1,7 +1,12 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useRef, useState, useMemo } from "react";
 import { toast } from "sonner";
-import { Sparkles, Trash2, Calendar, Archive as ArchiveIcon } from "lucide-react";
+import {
+  Sparkles,
+  Trash2,
+  Calendar,
+  Archive as ArchiveIcon,
+} from "lucide-react";
 import { InboxListSkeleton } from "@/components/Skeleton";
 import { usePhoneScrollCompress } from "@/hooks/useScrollVelocity";
 import { ChatSwipeRow } from "@/components/ChatSwipeRow";
@@ -12,11 +17,11 @@ import { LoginSheet } from "@/components/LoginSheet";
 import { CleanupReviewSheet } from "@/components/CleanupReviewSheet";
 import { ChatBubble } from "@/components/ChatBubble";
 import { BrainMirrorPanel } from "@/components/BrainMirrorSummary";
-import { isBrainMirrorCandidate, type BrainMirrorResult } from "@/lib/brainMirror";
 import {
-  archiveFromInbox,
-  scheduleFromInbox,
-} from "@/lib/thoughtProvenance";
+  isBrainMirrorCandidate,
+  type BrainMirrorResult,
+} from "@/lib/brainMirror";
+import { archiveFromInbox, scheduleFromInbox } from "@/lib/thoughtProvenance";
 import {
   useInbox,
   useSchedules,
@@ -43,20 +48,34 @@ function Inbox() {
   const archive = useArchive();
   const userId = useUserId();
 
-  const [scheduleSheet, setScheduleSheet] = useState<{ open: boolean; item?: InboxItem; date?: Date }>({
+  const [scheduleSheet, setScheduleSheet] = useState<{
+    open: boolean;
+    item?: InboxItem;
+    date?: Date;
+  }>({
     open: false,
   });
   const [loginOpen, setLoginOpen] = useState(false);
-  
+
   const [focusSortOpen, setFocusSortOpen] = useState(false);
-  const [scheduleQuick, setScheduleQuick] = useState<{ open: boolean; item?: InboxItem }>({ open: false });
-  const [focusPendingScheduleId, setFocusPendingScheduleId] = useState<string | null>(null);
+  const [scheduleQuick, setScheduleQuick] = useState<{
+    open: boolean;
+    item?: InboxItem;
+  }>({ open: false });
+  const [focusPendingScheduleId, setFocusPendingScheduleId] = useState<
+    string | null
+  >(null);
   const [cleanupReviewOpen, setCleanupReviewOpen] = useState(false);
   const [showSwipeHint, setShowSwipeHint] = useState(false);
   const [menuFor, setMenuFor] = useState<string | null>(null);
-  const [pasteSheet, setPasteSheet] = useState<{ chunks: string[]; original: string } | null>(null);
+  const [pasteSheet, setPasteSheet] = useState<{
+    chunks: string[];
+    original: string;
+  } | null>(null);
   const [restorePasteText, setRestorePasteText] = useState<string | null>(null);
-  const [bmEligibleIds, setBmEligibleIds] = useState<Set<string>>(() => new Set());
+  const [bmEligibleIds, setBmEligibleIds] = useState<Set<string>>(
+    () => new Set(),
+  );
 
   const markBmEligible = (id: string) => {
     setBmEligibleIds((prev) => new Set(prev).add(id));
@@ -110,13 +129,19 @@ function Inbox() {
   useEffect(() => {
     if (items.length > prevCountRef.current) {
       requestAnimationFrame(() => {
-        listEndRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
+        listEndRef.current?.scrollIntoView({
+          behavior: "smooth",
+          block: "end",
+        });
       });
     }
     prevCountRef.current = items.length;
   }, [items.length]);
 
-  const showUndoToast = (message: string, onUndo: () => void | Promise<void>) => {
+  const showUndoToast = (
+    message: string,
+    onUndo: () => void | Promise<void>,
+  ) => {
     toast.custom(
       (toastId) => (
         <div className="flex items-center gap-3 rounded-[24px] bg-ink px-4 py-3 text-white shadow-float">
@@ -136,7 +161,11 @@ function Inbox() {
     );
   };
 
-  const moveToScheduleWithDates = async (it: InboxItem, start: Date, end: Date) => {
+  const moveToScheduleWithDates = async (
+    it: InboxItem,
+    start: Date,
+    end: Date,
+  ) => {
     const text = it.brain_mirror?.title
       ? formatMirrorScheduleText(it.text, it.brain_mirror)
       : it.text.split("\n")[0]?.trim() || it.text;
@@ -146,16 +175,19 @@ function Inbox() {
       end_time: end.toISOString(),
     });
     const snapshot = archiveFromInbox(it);
-    const { item: created } = await schedules.add(payload as any);
+    const { item: created } = await schedules.add(payload);
     await inbox.remove(it.id);
-    track("schedule_created", { source: "inbox_swipe", text_length: text.length });
+    track("schedule_created", {
+      source: "inbox_swipe",
+      text_length: text.length,
+    });
     showUndoToast(t("일정으로 옮겼어요", "Moved to Schedule"), async () => {
       await schedules.remove(created.id);
       const { item: restored } = await inbox.add({
         text: snapshot.text,
         images: snapshot.images,
         brain_mirror: snapshot.brain_mirror,
-      } as any);
+      });
       markBmEligible(restored.id);
     });
   };
@@ -167,7 +199,7 @@ function Inbox() {
 
   const moveToArchive = async (it: InboxItem) => {
     const payload = archiveFromInbox(it);
-    const { item: created } = await archive.add(payload as any);
+    const { item: created } = await archive.add(payload);
     await inbox.remove(it.id);
     track("thought_swiped_archive", { text_length: it.text.length });
     showUndoToast(t("보관했어요", "Archived"), async () => {
@@ -176,11 +208,10 @@ function Inbox() {
         text: payload.text,
         images: payload.images,
         brain_mirror: payload.brain_mirror,
-      } as any);
+      });
       markBmEligible(restored.id);
     });
   };
-
 
   const autoScheduleFromMirror = async (
     item: InboxItem,
@@ -205,10 +236,13 @@ function Inbox() {
         text,
         start_time: start.toISOString(),
         end_time: end.toISOString(),
-      }) as any,
+      }),
     );
     await inbox.remove(item.id);
-    track("schedule_created", { source: "brain_mirror", text_length: text.length });
+    track("schedule_created", {
+      source: "brain_mirror",
+      text_length: text.length,
+    });
 
     toast.custom(
       (toastId) => (
@@ -223,7 +257,7 @@ function Inbox() {
                 text: snapshot.text,
                 images: snapshot.images,
                 brain_mirror: snapshot.brain_mirror,
-              } as any);
+              });
               markBmEligible(restored.id);
               toast.dismiss(toastId);
             }}
@@ -251,7 +285,10 @@ function Inbox() {
   const handleAdd = async (text: string, images: string[]) => {
     if (!text && !images.length) return;
     haptic([6, 16, 10]);
-    const { item: created, cloudSynced } = await inbox.add({ text, images } as any);
+    const { item: created, cloudSynced } = await inbox.add({
+      text,
+      images,
+    });
     markBmEligible(created.id);
     track("thought_created", {
       text_length: text.length,
@@ -259,9 +296,12 @@ function Inbox() {
       image_count: images.length,
     });
     if (cloudSynced) return;
-    toast.success(t("기기에 저장됐어요 (동기화 대기)", "Saved locally (sync pending)"), {
-      duration: 2500,
-    });
+    toast.success(
+      t("기기에 저장됐어요 (동기화 대기)", "Saved locally (sync pending)"),
+      {
+        duration: 2500,
+      },
+    );
     if (!isBrainMirrorCandidate(text)) {
       offerDateSchedule(created);
     }
@@ -276,7 +316,13 @@ function Inbox() {
       toast.custom(
         (id) => (
           <div className="flex items-center gap-3 rounded-[24px] bg-ink px-4 py-3 text-white shadow-float">
-            <div className="text-sm">💾 {t("다른 기기에서도 이어가려면 로그인하세요", "Sign in to keep your thoughts on other devices")}</div>
+            <div className="text-sm">
+              💾{" "}
+              {t(
+                "다른 기기에서도 이어가려면 로그인하세요",
+                "Sign in to keep your thoughts on other devices",
+              )}
+            </div>
             <button
               onClick={() => {
                 setLoginOpen(true);
@@ -300,13 +346,17 @@ function Inbox() {
           {items.length === 0 ? (
             <>
               <div className="nrc-eyebrow">{t("나에게", "To myself")}</div>
-              <h1 className="page-title mt-1">{t("던져보세요", "Drop a thought")}</h1>
+              <h1 className="page-title mt-1">
+                {t("던져보세요", "Drop a thought")}
+              </h1>
             </>
           ) : (
             <div className="flex flex-col gap-2">
               <div className="flex items-center justify-between gap-3">
                 <div>
-                  <h1 className="text-[15px] font-bold text-ink">{t("나와의 대화", "Chat with myself")}</h1>
+                  <h1 className="text-[15px] font-bold text-ink">
+                    {t("나와의 대화", "Chat with myself")}
+                  </h1>
                   <p className="mt-0.5 text-[11px] text-ink-soft">
                     {t("좌우로 밀어 정리", "Swipe left or right to sort")}
                   </p>
@@ -327,7 +377,10 @@ function Inbox() {
                   onClick={dismissSwipeHint}
                   className="chat-swipe-hint rounded-[16px] bg-primary/25 px-3 py-2 text-left text-[12px] text-ink"
                 >
-                  {t("💡 오른쪽 → 일정 · 왼쪽 → 보관. 밀었다 놓으면 버튼을 눌러도 돼요.", "💡 Right → Schedule · Left → Archive. Partial swipe, then tap the action.")}
+                  {t(
+                    "💡 오른쪽 → 일정 · 왼쪽 → 보관. 밀었다 놓으면 버튼을 눌러도 돼요.",
+                    "💡 Right → Schedule · Left → Archive. Partial swipe, then tap the action.",
+                  )}
                 </button>
               )}
             </div>
@@ -341,7 +394,9 @@ function Inbox() {
         ) : items.length === 0 ? (
           <EmptyState />
         ) : (
-          <div className={`chat-scroll flex flex-col gap-4 ${scrollCompress ? "scroll-compress" : ""}`}>
+          <div
+            className={`chat-scroll flex flex-col gap-4 ${scrollCompress ? "scroll-compress" : ""}`}
+          >
             {itemsAsc.map((it) => {
               const isNewest = it.id === newestId;
               return (
@@ -352,7 +407,9 @@ function Inbox() {
                   onLongPress={() => setMenuFor(it.id)}
                 >
                   <ChatBubble item={it} isNewest={isNewest}>
-                    {it.brain_mirror || (bmEligibleIds.has(it.id) && isBrainMirrorCandidate(it.text)) ? (
+                    {it.brain_mirror ||
+                    (bmEligibleIds.has(it.id) &&
+                      isBrainMirrorCandidate(it.text)) ? (
                       <BrainMirrorPanel
                         item={it}
                         inbox={inbox}
@@ -375,7 +432,9 @@ function Inbox() {
       <div className="sticky bottom-0 z-20 pb-[env(safe-area-inset-bottom)]">
         <InputBar
           onAdd={handleAdd}
-          onPasteMulti={(chunks, original) => setPasteSheet({ chunks, original })}
+          onPasteMulti={(chunks, original) =>
+            setPasteSheet({ chunks, original })
+          }
           restoreText={restorePasteText}
           onRestoreConsumed={() => setRestorePasteText(null)}
         />
@@ -383,7 +442,10 @@ function Inbox() {
 
       {/* Context menu */}
       {menuFor && (
-        <div className="absolute inset-0 z-50 flex flex-col" onClick={() => setMenuFor(null)}>
+        <div
+          className="absolute inset-0 z-50 flex flex-col"
+          onClick={() => setMenuFor(null)}
+        >
           <div className="flex-1 bg-ink/30 backdrop-blur-sm animate-fade-in" />
           <div
             className="glass-strong animate-slide-up mx-5 mb-[100px] rounded-[24px] p-2 shadow-float"
@@ -449,16 +511,34 @@ function Inbox() {
             onClick={(e) => e.stopPropagation()}
           >
             <div className="mx-auto mb-3 h-1.5 w-10 rounded-full bg-ink/15" />
-            <div className="text-[17px] font-bold text-ink">{t("붙여넣은 텍스트를 어떻게 할까요?", "What to do with the pasted text?")}</div>
-            <div className="mt-1 text-sm text-ink-soft">{t(`${pasteSheet.chunks.length}개 줄이 감지됐어요.`, `${pasteSheet.chunks.length} lines detected.`)}</div>
+            <div className="text-[17px] font-bold text-ink">
+              {t(
+                "붙여넣은 텍스트를 어떻게 할까요?",
+                "What to do with the pasted text?",
+              )}
+            </div>
+            <div className="mt-1 text-sm text-ink-soft">
+              {t(
+                `${pasteSheet.chunks.length}개 줄이 감지됐어요.`,
+                `${pasteSheet.chunks.length} lines detected.`,
+              )}
+            </div>
             <button
               onClick={async () => {
                 for (const c of pasteSheet.chunks) {
-                  const { item } = await inbox.add({ text: c, images: [] } as any);
+                  const { item } = await inbox.add({
+                    text: c,
+                    images: [],
+                  });
                   markBmEligible(item.id);
                 }
                 setPasteSheet(null);
-                toast.success(t(`${pasteSheet.chunks.length}개로 나눠 담았어요`, `Split into ${pasteSheet.chunks.length} items`));
+                toast.success(
+                  t(
+                    `${pasteSheet.chunks.length}개로 나눠 담았어요`,
+                    `Split into ${pasteSheet.chunks.length} items`,
+                  ),
+                );
               }}
               className="mt-4 w-full rounded-full bg-primary py-3.5 text-[15px] font-bold text-ink"
             >
@@ -466,7 +546,10 @@ function Inbox() {
             </button>
             <button
               onClick={async () => {
-                const { item } = await inbox.add({ text: pasteSheet.original, images: [] } as any);
+                const { item } = await inbox.add({
+                  text: pasteSheet.original,
+                  images: [],
+                });
                 markBmEligible(item.id);
                 setPasteSheet(null);
               }}
@@ -491,10 +574,13 @@ function Inbox() {
                 start_time: start.toISOString(),
                 end_time: end.toISOString(),
                 all_day: opts?.allDay ?? false,
-              }) as any,
+              }),
             );
             await inbox.remove(scheduleSheet.item!.id);
-            track("schedule_created", { source: "inbox_swipe", text_length: text.length });
+            track("schedule_created", {
+              source: "inbox_swipe",
+              text_length: text.length,
+            });
             setScheduleSheet({ open: false });
             toast.success(t("일정으로 등록됐어요", "Scheduled"));
           }}
@@ -541,7 +627,10 @@ function Inbox() {
   );
 }
 
-function formatMirrorScheduleText(original: string, result: BrainMirrorResult): string {
+function formatMirrorScheduleText(
+  original: string,
+  result: BrainMirrorResult,
+): string {
   const lines = [result.title, ...result.items.map((line) => `- ${line}`)];
   const text = lines.join("\n").trim();
   return text || original;
@@ -556,7 +645,10 @@ function EmptyState() {
         {t("오늘은 가볍네요.", "Today feels light.")}
       </div>
       <div className="mt-1 text-sm text-ink-soft">
-        {t("기다리는 건 없어요. 떠오르는 걸 적어보세요.", "Nothing is waiting. Drop a thought when it comes.")}
+        {t(
+          "기다리는 건 없어요. 떠오르는 걸 적어보세요.",
+          "Nothing is waiting. Drop a thought when it comes.",
+        )}
       </div>
     </div>
   );

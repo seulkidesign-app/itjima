@@ -66,9 +66,16 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
     [lang],
   );
 
-  const value = useMemo(() => ({ lang, setLang, toggle, t }), [lang, setLang, toggle, t]);
+  const value = useMemo(
+    () => ({ lang, setLang, toggle, t }),
+    [lang, setLang, toggle, t],
+  );
 
-  return <LanguageContext.Provider value={value}>{children}</LanguageContext.Provider>;
+  return (
+    <LanguageContext.Provider value={value}>
+      {children}
+    </LanguageContext.Provider>
+  );
 }
 
 export function useLang() {
@@ -89,7 +96,8 @@ export function LanguageToggle({ className = "" }: { className?: string }) {
   useEffect(() => {
     if (!open) return;
     const onDown = (e: MouseEvent) => {
-      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+      if (ref.current && !ref.current.contains(e.target as Node))
+        setOpen(false);
     };
     document.addEventListener("mousedown", onDown);
     return () => document.removeEventListener("mousedown", onDown);
@@ -107,17 +115,19 @@ export function LanguageToggle({ className = "" }: { className?: string }) {
       >
         <span aria-hidden>🌐</span>
         <span>{lang === "ko" ? "한국어" : "English"}</span>
-        <span aria-hidden className="text-[8px] opacity-60">▼</span>
+        <span aria-hidden className="text-[8px] opacity-60">
+          ▼
+        </span>
       </button>
       {open && (
         <ul
           role="listbox"
           className="absolute right-0 top-[calc(100%+4px)] z-50 min-w-[120px] overflow-hidden rounded-[24px] bg-white shadow-card"
         >
-          {([
+          {[
             { v: "ko" as const, label: "한국어" },
             { v: "en" as const, label: "English" },
-          ]).map((opt) => (
+          ].map((opt) => (
             <li key={opt.v}>
               <button
                 type="button"
@@ -128,7 +138,9 @@ export function LanguageToggle({ className = "" }: { className?: string }) {
                   setOpen(false);
                 }}
                 className={`flex w-full items-center justify-between px-3 py-2 text-left text-[13px] font-semibold ${
-                  lang === opt.v ? "bg-primary/15 text-ink" : "text-ink-soft hover:bg-black/5"
+                  lang === opt.v
+                    ? "bg-primary/15 text-ink"
+                    : "text-ink-soft hover:bg-black/5"
                 }`}
               >
                 <span>{opt.label}</span>

@@ -24,7 +24,9 @@ function startOfDay(d: Date) {
 
 export function ScheduleQuickSheet({ item, open, onClose, onConfirm }: Props) {
   const t = useT();
-  const [dayChoice, setDayChoice] = useState<"today" | "tomorrow" | "pick" | null>(null);
+  const [dayChoice, setDayChoice] = useState<
+    "today" | "tomorrow" | "pick" | null
+  >(null);
   const [pickDate, setPickDate] = useState(() => {
     const n = new Date();
     return [n.getMonth() + 1, n.getDate()];
@@ -97,9 +99,13 @@ export function ScheduleQuickSheet({ item, open, onClose, onConfirm }: Props) {
       <div className="px-5 pb-[calc(env(safe-area-inset-bottom)+1.25rem)]">
         <div className="mb-4 flex items-center gap-2">
           <Calendar size={18} className="text-primary" />
-          <h2 className="text-[17px] font-bold text-ink">{t("일정으로", "To Schedule")}</h2>
+          <h2 className="text-[17px] font-bold text-ink">
+            {t("일정으로", "To Schedule")}
+          </h2>
         </div>
-        <p className="mb-4 line-clamp-2 text-[14px] text-ink-soft">{item.text}</p>
+        <p className="mb-4 line-clamp-2 text-[14px] text-ink-soft">
+          {item.text}
+        </p>
 
         {step === "day" && (
           <motion.div
@@ -108,11 +114,13 @@ export function ScheduleQuickSheet({ item, open, onClose, onConfirm }: Props) {
             transition={SPRING_DEFAULT}
             className="space-y-2"
           >
-            {([
-              ["today", t("오늘", "Today")],
-              ["tomorrow", t("내일", "Tomorrow")],
-              ["pick", t("날짜 선택", "Pick Date")],
-            ] as const).map(([key, label]) => (
+            {(
+              [
+                ["today", t("오늘", "Today")],
+                ["tomorrow", t("내일", "Tomorrow")],
+                ["pick", t("날짜 선택", "Pick Date")],
+              ] as const
+            ).map(([key, label]) => (
               <button
                 key={key}
                 type="button"
@@ -129,8 +137,14 @@ export function ScheduleQuickSheet({ item, open, onClose, onConfirm }: Props) {
               <div className="pt-2">
                 <WheelPicker
                   columns={[
-                    { label: t("월", "Mo"), values: Array.from({ length: 12 }, (_, i) => i + 1) },
-                    { label: t("일", "Day"), values: Array.from({ length: 31 }, (_, i) => i + 1) },
+                    {
+                      label: t("월", "Mo"),
+                      values: Array.from({ length: 12 }, (_, i) => i + 1),
+                    },
+                    {
+                      label: t("일", "Day"),
+                      values: Array.from({ length: 31 }, (_, i) => i + 1),
+                    },
                   ]}
                   value={pickDate}
                   onChange={setPickDate}
@@ -176,7 +190,11 @@ export function ScheduleQuickSheet({ item, open, onClose, onConfirm }: Props) {
               <div className="mt-4">
                 <WheelPicker
                   columns={[
-                    { label: t("시", "Hr"), values: Array.from({ length: 24 }, (_, i) => i), pad: 2 },
+                    {
+                      label: t("시", "Hr"),
+                      values: Array.from({ length: 24 }, (_, i) => i),
+                      pad: 2,
+                    },
                     { label: t("분", "Min"), values: [0, 15, 30, 45], pad: 2 },
                   ]}
                   value={wheelTime}

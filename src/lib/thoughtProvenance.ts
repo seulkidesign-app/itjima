@@ -20,6 +20,7 @@ export function scheduleFromInbox(
     alarm?: boolean;
     all_day?: boolean;
     repeat?: null;
+    all_day?: boolean;
   },
 ) {
   const snap = inboxSnapshot(item);
@@ -57,7 +58,10 @@ export function scheduleDisplayTitle(item: {
   return line || item.raw_text?.split("\n")[0]?.trim() || item.text;
 }
 
-export function rawPreview(item: { raw_text?: string | null; text: string }, max = 60): string {
+export function rawPreview(
+  item: { raw_text?: string | null; text: string },
+  max = 60,
+): string {
   const raw = (item.raw_text ?? item.text).trim();
   if (raw.length <= max) return raw;
   return raw.slice(0, max) + "…";

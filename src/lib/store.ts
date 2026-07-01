@@ -109,7 +109,9 @@ function migrateLegacy(kind: ListKind, userId: string | null) {
 }
 
 function migrateAllBuckets(userId: string | null) {
-  (Object.keys(LEGACY_KEYS) as ListKind[]).forEach((kind) => migrateLegacy(kind, userId));
+  (Object.keys(LEGACY_KEYS) as ListKind[]).forEach((kind) =>
+    migrateLegacy(kind, userId),
+  );
   if (userId) migrateLegacy("inbox", GUEST);
   if (userId) migrateLegacy("schedules", GUEST);
   if (userId) migrateLegacy("archive", GUEST);
@@ -120,7 +122,9 @@ function uid() {
 }
 
 function sortByCreated<T extends { created_at: string }>(items: T[]) {
-  return [...items].sort((a, b) => +new Date(b.created_at) - +new Date(a.created_at));
+  return [...items].sort(
+    (a, b) => +new Date(b.created_at) - +new Date(a.created_at),
+  );
 }
 
 function stripCloudFields(item: Record<string, unknown>, table: TableName) {
@@ -158,14 +162,24 @@ const FULL_CLOUD_KEYS: Record<TableName, readonly string[]> = {
     "status",
     "alarm_at",
   ],
-  archive: ["id", "text", "images", "created_at", "source_id", "raw_text", "brain_mirror"],
+  archive: [
+    "id",
+    "text",
+    "images",
+    "created_at",
+    "source_id",
+    "raw_text",
+    "brain_mirror",
+  ],
 };
 
 function isSchemaColumnError(message: string) {
-  return /Could not find the .+ column of .+ in the schema cache/i.test(message);
+  return /Could not find the .+ column of .+ in the schema cache/i.test(
+    message,
+  );
 }
 
-function useLegacyCloudSchema() {
+function isLegacyCloudSchema() {
   if (typeof window === "undefined") return false;
   return localStorage.getItem(CLOUD_SCHEMA_KEY) === "legacy";
 }
@@ -206,7 +220,7 @@ async function cloudMutate(
   fields: Record<string, unknown>,
   id?: string,
 ): Promise<boolean> {
-  let legacy = useLegacyCloudSchema();
+  let legacy = isLegacyCloudSchema();
 
   for (let attempt = 0; attempt < 2; attempt++) {
     const row = pickCloudFields(table, fields, userId, legacy);
@@ -217,9 +231,15 @@ async function cloudMutate(
     } else if (op === "update" && id) {
       const { user_id: _u, ...patch } = row;
       if (!Object.keys(patch).length) return true;
-      ({ error } = await supabase.from(table).update(patch as never).eq("id", id).eq("user_id", userId));
+      ({ error } = await supabase
+        .from(table)
+        .update(patch as never)
+        .eq("id", id)
+        .eq("user_id", userId));
     } else if (op === "upsert") {
-      ({ error } = await supabase.from(table).upsert(row as never, { onConflict: "id" }));
+      ({ error } = await supabase
+        .from(table)
+        .upsert(row as never, { onConflict: "id" }));
     }
 
     if (!error) {
@@ -239,7 +259,6 @@ async function cloudMutate(
 
   return false;
 }
-
 
 async function cloudUpsertMany<T extends { id: string }>(
   table: TableName,
@@ -265,10 +284,15 @@ export function useUserId() {
   return id;
 }
 
-function useLocalList<T extends { id: string; created_at: string }>(kind: ListKind, table: TableName) {
+function useLocalList<T extends { id: string; created_at: string }>(
+  kind: ListKind,
+  table: TableName,
+) {
   const userId = useUserId();
   const [items, setItems] = useState<T[]>([]);
-  const [syncState, setSyncState] = useState<"idle" | "syncing" | "ready">("idle");
+  const [syncState, setSyncState] = useState<"idle" | "syncing" | "ready">(
+    "idle",
+  );
   const syncingRef = useRef(false);
   const key = storageKey(kind, userId);
 
@@ -287,7 +311,8 @@ function useLocalList<T extends { id: string; created_at: string }>(kind: ListKi
       if (detail === key) reloadLocal();
     };
     window.addEventListener("itjima:update", handler as EventListener);
-    return () => window.removeEventListener("itjima:update", handler as EventListener);
+    return () =>
+      window.removeEventListener("itjima:update", handler as EventListener);
   }, [key, reloadLocal]);
 
   useEffect(() => {
@@ -302,14 +327,17 @@ function useLocalList<T extends { id: string; created_at: string }>(kind: ListKi
       syncingRef.current = true;
       setSyncState("syncing");
 
-      if (useLegacyCloudSchema() && (await probeFullCloudSchema())) {
+      if (isLegacyCloudSchema() && (await probeFullCloudSchema())) {
         clearLegacyCloudSchema();
       }
 
       const guestKey = storageKey(kind, GUEST);
       const localUser = readLS<T>(key, table);
       const guestItems = readLS<T>(guestKey, table);
-      const localAll = sortByCreated([...localUser, ...guestItems.filter((g) => !localUser.some((l) => l.id === g.id))]);
+      const localAll = sortByCreated([
+        ...localUser,
+        ...guestItems.filter((g) => !localUser.some((l) => l.id === g.id)),
+      ]);
 
       const { data, error } = await supabase
         .from(table)
@@ -327,7 +355,9 @@ function useLocalList<T extends { id: string; created_at: string }>(kind: ListKi
         return;
       }
 
-      const cloud = (data ?? []).map((row) => stripCloudFields(row as Record<string, unknown>, table) as T);
+      const cloud = (data ?? []).map(
+        (row) => stripCloudFields(row as Record<string, unknown>, table) as T,
+      );
       const cloudIds = new Set(cloud.map((c) => c.id));
       const toUpload = localAll.filter((item) => !cloudIds.has(item.id));
 
@@ -338,7 +368,9 @@ function useLocalList<T extends { id: string; created_at: string }>(kind: ListKi
       const mergedMap = new Map<string, T>();
       const localById = new Map(localAll.map((item) => [item.id, item]));
       for (const row of cloud) {
-        const local = localById.get(row.id) as (T & { brain_mirror?: BrainMirrorResult | null }) | undefined;
+        const local = localById.get(row.id) as
+          | (T & { brain_mirror?: BrainMirrorResult | null })
+          | undefined;
         mergedMap.set(
           row.id,
           local?.brain_mirror && !(row as InboxItem).brain_mirror
@@ -382,7 +414,12 @@ function useLocalList<T extends { id: string; created_at: string }>(kind: ListKi
 
       let cloudSynced = true;
       if (userId) {
-        cloudSynced = await cloudMutate("insert", table, userId, item as Record<string, unknown>);
+        cloudSynced = await cloudMutate(
+          "insert",
+          table,
+          userId,
+          item as Record<string, unknown>,
+        );
       }
 
       if (table === "inbox") {
@@ -397,10 +434,18 @@ function useLocalList<T extends { id: string; created_at: string }>(kind: ListKi
 
   const update = useCallback(
     async (id: string, patch: Partial<T>) => {
-      const next = readLS<T>(key, table).map((it) => (it.id === id ? { ...it, ...patch } : it));
+      const next = readLS<T>(key, table).map((it) =>
+        it.id === id ? { ...it, ...patch } : it,
+      );
       writeLS(key, next);
       if (userId) {
-        await cloudMutate("update", table, userId, patch as Record<string, unknown>, id);
+        await cloudMutate(
+          "update",
+          table,
+          userId,
+          patch as Record<string, unknown>,
+          id,
+        );
       }
     },
     [key, userId, table],
@@ -411,7 +456,11 @@ function useLocalList<T extends { id: string; created_at: string }>(kind: ListKi
       const next = readLS<T>(key, table).filter((it) => it.id !== id);
       writeLS(key, next);
       if (userId) {
-        const { error } = await supabase.from(table).delete().eq("id", id).eq("user_id", userId);
+        const { error } = await supabase
+          .from(table)
+          .delete()
+          .eq("id", id)
+          .eq("user_id", userId);
         if (error) console.error(`[sync] delete ${table}`, error.message);
       }
     },
@@ -434,7 +483,8 @@ function useInboxList() {
 }
 
 export const useInbox = () => useInboxList();
-export const useSchedules = () => useLocalList<ScheduleItem>("schedules", "schedules");
+export const useSchedules = () =>
+  useLocalList<ScheduleItem>("schedules", "schedules");
 export const useArchive = () => useLocalList<ArchiveItem>("archive", "archive");
 
 export function getUsageCount() {

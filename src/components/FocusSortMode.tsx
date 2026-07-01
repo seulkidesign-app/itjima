@@ -1,4 +1,10 @@
-import { useEffect, useRef, useState, type PointerEvent, type ReactNode } from "react";
+import {
+  useEffect,
+  useRef,
+  useState,
+  type PointerEvent,
+  type ReactNode,
+} from "react";
 import { Archive, Calendar, Trash2, X } from "lucide-react";
 import { animate, motion } from "framer-motion";
 import { useT } from "@/lib/i18n";
@@ -140,8 +146,16 @@ export function FocusSortMode({
           : { x: 0, y: h * 1.3 };
 
     await Promise.all([
-      animate(offset.x, target.x, { type: "spring", stiffness: 280, damping: 26 }).finished,
-      animate(offset.y, target.y, { type: "spring", stiffness: 280, damping: 26 }).finished,
+      animate(offset.x, target.x, {
+        type: "spring",
+        stiffness: 280,
+        damping: 26,
+      }).finished,
+      animate(offset.y, target.y, {
+        type: "spring",
+        stiffness: 280,
+        damping: 26,
+      }).finished,
     ]);
 
     const item = current;
@@ -203,7 +217,10 @@ export function FocusSortMode({
   const leftProgress = offset.x < 0 ? dragProgress(-offset.x, cardW()) : 0;
   const downProgress = offset.y > 0 ? dragProgress(offset.y, cardH()) : 0;
 
-  const rotate = Math.max(-MAX_ROTATE, Math.min(MAX_ROTATE, offset.x * (MAX_ROTATE / (cardW() * 0.5))));
+  const rotate = Math.max(
+    -MAX_ROTATE,
+    Math.min(MAX_ROTATE, offset.x * (MAX_ROTATE / (cardW() * 0.5))),
+  );
   const scale = dragging || exiting ? cardScale(progress) : 1;
   const shadow = cardShadowBlur(progress);
 
@@ -276,13 +293,21 @@ export function FocusSortMode({
                 transform: `translate(${offset.x}px, ${offset.y}px) rotate(${rotate}deg) scale(${scale})`,
                 boxShadow: `0 ${shadow}px ${shadow * 1.4}px -${shadow * 0.3}px rgba(0,0,0,${0.08 + progress * 0.1})`,
                 transition: dragging || exiting ? "none" : undefined,
-                backdropFilter: progress > SWIPE_PREVIEW ? `blur(${progress * 2}px)` : undefined,
+                backdropFilter:
+                  progress > SWIPE_PREVIEW
+                    ? `blur(${progress * 2}px)`
+                    : undefined,
               }}
             >
               {current.images?.length > 0 && (
                 <div className="mb-4 flex gap-2 overflow-x-auto">
                   {current.images.map((src, i) => (
-                    <img key={i} src={src} alt="" className="h-20 w-20 rounded-[20px] object-cover" />
+                    <img
+                      key={i}
+                      src={src}
+                      alt=""
+                      className="h-20 w-20 rounded-[20px] object-cover"
+                    />
                   ))}
                 </div>
               )}
@@ -290,7 +315,9 @@ export function FocusSortMode({
                 {current.text || t("(이미지만)", "(image only)")}
               </p>
               {current.brain_mirror?.title && (
-                <p className="mt-4 text-[13px] text-ink-soft">🧠 {current.brain_mirror.title}</p>
+                <p className="mt-4 text-[13px] text-ink-soft">
+                  🧠 {current.brain_mirror.title}
+                </p>
               )}
               <button
                 type="button"
@@ -306,7 +333,10 @@ export function FocusSortMode({
                 ? rightProgress >= SWIPE_COMMIT || leftProgress >= SWIPE_COMMIT
                   ? t("놓으면 확정", "Release to confirm")
                   : t("계속 밀어보세요", "Keep swiping")
-                : t("← 보관 · → 일정 · ↓ 삭제", "← Archive · → Schedule · ↓ Delete")}
+                : t(
+                    "← 보관 · → 일정 · ↓ 삭제",
+                    "← Archive · → Schedule · ↓ Delete",
+                  )}
             </p>
           </>
         ) : (
@@ -318,9 +348,16 @@ export function FocusSortMode({
           >
             <div className="text-5xl">✨</div>
             <p className="mt-4 text-[18px] font-bold text-ink">
-              {t("정리 끝. 머리가 조금 가벼워졌어요.", "All sorted. Your mind feels lighter.")}
+              {t(
+                "정리 끝. 머리가 조금 가벼워졌어요.",
+                "All sorted. Your mind feels lighter.",
+              )}
             </p>
-            <button type="button" onClick={onClose} className="touch-press pill-yellow mt-8 px-8 py-3.5">
+            <button
+              type="button"
+              onClick={onClose}
+              className="touch-press pill-yellow mt-8 px-8 py-3.5"
+            >
               {t("홈으로", "Back home")}
             </button>
           </motion.div>
@@ -328,7 +365,10 @@ export function FocusSortMode({
       </div>
 
       {deleteAsk && current && (
-        <div className="absolute inset-0 z-[70] flex flex-col" onClick={() => setDeleteAsk(false)}>
+        <div
+          className="absolute inset-0 z-[70] flex flex-col"
+          onClick={() => setDeleteAsk(false)}
+        >
           <div className="flex-1 bg-ink/40 backdrop-blur-md" />
           <motion.div
             initial={{ y: "100%" }}
@@ -338,9 +378,14 @@ export function FocusSortMode({
             onClick={(e) => e.stopPropagation()}
           >
             <div className="mx-auto mb-4 h-1.5 w-10 rounded-full bg-ink/15" />
-            <p className="text-[17px] font-bold text-ink">{t("이 생각을 삭제할까요?", "Delete this thought?")}</p>
+            <p className="text-[17px] font-bold text-ink">
+              {t("이 생각을 삭제할까요?", "Delete this thought?")}
+            </p>
             <p className="mt-1 text-sm text-ink-soft">
-              {t("삭제해도 기기에 잠시 보관됩니다.", "Soft delete — recoverable on this device.")}
+              {t(
+                "삭제해도 기기에 잠시 보관됩니다.",
+                "Soft delete — recoverable on this device.",
+              )}
             </p>
             <div className="mt-6 flex gap-2">
               <button

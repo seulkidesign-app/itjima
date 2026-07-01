@@ -1,4 +1,9 @@
-import { useEffect, useRef, useState, type PointerEvent as ReactPointerEvent } from "react";
+import {
+  useEffect,
+  useRef,
+  useState,
+  type PointerEvent as ReactPointerEvent,
+} from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Pin } from "lucide-react";
 import type { ScheduleItem } from "@/lib/store";
@@ -26,7 +31,13 @@ type Props = {
   }) => React.ReactNode;
 };
 
-export function CalendarDragLayer({ month, year, pinned, onDropToDate, children }: Props) {
+export function CalendarDragLayer({
+  month,
+  year,
+  pinned,
+  onDropToDate,
+  children,
+}: Props) {
   const [drag, setDrag] = useState<DragState | null>(null);
   const [hoverDay, setHoverDay] = useState<number | null>(null);
   const hoverRef = useRef<number | null>(null);
@@ -99,8 +110,12 @@ export function CalendarDragLayer({ month, year, pinned, onDropToDate, children 
             exit={{ scale: 0.88, opacity: 0 }}
             transition={SPRING_DEFAULT}
           >
-            {drag.pinned && <Pin size={11} className="mt-0.5 fill-primary text-primary" />}
-            <span className="line-clamp-2 text-[13px] font-semibold leading-snug text-ink">{drag.item.text}</span>
+            {drag.pinned && (
+              <Pin size={11} className="mt-0.5 fill-primary text-primary" />
+            )}
+            <span className="line-clamp-2 text-[13px] font-semibold leading-snug text-ink">
+              {drag.item.text}
+            </span>
           </motion.div>
         )}
       </AnimatePresence>
@@ -140,10 +155,10 @@ export function CalendarDayCell({
         isHover
           ? "bg-primary/50 ring-2 ring-primary shadow-card"
           : isSelected
-          ? "bg-primary text-ink shadow-card"
-          : isToday
-            ? "bg-primary/20 text-ink"
-            : "text-ink hover:bg-white/60"
+            ? "bg-primary text-ink shadow-card"
+            : isToday
+              ? "bg-primary/20 text-ink"
+              : "text-ink hover:bg-white/60"
       }`}
     >
       <span className="text-[11px] font-bold leading-none">{day}</span>
@@ -154,7 +169,9 @@ export function CalendarDayCell({
           }`}
         >
           {preview}
-          {eventCount > 1 && <span className="ml-0.5 opacity-70"> +{eventCount - 1}</span>}
+          {eventCount > 1 && (
+            <span className="ml-0.5 opacity-70"> +{eventCount - 1}</span>
+          )}
         </span>
       )}
     </motion.button>

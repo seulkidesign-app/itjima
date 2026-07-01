@@ -1,5 +1,13 @@
 import { useState } from "react";
-import { Bug, Lightbulb, Heart, HelpCircle, MessageSquare, X, Send } from "lucide-react";
+import {
+  Bug,
+  Lightbulb,
+  Heart,
+  HelpCircle,
+  MessageSquare,
+  X,
+  Send,
+} from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useT } from "@/lib/i18n";
@@ -7,7 +15,12 @@ import { confirm as hapticConfirm } from "@/lib/haptics";
 
 type Category = "question" | "bug" | "suggestion" | "praise" | "other";
 
-const CATEGORIES: { key: Category; icon: typeof Bug; ko: string; en: string }[] = [
+const CATEGORIES: {
+  key: Category;
+  icon: typeof Bug;
+  ko: string;
+  en: string;
+}[] = [
   { key: "question", icon: HelpCircle, ko: "문의", en: "Ask" },
   { key: "bug", icon: Bug, ko: "버그", en: "Bug" },
   { key: "suggestion", icon: Lightbulb, ko: "제안", en: "Idea" },
@@ -15,7 +28,13 @@ const CATEGORIES: { key: Category; icon: typeof Bug; ko: string; en: string }[] 
   { key: "other", icon: MessageSquare, ko: "기타", en: "Other" },
 ];
 
-export function FeedbackSheet({ open, onClose }: { open: boolean; onClose: () => void }) {
+export function FeedbackSheet({
+  open,
+  onClose,
+}: {
+  open: boolean;
+  onClose: () => void;
+}) {
   const t = useT();
   const [category, setCategory] = useState<Category>("suggestion");
   const [message, setMessage] = useState("");
@@ -37,7 +56,9 @@ export function FeedbackSheet({ open, onClose }: { open: boolean; onClose: () =>
       return;
     }
     if (msg.length > 2000) {
-      toast.error(t("2000자 이내로 적어주세요", "Keep it under 2000 characters"));
+      toast.error(
+        t("2000자 이내로 적어주세요", "Keep it under 2000 characters"),
+      );
       return;
     }
     if (email && !/^\S+@\S+\.\S+$/.test(email.trim())) {
@@ -53,16 +74,24 @@ export function FeedbackSheet({ open, onClose }: { open: boolean; onClose: () =>
         email: email.trim() || null,
         category,
         message: msg,
-        user_agent: typeof navigator !== "undefined" ? navigator.userAgent.slice(0, 500) : null,
-        page_path: typeof window !== "undefined" ? window.location.pathname : null,
+        user_agent:
+          typeof navigator !== "undefined"
+            ? navigator.userAgent.slice(0, 500)
+            : null,
+        page_path:
+          typeof window !== "undefined" ? window.location.pathname : null,
       });
       if (error) throw error;
       hapticConfirm();
-      toast.success(t("피드백 고마워요! 잘 읽을게요 🙌", "Thanks for the feedback!"));
+      toast.success(
+        t("피드백 고마워요! 잘 읽을게요 🙌", "Thanks for the feedback!"),
+      );
       reset();
       onClose();
-    } catch (e: any) {
-      toast.error(e.message ?? t("전송 실패", "Failed to send"));
+    } catch (e: unknown) {
+      toast.error(
+        e instanceof Error ? e.message : t("전송 실패", "Failed to send"),
+      );
     } finally {
       setSubmitting(false);
     }
@@ -82,7 +111,10 @@ export function FeedbackSheet({ open, onClose }: { open: boolean; onClose: () =>
               {t("문의 · 피드백", "Contact · Feedback")}
             </div>
             <div className="text-xs text-ink-soft">
-              {t("궁금한 점이나 의견을 남겨주세요", "Questions or thoughts — drop them here")}
+              {t(
+                "궁금한 점이나 의견을 남겨주세요",
+                "Questions or thoughts — drop them here",
+              )}
             </div>
           </div>
           <button

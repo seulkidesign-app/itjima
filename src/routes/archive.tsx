@@ -1,7 +1,16 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
-import { Search, Trash2, Sparkles, ChevronDown, X, FolderPlus, Check, Pin } from "lucide-react";
+import {
+  Search,
+  Trash2,
+  Sparkles,
+  ChevronDown,
+  X,
+  FolderPlus,
+  Check,
+  Pin,
+} from "lucide-react";
 import { useArchive, useSchedules, type ArchiveItem } from "@/lib/store";
 import { archiveGroup, detectDate } from "@/lib/dateDetect";
 import { useT, useLang } from "@/lib/i18n";
@@ -23,7 +32,13 @@ export const Route = createFileRoute("/archive")({
   component: Archive,
 });
 
-type GroupDef = { key: string; ko: string; en: string; emoji: string; custom?: boolean };
+type GroupDef = {
+  key: string;
+  ko: string;
+  en: string;
+  emoji: string;
+  custom?: boolean;
+};
 
 const BUILTIN_GROUPS: GroupDef[] = [
   { key: "todo", ko: "할 일", en: "To-do", emoji: "✅" },
@@ -39,8 +54,11 @@ const COLLAPSED_KEY = "itjima.archive_collapsed";
 
 function readJSON<T>(key: string, fallback: T): T {
   if (typeof window === "undefined") return fallback;
-  try { return JSON.parse(localStorage.getItem(key) || "") ?? fallback; }
-  catch { return fallback; }
+  try {
+    return JSON.parse(localStorage.getItem(key) || "") ?? fallback;
+  } catch {
+    return fallback;
+  }
 }
 function writeJSON(key: string, val: unknown) {
   if (typeof window === "undefined") return;
@@ -85,7 +103,11 @@ function Archive() {
   }, []);
 
   const allGroups: GroupDef[] = useMemo(
-    () => [...BUILTIN_GROUPS.filter(g => g.key !== "etc"), ...customGroups, BUILTIN_GROUPS.find(g => g.key === "etc")!],
+    () => [
+      ...BUILTIN_GROUPS.filter((g) => g.key !== "etc"),
+      ...customGroups,
+      BUILTIN_GROUPS.find((g) => g.key === "etc")!,
+    ],
     [customGroups],
   );
 
@@ -102,7 +124,8 @@ function Archive() {
   };
   const toggleCollapse = (k: string) => {
     const next = new Set(collapsed);
-    if (next.has(k)) next.delete(k); else next.add(k);
+    if (next.has(k)) next.delete(k);
+    else next.add(k);
     setCollapsed(next);
     writeJSON(COLLAPSED_KEY, [...next]);
     haptic(4);
@@ -132,11 +155,13 @@ function Archive() {
       if (!map.has(k)) map.set(k, []);
       map.get(k)!.push(it);
     });
-    return allGroups.map((g) => ({
-      ...g,
-      label: lang === "en" ? g.en : g.ko,
-      items: map.get(g.key) ?? [],
-    })).filter((g) => g.items.length > 0);
+    return allGroups
+      .map((g) => ({
+        ...g,
+        label: lang === "en" ? g.en : g.ko,
+        items: map.get(g.key) ?? [],
+      }))
+      .filter((g) => g.items.length > 0);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [filtered, lang, overrides, allGroups]);
 
@@ -164,17 +189,24 @@ function Archive() {
     }, 450);
   };
   const cancelLongPress = () => {
-    if (pressTimer.current) { clearTimeout(pressTimer.current); pressTimer.current = null; }
+    if (pressTimer.current) {
+      clearTimeout(pressTimer.current);
+      pressTimer.current = null;
+    }
   };
   const toggleSelect = (id: string) => {
     if (!selecting) return;
     const next = new Set(selected);
-    if (next.has(id)) next.delete(id); else next.add(id);
+    if (next.has(id)) next.delete(id);
+    else next.add(id);
     setSelected(next);
     haptic(3);
     if (next.size === 0) setSelecting(false);
   };
-  const exitSelection = () => { setSelecting(false); setSelected(new Set()); };
+  const exitSelection = () => {
+    setSelecting(false);
+    setSelected(new Set());
+  };
 
   // ---- Drag & drop reassignment ----
   const [dragId, setDragId] = useState<string | null>(null);
@@ -184,7 +216,8 @@ function Archive() {
     if (!it) return;
     const auto = archiveGroup(it.text).key;
     const next = { ...overrides };
-    if (key === auto) delete next[id]; else next[id] = key;
+    if (key === auto) delete next[id];
+    else next[id] = key;
     persistOverrides(next);
     haptic([6, 10, 6]);
   };
@@ -195,27 +228,45 @@ function Archive() {
     if (!g.custom) return;
     headerPressTimer.current = window.setTimeout(() => {
       haptic([10, 20, 10]);
-      const ok = window.confirm(t(`"${g.ko}" 그룹을 해제할까요? 메모는 그대로 남아요.`, `Ungroup "${g.en}"? Notes stay.`));
+      const ok = window.confirm(
+        t(
+          `"${g.ko}" 그룹을 해제할까요? 메모는 그대로 남아요.`,
+          `Ungroup "${g.en}"? Notes stay.`,
+        ),
+      );
       if (!ok) return;
       // Remove custom group and clear overrides pointing to it.
       persistCustom(customGroups.filter((x) => x.key !== g.key));
       const next: Record<string, string> = {};
-      Object.entries(overrides).forEach(([id, k]) => { if (k !== g.key) next[id] = k; });
+      Object.entries(overrides).forEach(([id, k]) => {
+        if (k !== g.key) next[id] = k;
+      });
       persistOverrides(next);
     }, 600);
   };
   const cancelHeaderPress = () => {
-    if (headerPressTimer.current) { clearTimeout(headerPressTimer.current); headerPressTimer.current = null; }
+    if (headerPressTimer.current) {
+      clearTimeout(headerPressTimer.current);
+      headerPressTimer.current = null;
+    }
   };
 
   const createGroupFromSelection = () => {
     const name = newName.trim();
     if (!name || selected.size === 0) return;
     const key = `c_${Date.now().toString(36)}`;
-    const def: GroupDef = { key, ko: name, en: name, emoji: newEmoji || "✨", custom: true };
+    const def: GroupDef = {
+      key,
+      ko: name,
+      en: name,
+      emoji: newEmoji || "✨",
+      custom: true,
+    };
     persistCustom([...customGroups, def]);
     const next = { ...overrides };
-    selected.forEach((id) => { next[id] = key; });
+    selected.forEach((id) => {
+      next[id] = key;
+    });
     persistOverrides(next);
     haptic([8, 20, 10]);
     setGroupModal(false);
@@ -238,15 +289,12 @@ function Archive() {
       raw_text: it.raw_text ?? it.text,
       brain_mirror: it.brain_mirror ?? null,
       status: "active",
-    } as any);
+    });
     await remove(it.id);
     track("archive_swiped_schedule", { text_length: it.text.length });
     haptic([6, 18, 8]);
     toast.success(t("일정으로 옮겼어요", "Moved to schedule"));
   };
-
-
-
 
   return (
     <div className="flex h-full flex-col bg-white">
@@ -256,7 +304,9 @@ function Archive() {
           <div className="mt-1 flex items-end justify-between gap-3">
             <h1 className="page-title">{t("기억", "Memory")}</h1>
             <div className="text-right leading-none">
-              <div className="font-num text-[40px] text-ink">{items.length}</div>
+              <div className="font-num text-[40px] text-ink">
+                {items.length}
+              </div>
               <div className="nrc-eyebrow mt-0.5">{t("개", "Saved")}</div>
             </div>
           </div>
@@ -285,50 +335,58 @@ function Archive() {
         <div className="px-5 pb-3">
           <div className="flex items-center gap-2 rounded-[24px] bg-white px-3.5 py-2.5 shadow-card">
             <Search size={16} className="text-ink-soft" />
-          <input
-            value={q}
-            onChange={(e) => setQ(e.target.value)}
-            placeholder={t("보관한 생각 검색", "Search archived thoughts")}
-            className="flex-1 bg-transparent text-[14px] text-ink placeholder:text-ink-soft/70 focus:outline-none"
-          />
-        </div>
-        <div className="mt-2 flex flex-wrap items-center gap-1.5">
-          <button
-            type="button"
-            onClick={() => setGroupFilter("all")}
-            className={`rounded-full px-3 py-1 text-[12px] font-medium ${
-              groupFilter === "all" ? "bg-ink text-white" : "bg-ink/[0.06] text-ink-soft"
-            }`}
-          >
-            {t("전체", "All")}
-          </button>
-          {allGroups.map((g) => (
+            <input
+              value={q}
+              onChange={(e) => setQ(e.target.value)}
+              placeholder={t("보관한 생각 검색", "Search archived thoughts")}
+              className="flex-1 bg-transparent text-[14px] text-ink placeholder:text-ink-soft/70 focus:outline-none"
+            />
+          </div>
+          <div className="mt-2 flex flex-wrap items-center gap-1.5">
             <button
-              key={g.key}
               type="button"
-              onClick={() => setGroupFilter(g.key)}
+              onClick={() => setGroupFilter("all")}
               className={`rounded-full px-3 py-1 text-[12px] font-medium ${
-                groupFilter === g.key ? "bg-ink text-white" : "bg-ink/[0.06] text-ink-soft"
+                groupFilter === "all"
+                  ? "bg-ink text-white"
+                  : "bg-ink/[0.06] text-ink-soft"
               }`}
             >
-              {g.emoji} {lang === "en" ? g.en : g.ko}
+              {t("전체", "All")}
             </button>
-          ))}
-          <select
-            value={sortOrder}
-            onChange={(e) => setSortOrder(e.target.value as "newest" | "oldest")}
-            className="ml-auto rounded-full bg-ink/[0.06] px-3 py-1 text-[12px] font-medium text-ink-soft focus:outline-none"
-            aria-label={t("정렬", "Sort")}
-          >
-            <option value="newest">{t("최신순", "Newest")}</option>
-            <option value="oldest">{t("오래된순", "Oldest")}</option>
-          </select>
-        </div>
-        <div className="mt-2 flex items-center gap-1.5 px-1 text-[11px] text-ink-soft">
-          <Sparkles size={11} className="text-primary" />
-          {t("→ 일정으로 보내기 · ← 삭제 · 길게 눌러 다중 선택 · 그룹 헤더 길게 눌러 해제",
-             "Swipe → Schedule · ← Delete · long-press to multi-select · long-press header to ungroup")}
-        </div>
+            {allGroups.map((g) => (
+              <button
+                key={g.key}
+                type="button"
+                onClick={() => setGroupFilter(g.key)}
+                className={`rounded-full px-3 py-1 text-[12px] font-medium ${
+                  groupFilter === g.key
+                    ? "bg-ink text-white"
+                    : "bg-ink/[0.06] text-ink-soft"
+                }`}
+              >
+                {g.emoji} {lang === "en" ? g.en : g.ko}
+              </button>
+            ))}
+            <select
+              value={sortOrder}
+              onChange={(e) =>
+                setSortOrder(e.target.value as "newest" | "oldest")
+              }
+              className="ml-auto rounded-full bg-ink/[0.06] px-3 py-1 text-[12px] font-medium text-ink-soft focus:outline-none"
+              aria-label={t("정렬", "Sort")}
+            >
+              <option value="newest">{t("최신순", "Newest")}</option>
+              <option value="oldest">{t("오래된순", "Oldest")}</option>
+            </select>
+          </div>
+          <div className="mt-2 flex items-center gap-1.5 px-1 text-[11px] text-ink-soft">
+            <Sparkles size={11} className="text-primary" />
+            {t(
+              "→ 일정으로 보내기 · ← 삭제 · 길게 눌러 다중 선택 · 그룹 헤더 길게 눌러 해제",
+              "Swipe → Schedule · ← Delete · long-press to multi-select · long-press header to ungroup",
+            )}
+          </div>
         </div>
       </div>
 
@@ -344,8 +402,13 @@ function Archive() {
             return (
               <section
                 key={g.key}
-                onDragOver={(e) => { e.preventDefault(); if (dragOver !== g.key) setDragOver(g.key); }}
-                onDragLeave={() => { if (dragOver === g.key) setDragOver(null); }}
+                onDragOver={(e) => {
+                  e.preventDefault();
+                  if (dragOver !== g.key) setDragOver(g.key);
+                }}
+                onDragLeave={() => {
+                  if (dragOver === g.key) setDragOver(null);
+                }}
                 onDrop={(e) => {
                   e.preventDefault();
                   const id = e.dataTransfer.getData("text/plain") || dragId;
@@ -363,8 +426,13 @@ function Archive() {
                   className="mb-2 flex w-full cursor-pointer items-center justify-between px-1 py-1 text-left select-none"
                 >
                   <h2 className="text-[11px] font-extrabold uppercase tracking-[0.18em] text-ink">
-                    <span className="text-base">{g.emoji}</span> {g.label} <span className="text-ink-soft/70">/ {g.items.length}</span>
-                    {g.custom && <span className="ml-1.5 bg-primary px-1.5 py-0.5 text-[9px] font-extrabold text-ink">{t("MINE", "MINE")}</span>}
+                    <span className="text-base">{g.emoji}</span> {g.label}{" "}
+                    <span className="text-ink-soft/70">/ {g.items.length}</span>
+                    {g.custom && (
+                      <span className="ml-1.5 bg-primary px-1.5 py-0.5 text-[9px] font-extrabold text-ink">
+                        {t("MINE", "MINE")}
+                      </span>
+                    )}
                   </h2>
                   <ChevronDown
                     size={16}
@@ -393,7 +461,10 @@ function Archive() {
                               e.dataTransfer.effectAllowed = "move";
                               setDragId(it.id);
                             }}
-                            onDragEnd={() => { setDragId(null); setDragOver(null); }}
+                            onDragEnd={() => {
+                              setDragId(null);
+                              setDragOver(null);
+                            }}
                             onPointerDown={() => startLongPress(it.id)}
                             onPointerUp={cancelLongPress}
                             onPointerLeave={cancelLongPress}
@@ -404,14 +475,22 @@ function Archive() {
                           >
                             <div className="flex gap-3">
                               {selecting && (
-                                <div className={`mt-1 flex h-5 w-5 shrink-0 items-center justify-center rounded-full border-2 ${
-                                  isSel ? "border-primary bg-primary text-ink" : "border-ink/20"
-                                }`}>
+                                <div
+                                  className={`mt-1 flex h-5 w-5 shrink-0 items-center justify-center rounded-full border-2 ${
+                                    isSel
+                                      ? "border-primary bg-primary text-ink"
+                                      : "border-ink/20"
+                                  }`}
+                                >
                                   {isSel && <Check size={12} strokeWidth={3} />}
                                 </div>
                               )}
                               {it.images?.[0] && (
-                                <img src={it.images[0]} alt="" className="h-14 w-14 rounded-[24px] object-cover" />
+                                <img
+                                  src={it.images[0]}
+                                  alt=""
+                                  className="h-14 w-14 rounded-[24px] object-cover"
+                                />
                               )}
                               <div className="flex-1 min-w-0">
                                 <div className="flex items-start justify-between gap-2">
@@ -431,7 +510,11 @@ function Archive() {
                                     >
                                       <Pin
                                         size={14}
-                                        className={pins.has(it.id) ? "fill-primary text-primary" : "text-ink-soft"}
+                                        className={
+                                          pins.has(it.id)
+                                            ? "fill-primary text-primary"
+                                            : "text-ink-soft"
+                                        }
                                       />
                                     </button>
                                   )}
@@ -445,22 +528,37 @@ function Archive() {
                                   </p>
                                 )}
                                 <div className="mt-3 flex items-center justify-between gap-2 text-meta">
-                                  <span>{g.emoji} {g.label}</span>
+                                  <span>
+                                    {g.emoji} {g.label}
+                                  </span>
                                   <div className="flex items-center gap-2">
                                     <button
                                       type="button"
                                       onClick={(e) => {
                                         e.stopPropagation();
                                         setEditItem(it);
-                                        setEditTitle(readArchiveTitles()[it.id] ?? archiveDisplayTitle(it.id, it));
+                                        setEditTitle(
+                                          readArchiveTitles()[it.id] ??
+                                            archiveDisplayTitle(it.id, it),
+                                        );
                                       }}
                                       className="text-[11px] underline"
                                     >
                                       {t("제목", "Title")}
                                     </button>
-                                    <span>{new Date(it.created_at).toLocaleDateString(locale)}</span>
+                                    <span>
+                                      {new Date(
+                                        it.created_at,
+                                      ).toLocaleDateString(locale)}
+                                    </span>
                                     {!selecting && (
-                                      <button onClick={(e) => { e.stopPropagation(); remove(it.id); }} aria-label={t("삭제", "Delete")}>
+                                      <button
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          remove(it.id);
+                                        }}
+                                        aria-label={t("삭제", "Delete")}
+                                      >
                                         <Trash2 size={13} />
                                       </button>
                                     )}
@@ -492,7 +590,8 @@ function Archive() {
               <X size={18} />
             </button>
             <div className="flex-1 px-1 text-[13px] font-semibold text-ink">
-              {selected.size}{t("개 선택됨", " selected")}
+              {selected.size}
+              {t("개 선택됨", " selected")}
             </div>
             <button
               onClick={() => setGroupModal(true)}
@@ -508,11 +607,17 @@ function Archive() {
       {/* Create-group modal */}
       {groupModal && (
         <div className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center p-4 animate-fade-in">
-          <div className="absolute inset-0 bg-ink/40 backdrop-blur-md" onClick={() => setGroupModal(false)} />
+          <div
+            className="absolute inset-0 bg-ink/40 backdrop-blur-md"
+            onClick={() => setGroupModal(false)}
+          />
           <div className="relative w-full max-w-sm rounded-[24px] bg-white/95 p-6 shadow-float backdrop-blur-xl animate-scale-in">
-            <div className="text-[17px] font-extrabold text-ink">{t("새 그룹 만들기", "New group")}</div>
+            <div className="text-[17px] font-extrabold text-ink">
+              {t("새 그룹 만들기", "New group")}
+            </div>
             <div className="mt-1 text-xs text-ink-soft">
-              {selected.size}{t("개 메모를 이 그룹으로 묶어요.", " notes will be grouped.")}
+              {selected.size}
+              {t("개 메모를 이 그룹으로 묶어요.", " notes will be grouped.")}
             </div>
             <div className="mt-4 flex items-center gap-2">
               <input
@@ -560,13 +665,18 @@ function Archive() {
       />
 
       {editItem && (
-        <div className="absolute inset-0 z-50 flex flex-col" onClick={() => setEditItem(null)}>
+        <div
+          className="absolute inset-0 z-50 flex flex-col"
+          onClick={() => setEditItem(null)}
+        >
           <div className="flex-1 bg-ink/30 backdrop-blur-sm" />
           <div
             className="animate-slide-up rounded-t-[28px] bg-background px-5 pb-[calc(env(safe-area-inset-bottom)+1rem)] pt-3"
             onClick={(e) => e.stopPropagation()}
           >
-            <h3 className="text-[17px] font-bold text-ink">{t("제목 편집", "Edit title")}</h3>
+            <h3 className="text-[17px] font-bold text-ink">
+              {t("제목 편집", "Edit title")}
+            </h3>
             <input
               value={editTitle}
               onChange={(e) => setEditTitle(e.target.value)}
@@ -599,7 +709,10 @@ function Empty() {
         {t("아직 담긴 게 없어요.", "Nothing saved yet.")}
       </div>
       <div className="mt-1 text-sm text-ink-soft">
-        {t("마음에 남는 생각을 왼쪽으로 밀어 모아보세요.", "Swipe left on a thought when you want to keep it.")}
+        {t(
+          "마음에 남는 생각을 왼쪽으로 밀어 모아보세요.",
+          "Swipe left on a thought when you want to keep it.",
+        )}
       </div>
     </div>
   );

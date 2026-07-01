@@ -104,7 +104,10 @@ export function mockBrainMirror(text: string): BrainMirrorResult | null {
         ? "다음 주"
         : "";
 
-  if (hasBirthday || (/엄마|아빠|부모/.test(text) && /꽃|케이크|병원/.test(text))) {
+  if (
+    hasBirthday ||
+    (/엄마|아빠|부모/.test(text) && /꽃|케이크|병원/.test(text))
+  ) {
     const items: string[] = [];
     if (/꽃/.test(text)) items.push("꽃 구매");
     if (/케이크/.test(text)) items.push("케이크 구매");
@@ -115,7 +118,9 @@ export function mockBrainMirror(text: string): BrainMirrorResult | null {
       title: hasBirthday ? "엄마 생일 준비 🎂" : "챙길 것들",
       items,
       suggestedDateText: dateText,
-      suggestedAction: dateText ? suggestedActionForDate(dateText) : "이렇게 기억해둘게요.",
+      suggestedAction: dateText
+        ? suggestedActionForDate(dateText)
+        : "이렇게 기억해둘게요.",
       confidence: 0.88,
     });
   }
@@ -130,7 +135,9 @@ export function mockBrainMirror(text: string): BrainMirrorResult | null {
       : [];
 
   const title =
-    text.length > 24 ? `${text.slice(0, 22).trim()}…` : text.trim() || "이해한 내용";
+    text.length > 24
+      ? `${text.slice(0, 22).trim()}…`
+      : text.trim() || "이해한 내용";
 
   return mockSnapshot({
     title,

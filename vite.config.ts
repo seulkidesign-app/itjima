@@ -20,9 +20,21 @@ export default defineConfig({
       output: {
         codeSplitting: {
           groups: [
-            { name: "vendor-react", test: /node_modules[\\/]react/, priority: 20 },
-            { name: "vendor-tanstack", test: /node_modules[\\/]@tanstack/, priority: 15 },
-            { name: "vendor-supabase", test: /node_modules[\\/]@supabase/, priority: 15 },
+            {
+              name: "vendor-react",
+              test: /node_modules[\\/]react/,
+              priority: 20,
+            },
+            {
+              name: "vendor-tanstack",
+              test: /node_modules[\\/]@tanstack/,
+              priority: 15,
+            },
+            {
+              name: "vendor-supabase",
+              test: /node_modules[\\/]@supabase/,
+              priority: 15,
+            },
           ],
         },
       },

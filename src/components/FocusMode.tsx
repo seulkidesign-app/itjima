@@ -18,7 +18,11 @@ export function CleanupBar({
           {t(`${deleteCount}개 삭제됩니다`, `${deleteCount} will be deleted`)}
         </p>
         <div className="flex items-center gap-2">
-          <button type="button" onClick={onCancel} className="pill-ghost px-4 py-2 text-[13px]">
+          <button
+            type="button"
+            onClick={onCancel}
+            className="pill-ghost px-4 py-2 text-[13px]"
+          >
             {t("취소", "Cancel")}
           </button>
           <button

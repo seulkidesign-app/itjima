@@ -6,8 +6,11 @@
  * White · #111111 · #FFE033 · #9A9A90 only. */
 
 @theme inline {
-  --font-sans: "Pretendard", "Pretendard Variable", "Archivo", -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
-  --font-display: "Bebas Neue", "Archivo Black", "Pretendard", system-ui, sans-serif;
+  --font-sans:
+    "Pretendard", "Pretendard Variable", "Archivo", -apple-system,
+    BlinkMacSystemFont, system-ui, sans-serif;
+  --font-display:
+    "Bebas Neue", "Archivo Black", "Pretendard", system-ui, sans-serif;
   --font-num: "Archivo Black", "Bebas Neue", system-ui, sans-serif;
 
   --radius-button: 999px;
@@ -45,53 +48,58 @@
   --radius: 24px;
 
   /* Brand palette */
-  --brand-yellow: #FFE033;
-  --brand-yellow-soft: #FFF4B8;
+  --brand-yellow: #ffe033;
+  --brand-yellow-soft: #fff4b8;
 
   /* Surfaces */
-  --background: #FFFFFF;
+  --background: #ffffff;
   --foreground: #111111;
   --ink: #111111;
-  --ink-soft: #9A9A90;
-  --meta: #9A9A90;
+  --ink-soft: #9a9a90;
+  --meta: #9a9a90;
 
   --glass: oklch(1 0 0 / 0.92);
   --glass-border: oklch(0 0 0 / 0.05);
 
-  --card: #FFFFFF;
+  --card: #ffffff;
   --card-foreground: #111111;
-  --popover: #FFFFFF;
+  --popover: #ffffff;
   --popover-foreground: #111111;
 
-  --primary: #FFE033;
+  --primary: #ffe033;
   --primary-foreground: #111111;
-  --secondary: #F7F7F5;
+  --secondary: #f7f7f5;
   --secondary-foreground: #111111;
-  --muted: #F7F7F5;
-  --muted-foreground: #9A9A90;
-  --accent: #F7F7F5;
+  --muted: #f7f7f5;
+  --muted-foreground: #9a9a90;
+  --accent: #f7f7f5;
   --accent-foreground: #111111;
   --destructive: #111111;
-  --destructive-foreground: #FFFFFF;
+  --destructive-foreground: #ffffff;
 
   --border: oklch(0 0 0 / 0.05);
-  --input: #F7F7F5;
-  --ring: #FFE033;
+  --input: #f7f7f5;
+  --ring: #ffe033;
 
   --bg-gradient: #ffffff;
 
   /* Shadows — soft diffused */
   --shadow-card: 0 2px 16px -4px oklch(0 0 0 / 0.08);
   --shadow-float: 0 8px 28px -8px oklch(0 0 0 / 0.12);
-  --shadow-yellow: 0 0 0 2px oklch(0.92 0.14 95 / 0.45), 0 8px 24px -6px oklch(0.92 0.14 95 / 0.22);
-  --shadow-muted: 0 0 0 2px oklch(0.62 0.02 100 / 0.25), 0 8px 24px -6px oklch(0 0 0 / 0.08);
+  --shadow-yellow:
+    0 0 0 2px oklch(0.92 0.14 95 / 0.45),
+    0 8px 24px -6px oklch(0.92 0.14 95 / 0.22);
+  --shadow-muted:
+    0 0 0 2px oklch(0.62 0.02 100 / 0.25), 0 8px 24px -6px oklch(0 0 0 / 0.08);
 }
 
 @layer base {
   * {
     border-color: var(--color-border);
   }
-  html, body, #root {
+  html,
+  body,
+  #root {
     height: 100%;
   }
   body {
@@ -101,8 +109,13 @@
     -webkit-font-smoothing: antialiased;
     overscroll-behavior: none;
   }
-  button { font-family: inherit; }
-  textarea, input { font-family: inherit; }
+  button {
+    font-family: inherit;
+  }
+  textarea,
+  input {
+    font-family: inherit;
+  }
 }
 
 /* Display & numeric utilities (NRC vibe) */
@@ -148,10 +161,18 @@
   backdrop-filter: blur(28px) saturate(180%);
   border-bottom: 1px solid oklch(0 0 0 / 0.06);
 }
-@utility card-radius { border-radius: 24px; }
-@utility btn-radius { border-radius: 999px; }
-@utility shadow-card { box-shadow: var(--shadow-card); }
-@utility shadow-float { box-shadow: var(--shadow-float); }
+@utility card-radius {
+  border-radius: 24px;
+}
+@utility btn-radius {
+  border-radius: 999px;
+}
+@utility shadow-card {
+  box-shadow: var(--shadow-card);
+}
+@utility shadow-float {
+  box-shadow: var(--shadow-float);
+}
 @utility text-meta {
   font-size: 13px;
   font-weight: 500;
@@ -218,8 +239,12 @@
 }
 
 @keyframes shimmer {
-  0% { background-position: 120% 0; }
-  100% { background-position: -120% 0; }
+  0% {
+    background-position: 120% 0;
+  }
+  100% {
+    background-position: -120% 0;
+  }
 }
 
 .imessage-dot {
@@ -231,8 +256,16 @@
 }
 
 @keyframes imessage-bounce {
-  0%, 60%, 100% { transform: translateY(0); opacity: 0.35; }
-  30% { transform: translateY(-4px); opacity: 1; }
+  0%,
+  60%,
+  100% {
+    transform: translateY(0);
+    opacity: 0.35;
+  }
+  30% {
+    transform: translateY(-4px);
+    opacity: 1;
+  }
 }
 
 /* NRC pills — black bg primary, yellow accent */
@@ -245,8 +278,12 @@
   font-size: 0.8125rem;
   letter-spacing: 0.04em;
   text-transform: uppercase;
-  transition: transform 0.15s ease, box-shadow 0.15s ease;
-  &:active { transform: scale(0.96); }
+  transition:
+    transform 0.15s ease,
+    box-shadow 0.15s ease;
+  &:active {
+    transform: scale(0.96);
+  }
 }
 @utility pill-black {
   background: var(--ink);
@@ -258,7 +295,9 @@
   letter-spacing: 0.04em;
   text-transform: uppercase;
   transition: transform 0.15s ease;
-  &:active { transform: scale(0.96); }
+  &:active {
+    transform: scale(0.96);
+  }
 }
 @utility pill-ghost {
   background: transparent;
@@ -319,42 +358,105 @@
   overscroll-behavior-y: contain;
   touch-action: pan-y;
   -webkit-overflow-scrolling: touch;
-  -webkit-mask-image: linear-gradient(180deg, transparent 0%, rgba(0,0,0,0.35) 15%, #000 40%, #000 60%, rgba(0,0,0,0.35) 85%, transparent 100%);
-          mask-image: linear-gradient(180deg, transparent 0%, rgba(0,0,0,0.35) 15%, #000 40%, #000 60%, rgba(0,0,0,0.35) 85%, transparent 100%);
+  -webkit-mask-image: linear-gradient(
+    180deg,
+    transparent 0%,
+    rgba(0, 0, 0, 0.35) 15%,
+    #000 40%,
+    #000 60%,
+    rgba(0, 0, 0, 0.35) 85%,
+    transparent 100%
+  );
+  mask-image: linear-gradient(
+    180deg,
+    transparent 0%,
+    rgba(0, 0, 0, 0.35) 15%,
+    #000 40%,
+    #000 60%,
+    rgba(0, 0, 0, 0.35) 85%,
+    transparent 100%
+  );
 }
-.wheel-col::-webkit-scrollbar { display: none; }
-
+.wheel-col::-webkit-scrollbar {
+  display: none;
+}
 
 @keyframes fade-in {
-  from { opacity: 0; transform: translateY(8px); }
-  to   { opacity: 1; transform: translateY(0); }
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 @keyframes bm-enter {
-  from { opacity: 0; transform: translateY(8px); }
-  to   { opacity: 1; transform: translateY(0); }
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 @keyframes swipe-label-in {
-  from { opacity: 0; transform: translateY(6px); }
-  to   { opacity: 1; transform: translateY(0); }
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 @keyframes slide-up {
-  from { transform: translateY(100%); }
-  to   { transform: translateY(0); }
+  from {
+    transform: translateY(100%);
+  }
+  to {
+    transform: translateY(0);
+  }
 }
 @keyframes pop {
-  0%   { transform: scale(0.92); opacity: 0; }
-  100% { transform: scale(1); opacity: 1; }
+  0% {
+    transform: scale(0.92);
+    opacity: 0;
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
 }
-@utility animate-fade-in { animation: fade-in 0.25s ease-out both; }
-@utility animate-bm-enter { animation: bm-enter 0.4s ease-out both; }
-@utility animate-swipe-label { animation: swipe-label-in 0.25s ease-out both; }
-@utility animate-slide-up { animation: slide-up 0.3s cubic-bezier(0.2, 0.8, 0.2, 1) both; }
-@utility animate-pop { animation: pop 0.2s ease-out both; }
+@utility animate-fade-in {
+  animation: fade-in 0.25s ease-out both;
+}
+@utility animate-bm-enter {
+  animation: bm-enter 0.4s ease-out both;
+}
+@utility animate-swipe-label {
+  animation: swipe-label-in 0.25s ease-out both;
+}
+@utility animate-slide-up {
+  animation: slide-up 0.3s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+@utility animate-pop {
+  animation: pop 0.2s ease-out both;
+}
 @keyframes scale-in {
-  from { opacity: 0; transform: scale(0.94); }
-  to   { opacity: 1; transform: scale(1); }
+  from {
+    opacity: 0;
+    transform: scale(0.94);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
 }
-@utility animate-scale-in { animation: scale-in 0.25s ease-out both; }
+@utility animate-scale-in {
+  animation: scale-in 0.25s ease-out both;
+}
 
 /* Hide externally injected dev/preview badges (not ItJima branding) */
 a[href*="lovable.dev"][target="_blank"],

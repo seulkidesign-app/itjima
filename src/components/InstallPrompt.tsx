@@ -22,7 +22,10 @@ function isStandalone() {
 
 function isIOS() {
   if (typeof navigator === "undefined") return false;
-  return /iPhone|iPad|iPod/i.test(navigator.userAgent) && !/CriOS|FxiOS|EdgiOS/i.test(navigator.userAgent);
+  return (
+    /iPhone|iPad|iPod/i.test(navigator.userAgent) &&
+    !/CriOS|FxiOS|EdgiOS/i.test(navigator.userAgent)
+  );
 }
 
 function recentlyDismissed() {
@@ -41,7 +44,6 @@ export function InstallPrompt() {
   const [bip, setBip] = useState<BIPEvent | null>(null);
   const [show, setShow] = useState(false);
   const [iosHint, setIosHint] = useState(false);
-
 
   useEffect(() => {
     if (isStandalone() || recentlyDismissed()) return;
@@ -87,7 +89,10 @@ export function InstallPrompt() {
       track("pwa_install_prompted", { platform: "android" });
       await bip.prompt();
       const res = await bip.userChoice;
-      track("pwa_install_choice", { platform: "android", outcome: res.outcome });
+      track("pwa_install_choice", {
+        platform: "android",
+        outcome: res.outcome,
+      });
       dismiss();
     } else if (isIOS()) {
       track("pwa_install_prompted", { platform: "ios" });
@@ -112,8 +117,12 @@ export function InstallPrompt() {
             <Download className="h-5 w-5" />
           </div>
           <div className="min-w-0 flex-1">
-            <p className="text-sm font-semibold text-ink">{t("홈 화면에 추가", "Add to Home Screen")}</p>
-            <p className="truncate text-xs text-ink-soft">{t("앱처럼 한 번에 열어요", "Open it like a native app")}</p>
+            <p className="text-sm font-semibold text-ink">
+              {t("홈 화면에 추가", "Add to Home Screen")}
+            </p>
+            <p className="truncate text-xs text-ink-soft">
+              {t("앱처럼 한 번에 열어요", "Open it like a native app")}
+            </p>
           </div>
           <button
             onClick={install}
@@ -134,8 +143,14 @@ export function InstallPrompt() {
             onClick={(e) => e.stopPropagation()}
           >
             <div className="mb-3 flex items-center justify-between">
-              <h3 className="text-base font-bold text-ink">{t("홈 화면에 추가하는 법", "How to add to Home Screen")}</h3>
-              <button onClick={dismiss} aria-label={t("닫기", "Close")} className="rounded-full p-1 text-ink-soft">
+              <h3 className="text-base font-bold text-ink">
+                {t("홈 화면에 추가하는 법", "How to add to Home Screen")}
+              </h3>
+              <button
+                onClick={dismiss}
+                aria-label={t("닫기", "Close")}
+                className="rounded-full p-1 text-ink-soft"
+              >
                 <X className="h-4 w-4" />
               </button>
             </div>
@@ -145,7 +160,12 @@ export function InstallPrompt() {
                   1
                 </span>
                 <span className="flex-1">
-                  {t("Safari 하단의 ", "Tap the ")}<Share className="inline h-4 w-4 align-text-bottom" />{t(" 공유 버튼을 누르세요", " Share button at the bottom of Safari")}
+                  {t("Safari 하단의 ", "Tap the ")}
+                  <Share className="inline h-4 w-4 align-text-bottom" />
+                  {t(
+                    " 공유 버튼을 누르세요",
+                    " Share button at the bottom of Safari",
+                  )}
                 </span>
               </li>
               <li className="flex items-start gap-3">
@@ -153,18 +173,28 @@ export function InstallPrompt() {
                   2
                 </span>
                 <span className="flex-1">
-                  {t("메뉴에서 ", "Pick ")}<Plus className="inline h-4 w-4 align-text-bottom" /> <b>{t("\"홈 화면에 추가\"", "\"Add to Home Screen\"")}</b>{t(" 선택", "")}
+                  {t("메뉴에서 ", "Pick ")}
+                  <Plus className="inline h-4 w-4 align-text-bottom" />{" "}
+                  <b>{t('"홈 화면에 추가"', '"Add to Home Screen"')}</b>
+                  {t(" 선택", "")}
                 </span>
               </li>
               <li className="flex items-start gap-3">
                 <span className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-yellow text-xs font-bold text-ink">
                   3
                 </span>
-                <span className="flex-1">{t("우측 상단 ", "Tap ")}<b>{t("\"추가\"", "\"Add\"")}</b>{t(" 탭하면 끝!", " in the top right — done!")}</span>
+                <span className="flex-1">
+                  {t("우측 상단 ", "Tap ")}
+                  <b>{t('"추가"', '"Add"')}</b>
+                  {t(" 탭하면 끝!", " in the top right — done!")}
+                </span>
               </li>
             </ol>
             <p className="mt-4 text-xs text-ink-soft">
-              {t("※ Chrome이 아닌 Safari에서 열어야 추가할 수 있어요.", "※ Must be opened in Safari (not Chrome) to install.")}
+              {t(
+                "※ Chrome이 아닌 Safari에서 열어야 추가할 수 있어요.",
+                "※ Must be opened in Safari (not Chrome) to install.",
+              )}
             </p>
           </div>
         </div>

@@ -45,7 +45,10 @@ export function TopNav() {
             type="button"
             aria-label={t("정보", "About")}
             className="flex h-10 w-10 items-center justify-center rounded-full text-ink-soft active:bg-ink/5 active:text-ink transition"
-            onClick={() => { tap(); setAboutOpen(true); }}
+            onClick={() => {
+              tap();
+              setAboutOpen(true);
+            }}
           >
             <Info size={20} strokeWidth={2.25} />
           </button>
@@ -53,12 +56,18 @@ export function TopNav() {
             type="button"
             aria-label={t("문의 · 피드백", "Contact · Feedback")}
             className="flex h-10 w-10 items-center justify-center rounded-full text-ink-soft active:bg-ink/5 active:text-ink transition"
-            onClick={() => { tap(); setFeedbackOpen(true); }}
+            onClick={() => {
+              tap();
+              setFeedbackOpen(true);
+            }}
           >
             <MessageSquarePlus size={20} strokeWidth={2.25} />
           </button>
         </div>
-        <Link to="/about" className="font-display text-[22px] uppercase leading-none tracking-wide text-ink">
+        <Link
+          to="/about"
+          className="font-display text-[22px] uppercase leading-none tracking-wide text-ink"
+        >
           ITJIMA
           <span className="ml-1 inline-block h-1.5 w-1.5 -translate-y-1 rounded-full bg-primary align-middle" />
         </Link>
@@ -109,7 +118,10 @@ export function TopNav() {
         })}
       </nav>
       <AboutSheet open={aboutOpen} onClose={() => setAboutOpen(false)} />
-      <FeedbackSheet open={feedbackOpen} onClose={() => setFeedbackOpen(false)} />
+      <FeedbackSheet
+        open={feedbackOpen}
+        onClose={() => setFeedbackOpen(false)}
+      />
     </div>
   );
 }

@@ -1,6 +1,11 @@
 import type { ScheduleItem } from "@/lib/store";
 
-export type ScheduleSectionKey = "now" | "today" | "tomorrow" | "week" | "later";
+export type ScheduleSectionKey =
+  | "now"
+  | "today"
+  | "tomorrow"
+  | "week"
+  | "later";
 
 export type ScheduleSection = {
   key: ScheduleSectionKey;
@@ -29,17 +34,22 @@ function endOfWeek(d: Date) {
   return endOfDay(x);
 }
 
-export function classifySchedule(startIso: string, now = new Date()): ScheduleSectionKey {
+export function classifySchedule(
+  startIso: string,
+  now = new Date(),
+): ScheduleSectionKey {
   const start = new Date(startIso);
   const t = start.getTime();
   const n = now.getTime();
 
   if (t >= n && t - n <= NOW_MS) return "now";
-  if (t >= startOfDay(now).getTime() && t <= endOfDay(now).getTime()) return "today";
+  if (t >= startOfDay(now).getTime() && t <= endOfDay(now).getTime())
+    return "today";
 
   const tomorrow = new Date(now);
   tomorrow.setDate(tomorrow.getDate() + 1);
-  if (t >= startOfDay(tomorrow).getTime() && t <= endOfDay(tomorrow).getTime()) return "tomorrow";
+  if (t >= startOfDay(tomorrow).getTime() && t <= endOfDay(tomorrow).getTime())
+    return "tomorrow";
 
   if (t <= endOfWeek(now).getTime()) return "week";
   return "later";
@@ -51,9 +61,18 @@ export function isMissed(s: ScheduleItem, now = new Date()): boolean {
   return end < now.getTime() - 30 * 60 * 1000;
 }
 
-export function groupSchedules(items: ScheduleItem[], pins: Set<string>): ScheduleSection[] {
+export function groupSchedules(
+  items: ScheduleItem[],
+  pins: Set<string>,
+): ScheduleSection[] {
   const active = items.filter((s) => s.status !== "done");
-  const order: ScheduleSectionKey[] = ["now", "today", "tomorrow", "week", "later"];
+  const order: ScheduleSectionKey[] = [
+    "now",
+    "today",
+    "tomorrow",
+    "week",
+    "later",
+  ];
   const buckets = new Map<ScheduleSectionKey, ScheduleItem[]>(
     order.map((k) => [k, []]),
   );
@@ -74,7 +93,10 @@ export function groupSchedules(items: ScheduleItem[], pins: Set<string>): Schedu
     .filter((g) => g.items.length > 0);
 }
 
-export function sectionLabel(key: ScheduleSectionKey, lang: "ko" | "en"): string {
+export function sectionLabel(
+  key: ScheduleSectionKey,
+  lang: "ko" | "en",
+): string {
   const ko: Record<ScheduleSectionKey, string> = {
     now: "지금",
     today: "오늘",

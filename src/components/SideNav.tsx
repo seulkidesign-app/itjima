@@ -1,5 +1,13 @@
 import { Link, useRouterState } from "@tanstack/react-router";
-import { Inbox, Calendar, Archive, Info, Shield, LogIn, LogOut } from "lucide-react";
+import {
+  Inbox,
+  Calendar,
+  Archive,
+  Info,
+  Shield,
+  LogIn,
+  LogOut,
+} from "lucide-react";
 import { toast } from "sonner";
 import { useEffect, useState } from "react";
 import { useT, LanguageToggle } from "@/lib/i18n";

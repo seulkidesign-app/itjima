@@ -1,9 +1,24 @@
 /** Apple-style spring presets for ItJima interaction system v1.0 */
-export const SPRING_DEFAULT = { type: "spring" as const, stiffness: 320, damping: 28, mass: 0.8 };
+export const SPRING_DEFAULT = {
+  type: "spring" as const,
+  stiffness: 320,
+  damping: 28,
+  mass: 0.8,
+};
 
-export const SPRING_SNAP_BACK = { type: "spring" as const, stiffness: 420, damping: 32, mass: 0.75 };
+export const SPRING_SNAP_BACK = {
+  type: "spring" as const,
+  stiffness: 420,
+  damping: 32,
+  mass: 0.75,
+};
 
-export const SPRING_SHEET = { type: "spring" as const, stiffness: 380, damping: 34, mass: 0.85 };
+export const SPRING_SHEET = {
+  type: "spring" as const,
+  stiffness: 380,
+  damping: 34,
+  mass: 0.85,
+};
 
 export const SWIPE_PREVIEW = 0.3;
 export const SWIPE_COMMIT = 0.6;
@@ -16,7 +31,10 @@ export function dragProgress(absPx: number, cardWidth: number) {
 export function indicatorScale(progress: number) {
   if (progress <= 0) return 0;
   if (progress < SWIPE_PREVIEW) return (progress / SWIPE_PREVIEW) * 0.5;
-  if (progress < SWIPE_COMMIT) return 0.5 + ((progress - SWIPE_PREVIEW) / (SWIPE_COMMIT - SWIPE_PREVIEW)) * 0.5;
+  if (progress < SWIPE_COMMIT)
+    return (
+      0.5 + ((progress - SWIPE_PREVIEW) / (SWIPE_COMMIT - SWIPE_PREVIEW)) * 0.5
+    );
   return 1;
 }
 

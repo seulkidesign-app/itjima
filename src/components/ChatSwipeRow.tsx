@@ -1,4 +1,10 @@
-import { useEffect, useRef, useState, type PointerEvent, type ReactNode } from "react";
+import {
+  useEffect,
+  useRef,
+  useState,
+  type PointerEvent,
+  type ReactNode,
+} from "react";
 import { Archive, Calendar } from "lucide-react";
 import { animate } from "framer-motion";
 import { useT } from "@/lib/i18n";
@@ -148,10 +154,15 @@ export function ChatSwipeRow({
   }, [pending]);
 
   const w = width();
-  const rightProgress = dx > 0 ? dragProgress(dx, w) : pending === "right" ? 1 : 0;
-  const leftProgress = dx < 0 ? dragProgress(-dx, w) : pending === "left" ? 1 : 0;
+  const rightProgress =
+    dx > 0 ? dragProgress(dx, w) : pending === "right" ? 1 : 0;
+  const leftProgress =
+    dx < 0 ? dragProgress(-dx, w) : pending === "left" ? 1 : 0;
   const progress = Math.max(rightProgress, leftProgress);
-  const rotate = Math.max(-MAX_ROTATE, Math.min(MAX_ROTATE, dx * (MAX_ROTATE / (w * 0.45))));
+  const rotate = Math.max(
+    -MAX_ROTATE,
+    Math.min(MAX_ROTATE, dx * (MAX_ROTATE / (w * 0.45))),
+  );
   const scale = draggingRef.current || flying ? cardScale(progress) : 1;
   const shadow = cardShadowBlur(progress);
 
@@ -172,7 +183,9 @@ export function ChatSwipeRow({
           ) : (
             <Archive size={16} className="text-white" />
           )}
-          <span className={`text-[12px] font-extrabold ${isRight ? "text-ink" : "text-white"}`}>
+          <span
+            className={`text-[12px] font-extrabold ${isRight ? "text-ink" : "text-white"}`}
+          >
             {isRight ? t("일정", "Schedule") : t("보관", "Archive")}
           </span>
         </div>
@@ -215,7 +228,10 @@ export function ChatSwipeRow({
         className="relative z-[1] w-full touch-none select-none"
         style={{
           transform: `translateX(${dx}px) rotate(${rotate}deg) scale(${scale})`,
-          boxShadow: progress > 0 ? `0 ${shadow}px ${shadow * 1.2}px rgba(0,0,0,${0.06 + progress * 0.08})` : undefined,
+          boxShadow:
+            progress > 0
+              ? `0 ${shadow}px ${shadow * 1.2}px rgba(0,0,0,${0.06 + progress * 0.08})`
+              : undefined,
           transition: draggingRef.current || flying ? "none" : undefined,
         }}
       >

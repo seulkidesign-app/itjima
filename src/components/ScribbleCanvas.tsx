@@ -83,13 +83,18 @@ export function ScribbleCanvas({ open, onClose, onDone }: Props) {
   };
 
   return (
-    <div className="absolute inset-0 z-[60] flex flex-col bg-black/60 backdrop-blur-sm" onClick={onClose}>
+    <div
+      className="absolute inset-0 z-[60] flex flex-col bg-black/60 backdrop-blur-sm"
+      onClick={onClose}
+    >
       <div
         className="mt-auto animate-slide-up rounded-t-[28px] bg-white px-5 pb-[calc(env(safe-area-inset-bottom)+1rem)] pt-3"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="mx-auto mb-3 h-1.5 w-10 rounded-full bg-ink/15" />
-        <div className="mb-3 text-center text-[15px] font-bold text-ink">{t("낙서", "Scribble")}</div>
+        <div className="mb-3 text-center text-[15px] font-bold text-ink">
+          {t("낙서", "Scribble")}
+        </div>
         <canvas
           ref={canvasRef}
           width={800}

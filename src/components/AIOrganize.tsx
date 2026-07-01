@@ -3,15 +3,58 @@ import { Sparkles } from "lucide-react";
 import type { InboxItem } from "@/lib/store";
 import { haptic } from "@/lib/haptics";
 
+export type Bucket = "schedule" | "archive";
+
+declare global {
+  interface Window {
+    __aiOrganizeState?: {
+      flying: Record<string, Bucket>;
+      glow: Record<string, Bucket>;
+    };
+  }
+}
+
 const SCHEDULE_KW = [
-  "날짜","시간","오늘","내일","모레","월요일","화요일","수요일","목요일","금요일","토요일","일요일",
-  "시","오전","오후","저녁","아침","약속","미팅","예약","마감",
+  "날짜",
+  "시간",
+  "오늘",
+  "내일",
+  "모레",
+  "월요일",
+  "화요일",
+  "수요일",
+  "목요일",
+  "금요일",
+  "토요일",
+  "일요일",
+  "시",
+  "오전",
+  "오후",
+  "저녁",
+  "아침",
+  "약속",
+  "미팅",
+  "예약",
+  "마감",
 ];
 const ARCHIVE_KW = [
-  "카페","식당","여행","맛집","책","영상","유튜브","영화","드라마","아이디어","기획","음악","쇼핑","구매","링크","참고",
+  "카페",
+  "식당",
+  "여행",
+  "맛집",
+  "책",
+  "영상",
+  "유튜브",
+  "영화",
+  "드라마",
+  "아이디어",
+  "기획",
+  "음악",
+  "쇼핑",
+  "구매",
+  "링크",
+  "참고",
 ];
-
-export type Bucket = "schedule" | "archive";
 
 export function classify(text: string): Bucket {
   const t = text || "";
@@ -30,7 +73,9 @@ type Props = {
 };
 
 export function AIOrganizeButton({ items, onCommit, label, analyzing }: Props) {
-  const [phase, setPhase] = useState<"idle" | "analyzing" | "animating" | "committing" | "done">("idle");
+  const [phase, setPhase] = useState<
+    "idle" | "analyzing" | "animating" | "committing" | "done"
+  >("idle");
   const [flying, setFlying] = useState<Record<string, Bucket>>({});
   const [glow, setGlow] = useState<Record<string, Bucket>>({});
   const [counts, setCounts] = useState({ s: 0, a: 0, total: 0 });
@@ -39,7 +84,7 @@ export function AIOrganizeButton({ items, onCommit, label, analyzing }: Props) {
     setPhase("idle");
     setFlying({});
     setGlow({});
-    (window as any).__aiOrganizeState = { flying: {}, glow: {} };
+    window.__aiOrganizeState = { flying: {}, glow: {} };
     window.dispatchEvent(new CustomEvent("ai-organize:state"));
   };
 
@@ -80,7 +125,7 @@ export function AIOrganizeButton({ items, onCommit, label, analyzing }: Props) {
 
   // expose flying/glow state to OrganizeFxWrapper via window event
   useEffect(() => {
-    (window as any).__aiOrganizeState = { flying, glow };
+    window.__aiOrganizeState = { flying, glow };
     window.dispatchEvent(new CustomEvent("ai-organize:state"));
   }, [flying, glow]);
 
@@ -99,7 +144,14 @@ export function AIOrganizeButton({ items, onCommit, label, analyzing }: Props) {
             style={{ borderRadius: 999 }}
           >
             <span className="inline-flex items-center justify-center gap-2">
-              <Sparkles size={14} className={phase === "analyzing" ? "animate-spin text-primary" : "text-primary"} />
+              <Sparkles
+                size={14}
+                className={
+                  phase === "analyzing"
+                    ? "animate-spin text-primary"
+                    : "text-primary"
+                }
+              />
               {phase === "analyzing" ? analyzing : label}
             </span>
           </button>
@@ -108,11 +160,18 @@ export function AIOrganizeButton({ items, onCommit, label, analyzing }: Props) {
 
       {phase === "done" && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-6 animate-fade-in">
-          <div className="absolute inset-0 bg-ink/40 backdrop-blur-md" onClick={reset} />
+          <div
+            className="absolute inset-0 bg-ink/40 backdrop-blur-md"
+            onClick={reset}
+          />
           <div className="relative w-full max-w-sm rounded-3xl border border-white/40 bg-white/70 p-7 text-center shadow-float backdrop-blur-xl animate-scale-in">
             <div className="text-6xl">🧠</div>
-            <div className="mt-3 text-[20px] font-extrabold text-ink">머릿속이 가벼워졌어요</div>
-            <div className="mt-2 text-sm text-ink-soft">📅 일정 {counts.s}개 &nbsp; 🗂 보관 {counts.a}개 로 정리했어요</div>
+            <div className="mt-3 text-[20px] font-extrabold text-ink">
+              머릿속이 가벼워졌어요
+            </div>
+            <div className="mt-2 text-sm text-ink-soft">
+              📅 일정 {counts.s}개 &nbsp; 🗂 보관 {counts.a}개 로 정리했어요
+            </div>
             <div className="mt-5 rounded-2xl bg-white/60 px-4 py-4 text-[18px] font-extrabold leading-snug text-ink">
               당신의 머릿속이 {reduction}% 가벼워졌어요.
             </div>
@@ -135,7 +194,7 @@ export function useOrganizeFx(id: string) {
   const [state, setState] = useState<{ flying?: Bucket; glow?: Bucket }>({});
   useEffect(() => {
     const read = () => {
-      const s = (window as any).__aiOrganizeState || { flying: {}, glow: {} };
+      const s = window.__aiOrganizeState ?? { flying: {}, glow: {} };
       setState({ flying: s.flying[id], glow: s.glow[id] });
     };
     read();

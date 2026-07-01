@@ -2,7 +2,11 @@ import { useEffect, useState } from "react";
 import { BottomSheet } from "./BottomSheet";
 import { useT, useLang } from "@/lib/i18n";
 import type { InboxItem } from "@/lib/store";
-import { detectJunk, junkReasonLabel, type JunkCandidate } from "@/lib/junkDetect";
+import {
+  detectJunk,
+  junkReasonLabel,
+  type JunkCandidate,
+} from "@/lib/junkDetect";
 
 type Props = {
   items: InboxItem[];
@@ -11,7 +15,12 @@ type Props = {
   onConfirmDelete: (ids: string[]) => void;
 };
 
-export function CleanupReviewSheet({ items, open, onClose, onConfirmDelete }: Props) {
+export function CleanupReviewSheet({
+  items,
+  open,
+  onClose,
+  onConfirmDelete,
+}: Props) {
   const t = useT();
   const { lang } = useLang();
   const candidates = detectJunk(items);
@@ -53,7 +62,10 @@ export function CleanupReviewSheet({ items, open, onClose, onConfirmDelete }: Pr
 
         {candidates.length === 0 ? (
           <p className="mt-6 text-center text-sm text-ink-soft">
-            {t("지금은 정리할 항목이 없어요.", "Nothing to clean up right now.")}
+            {t(
+              "지금은 정리할 항목이 없어요.",
+              "Nothing to clean up right now.",
+            )}
           </p>
         ) : (
           <ul className="mt-4 space-y-2">
@@ -103,8 +115,7 @@ function CandidateRow({
   lang: "ko" | "en";
 }) {
   const preview =
-    candidate.item.text.trim() ||
-    (candidate.item.images?.length ? "🖼" : "—");
+    candidate.item.text.trim() || (candidate.item.images?.length ? "🖼" : "—");
 
   return (
     <li>

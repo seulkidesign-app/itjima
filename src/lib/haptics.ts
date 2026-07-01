@@ -1,10 +1,10 @@
 /** Lightweight haptic helper. Safe on devices/browsers without vibration. */
 export function haptic(pattern: number | number[] = 10) {
   if (typeof navigator === "undefined") return;
-  const v = (navigator as any).vibrate?.bind(navigator);
-  if (!v) return;
+  const vibrate = navigator.vibrate?.bind(navigator);
+  if (!vibrate) return;
   try {
-    v(pattern);
+    vibrate(pattern);
   } catch {
     // ignore
   }

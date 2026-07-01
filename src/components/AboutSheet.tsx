@@ -3,7 +3,13 @@ import { MessageSquarePlus } from "lucide-react";
 import { useT } from "@/lib/i18n";
 import { FeedbackSheet } from "./FeedbackSheet";
 
-export function AboutSheet({ open, onClose }: { open: boolean; onClose: () => void }) {
+export function AboutSheet({
+  open,
+  onClose,
+}: {
+  open: boolean;
+  onClose: () => void;
+}) {
   const t = useT();
   const [feedbackOpen, setFeedbackOpen] = useState(false);
   if (!open) return null;
@@ -17,7 +23,9 @@ export function AboutSheet({ open, onClose }: { open: boolean; onClose: () => vo
         >
           <div className="mx-auto mb-4 h-1.5 w-10 rounded-full bg-ink/15" />
           <div className="text-[22px] font-bold text-ink">ItJima</div>
-          <div className="text-sm text-ink-soft">{t("머릿속 인박스", "Mental Inbox")}</div>
+          <div className="text-sm text-ink-soft">
+            {t("머릿속 인박스", "Mental Inbox")}
+          </div>
           <p className="mt-4 text-[14px] leading-relaxed text-ink">
             {t(
               "캘린더도 노트도 아닙니다. 머릿속에 떠다니는 생각을 빠르게 던져 두고, 오른쪽으로 밀면 일정, 왼쪽으로 밀면 보관.",
@@ -25,9 +33,18 @@ export function AboutSheet({ open, onClose }: { open: boolean; onClose: () => vo
             )}
           </p>
           <div className="mt-5 space-y-2 text-[13px] text-ink-soft">
-            <div>{t("→ 오른쪽 스와이프: 일정으로", "→ Swipe right: schedule it")}</div>
-            <div>{t("← 왼쪽 스와이프: 보관함으로", "← Swipe left: archive it")}</div>
-            <div>{t("길게 누르면 메뉴, 두 개 이상이면 정리 모드", "Long-press for menu, 2+ items unlock Focus mode")}</div>
+            <div>
+              {t("→ 오른쪽 스와이프: 일정으로", "→ Swipe right: schedule it")}
+            </div>
+            <div>
+              {t("← 왼쪽 스와이프: 보관함으로", "← Swipe left: archive it")}
+            </div>
+            <div>
+              {t(
+                "길게 누르면 메뉴, 두 개 이상이면 정리 모드",
+                "Long-press for menu, 2+ items unlock Focus mode",
+              )}
+            </div>
           </div>
 
           <button
@@ -45,7 +62,10 @@ export function AboutSheet({ open, onClose }: { open: boolean; onClose: () => vo
           </button>
         </div>
       </div>
-      <FeedbackSheet open={feedbackOpen} onClose={() => setFeedbackOpen(false)} />
+      <FeedbackSheet
+        open={feedbackOpen}
+        onClose={() => setFeedbackOpen(false)}
+      />
     </>
   );
 }

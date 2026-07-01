@@ -31,7 +31,9 @@ function AuthCallbackPage() {
         return;
       }
 
-      toast.success(t("로그인됐어요. 다시 만나서 반가워요!", "Signed in. Welcome back!"));
+      toast.success(
+        t("로그인됐어요. 다시 만나서 반가워요!", "Signed in. Welcome back!"),
+      );
       window.location.replace(result.nextPath || "/");
     })();
   }, [t]);
