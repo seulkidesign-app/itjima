@@ -12,13 +12,6 @@ export type BrainMirrorResult = BrainMirrorCore & {
   isCurrent: boolean;
 };
 
-const DATE_WORDS = /내일|오늘|모레|글피|다음\s*주|이번\s*주|오후|오전/;
-const ACTION_PHRASE = /(?:해야|하려|사고|가야|하고|구매|예약|준비|신청|확인|만나|전화|보내|찾아|방문)/g;
-
-/** Journal-like endings: emotional/state reflection, not actionable intent */
-const JOURNAL_ENDING =
-  /(?:좋았|나빴|피곤|기뻤|슬펐|행복|우울|힘들|즐거|감동|아쉬|후회|그립|설레|짜증|화가|놀랐|재밌|지루|답답|편했|불편|아팠|아프|괜찮|별로|최고|최악|신났|지쳤|멋졌|아쉬웠|그리웠|외로|외롭|심심|뿌듯|만족|불만|실망|기대|걱정|불안|긴장|안도|후련|담담|평온|차분|복잡|혼란|헷갈|당황|감사|고마|미안|죄송|부끄|창피|수치|자랑|뿌옇|맑았|흐렸|춥|덥|시원|따뜻|포근)(?:다|었다|었|어요|네요|습니다|어|아|네|죠|군|구나|더라|더라고|더라구)?(?:[\.\!\?~…\s]|$)/;
-
 export function suggestedActionForDate(dateText: string): string {
   if (!dateText) return "";
   if (dateText === "내일") return "내일과 관련된 생각 같아요.";
@@ -27,18 +20,8 @@ export function suggestedActionForDate(dateText: string): string {
 }
 
 export function isBrainMirrorCandidate(text: string): boolean {
-  const trimmed = text.trim();
-  if (!trimmed) return false;
-
-  const actions = trimmed.match(ACTION_PHRASE);
-  const actionCount = actions?.length ?? 0;
-
-  if (JOURNAL_ENDING.test(trimmed) && actionCount === 0) return false;
-  if (DATE_WORDS.test(trimmed) && actionCount >= 1) return true;
-  if (actionCount >= 2) return true;
-  if (trimmed.length >= 30 && actionCount >= 1) return true;
-
-  return false;
+  const meaningful = text.replace(/[\s\p{P}\p{S}]/gu, "");
+  return meaningful.length >= 2;
 }
 
 /** Stamp version/isCurrent when persisting a new mirror snapshot. */
