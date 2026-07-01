@@ -136,6 +136,7 @@ export function BrainMirrorPanel({
     if (!isBrainMirrorCandidate(item.text)) return;
     if (sessionStorage.getItem(SK.attempted(item.id))) return;
 
+    sessionStorage.setItem(SK.attempted(item.id), "1");
     setPhase("thinking");
     setThinkingTier(0);
 
@@ -158,7 +159,6 @@ export function BrainMirrorPanel({
 
     const showResult = (mirror: BrainMirrorResult) => {
       if (finished) return;
-      sessionStorage.setItem(SK.attempted(item.id), "1");
       cleanup();
       setResult(mirror);
       setPhase("ready");
