@@ -6,7 +6,7 @@ import { setInboxBrainMirror, useInbox, type InboxItem } from "@/lib/store";
 import { useT } from "@/lib/i18n";
 import { haptic } from "@/lib/haptics";
 
-const MAGIC_DELAY_MS = 1200;
+const MAGIC_DELAY_MS = 300;
 const THINKING_TIER_1_MS = 300;
 const THINKING_TIER_2_MS = 3000;
 const THINKING_TIER_3_MS = 8000;
@@ -151,7 +151,6 @@ export function BrainMirrorPanel({
 
     const hideSilently = () => {
       if (finished) return;
-      sessionStorage.setItem(SK.attempted(item.id), "1");
       cleanup();
       setPhase("hidden");
       setThinkingTier(0);
