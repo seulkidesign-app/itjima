@@ -25,7 +25,7 @@ export async function fetchBrainMirror(
       const data = await res.json();
       if (data === null) return null;
       const parsed = parseBrainMirrorResult(data);
-      if (parsed) return parsed;
+      if (parsed?.items.length) return parsed;
     }
   } catch (err) {
     if (signal?.aborted) throw err;

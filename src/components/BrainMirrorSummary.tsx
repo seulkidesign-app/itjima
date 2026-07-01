@@ -128,7 +128,12 @@ export function BrainMirrorPanel({
     }
 
     if (item.brain_mirror) {
-      setResult(normalizeStored(item.brain_mirror));
+      const stored = normalizeStored(item.brain_mirror);
+      if (!stored.items.length) {
+        setPhase("hidden");
+        return;
+      }
+      setResult(stored);
       setPhase("ready");
       return;
     }
@@ -159,6 +164,10 @@ export function BrainMirrorPanel({
 
     const showResult = (mirror: BrainMirrorResult) => {
       if (finished) return;
+      if (!mirror.items.length) {
+        hideSilently();
+        return;
+      }
       cleanup();
       setResult(mirror);
       setPhase("ready");
@@ -214,7 +223,7 @@ export function BrainMirrorPanel({
 
   if (phase === "idle" || phase === "hidden") return null;
   if (phase === "thinking") return <ThinkingIndicator tier={thinkingTier} />;
-  if (!result) return null;
+  if (!result?.items.length) return null;
 
   return (
     <BrainMirrorResultView

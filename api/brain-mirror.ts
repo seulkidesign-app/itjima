@@ -18,6 +18,9 @@ JSON schema:
 
 rules:
 - items: max 5, short action phrases (e.g. "꽃 구매", "병원 방문")
+- DO NOT add items that the user did not explicitly mention. Only extract, never invent.
+- items must ONLY contain actions/things explicitly mentioned in the user's raw text. Never invent or suggest items not in the input.
+- If there are no extractable items from the input, return items as empty array []
 - suggestedDateText: empty string if no date inferred
 - suggestedAction: one calm observational sentence (e.g. "내일과 관련된 생각 같아요.")
 - Never imply you already completed an action (no "넣어뒀어요", "등록했어요", "처리했어요")
@@ -60,7 +63,7 @@ function normalizePayload(raw: unknown): BrainMirrorPayload | null {
         ? o.message
         : "";
 
-  if (!suggestedAction && items.length === 0) return null;
+  if (items.length === 0) return null;
 
   const confidence =
     typeof o.confidence === "number"
