@@ -1,7 +1,7 @@
 import type { VercelRequest, VercelResponse } from "@vercel/node";
 
-/** Sonnet 4.6 — https://platform.claude.com/docs/en/about-claude/models/overview */
-const ANTHROPIC_MODEL = "claude-sonnet-4-6";
+/** Haiku 4.5 — https://platform.claude.com/docs/en/about-claude/models/overview */
+const ANTHROPIC_MODEL = "claude-haiku-4-5-20251001";
 
 const SYSTEM_PROMPT = `You are ItJima. The user drops a messy thought — you understand it first, quietly.
 Never pressure the user to organize. Never ask questions. Act with gentle confidence.
@@ -23,23 +23,6 @@ rules:
 - Never imply you already completed an action (no "넣어뒀어요", "등록했어요", "처리했어요")
 - confidence: 0.0-1.0
 - Korean unless input is clearly English`;
-
-const VALIDATOR_PROMPT = `You validate Brain Mirror output for ItJima.
-The user dropped a messy thought (rawText). A draft mirror was generated.
-
-Your job:
-1. Confirm EVERY item in items[] is directly grounded in rawText (same intent, not invented).
-2. Flag and REMOVE any invented actions not supported by rawText.
-3. Return a safe suggestedAction:
-   - Remove any phrasing that implies the app already completed an action
-     (e.g. "넣어뒀어요", "등록했어요", "처리했어요", "완료했어요").
-   - Keep calm, observational tone (e.g. "내일과 관련된 생각 같아요.").
-4. If title is not grounded in rawText, fix or reject.
-5. Keep suggestedDateText only if a date/time is clearly inferable from rawText; else "".
-
-Return ONLY valid JSON:
-{ "valid": true, "title": "...", "items": ["..."], "suggestedDateText": "...", "suggestedAction": "...", "confidence": 0.0-1.0 }
-If the draft cannot be made safe and fully grounded, return: { "valid": false }`;
 
 type BrainMirrorPayload = {
   title: string;
@@ -139,35 +122,6 @@ async function generateBrainMirrorDraft(
   }
 }
 
-function parseValidatorResponse(raw: unknown): BrainMirrorPayload | null {
-  if (!raw || typeof raw !== "object") return null;
-  const o = raw as Record<string, unknown>;
-  if (o.valid !== true) return null;
-  return normalizePayload(o);
-}
-
-async function validateBrainMirror(
-  apiKey: string,
-  rawText: string,
-  draft: BrainMirrorPayload,
-): Promise<BrainMirrorPayload | null> {
-  const userContent = JSON.stringify({
-    rawText,
-    title: draft.title,
-    items: draft.items,
-    suggestedDateText: draft.suggestedDateText,
-    suggestedAction: draft.suggestedAction,
-  });
-
-  try {
-    const raw = await callAnthropicJson(apiKey, VALIDATOR_PROMPT, userContent);
-    return parseValidatorResponse(raw);
-  } catch (error) {
-    console.error("[brain-mirror] validator error", error);
-    return null;
-  }
-}
-
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method !== "POST") {
     return res.status(405).json({ error: "Method not allowed" });
@@ -187,26 +141,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return res.status(503).json({ error: "API not configured" });
   }
 
-  let draft = await generateBrainMirrorDraft(apiKey, text);
+  const draft = await generateBrainMirrorDraft(apiKey, text);
   if (!draft) {
     return res.status(502).json({ error: "invalid model response" });
   }
 
-  let validated = await validateBrainMirror(apiKey, text, draft);
-  if (validated) {
-    return res.status(200).json(validated);
-  }
-
-  console.warn("[brain-mirror] validation failed, regenerating draft");
-  draft = await generateBrainMirrorDraft(apiKey, text);
-  if (!draft) {
-    return res.status(200).json(null);
-  }
-
-  validated = await validateBrainMirror(apiKey, text, draft);
-  if (!validated) {
-    return res.status(200).json(null);
-  }
-
-  return res.status(200).json(validated);
+  return res.status(200).json(draft);
 }
