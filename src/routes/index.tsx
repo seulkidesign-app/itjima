@@ -73,6 +73,7 @@ function Inbox() {
     original: string;
   } | null>(null);
   const [restorePasteText, setRestorePasteText] = useState<string | null>(null);
+  const [swipeOpenId, setSwipeOpenId] = useState<string | null>(null);
   const [bmEligibleIds, setBmEligibleIds] = useState<Set<string>>(
     () => new Set(),
   );
@@ -402,6 +403,9 @@ function Inbox() {
               return (
                 <ChatSwipeRow
                   key={it.id}
+                  rowId={it.id}
+                  openRowId={swipeOpenId}
+                  onOpenRowChange={setSwipeOpenId}
                   onSwipeRight={() => openScheduleQuick(it)}
                   onSwipeLeft={() => moveToArchive(it)}
                   onLongPress={() => setMenuFor(it.id)}
