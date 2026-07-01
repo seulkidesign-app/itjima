@@ -207,7 +207,6 @@
   height: 100dvh;
   margin: 0 auto;
   position: relative;
-  overflow: hidden;
   background: #ffffff;
 }
 @media (min-width: 768px) {

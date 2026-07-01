@@ -209,39 +209,40 @@ function Inbox() {
 
   return (
     <div className="flex h-full min-h-full flex-col bg-white">
-      {/* NRC-style hero block */}
-      <div className="px-5 pb-3 pt-6">
-        <div className="nrc-eyebrow">{t("오늘의 인박스", "Today's Inbox")}</div>
-        <div className="mt-1 flex items-end justify-between gap-3">
-          <h1 className="page-title">
-            {items.length > 0
-              ? t("생각 정리하기", "Clear Your Mind")
-              : t("던져보세요", "Drop A Thought")}
-          </h1>
-          <div className="text-right leading-none">
-            <div className="font-num text-[40px] text-ink">{items.length}</div>
-            <div className="nrc-eyebrow mt-0.5">{t("개", "Notes")}</div>
+      <div className="sticky top-0 z-10 shrink-0 bg-white">
+        {/* NRC-style hero block */}
+        <div className="px-5 pb-3 pt-6">
+          <div className="nrc-eyebrow">{t("오늘의 인박스", "Today's Inbox")}</div>
+          <div className="mt-1 flex items-end justify-between gap-3">
+            <h1 className="page-title">
+              {items.length > 0
+                ? t("생각 정리하기", "Clear Your Mind")
+                : t("던져보세요", "Drop A Thought")}
+            </h1>
+            <div className="text-right leading-none">
+              <div className="font-num text-[40px] text-ink">{items.length}</div>
+              <div className="nrc-eyebrow mt-0.5">{t("개", "Notes")}</div>
+            </div>
           </div>
         </div>
+
+        {/* Sort mode pill */}
+        {items.length >= 2 && (
+          <div className="px-5 pb-2">
+            <button
+              onClick={() => {
+                if (cleanupOpen) exitCleanup();
+                else setCleanupOpen(true);
+              }}
+              className={`pill-ghost inline-flex items-center gap-1.5 ${
+                cleanupOpen ? "ring-2 ring-primary" : ""
+              }`}
+            >
+              <Sparkles size={14} /> {t("정리 모드", "Focus mode")}
+            </button>
+          </div>
+        )}
       </div>
-
-      {/* Sort mode pill */}
-      {items.length >= 2 && (
-        <div className="px-5 pb-2">
-          <button
-            onClick={() => {
-              if (cleanupOpen) exitCleanup();
-              else setCleanupOpen(true);
-            }}
-            className={`pill-ghost inline-flex items-center gap-1.5 ${
-              cleanupOpen ? "ring-2 ring-primary" : ""
-            }`}
-          >
-            <Sparkles size={14} /> {t("정리 모드", "Focus mode")}
-          </button>
-        </div>
-      )}
-
 
       {/* Cards */}
       <div className="flex-1 px-5 pb-20">
