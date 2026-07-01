@@ -1,0 +1,1 @@
+import{t as e}from"./vendor-react-CepXLKLB.js";import{i as t}from"./vendor-tanstack-D5aW7hXl.js";var n=e(),r=()=>(0,n.jsx)(t,{});export{r as component};

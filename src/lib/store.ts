@@ -131,9 +131,115 @@ function stripCloudFields(item: Record<string, unknown>, table: TableName) {
   return rest;
 }
 
-function toCloudRow(table: TableName, item: Record<string, unknown>, userId: string) {
-  return { ...item, user_id: userId };
+const CLOUD_SCHEMA_KEY = "itjima.cloudSchema";
+
+/** Columns present before v0.2 migrations (prod fallback). */
+const LEGACY_CLOUD_KEYS: Record<TableName, readonly string[]> = {
+  inbox: ["id", "text", "images", "created_at"],
+  schedules: ["id", "text", "start_time", "end_time", "alarm", "created_at"],
+  archive: ["id", "text", "images", "created_at"],
+};
+
+/** Columns after all migrations in supabase/migrations are applied. */
+const FULL_CLOUD_KEYS: Record<TableName, readonly string[]> = {
+  inbox: ["id", "text", "images", "created_at", "status", "brain_mirror"],
+  schedules: [
+    "id",
+    "text",
+    "start_time",
+    "end_time",
+    "alarm",
+    "created_at",
+    "all_day",
+    "repeat",
+    "source_id",
+    "raw_text",
+    "brain_mirror",
+    "status",
+    "alarm_at",
+  ],
+  archive: ["id", "text", "images", "created_at", "source_id", "raw_text", "brain_mirror"],
+};
+
+function isSchemaColumnError(message: string) {
+  return /Could not find the .+ column of .+ in the schema cache/i.test(message);
 }
+
+function useLegacyCloudSchema() {
+  if (typeof window === "undefined") return false;
+  return localStorage.getItem(CLOUD_SCHEMA_KEY) === "legacy";
+}
+
+function markLegacyCloudSchema() {
+  if (typeof window === "undefined") return;
+  localStorage.setItem(CLOUD_SCHEMA_KEY, "legacy");
+}
+
+function clearLegacyCloudSchema() {
+  if (typeof window === "undefined") return;
+  localStorage.removeItem(CLOUD_SCHEMA_KEY);
+}
+
+async function probeFullCloudSchema(): Promise<boolean> {
+  const { error } = await supabase.from("inbox").select("status").limit(1);
+  return !error;
+}
+
+function pickCloudFields(
+  table: TableName,
+  fields: Record<string, unknown>,
+  userId: string,
+  legacy: boolean,
+) {
+  const allowed = legacy ? LEGACY_CLOUD_KEYS[table] : FULL_CLOUD_KEYS[table];
+  const out: Record<string, unknown> = { user_id: userId };
+  for (const key of allowed) {
+    if (key in fields && fields[key] !== undefined) out[key] = fields[key];
+  }
+  return out;
+}
+
+async function cloudMutate(
+  op: "insert" | "update" | "upsert",
+  table: TableName,
+  userId: string,
+  fields: Record<string, unknown>,
+  id?: string,
+): Promise<boolean> {
+  let legacy = useLegacyCloudSchema();
+
+  for (let attempt = 0; attempt < 2; attempt++) {
+    const row = pickCloudFields(table, fields, userId, legacy);
+    let error: { message: string } | null = null;
+
+    if (op === "insert") {
+      ({ error } = await supabase.from(table).insert(row as never));
+    } else if (op === "update" && id) {
+      const { user_id: _u, ...patch } = row;
+      if (!Object.keys(patch).length) return true;
+      ({ error } = await supabase.from(table).update(patch as never).eq("id", id).eq("user_id", userId));
+    } else if (op === "upsert") {
+      ({ error } = await supabase.from(table).upsert(row as never, { onConflict: "id" }));
+    }
+
+    if (!error) {
+      if (!legacy) clearLegacyCloudSchema();
+      return true;
+    }
+
+    if (!legacy && isSchemaColumnError(error.message)) {
+      markLegacyCloudSchema();
+      legacy = true;
+      continue;
+    }
+
+    console.error(`[sync] ${op} ${table}`, error.message);
+    return false;
+  }
+
+  return false;
+}
+
 
 async function cloudUpsertMany<T extends { id: string }>(
   table: TableName,
@@ -141,9 +247,9 @@ async function cloudUpsertMany<T extends { id: string }>(
   items: T[],
 ) {
   if (!items.length) return;
-  const payload = items.map((it) => toCloudRow(table, it as Record<string, unknown>, userId));
-  const { error } = await supabase.from(table).upsert(payload as never[], { onConflict: "id" });
-  if (error) console.error(`[sync] upsert ${table}`, error.message);
+  for (const it of items) {
+    await cloudMutate("upsert", table, userId, it as Record<string, unknown>);
+  }
 }
 
 /** Hook returning current auth user id (or null) and reacting to changes. */
@@ -195,6 +301,10 @@ function useLocalList<T extends { id: string; created_at: string }>(kind: ListKi
       if (syncingRef.current) return;
       syncingRef.current = true;
       setSyncState("syncing");
+
+      if (useLegacyCloudSchema() && (await probeFullCloudSchema())) {
+        clearLegacyCloudSchema();
+      }
 
       const guestKey = storageKey(kind, GUEST);
       const localUser = readLS<T>(key, table);
@@ -272,13 +382,7 @@ function useLocalList<T extends { id: string; created_at: string }>(kind: ListKi
 
       let cloudSynced = true;
       if (userId) {
-        const { error } = await supabase
-          .from(table)
-          .insert(toCloudRow(table, item as Record<string, unknown>, userId) as never);
-        if (error) {
-          cloudSynced = false;
-          console.error(`[sync] insert ${table}`, error.message);
-        }
+        cloudSynced = await cloudMutate("insert", table, userId, item as Record<string, unknown>);
       }
 
       if (table === "inbox") {
@@ -296,15 +400,7 @@ function useLocalList<T extends { id: string; created_at: string }>(kind: ListKi
       const next = readLS<T>(key, table).map((it) => (it.id === id ? { ...it, ...patch } : it));
       writeLS(key, next);
       if (userId) {
-        const cloudPatch = { ...(patch as Record<string, unknown>) };
-        if (Object.keys(cloudPatch).length > 0) {
-          const { error } = await supabase
-            .from(table)
-            .update(cloudPatch as never)
-            .eq("id", id)
-            .eq("user_id", userId);
-          if (error) console.error(`[sync] update ${table}`, error.message);
-        }
+        await cloudMutate("update", table, userId, patch as Record<string, unknown>, id);
       }
     },
     [key, userId, table],

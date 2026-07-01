@@ -3,7 +3,8 @@ import { useEffect, useRef, useState, useMemo } from "react";
 import { toast } from "sonner";
 import { Sparkles, Trash2, Calendar, Archive as ArchiveIcon } from "lucide-react";
 import { InputBar } from "@/components/InputBar";
-import { SwipeCard } from "@/components/SwipeCard";
+import { ChatSwipeRow } from "@/components/ChatSwipeRow";
+import { FocusSortMode } from "@/components/FocusSortMode";
 import { ScheduleSheet } from "@/components/ScheduleSheet";
 import { LoginSheet } from "@/components/LoginSheet";
 import { CleanupReviewSheet } from "@/components/CleanupReviewSheet";
@@ -44,11 +45,12 @@ function Inbox() {
   });
   const [loginOpen, setLoginOpen] = useState(false);
   
+  const [focusSortOpen, setFocusSortOpen] = useState(false);
   const [cleanupReviewOpen, setCleanupReviewOpen] = useState(false);
+  const [showSwipeHint, setShowSwipeHint] = useState(false);
   const [menuFor, setMenuFor] = useState<string | null>(null);
   const [pasteSheet, setPasteSheet] = useState<{ chunks: string[]; original: string } | null>(null);
   const [restorePasteText, setRestorePasteText] = useState<string | null>(null);
-  const pressTimer = useRef<number | null>(null);
   const [bmEligibleIds, setBmEligibleIds] = useState<Set<string>>(() => new Set());
 
   const markBmEligible = (id: string) => {
@@ -87,8 +89,20 @@ function Inbox() {
   const prevCountRef = useRef(items.length);
 
   useEffect(() => {
+    if (items.length === 0) return;
+    if (typeof window === "undefined") return;
+    if (!localStorage.getItem("itjima.chatSwipeHintSeen")) {
+      setShowSwipeHint(true);
+    }
+  }, [items.length]);
+
+  const dismissSwipeHint = () => {
+    localStorage.setItem("itjima.chatSwipeHintSeen", "1");
+    setShowSwipeHint(false);
+  };
+
+  useEffect(() => {
     if (items.length > prevCountRef.current) {
-      // new item added → scroll to bottom
       requestAnimationFrame(() => {
         listEndRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
       });
@@ -287,16 +301,6 @@ function Inbox() {
     }
   };
 
-  const startLongPress = (id: string) => {
-    pressTimer.current = window.setTimeout(() => setMenuFor(id), 500);
-  };
-  const cancelLongPress = () => {
-    if (pressTimer.current) {
-      clearTimeout(pressTimer.current);
-      pressTimer.current = null;
-    }
-  };
-
   return (
     <div className="flex h-full min-h-full flex-col bg-white">
       <div className="sticky top-0 z-10 shrink-0 bg-white">
@@ -307,15 +311,31 @@ function Inbox() {
               <h1 className="page-title mt-1">{t("던져보세요", "Drop a thought")}</h1>
             </>
           ) : (
-            <div className="flex items-center justify-between gap-3">
-              <h1 className="text-[15px] font-bold text-ink">{t("나와의 대화", "Chat with myself")}</h1>
-              {items.length >= 2 && (
+            <div className="flex flex-col gap-2">
+              <div className="flex items-center justify-between gap-3">
+                <div>
+                  <h1 className="text-[15px] font-bold text-ink">{t("나와의 대화", "Chat with myself")}</h1>
+                  <p className="mt-0.5 text-[11px] text-ink-soft">
+                    {t("좌우로 밀어 정리", "Swipe left or right to sort")}
+                  </p>
+                </div>
+                {items.length >= 1 && (
+                  <button
+                    type="button"
+                    onClick={() => setFocusSortOpen(true)}
+                    className="pill-yellow shrink-0 px-4 py-2.5 text-[12px]"
+                  >
+                    {t("정리하기", "Sort now")}
+                  </button>
+                )}
+              </div>
+              {showSwipeHint && (
                 <button
                   type="button"
-                  onClick={() => setCleanupReviewOpen(true)}
-                  className="pill-ghost inline-flex items-center gap-1.5 py-1.5 text-[12px]"
+                  onClick={dismissSwipeHint}
+                  className="chat-swipe-hint rounded-[16px] bg-primary/25 px-3 py-2 text-left text-[12px] text-ink"
                 >
-                  <Sparkles size={13} /> {t("정리하기", "Clean up")}
+                  {t("💡 오른쪽 → 일정 · 왼쪽 → 보관. 밀었다 놓으면 버튼을 눌러도 돼요.", "💡 Right → Schedule · Left → Archive. Partial swipe, then tap the action.")}
                 </button>
               )}
             </div>
@@ -331,20 +351,13 @@ function Inbox() {
             {itemsAsc.map((it) => {
               const isNewest = it.id === newestId;
               return (
-                <SwipeCard
+                <ChatSwipeRow
                   key={it.id}
-                  mode="instant"
-                  bare
-                  onSwipe={(dir) =>
-                    dir === "right" ? moveToScheduleInstant(it) : moveToArchive(it)
-                  }
+                  onSwipeRight={() => moveToScheduleInstant(it)}
+                  onSwipeLeft={() => moveToArchive(it)}
+                  onLongPress={() => setMenuFor(it.id)}
                 >
-                  <ChatBubble
-                    item={it}
-                    isNewest={isNewest}
-                    onLongPressStart={startLongPress}
-                    onLongPressEnd={cancelLongPress}
-                  >
+                  <ChatBubble item={it} isNewest={isNewest}>
                     {it.brain_mirror || (bmEligibleIds.has(it.id) && isBrainMirrorCandidate(it.text)) ? (
                       <BrainMirrorPanel
                         item={it}
@@ -357,7 +370,7 @@ function Inbox() {
                       />
                     ) : null}
                   </ChatBubble>
-                </SwipeCard>
+                </ChatSwipeRow>
               );
             })}
             <div ref={listEndRef} />
@@ -387,6 +400,14 @@ function Inbox() {
               if (!it) return null;
               return (
                 <>
+                  <MenuItem
+                    icon={<Sparkles size={18} />}
+                    label={t("정크 비우기", "Clean junk")}
+                    onClick={() => {
+                      setMenuFor(null);
+                      setCleanupReviewOpen(true);
+                    }}
+                  />
                   <MenuItem
                     icon={<Calendar size={18} />}
                     label={t("일정으로", "To schedule")}
@@ -486,6 +507,18 @@ function Inbox() {
         />
       )}
 
+      <FocusSortMode
+        open={focusSortOpen}
+        items={items}
+        onClose={() => setFocusSortOpen(false)}
+        onSchedule={(it) => moveToScheduleInstant(it)}
+        onArchive={(it) => moveToArchive(it)}
+        onSoftDelete={async (it) => {
+          await inbox.softDelete(it.id);
+          haptic([4, 8, 4]);
+        }}
+      />
+
       <CleanupReviewSheet
         open={cleanupReviewOpen}
         items={items}
@@ -512,8 +545,8 @@ function EmptyState() {
       <div className="mt-3 text-[17px] font-bold text-ink">{t("텅 비었어요", "Empty for now")}</div>
       <div className="mt-1 text-sm text-ink-soft">
         {t(
-          "아래에 적거나 붙여넣으세요. Shift+Enter로 줄바꿈 · 🎤 음성 · 오른쪽 스와이프는 일정",
-          "Type or paste below. Shift+Enter for a new line · 🎤 voice · swipe right to schedule",
+          "아래에 적거나 붙여넣으세요. 좌우로 밀면 일정·보관 · 정리하기로 한 장씩 정리",
+          "Type below. Swipe to sort · or tap Sort now for focus mode",
         )}
       </div>
     </div>

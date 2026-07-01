@@ -179,6 +179,16 @@
   align-self: flex-end;
 }
 
+.focus-sort-card {
+  border-radius: 28px;
+  background: #ffffff;
+  border: 2px solid oklch(0 0 0 / 0.06);
+}
+
+.chat-swipe-hint {
+  animation: fade-in-soft 0.4s ease;
+}
+
 /* NRC pills — black bg primary, yellow accent */
 @utility pill-yellow {
   background: var(--brand-yellow);

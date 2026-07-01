@@ -14,5 +14,18 @@ export default defineConfig({
   build: {
     outDir: "dist",
     emptyOutDir: true,
+    // Main entry (~560 kB min) includes router + Supabase; warn only above 650 kB
+    chunkSizeWarningLimit: 650,
+    rolldownOptions: {
+      output: {
+        codeSplitting: {
+          groups: [
+            { name: "vendor-react", test: /node_modules[\\/]react/, priority: 20 },
+            { name: "vendor-tanstack", test: /node_modules[\\/]@tanstack/, priority: 15 },
+            { name: "vendor-supabase", test: /node_modules[\\/]@supabase/, priority: 15 },
+          ],
+        },
+      },
+    },
   },
 });
