@@ -12,11 +12,17 @@ export function SwipeCard({
   onSwipe,
   disabled,
   className = "",
+  mode = "confirm",
+  bare = false,
 }: {
   children: ReactNode;
   onSwipe: (dir: Direction) => void;
   disabled?: boolean;
   className?: string;
+  /** instant: no second confirm tap (Home). confirm: two-step (Archive). */
+  mode?: "instant" | "confirm";
+  /** Skip outer card chrome (chat bubbles). */
+  bare?: boolean;
 }) {
   const t = useT();
   const [dx, setDx] = useState(0);
@@ -49,12 +55,22 @@ export function SwipeCard({
       tick();
     }
   };
+  const commitSwipe = (dir: Direction) => {
+    confirmHaptic();
+    setReleased(true);
+    setDx(dir === "right" ? 600 : -600);
+    setTimeout(() => onSwipe(dir), 220);
+  };
+
   const onUp = () => {
     if (!dragging.current) return;
     dragging.current = false;
     if (Math.abs(dx) >= THRESHOLD) {
       const dir: Direction = dx > 0 ? "right" : "left";
-      // Snap to confirm offset; show confirm button
+      if (mode === "instant") {
+        commitSwipe(dir);
+        return;
+      }
       setPending(dir);
       setDx(dir === "right" ? 140 : -140);
     } else {
@@ -70,10 +86,7 @@ export function SwipeCard({
 
   const finish = () => {
     if (!pending) return;
-    confirmHaptic();
-    setReleased(true);
-    setDx(pending === "right" ? 600 : -600);
-    setTimeout(() => onSwipe(pending), 220);
+    commitSwipe(pending);
   };
 
   // Dismiss confirm with Escape
@@ -106,16 +119,20 @@ export function SwipeCard({
         }}
       >
         <div
-          className="overflow-hidden rounded-[24px] bg-white shadow-card"
-          style={{
-            boxShadow:
-              tone === "right"
-                ? "var(--shadow-yellow)"
-                : tone === "left"
-                  ? "var(--shadow-muted)"
-                  : "var(--shadow-card)",
-            transition: "box-shadow 0.2s ease",
-          }}
+          className={bare ? "overflow-visible" : "overflow-hidden rounded-[24px] bg-white shadow-card"}
+          style={
+            bare
+              ? undefined
+              : {
+                  boxShadow:
+                    tone === "right"
+                      ? "var(--shadow-yellow)"
+                      : tone === "left"
+                        ? "var(--shadow-muted)"
+                        : "var(--shadow-card)",
+                  transition: "box-shadow 0.2s ease",
+                }
+          }
         >
           {children}
         </div>
@@ -131,8 +148,8 @@ export function SwipeCard({
         )}
       </div>
 
-      {/* Slide-to-confirm overlay (Apple-watch style two-step) */}
-      {pending === "right" && (
+      {/* Two-step confirm (Archive etc.) */}
+      {mode === "confirm" && pending === "right" && (
         <div className="pointer-events-none absolute inset-y-0 left-0 flex w-[160px] items-center justify-start pl-3">
           <button
             onClick={finish}
@@ -149,7 +166,7 @@ export function SwipeCard({
           </button>
         </div>
       )}
-      {pending === "left" && (
+      {mode === "confirm" && pending === "left" && (
         <div className="pointer-events-none absolute inset-y-0 right-0 flex w-[180px] items-center justify-end pr-3">
           <button
             onClick={cancel}

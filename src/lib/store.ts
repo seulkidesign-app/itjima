@@ -21,6 +21,8 @@ export type InboxItem = {
 };
 export type RepeatRule = "daily" | "weekly" | "monthly" | "yearly";
 
+export type ScheduleStatus = "active" | "done";
+
 export type ScheduleItem = {
   id: string;
   text: string;
@@ -30,6 +32,11 @@ export type ScheduleItem = {
   created_at: string;
   all_day?: boolean;
   repeat?: RepeatRule | null;
+  source_id?: string | null;
+  raw_text?: string | null;
+  brain_mirror?: BrainMirrorResult | null;
+  status?: ScheduleStatus;
+  alarm_at?: string | null;
 };
 export type ArchiveItem = {
   id: string;
@@ -37,6 +44,8 @@ export type ArchiveItem = {
   images: string[];
   created_at: string;
   brain_mirror?: BrainMirrorResult | null;
+  source_id?: string | null;
+  raw_text?: string | null;
 };
 
 type ListKind = "inbox" | "schedules" | "archive";
@@ -81,6 +90,9 @@ function normalizeRow(row: unknown, table: TableName) {
   if (table === "inbox" && !r.status) {
     r.status = "active";
   }
+  if (table === "schedules" && !r.status) {
+    r.status = "active";
+  }
   if ("brain_mirror" in r) {
     r.brain_mirror = parseBrainMirrorResult(r.brain_mirror);
   }
@@ -113,15 +125,14 @@ function sortByCreated<T extends { created_at: string }>(items: T[]) {
 
 function stripCloudFields(item: Record<string, unknown>, table: TableName) {
   const { user_id: _u, ...rest } = item;
-  if (table !== "schedules" && "brain_mirror" in rest) {
+  if ("brain_mirror" in rest) {
     rest.brain_mirror = parseBrainMirrorResult(rest.brain_mirror);
   }
   return rest;
 }
 
 function toCloudRow(table: TableName, item: Record<string, unknown>, userId: string) {
-  const { brain_mirror: _bm, status: _status, all_day: _ad, repeat: _rp, ...rest } = item;
-  return { ...rest, user_id: userId };
+  return { ...item, user_id: userId };
 }
 
 async function cloudUpsertMany<T extends { id: string }>(
@@ -259,11 +270,15 @@ function useLocalList<T extends { id: string; created_at: string }>(kind: ListKi
       const next = sortByCreated([item, ...readLS<T>(key, table)]);
       writeLS(key, next);
 
+      let cloudSynced = true;
       if (userId) {
         const { error } = await supabase
           .from(table)
           .insert(toCloudRow(table, item as Record<string, unknown>, userId) as never);
-        if (error) console.error(`[sync] insert ${table}`, error.message);
+        if (error) {
+          cloudSynced = false;
+          console.error(`[sync] insert ${table}`, error.message);
+        }
       }
 
       if (table === "inbox") {
@@ -271,7 +286,7 @@ function useLocalList<T extends { id: string; created_at: string }>(kind: ListKi
         localStorage.setItem(META.usage, String(u));
       }
 
-      return item;
+      return { item, cloudSynced };
     },
     [key, userId, table],
   );
@@ -282,8 +297,6 @@ function useLocalList<T extends { id: string; created_at: string }>(kind: ListKi
       writeLS(key, next);
       if (userId) {
         const cloudPatch = { ...(patch as Record<string, unknown>) };
-        delete cloudPatch.brain_mirror;
-        delete cloudPatch.status;
         if (Object.keys(cloudPatch).length > 0) {
           const { error } = await supabase
             .from(table)
@@ -315,7 +328,13 @@ function useLocalList<T extends { id: string; created_at: string }>(kind: ListKi
 function useInboxList() {
   const list = useLocalList<InboxItem>("inbox", "inbox");
   const items = list.items.filter((it) => !it.status || it.status === "active");
-  return { ...list, items };
+  const softDelete = useCallback(
+    async (id: string) => {
+      await list.update(id, { status: "deleted" } as Partial<InboxItem>);
+    },
+    [list],
+  );
+  return { ...list, items, softDelete };
 }
 
 export const useInbox = () => useInboxList();

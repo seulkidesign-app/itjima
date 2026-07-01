@@ -1,15 +1,19 @@
 import { useEffect, useRef, useState, type ChangeEvent, type ClipboardEvent, type FormEvent } from "react";
 import { Mic, Image as ImageIcon, Plus, X, Pencil } from "lucide-react";
+import { toast } from "sonner";
 import { ScribbleCanvas } from "./ScribbleCanvas";
 import { useT, useLang } from "@/lib/i18n";
+import { compressDataUrl, compressImageFile, MAX_IMAGES } from "@/lib/imageCompress";
 
 type Props = {
   onAdd: (text: string, images: string[]) => void;
-  onQuickSave?: (text: string, images: string[]) => void;
   onPasteMulti: (chunks: string[], original: string) => void;
+  /** Restores pasted text when the split sheet is dismissed. */
+  restoreText?: string | null;
+  onRestoreConsumed?: () => void;
 };
 
-export function InputBar({ onAdd, onPasteMulti }: Props) {
+export function InputBar({ onAdd, onPasteMulti, restoreText, onRestoreConsumed }: Props) {
   const t = useT();
   const { lang } = useLang();
   const [text, setText] = useState("");
@@ -31,6 +35,27 @@ export function InputBar({ onAdd, onPasteMulti }: Props) {
   imagesRef.current = images;
   onAddRef.current = onAdd;
 
+  useEffect(() => {
+    if (!restoreText) return;
+    setText(restoreText);
+    textRef.current = restoreText;
+    onRestoreConsumed?.();
+    textareaRef.current?.focus();
+  }, [restoreText, onRestoreConsumed]);
+
+  const addImage = async (dataUrl: string) => {
+    if (imagesRef.current.length >= MAX_IMAGES) {
+      toast(t(`이미지는 ${MAX_IMAGES}장까지`, `Up to ${MAX_IMAGES} images`));
+      return;
+    }
+    try {
+      const compressed = await compressDataUrl(dataUrl);
+      setImages((p) => [...p, compressed]);
+    } catch {
+      toast.error(t("이미지를 불러오지 못했어요", "Couldn't load image"));
+    }
+  };
+
   const reset = () => {
     textRef.current = "";
     imagesRef.current = [];
@@ -48,7 +73,7 @@ export function InputBar({ onAdd, onPasteMulti }: Props) {
   const handleAdd = (textSnapshot?: string) => {
     const currentImages = imagesRef.current;
     const currentText = textSnapshot ?? textareaRef.current?.value ?? textRef.current;
-    const trimmedText = currentText.trim();
+    const trimmedText = currentText.replace(/\s*\[…\]\s*$/, "").trim();
     if (!trimmedText && currentImages.length === 0) return;
     onAddRef.current(trimmedText, currentImages);
     reset();
@@ -100,7 +125,7 @@ export function InputBar({ onAdd, onPasteMulti }: Props) {
     const W = window as any;
     const SR = W.SpeechRecognition || W.webkitSpeechRecognition;
     if (!SR) {
-      alert(t("이 브라우저는 음성 입력을 지원하지 않아요.", "This browser doesn't support voice input."));
+      toast.error(t("이 브라우저는 음성 입력을 지원하지 않아요.", "This browser doesn't support voice input."));
       return;
     }
     if (listening) { recogRef.current?.stop(); return; }
@@ -110,8 +135,16 @@ export function InputBar({ onAdd, onPasteMulti }: Props) {
     r.continuous = false;
     r.onresult = (e: any) => {
       const last = e.results[e.results.length - 1];
-      const t = last[0].transcript;
-      if (last.isFinal) setText((prev) => (prev ? prev + " " : "") + t);
+      const transcript = last[0].transcript as string;
+      if (last.isFinal) setText((prev) => (prev ? prev + " " : "") + transcript);
+      else setText((prev) => {
+        const base = prev.replace(/\s*\[…\]$/, "");
+        return (base ? base + " " : "") + transcript + " […]";
+      });
+    };
+    r.onerror = () => {
+      setListening(false);
+      toast.error(t("음성 입력에 실패했어요", "Voice input failed"));
     };
     r.onend = () => setListening(false);
     r.start();
@@ -119,14 +152,21 @@ export function InputBar({ onAdd, onPasteMulti }: Props) {
     setListening(true);
   };
 
-  const onFile = (e: ChangeEvent<HTMLInputElement>) => {
+  const onFile = async (e: ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (!files) return;
-    Array.from(files).forEach((f) => {
-      const reader = new FileReader();
-      reader.onload = () => setImages((p) => [...p, reader.result as string]);
-      reader.readAsDataURL(f);
-    });
+    for (const f of Array.from(files)) {
+      if (imagesRef.current.length >= MAX_IMAGES) {
+        toast(t(`이미지는 ${MAX_IMAGES}장까지`, `Up to ${MAX_IMAGES} images`));
+        break;
+      }
+      try {
+        const compressed = await compressImageFile(f);
+        setImages((p) => [...p, compressed]);
+      } catch {
+        toast.error(t("이미지를 불러오지 못했어요", "Couldn't load image"));
+      }
+    }
     e.target.value = "";
   };
 
@@ -137,9 +177,11 @@ export function InputBar({ onAdd, onPasteMulti }: Props) {
         if (it.type.startsWith("image/")) {
           const f = it.getAsFile();
           if (f) {
-            const reader = new FileReader();
-            reader.onload = () => setImages((p) => [...p, reader.result as string]);
-            reader.readAsDataURL(f);
+            void (async () => {
+              const reader = new FileReader();
+              reader.onload = () => void addImage(reader.result as string);
+              reader.readAsDataURL(f);
+            })();
           }
         }
       }
@@ -162,6 +204,7 @@ export function InputBar({ onAdd, onPasteMulti }: Props) {
             <div key={i} className="relative">
               <img src={src} alt="" className="h-16 w-16 rounded-[24px] object-cover" />
               <button
+                type="button"
                 onClick={() => setImages((p) => p.filter((_, idx) => idx !== i))}
                 className="absolute -right-1 -top-1 rounded-full bg-ink p-0.5 text-white"
               >
@@ -207,12 +250,13 @@ export function InputBar({ onAdd, onPasteMulti }: Props) {
             }
           }}
           rows={3}
-          placeholder={t("메시지 입력", "Message")}
+          placeholder={t("메시지 입력 · Shift+Enter 줄바꿈", "Message · Shift+Enter for new line")}
           className="block min-h-[72px] w-full resize-none bg-transparent text-[16px] leading-relaxed text-ink placeholder:text-ink-soft/70 focus:outline-none max-h-40"
         />
       </div>
       <div className="flex items-center gap-1 pb-2 pt-1">
         <button
+          type="button"
           onClick={onMic}
           className={`flex h-9 w-9 items-center justify-center rounded-full transition ${
             listening ? "bg-ink text-white animate-pulse" : "text-ink-soft hover:bg-white/60"
@@ -222,6 +266,7 @@ export function InputBar({ onAdd, onPasteMulti }: Props) {
           <Mic size={18} />
         </button>
         <button
+          type="button"
           onClick={() => fileRef.current?.click()}
           className="flex h-9 w-9 items-center justify-center rounded-full text-ink-soft hover:bg-white/60"
           aria-label={t("이미지 첨부", "Attach image")}
@@ -230,6 +275,7 @@ export function InputBar({ onAdd, onPasteMulti }: Props) {
         </button>
         <input ref={fileRef} type="file" accept="image/*" multiple onChange={onFile} className="hidden" />
         <button
+          type="button"
           onClick={() => setScribbleOpen(true)}
           className="flex h-9 w-9 items-center justify-center rounded-full text-ink-soft hover:bg-white/60"
           aria-label={t("낙서", "Scribble")}
@@ -260,7 +306,7 @@ export function InputBar({ onAdd, onPasteMulti }: Props) {
       <ScribbleCanvas
         open={scribbleOpen}
         onClose={() => setScribbleOpen(false)}
-        onDone={(dataUrl) => setImages((p) => [...p, dataUrl])}
+        onDone={(dataUrl) => void addImage(dataUrl)}
       />
     </form>
   );

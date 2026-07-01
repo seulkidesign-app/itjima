@@ -1,9 +1,21 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useEffect, useMemo, useRef, useState } from "react";
-import { Plus, Bell, BellOff, Pin } from "lucide-react";
-import { useSchedules, type ScheduleItem } from "@/lib/store";
+import { useEffect, useMemo, useRef, useState, type ComponentProps } from "react";
+import { Plus, Pin, Check, Bell, BellOff } from "lucide-react";
+import { useArchive, useSchedules, type ScheduleItem } from "@/lib/store";
 import { countdown, dDay } from "@/lib/dateDetect";
 import { ScheduleSheet } from "@/components/ScheduleSheet";
+import { ReminderSheet } from "@/components/ReminderSheet";
+import { ScheduleAlarmChips } from "@/components/ScheduleAlarmChips";
+import {
+  bindInAppReminders,
+  clearReminderOffset,
+  effectiveAlarmAt,
+  formatAlarmLabel,
+  presetToAlarmAt,
+  type AlarmPreset,
+} from "@/lib/scheduleReminders";
+import { groupSchedules, isMissed, sectionLabel, classifySchedule } from "@/lib/scheduleGroups";
+import { scheduleDisplayTitle, rawPreview } from "@/lib/thoughtProvenance";
 import { toast } from "sonner";
 import { useT, useLang } from "@/lib/i18n";
 import { track } from "@/lib/analytics";
@@ -42,55 +54,59 @@ function usePins() {
 
 function Schedule() {
   const t = useT();
+  const { lang } = useLang();
   const { items, update, remove, add } = useSchedules();
-  const [tab, setTab] = useState<"list" | "cal">("cal");
+  const archive = useArchive();
+  const [tab, setTab] = useState<"today" | "list" | "cal">("list");
   const [sheet, setSheet] = useState<{ open: boolean; edit?: ScheduleItem }>({ open: false });
+  const [reminderSheet, setReminderSheet] = useState<ScheduleItem | null>(null);
   const [, tickN] = useState(0);
   const { pins, toggle: togglePin } = usePins();
+
+  const activeItems = useMemo(() => items.filter((s) => s.status !== "done"), [items]);
+  const doneItems = useMemo(() => items.filter((s) => s.status === "done"), [items]);
 
   useEffect(() => {
     const id = setInterval(() => tickN((n) => n + 1), 30_000);
     return () => clearInterval(id);
   }, []);
 
-  // Schedule simple in-tab notifications 1hr before start when alarm on
   useEffect(() => {
-    if (typeof window === "undefined" || !("Notification" in window)) return;
-    const timers: number[] = [];
-    items.forEach((s) => {
-      if (!s.alarm) return;
-      const fireAt = new Date(s.start_time).getTime() - 60 * 60 * 1000;
-      const delay = fireAt - Date.now();
-      if (delay > 0 && delay < 24 * 60 * 60 * 1000) {
-        timers.push(
-          window.setTimeout(() => {
-            if (Notification.permission === "granted") {
-              new Notification("⏰ ItJima", { body: t(`1시간 후: ${s.text}`, `In 1 hour: ${s.text}`) });
-            }
-          }, delay),
-        );
+    return bindInAppReminders(items, (title, body) => {
+      if (Notification.permission === "granted") {
+        new Notification(title, { body });
       }
     });
-    return () => timers.forEach(clearTimeout);
-  }, [items]);
+  }, [items, tickN]);
 
-  // List: pinned first, then upcoming (closest), then past
-  const sorted = useMemo(() => {
-    const now = Date.now();
-    const arr = [...items];
-    arr.sort((a, b) => {
-      const ap = pins.has(a.id) ? 1 : 0;
-      const bp = pins.has(b.id) ? 1 : 0;
-      if (ap !== bp) return bp - ap;
-      const at = +new Date(a.start_time);
-      const bt = +new Date(b.start_time);
-      const aFuture = at >= now;
-      const bFuture = bt >= now;
-      if (aFuture !== bFuture) return aFuture ? -1 : 1;
-      return aFuture ? at - bt : bt - at;
-    });
-    return arr;
-  }, [items, pins]);
+  const armAlarmAt = async (s: ScheduleItem, at: Date) => {
+    if ("Notification" in window && Notification.permission === "default") {
+      await Notification.requestPermission();
+    }
+    clearReminderOffset(s.id);
+    await update(s.id, { alarm: true, alarm_at: at.toISOString() } as any);
+    toast.success(t("알림을 예약했어요", "Reminder set"));
+  };
+
+  const armFromPreset = async (s: ScheduleItem, preset: AlarmPreset) => {
+    await armAlarmAt(s, presetToAlarmAt(preset));
+  };
+
+  const disarmReminder = async (s: ScheduleItem) => {
+    clearReminderOffset(s.id);
+    await update(s.id, { alarm: false, alarm_at: null } as any);
+  };
+
+  const listSections = useMemo(() => groupSchedules(activeItems, pins), [activeItems, pins]);
+
+  const todayTimerItems = useMemo(() => {
+    return [...activeItems]
+      .filter((s) => {
+        const k = classifySchedule(s.start_time);
+        return k === "now" || k === "today" || pins.has(s.id);
+      })
+      .sort((a, b) => +new Date(a.start_time) - +new Date(b.start_time));
+  }, [activeItems, pins]);
 
   const moveEventToDate = async (id: string, day: number, month: number, year: number) => {
     const it = items.find((x) => x.id === id);
@@ -105,67 +121,117 @@ function Schedule() {
     toast.success(t("날짜가 옮겨졌어요", "Date moved"));
   };
 
+  const markDone = async (s: ScheduleItem) => {
+    await update(s.id, { status: "done" } as any);
+    hapticConfirm();
+    track("schedule_completed", { text_length: s.text.length });
+    toast.success(t("완료했어요", "Marked done"));
+  };
+
+  const moveDoneToArchive = async (s: ScheduleItem) => {
+    await archive.add({
+      text: s.raw_text ?? s.text,
+      images: [],
+      source_id: s.source_id ?? s.id,
+      raw_text: s.raw_text ?? s.text,
+      brain_mirror: s.brain_mirror ?? null,
+    } as any);
+    await remove(s.id);
+    if (pins.has(s.id)) togglePin(s.id);
+    toast.success(t("기억으로 옮겼어요", "Moved to Memory"));
+  };
+
+  const cardProps = (s: ScheduleItem) => ({
+    s,
+    pinned: pins.has(s.id),
+    missed: isMissed(s),
+    done: s.status === "done",
+    onPin: () => { togglePin(s.id); haptic(8); },
+    onEdit: () => setSheet({ open: true, edit: s }),
+    onComplete: () => markDone(s),
+    onMoveToArchive: () => moveDoneToArchive(s),
+    onArmPreset: (preset: AlarmPreset) => armFromPreset(s, preset),
+    onArmCustom: () => setReminderSheet(s),
+    onDisarm: () => disarmReminder(s),
+    onDelete: () => {
+      remove(s.id);
+      if (pins.has(s.id)) togglePin(s.id);
+      toast(t("삭제됨", "Deleted"));
+    },
+  });
+
   return (
     <div className="flex h-full flex-col bg-white">
-      <div className="px-5 pb-3 pt-6">
-        <div className="nrc-eyebrow">{t("나의 일정", "My Schedule")}</div>
-        <h1 className="page-title mt-1">{t("계획", "Plan")}</h1>
-      </div>
-      <div className="px-5 pb-3">
-        <div className="inline-flex border-b border-ink/10">
-          {([
-            ["cal", t("캘린더", "Calendar")],
-            ["list", t("리스트", "List")],
-          ] as const).map(([k, label]) => (
-            <button
-              key={k}
-              onClick={() => setTab(k as "list" | "cal")}
-              className={`relative px-4 py-2 text-[12px] font-extrabold uppercase tracking-[0.16em] transition ${
-                tab === k ? "text-ink" : "text-ink-soft"
-              }`}
-            >
-              {label}
-              <span
-                className={`absolute inset-x-0 -bottom-px h-[3px] transition-all ${
-                  tab === k ? "bg-ink" : "bg-transparent"
+      <div className="sticky top-0 z-10 shrink-0 bg-white">
+        <div className="px-5 pb-3 pt-6">
+          <div className="nrc-eyebrow">{t("나의 일정", "My Schedule")}</div>
+          <h1 className="page-title mt-1">{t("계획", "Plan")}</h1>
+        </div>
+        <div className="px-5 pb-3">
+          <div className="inline-flex border-b border-ink/10">
+            {([
+              ["list", t("리스트", "List")],
+              ["today", t("오늘", "Today")],
+              ["cal", t("캘린더", "Calendar")],
+            ] as const).map(([k, label]) => (
+              <button
+                key={k}
+                onClick={() => setTab(k)}
+                className={`relative px-4 py-2 text-[12px] font-extrabold uppercase tracking-[0.16em] transition ${
+                  tab === k ? "text-ink" : "text-ink-soft"
                 }`}
-              />
-            </button>
-          ))}
+              >
+                {label}
+                <span
+                  className={`absolute inset-x-0 -bottom-px h-[3px] transition-all ${
+                    tab === k ? "bg-ink" : "bg-transparent"
+                  }`}
+                />
+              </button>
+            ))}
+          </div>
         </div>
       </div>
 
       <div className="flex-1 px-5 pb-6">
-        {tab === "list" ? (
-          sorted.length === 0 ? (
+        {tab === "today" ? (
+          todayTimerItems.length === 0 && doneItems.length === 0 ? (
             <Empty />
           ) : (
             <div className="flex flex-col gap-3">
-              {sorted.map((s) => (
-                <ScheduleCard
-                  key={s.id}
-                  s={s}
-                  pinned={pins.has(s.id)}
-                  onPin={() => { togglePin(s.id); haptic(8); }}
-                  onEdit={() => setSheet({ open: true, edit: s })}
-                  onToggle={async (alarm) => {
-                    if (alarm && "Notification" in window && Notification.permission === "default") {
-                      await Notification.requestPermission();
-                    }
-                    update(s.id, { alarm } as any);
-                  }}
-                  onDelete={() => {
-                    remove(s.id);
-                    if (pins.has(s.id)) togglePin(s.id);
-                    toast(t("삭제됨", "Deleted"));
-                  }}
-                />
+              {todayTimerItems.map((s) => (
+                <ScheduleCard key={s.id} {...cardProps(s)} timer />
               ))}
+              {doneItems.length > 0 && (
+                <DoneSection items={doneItems} cardProps={cardProps} t={t} />
+              )}
+            </div>
+          )
+        ) : tab === "list" ? (
+          listSections.length === 0 && doneItems.length === 0 ? (
+            <Empty />
+          ) : (
+            <div className="flex flex-col gap-5">
+              {listSections.map((sec) => (
+                <section key={sec.key}>
+                  <h2 className="mb-2 px-1 text-[11px] font-extrabold uppercase tracking-[0.18em] text-ink-soft">
+                    {sectionLabel(sec.key, lang)}
+                  </h2>
+                  <div className="flex flex-col gap-3">
+                    {sec.items.map((s) => (
+                      <ScheduleCard key={s.id} {...cardProps(s)} emphasize={sec.key === "now"} />
+                    ))}
+                  </div>
+                </section>
+              ))}
+              {doneItems.length > 0 && (
+                <DoneSection items={doneItems} cardProps={cardProps} t={t} />
+              )}
             </div>
           )
         ) : (
           <CalendarGrid
-            items={sorted}
+            items={activeItems}
             pins={pins}
             onTogglePin={(id) => { togglePin(id); haptic(8); }}
             onEdit={(s) => setSheet({ open: true, edit: s })}
@@ -182,6 +248,17 @@ function Schedule() {
       >
         <Plus size={26} strokeWidth={2.5} />
       </button>
+
+      {reminderSheet && (
+        <ReminderSheet
+          schedule={reminderSheet}
+          onClose={() => setReminderSheet(null)}
+          onConfirmAt={(iso) => {
+            void armAlarmAt(reminderSheet, new Date(iso));
+            setReminderSheet(null);
+          }}
+        />
+      )}
 
       {sheet.open && (
         <ScheduleSheet
@@ -226,23 +303,43 @@ function Schedule() {
 function ScheduleCard({
   s,
   pinned,
+  missed,
+  done,
+  emphasize,
+  timer,
   onPin,
   onEdit,
-  onToggle,
+  onComplete,
+  onMoveToArchive,
+  onArmPreset,
+  onArmCustom,
+  onDisarm,
   onDelete,
 }: {
   s: ScheduleItem;
   pinned: boolean;
+  missed?: boolean;
+  done?: boolean;
+  emphasize?: boolean;
+  timer?: boolean;
   onPin: () => void;
   onEdit: () => void;
-  onToggle: (v: boolean) => void;
+  onComplete: () => void;
+  onMoveToArchive?: () => void;
+  onArmPreset: (preset: AlarmPreset) => void;
+  onArmCustom: () => void;
+  onDisarm: () => void;
   onDelete: () => void;
 }) {
   const t = useT();
   const { lang } = useLang();
+  const [showAlarmChips, setShowAlarmChips] = useState(false);
   const start = new Date(s.start_time);
   const end = new Date(s.end_time);
-  const d = dDay(start);
+  const rel = lang === "en" ? translateCountdown(countdown(start)) : countdown(start);
+  const title = scheduleDisplayTitle(s);
+  const preview = rawPreview(s);
+  const alarmAt = s.alarm ? effectiveAlarmAt(s) : null;
   const pressTimer = useRef<number | null>(null);
   const longFired = useRef(false);
 
@@ -260,78 +357,121 @@ function ScheduleCard({
   return (
     <div
       className={`card-radius shadow-card px-[22px] py-5 transition ${
-        pinned ? "bg-primary/15 ring-2 ring-primary/40" : "glass"
+        done ? "opacity-50" : ""
+      } ${emphasize || timer ? "ring-2 ring-primary/30 bg-primary/10" : pinned ? "bg-primary/15 ring-2 ring-primary/40" : "glass"} ${
+        missed && !done ? "border-l-4 border-amber-300/80" : ""
       }`}
       onPointerDown={startPress}
       onPointerUp={endPress}
       onPointerLeave={endPress}
       onClick={() => { if (!longFired.current) onEdit(); }}
     >
-      <div className="flex items-start justify-between gap-3">
-        <div className="flex-1">
-          <div className="flex items-center gap-2">
+      <div className="flex items-start gap-3">
+        <button
+          type="button"
+          onClick={(e) => { e.stopPropagation(); if (done) onMoveToArchive?.(); else onComplete(); }}
+          className={`mt-1 flex h-6 w-6 shrink-0 items-center justify-center rounded-full border-2 ${
+            done ? "border-primary bg-primary text-ink" : "border-ink/20 hover:border-primary"
+          }`}
+          aria-label={t("완료", "Done")}
+        >
+          {done && <Check size={14} strokeWidth={3} />}
+        </button>
+        <div className="min-w-0 flex-1">
+          <div className="flex flex-wrap items-center gap-2">
             {pinned && <Pin size={12} className="fill-primary text-primary" />}
-            <span
-              className={`rounded-full px-2 py-0.5 text-[11px] font-bold ${
-                d.tone === "today"
-                  ? "bg-primary text-ink"
-                  : d.tone === "soon"
-                    ? "bg-primary text-ink"
-                    : "bg-white/70 text-ink-soft"
-              }`}
-            >
-              {lang === "en" ? translateDday(d.label) : d.label}
+            <span className={`font-num font-bold text-ink ${emphasize || timer ? "text-[18px]" : "text-[14px]"}`}>
+              {rel}
             </span>
-            <span className="text-[12px] font-semibold text-ink">
-              {lang === "en" ? translateCountdown(countdown(start)) : countdown(start)}
-            </span>
+            {missed && !done && (
+              <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-bold text-amber-800">
+                {t("시간 지남", "Past due")}
+              </span>
+            )}
           </div>
-          <div className="mt-1.5 card-text text-ink">{s.text}</div>
-          <div className="mt-2 text-meta">
+          <div className="mt-1 text-[15px] font-semibold leading-snug text-ink">{title}</div>
+          {preview && preview !== title && (
+            <p className="mt-0.5 line-clamp-1 text-[12px] text-ink-soft">{preview}</p>
+          )}
+          <div className="mt-1.5 text-meta">
             {fmt(start)} → {fmt(end)}
           </div>
+          {alarmAt && (
+            <button
+              type="button"
+              onClick={(e) => { e.stopPropagation(); onDisarm(); }}
+              className="mt-1.5 inline-flex items-center gap-1 rounded-full bg-primary/30 px-2 py-0.5 text-[11px] font-bold text-ink"
+            >
+              <Bell size={11} /> {formatAlarmLabel(alarmAt, lang)}
+            </button>
+          )}
         </div>
-        <button
-          onClick={(e) => { e.stopPropagation(); onToggle(!s.alarm); }}
-          aria-label={t("알람 토글", "Toggle alarm")}
-          className={`relative flex h-7 w-12 shrink-0 items-center rounded-full transition ${
-            s.alarm ? "bg-primary" : "bg-white/70"
-          }`}
-        >
-          <span
-            className={`flex h-5 w-5 items-center justify-center rounded-full bg-white shadow transition ${
-              s.alarm ? "translate-x-6" : "translate-x-1"
+        {!done && (
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              if (s.alarm) onDisarm();
+              else setShowAlarmChips((v) => !v);
+            }}
+            aria-label={t("알림", "Reminder")}
+            className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full transition ${
+              s.alarm ? "bg-primary text-ink" : "bg-white/70 text-ink-soft"
             }`}
           >
-            {s.alarm ? <Bell size={11} /> : <BellOff size={11} className="text-ink-soft" />}
-          </span>
-        </button>
+            {s.alarm ? <Bell size={16} /> : <BellOff size={16} />}
+          </button>
+        )}
       </div>
-      <div className="mt-3 flex justify-end gap-3">
-        <button
-          onClick={(e) => { e.stopPropagation(); onPin(); }}
-          className="text-[12px] font-medium text-ink-soft hover:text-ink"
-        >
-          {pinned ? t("핀 해제", "Unpin") : t("핀", "Pin")}
-        </button>
-        <button
-          onClick={(e) => { e.stopPropagation(); onDelete(); }}
-          className="text-[12px] font-medium text-ink-soft hover:text-ink"
-        >
-          {t("삭제", "Delete")}
-        </button>
-      </div>
+      {showAlarmChips && !done && (
+        <ScheduleAlarmChips
+          onSelect={onArmPreset}
+          onCustom={onArmCustom}
+          onDismiss={() => setShowAlarmChips(false)}
+        />
+      )}
+      {!done && (
+        <div className="mt-3 flex justify-end gap-3">
+          <button
+            onClick={(e) => { e.stopPropagation(); onDelete(); }}
+            className="text-[12px] font-medium text-ink-soft hover:text-ink"
+          >
+            {t("삭제", "Delete")}
+          </button>
+        </div>
+      )}
     </div>
   );
 }
 
-function translateDday(label: string) {
-  if (label === "오늘") return "Today";
-  if (label === "내일") return "Tomorrow";
-  if (label === "어제") return "Yesterday";
-  const m = label.match(/^D([+-]?\d+)$/);
-  if (m) return label;
-  return label;
+function DoneSection({
+  items,
+  cardProps,
+  t,
+}: {
+  items: ScheduleItem[];
+  cardProps: (s: ScheduleItem) => Omit<ComponentProps<typeof ScheduleCard>, "emphasize" | "timer">;
+  t: ReturnType<typeof useT>;
+}) {
+  const [open, setOpen] = useState(false);
+  return (
+    <section>
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        className="mb-2 w-full px-1 text-left text-[11px] font-extrabold uppercase tracking-[0.18em] text-ink-soft"
+      >
+        {t("완료됨", "Done")} · {items.length} {open ? "▾" : "▸"}
+      </button>
+      {open && (
+        <div className="flex flex-col gap-3">
+          {items.map((s) => (
+            <ScheduleCard key={s.id} {...cardProps(s)} done />
+          ))}
+        </div>
+      )}
+    </section>
+  );
 }
 
 function translateCountdown(label: string) {

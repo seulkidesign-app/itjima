@@ -1,11 +1,20 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
-import { Search, Trash2, Sparkles, ChevronDown, X, FolderPlus, Check } from "lucide-react";
+import { Search, Trash2, Sparkles, ChevronDown, X, FolderPlus, Check, Pin } from "lucide-react";
 import { useArchive, useSchedules, type ArchiveItem } from "@/lib/store";
 import { archiveGroup, detectDate } from "@/lib/dateDetect";
 import { useT, useLang } from "@/lib/i18n";
 import { haptic } from "@/lib/haptics";
+import { ArchiveOrganizeSheet } from "@/components/ArchiveOrganizeSheet";
+import {
+  archiveDisplayTitle,
+  archiveSearchHaystack,
+  readArchivePins,
+  toggleArchivePin,
+  setArchiveTitle,
+  readArchiveTitles,
+} from "@/lib/archiveMeta";
 import { SwipeCard } from "@/components/SwipeCard";
 import { track } from "@/lib/analytics";
 
@@ -43,6 +52,8 @@ function Archive() {
   const { items, remove } = useArchive();
   const schedules = useSchedules();
   const [q, setQ] = useState("");
+  const [groupFilter, setGroupFilter] = useState<string>("all");
+  const [sortOrder, setSortOrder] = useState<"newest" | "oldest">("newest");
   const [overrides, setOverrides] = useState<Record<string, string>>({});
   const [customGroups, setCustomGroups] = useState<GroupDef[]>([]);
   const [collapsed, setCollapsed] = useState<Set<string>>(new Set());
@@ -55,8 +66,16 @@ function Archive() {
   const [newEmoji, setNewEmoji] = useState("✨");
   const pressTimer = useRef<number | null>(null);
 
-  // AI organize visual state
-  const [aiPhase, setAiPhase] = useState<"idle" | "analyzing" | "shimmer">("idle");
+  const [organizeOpen, setOrganizeOpen] = useState(false);
+  const [editItem, setEditItem] = useState<ArchiveItem | null>(null);
+  const [editTitle, setEditTitle] = useState("");
+  const [pins, setPins] = useState<Set<string>>(() => readArchivePins());
+
+  useEffect(() => {
+    const h = () => setPins(readArchivePins());
+    window.addEventListener("itjima:archive-meta", h);
+    return () => window.removeEventListener("itjima:archive-meta", h);
+  }, []);
 
   useEffect(() => {
     setOverrides(readJSON<Record<string, string>>(OVERRIDE_KEY, {}));
@@ -88,10 +107,22 @@ function Archive() {
     haptic(4);
   };
 
-  const filtered = useMemo(
-    () => (q ? items.filter((it) => it.text.toLowerCase().includes(q.toLowerCase())) : items),
-    [items, q],
-  );
+  const filtered = useMemo(() => {
+    let list = items;
+    if (q.trim()) {
+      const needle = q.trim().toLowerCase();
+      list = list.filter((it) => archiveSearchHaystack(it).includes(needle));
+    }
+    if (groupFilter !== "all") {
+      list = list.filter((it) => groupOf(it.id, it.text) === groupFilter);
+    }
+    list = [...list].sort((a, b) => {
+      const da = +new Date(a.created_at);
+      const db = +new Date(b.created_at);
+      return sortOrder === "newest" ? db - da : da - db;
+    });
+    return list;
+  }, [items, q, groupFilter, sortOrder, overrides]);
 
   const grouped = useMemo(() => {
     const map = new Map<string, typeof items>();
@@ -110,24 +141,17 @@ function Archive() {
 
   const locale = lang === "en" ? "en-US" : "ko-KR";
 
-  // ---- AI 그룹 정리 ----
-  const runAIOrganize = async () => {
-    if (aiPhase !== "idle" || items.length === 0) return;
+  // ---- 키워드 기반 자동 정리 (사용자 지정 그룹은 유지) ----
+  const runAIOrganize = () => {
+    if (items.length === 0) return;
     haptic([6, 18, 10]);
-    setAiPhase("analyzing");
-    await new Promise((r) => setTimeout(r, 1200));
-    setAiPhase("shimmer");
-    // Clear overrides that pointed to built-in groups so AI re-classifies.
-    // Keep overrides pointing to custom groups.
-    const customKeys = new Set(customGroups.map((g) => g.key));
-    const next: Record<string, string> = {};
-    Object.entries(overrides).forEach(([id, k]) => {
-      if (customKeys.has(k)) next[id] = k;
-    });
+    setOrganizeOpen(true);
+  };
+
+  const applyOrganize = (next: Record<string, string>) => {
     persistOverrides(next);
-    await new Promise((r) => setTimeout(r, 800));
-    setAiPhase("idle");
     haptic([6, 20, 8]);
+    toast.success(t("그룹을 업데이트했어요", "Groups updated"));
   };
 
   // ---- Selection / long-press ----
@@ -209,6 +233,10 @@ function Archive() {
       start_time: start.toISOString(),
       end_time: end.toISOString(),
       alarm: false,
+      source_id: it.source_id ?? it.id,
+      raw_text: it.raw_text ?? it.text,
+      brain_mirror: it.brain_mirror ?? null,
+      status: "active",
     } as any);
     await remove(it.id);
     track("archive_swiped_schedule", { text_length: it.text.length });
@@ -221,40 +249,41 @@ function Archive() {
 
   return (
     <div className="flex h-full flex-col bg-white">
-      <div className="px-5 pb-2 pt-6">
-        <div className="nrc-eyebrow">{t("보관함", "Archive")}</div>
-        <div className="mt-1 flex items-end justify-between gap-3">
-          <h1 className="page-title">{t("기억", "Memory")}</h1>
-          <div className="text-right leading-none">
-            <div className="font-num text-[40px] text-ink">{items.length}</div>
-            <div className="nrc-eyebrow mt-0.5">{t("개", "Saved")}</div>
+      <div className="sticky top-0 z-10 shrink-0 bg-white pb-1">
+        <div className="px-5 pb-2 pt-6">
+          <div className="nrc-eyebrow">{t("보관함", "Archive")}</div>
+          <div className="mt-1 flex items-end justify-between gap-3">
+            <h1 className="page-title">{t("기억", "Memory")}</h1>
+            <div className="text-right leading-none">
+              <div className="font-num text-[40px] text-ink">{items.length}</div>
+              <div className="nrc-eyebrow mt-0.5">{t("개", "Saved")}</div>
+            </div>
           </div>
         </div>
-      </div>
-      {/* AI 그룹 정리 button */}
-      {items.length > 0 && (
-        <div className="px-5 pb-3">
-          <button
-            onClick={runAIOrganize}
-            disabled={aiPhase !== "idle"}
-            className={`w-full bg-ink py-4 text-[13px] font-extrabold uppercase tracking-[0.18em] text-white transition active:scale-[0.98] disabled:opacity-80 ${
-              aiPhase === "analyzing" ? "animate-pulse" : ""
-            }`}
-            style={{ borderRadius: 999 }}
-          >
-            <span className="inline-flex items-center justify-center gap-2">
-              <Sparkles size={14} className={`text-primary ${aiPhase === "analyzing" ? "animate-spin" : ""}`} />
-              {aiPhase === "analyzing"
-                ? t("분석 중...", "Analyzing...")
-                : t("✨ AI 그룹 정리", "✨ AI Re-group")}
-            </span>
-          </button>
-        </div>
-      )}
+        {items.length > 0 && (
+          <div className="px-5 pb-3">
+            <button
+              onClick={runAIOrganize}
+              className="w-full bg-ink py-4 text-[13px] font-extrabold uppercase tracking-[0.18em] text-white transition active:scale-[0.98]"
+              style={{ borderRadius: 999 }}
+            >
+              <span className="inline-flex items-center justify-center gap-2">
+                <Sparkles size={14} className="text-primary" />
+                {t("✨ 자동 정리", "✨ Auto-sort")}
+              </span>
+            </button>
+            <p className="mt-2 px-1 text-[11px] leading-relaxed text-ink-soft">
+              {t(
+                "키워드로 그룹을 다시 나눠요. 직접 만든 그룹은 그대로 둡니다.",
+                "Re-sorts by keywords. Custom groups stay as you set them.",
+              )}
+            </p>
+          </div>
+        )}
 
-      <div className="px-5 pb-3">
-        <div className="flex items-center gap-2 rounded-[24px] bg-white px-3.5 py-2.5 shadow-card">
-          <Search size={16} className="text-ink-soft" />
+        <div className="px-5 pb-3">
+          <div className="flex items-center gap-2 rounded-[24px] bg-white px-3.5 py-2.5 shadow-card">
+            <Search size={16} className="text-ink-soft" />
           <input
             value={q}
             onChange={(e) => setQ(e.target.value)}
@@ -262,10 +291,43 @@ function Archive() {
             className="flex-1 bg-transparent text-[14px] text-ink placeholder:text-ink-soft/70 focus:outline-none"
           />
         </div>
+        <div className="mt-2 flex flex-wrap items-center gap-1.5">
+          <button
+            type="button"
+            onClick={() => setGroupFilter("all")}
+            className={`rounded-full px-3 py-1 text-[12px] font-medium ${
+              groupFilter === "all" ? "bg-ink text-white" : "bg-ink/[0.06] text-ink-soft"
+            }`}
+          >
+            {t("전체", "All")}
+          </button>
+          {allGroups.map((g) => (
+            <button
+              key={g.key}
+              type="button"
+              onClick={() => setGroupFilter(g.key)}
+              className={`rounded-full px-3 py-1 text-[12px] font-medium ${
+                groupFilter === g.key ? "bg-ink text-white" : "bg-ink/[0.06] text-ink-soft"
+              }`}
+            >
+              {g.emoji} {lang === "en" ? g.en : g.ko}
+            </button>
+          ))}
+          <select
+            value={sortOrder}
+            onChange={(e) => setSortOrder(e.target.value as "newest" | "oldest")}
+            className="ml-auto rounded-full bg-ink/[0.06] px-3 py-1 text-[12px] font-medium text-ink-soft focus:outline-none"
+            aria-label={t("정렬", "Sort")}
+          >
+            <option value="newest">{t("최신순", "Newest")}</option>
+            <option value="oldest">{t("오래된순", "Oldest")}</option>
+          </select>
+        </div>
         <div className="mt-2 flex items-center gap-1.5 px-1 text-[11px] text-ink-soft">
           <Sparkles size={11} className="text-primary" />
           {t("→ 일정으로 보내기 · ← 삭제 · 길게 눌러 다중 선택 · 그룹 헤더 길게 눌러 해제",
              "Swipe → Schedule · ← Delete · long-press to multi-select · long-press header to ungroup")}
+        </div>
         </div>
       </div>
 
@@ -307,7 +369,7 @@ function Archive() {
                   />
                 </div>
                 {!isCollapsed && (
-                  <div className={`flex flex-col gap-3 ${aiPhase === "shimmer" ? "animate-pulse" : ""}`}>
+                  <div className="flex flex-col gap-3">
                     {g.items.map((it) => {
                       const isSel = selected.has(it.id);
                       const isDragging = dragId === it.id;
@@ -349,12 +411,50 @@ function Archive() {
                                 <img src={it.images[0]} alt="" className="h-14 w-14 rounded-[24px] object-cover" />
                               )}
                               <div className="flex-1 min-w-0">
-                                <p className="card-text whitespace-pre-wrap text-ink line-clamp-3">
-                                  {it.text}
+                                <div className="flex items-start justify-between gap-2">
+                                  <p className="text-[15px] font-semibold leading-snug text-ink line-clamp-2">
+                                    {archiveDisplayTitle(it.id, it)}
+                                  </p>
+                                  {!selecting && (
+                                    <button
+                                      type="button"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        toggleArchivePin(it.id);
+                                        setPins(readArchivePins());
+                                        haptic(4);
+                                      }}
+                                      aria-label={t("핀", "Pin")}
+                                    >
+                                      <Pin
+                                        size={14}
+                                        className={pins.has(it.id) ? "fill-primary text-primary" : "text-ink-soft"}
+                                      />
+                                    </button>
+                                  )}
+                                </div>
+                                <p className="mt-1 whitespace-pre-wrap text-[13px] leading-relaxed text-ink-soft line-clamp-2">
+                                  {it.raw_text ?? it.text}
                                 </p>
+                                {it.brain_mirror?.title && (
+                                  <p className="mt-1.5 text-[11px] text-ink-soft">
+                                    🧠 {it.brain_mirror.title}
+                                  </p>
+                                )}
                                 <div className="mt-3 flex items-center justify-between gap-2 text-meta">
                                   <span>{g.emoji} {g.label}</span>
                                   <div className="flex items-center gap-2">
+                                    <button
+                                      type="button"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        setEditItem(it);
+                                        setEditTitle(readArchiveTitles()[it.id] ?? archiveDisplayTitle(it.id, it));
+                                      }}
+                                      className="text-[11px] underline"
+                                    >
+                                      {t("제목", "Title")}
+                                    </button>
                                     <span>{new Date(it.created_at).toLocaleDateString(locale)}</span>
                                     {!selecting && (
                                       <button onClick={(e) => { e.stopPropagation(); remove(it.id); }} aria-label={t("삭제", "Delete")}>
@@ -442,6 +542,44 @@ function Archive() {
                 {t("만들기", "Create")}
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      <ArchiveOrganizeSheet
+        open={organizeOpen}
+        items={items}
+        overrides={overrides}
+        customGroupKeys={new Set(customGroups.map((g) => g.key))}
+        allGroups={allGroups}
+        onClose={() => setOrganizeOpen(false)}
+        onApply={applyOrganize}
+      />
+
+      {editItem && (
+        <div className="absolute inset-0 z-50 flex flex-col" onClick={() => setEditItem(null)}>
+          <div className="flex-1 bg-ink/30 backdrop-blur-sm" />
+          <div
+            className="animate-slide-up rounded-t-[28px] bg-background px-5 pb-[calc(env(safe-area-inset-bottom)+1rem)] pt-3"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h3 className="text-[17px] font-bold text-ink">{t("제목 편집", "Edit title")}</h3>
+            <input
+              value={editTitle}
+              onChange={(e) => setEditTitle(e.target.value)}
+              className="mt-3 w-full rounded-[20px] bg-ink/[0.04] px-3.5 py-3 text-[15px] focus:outline-none focus:shadow-[0_0_0_2px_#FFE033]"
+            />
+            <button
+              type="button"
+              onClick={() => {
+                setArchiveTitle(editItem.id, editTitle);
+                setEditItem(null);
+                toast.success(t("저장됐어요", "Saved"));
+              }}
+              className="mt-4 w-full rounded-full bg-primary py-3.5 text-[15px] font-bold text-ink"
+            >
+              {t("저장", "Save")}
+            </button>
           </div>
         </div>
       )}

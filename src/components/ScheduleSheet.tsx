@@ -22,7 +22,7 @@ function dateToDatePicker(d: Date) {
   return [d.getMonth() + 1, d.getDate()];
 }
 
-const REPEAT_RULES: RepeatRule[] = ["daily", "weekly", "monthly", "yearly"];
+const SHOW_REPEAT_UI = false;
 
 export function ScheduleSheet({
   open,
@@ -77,20 +77,32 @@ export function ScheduleSheet({
   ];
 
   const handleSave = () => {
-    const y = new Date().getFullYear();
+    const anchor = initialStart ?? new Date();
+    let baseYear = anchor.getFullYear();
     let s: Date;
     let e: Date;
     if (allDay) {
-      s = new Date(y, dateOnly[0] - 1, dateOnly[1], 0, 0, 0, 0);
-      e = new Date(y, dateOnly[0] - 1, dateOnly[1], 23, 59, 59, 999);
+      s = new Date(baseYear, dateOnly[0] - 1, dateOnly[1], 0, 0, 0, 0);
+      e = new Date(baseYear, dateOnly[0] - 1, dateOnly[1], 23, 59, 59, 999);
     } else {
-      s = new Date(y, start[0] - 1, start[1], start[2], start[3]);
-      e = new Date(y, end[0] - 1, end[1], end[2], end[3]);
+      s = new Date(baseYear, start[0] - 1, start[1], start[2], start[3]);
+      e = new Date(baseYear, end[0] - 1, end[1], end[2], end[3]);
+      if (e <= s) e.setTime(s.getTime() + 60 * 60 * 1000);
+    }
+    if (!initialStart) {
+      const bump = (d: Date) => {
+        if (d.getTime() < Date.now() - 60 * 60 * 1000) {
+          return new Date(d.getFullYear() + 1, d.getMonth(), d.getDate(), d.getHours(), d.getMinutes(), d.getSeconds(), d.getMilliseconds());
+        }
+        return d;
+      };
+      s = bump(s);
+      e = bump(e);
       if (e <= s) e.setTime(s.getTime() + 60 * 60 * 1000);
     }
     onSave(text.trim() || t("새 일정", "New event"), s, e, {
       allDay,
-      repeat: repeat ? repeatRule : null,
+      repeat: SHOW_REPEAT_UI && repeat ? repeatRule : null,
     });
   };
 
@@ -112,31 +124,35 @@ export function ScheduleSheet({
           <input type="checkbox" checked={allDay} onChange={(e) => setAllDay(e.target.checked)} />
           {t("하루 종일", "All day")}
         </label>
-        <label className="mb-3 flex items-center gap-2.5 text-[14px] text-ink">
-          <input type="checkbox" checked={repeat} onChange={(e) => setRepeat(e.target.checked)} />
-          {t("반복", "Repeat")}
-        </label>
-        {repeat && (
-          <div className="mb-4 flex flex-wrap gap-2">
-            {REPEAT_RULES.map((rule) => (
-              <button
-                key={rule}
-                type="button"
-                onClick={() => setRepeatRule(rule)}
-                className={`rounded-full px-3 py-1.5 text-[13px] font-medium ${
-                  repeatRule === rule ? "bg-primary text-ink" : "bg-ink/[0.06] text-ink-soft"
-                }`}
-              >
-                {rule === "daily"
-                  ? t("매일", "Daily")
-                  : rule === "weekly"
-                    ? t("매주", "Weekly")
-                    : rule === "monthly"
-                      ? t("매월", "Monthly")
-                      : t("매년", "Yearly")}
-              </button>
-            ))}
-          </div>
+        {SHOW_REPEAT_UI && (
+          <>
+            <label className="mb-3 flex items-center gap-2.5 text-[14px] text-ink">
+              <input type="checkbox" checked={repeat} onChange={(e) => setRepeat(e.target.checked)} />
+              {t("반복", "Repeat")}
+            </label>
+            {repeat && (
+              <div className="mb-4 flex flex-wrap gap-2">
+                {(["daily", "weekly", "monthly", "yearly"] as RepeatRule[]).map((rule) => (
+                  <button
+                    key={rule}
+                    type="button"
+                    onClick={() => setRepeatRule(rule)}
+                    className={`rounded-full px-3 py-1.5 text-[13px] font-medium ${
+                      repeatRule === rule ? "bg-primary text-ink" : "bg-ink/[0.06] text-ink-soft"
+                    }`}
+                  >
+                    {rule === "daily"
+                      ? t("매일", "Daily")
+                      : rule === "weekly"
+                        ? t("매주", "Weekly")
+                        : rule === "monthly"
+                          ? t("매월", "Monthly")
+                          : t("매년", "Yearly")}
+                  </button>
+                ))}
+              </div>
+            )}
+          </>
         )}
         {allDay ? (
           <>

@@ -22,17 +22,26 @@ export async function getAdminStats() {
   const { userId } = await requireAuth();
   await assertAdmin(userId);
 
-  const [{ count: inboxCount }, { count: scheduleCount }, { count: archiveCount }] = await Promise.all([
+  const [{ count: inboxCount }, { count: scheduleCount }, { count: archiveCount }, inboxUsers, scheduleUsers, archiveUsers] =
+    await Promise.all([
     supabase.from("inbox").select("*", { count: "exact", head: true }),
     supabase.from("schedules").select("*", { count: "exact", head: true }),
     supabase.from("archive").select("*", { count: "exact", head: true }),
+    supabase.from("inbox").select("user_id"),
+    supabase.from("schedules").select("user_id"),
+    supabase.from("archive").select("user_id"),
   ]);
+
+  const userIds = new Set<string>();
+  for (const row of [...(inboxUsers.data ?? []), ...(scheduleUsers.data ?? []), ...(archiveUsers.data ?? [])]) {
+    if (row.user_id) userIds.add(row.user_id);
+  }
 
   return {
     inboxCount: inboxCount ?? 0,
     scheduleCount: scheduleCount ?? 0,
     archiveCount: archiveCount ?? 0,
-    userCount: 0,
+    userCount: userIds.size,
   };
 }
 
@@ -45,7 +54,7 @@ export async function listRecentUsers() {
 
   return (data ?? []).map((row) => ({
     id: row.user_id,
-    email: "",
+    email: `${row.user_id.slice(0, 8)}…`,
     created_at: row.created_at,
     last_sign_in_at: null as string | null,
     roles: [row.role],

@@ -1,20 +1,99 @@
-/** Lightweight Korean date/time keyword detection. Returns ISO datetime guess or null. */
+/** Lightweight date/time keyword detection (KO + EN). Returns datetime guess or null. */
+
+const KO_WEEKDAYS = ["일", "월", "화", "수", "목", "금", "토"] as const;
+const EN_WEEKDAYS = [
+  "sunday",
+  "monday",
+  "tuesday",
+  "wednesday",
+  "thursday",
+  "friday",
+  "saturday",
+] as const;
+
+function nextWeekday(targetDay: number, from: Date, includeToday: boolean): Date {
+  const d = new Date(from);
+  d.setHours(0, 0, 0, 0);
+  let diff = (targetDay - d.getDay() + 7) % 7;
+  if (diff === 0 && !includeToday) diff = 7;
+  d.setDate(d.getDate() + diff);
+  return d;
+}
+
 export function detectDate(text: string): { label: string; start: Date; end: Date } | null {
   const now = new Date();
   let target = new Date(now);
   let matched = false;
+  let timeSet = false;
   let label = "";
+  const lower = text.toLowerCase();
 
-  // 오늘/내일/모레/글피
-  if (/오늘/.test(text)) { matched = true; label = "오늘"; }
-  else if (/내일/.test(text)) { target.setDate(now.getDate() + 1); matched = true; label = "내일"; }
-  else if (/모레/.test(text)) { target.setDate(now.getDate() + 2); matched = true; label = "모레"; }
-  else if (/글피/.test(text)) { target.setDate(now.getDate() + 3); matched = true; label = "글피"; }
+  // Korean relative days
+  if (/오늘/.test(text)) {
+    matched = true;
+    label = "오늘";
+  } else if (/내일/.test(text)) {
+    target.setDate(now.getDate() + 1);
+    matched = true;
+    label = "내일";
+  } else if (/모레/.test(text)) {
+    target.setDate(now.getDate() + 2);
+    matched = true;
+    label = "모레";
+  } else if (/글피/.test(text)) {
+    target.setDate(now.getDate() + 3);
+    matched = true;
+    label = "글피";
+  }
 
-  // 다음주 / 이번주
-  if (/다음\s*주/.test(text)) { target.setDate(now.getDate() + 7); matched = true; label = "다음 주"; }
+  // English relative days
+  if (/\btoday\b/i.test(text)) {
+    matched = true;
+    label = label || "Today";
+  } else if (/\btomorrow\b/i.test(text)) {
+    target.setDate(now.getDate() + 1);
+    matched = true;
+    label = label || "Tomorrow";
+  } else if (/\bday after tomorrow\b/i.test(text)) {
+    target.setDate(now.getDate() + 2);
+    matched = true;
+    label = label || "Day after tomorrow";
+  }
 
-  // M월 D일
+  // Next week
+  if (/다음\s*주/.test(text) || /\bnext\s+week\b/i.test(text)) {
+    target.setDate(now.getDate() + 7);
+    matched = true;
+    label = label || (/next/i.test(text) ? "Next week" : "다음 주");
+  }
+
+  // Korean weekday: 월요일
+  const koWd = text.match(/(일|월|화|수|목|금|토)요일/);
+  if (koWd) {
+    const idx = KO_WEEKDAYS.indexOf(koWd[1] as (typeof KO_WEEKDAYS)[number]);
+    if (idx >= 0) {
+      target = nextWeekday(idx, now, true);
+      matched = true;
+      label = `${koWd[1]}요일`;
+    }
+  }
+
+  // English weekday
+  if (!koWd) {
+    const enWd = lower.match(
+      /\b(sunday|monday|tuesday|wednesday|thursday|friday|saturday)\b/,
+    );
+    if (enWd) {
+      const idx = EN_WEEKDAYS.indexOf(enWd[1] as (typeof EN_WEEKDAYS)[number]);
+      if (idx >= 0) {
+        target = nextWeekday(idx, now, true);
+        matched = true;
+        label = enWd[1].charAt(0).toUpperCase() + enWd[1].slice(1);
+      }
+    }
+  }
+
+  // M월 D일 / M/D / M-D
   const md = text.match(/(\d{1,2})\s*월\s*(\d{1,2})\s*일/);
   if (md) {
     const m = parseInt(md[1], 10) - 1;
@@ -23,19 +102,53 @@ export function detectDate(text: string): { label: string; start: Date; end: Dat
     if (target < now) target.setFullYear(now.getFullYear() + 1);
     matched = true;
     label = `${m + 1}월 ${d}일`;
+  } else {
+    const slash = text.match(/\b(\d{1,2})[/-](\d{1,2})\b/);
+    if (slash) {
+      const m = parseInt(slash[1], 10) - 1;
+      const d = parseInt(slash[2], 10);
+      target = new Date(now.getFullYear(), m, d);
+      if (target < now) target.setFullYear(now.getFullYear() + 1);
+      matched = true;
+      label = `${m + 1}/${d}`;
+    }
   }
 
-  // 시간: 오후 N시 / 오전 N시 / N시 / N시 M분
-  const hm = text.match(/(오전|오후)?\s*(\d{1,2})\s*시(?:\s*(\d{1,2})\s*분)?/);
-  if (hm) {
-    let h = parseInt(hm[2], 10);
-    const mn = hm[3] ? parseInt(hm[3], 10) : 0;
-    if (hm[1] === "오후" && h < 12) h += 12;
-    if (hm[1] === "오전" && h === 12) h = 0;
+  // Korean time: 오후 N시
+  const hmKo = text.match(/(오전|오후)?\s*(\d{1,2})\s*시(?:\s*(\d{1,2})\s*분)?/);
+  if (hmKo) {
+    let h = parseInt(hmKo[2], 10);
+    const mn = hmKo[3] ? parseInt(hmKo[3], 10) : 0;
+    if (hmKo[1] === "오후" && h < 12) h += 12;
+    if (hmKo[1] === "오전" && h === 12) h = 0;
     target.setHours(h, mn, 0, 0);
     matched = true;
-    label = `${label ? label + " " : ""}${hm[1] ?? ""}${h % 12 || 12}시${mn ? ` ${mn}분` : ""}`.trim();
-  } else if (matched) {
+    timeSet = true;
+    label = `${label ? label + " " : ""}${hmKo[1] ?? ""}${h % 12 || 12}시${mn ? ` ${mn}분` : ""}`.trim();
+  }
+
+  // English time: 3pm, 3:30 pm, 15:00
+  const hmEn = lower.match(/\b(\d{1,2})(?::(\d{2}))?\s*(am|pm)\b/);
+  if (hmEn) {
+    let h = parseInt(hmEn[1], 10);
+    const mn = hmEn[2] ? parseInt(hmEn[2], 10) : 0;
+    if (hmEn[3] === "pm" && h < 12) h += 12;
+    if (hmEn[3] === "am" && h === 12) h = 0;
+    target.setHours(h, mn, 0, 0);
+    matched = true;
+    timeSet = true;
+    label = label || `${hmEn[1]}:${hmEn[2] ?? "00"} ${hmEn[3]}`;
+  } else {
+    const hm24 = text.match(/\b([01]?\d|2[0-3]):([0-5]\d)\b/);
+    if (hm24) {
+      target.setHours(parseInt(hm24[1], 10), parseInt(hm24[2], 10), 0, 0);
+      matched = true;
+      timeSet = true;
+      label = label || hm24[0];
+    }
+  }
+
+  if (matched && !timeSet) {
     target.setHours(9, 0, 0, 0);
   }
 

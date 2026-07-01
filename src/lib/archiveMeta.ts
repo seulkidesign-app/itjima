@@ -1,0 +1,76 @@
+const PIN_KEY = "itjima.archive.pinned";
+const TAGS_KEY = "itjima.archive.tags";
+const TITLE_KEY = "itjima.archive.titles";
+
+function readJSON<T>(key: string, fallback: T): T {
+  if (typeof window === "undefined") return fallback;
+  try {
+    return JSON.parse(localStorage.getItem(key) || "") ?? fallback;
+  } catch {
+    return fallback;
+  }
+}
+
+function writeJSON(key: string, val: unknown) {
+  if (typeof window === "undefined") return;
+  localStorage.setItem(key, JSON.stringify(val));
+  window.dispatchEvent(new CustomEvent("itjima:archive-meta"));
+}
+
+export function readArchivePins(): Set<string> {
+  return new Set(readJSON<string[]>(PIN_KEY, []));
+}
+
+export function toggleArchivePin(id: string) {
+  const pins = readArchivePins();
+  if (pins.has(id)) pins.delete(id);
+  else pins.add(id);
+  writeJSON(PIN_KEY, [...pins]);
+}
+
+export function readArchiveTags(): Record<string, string[]> {
+  return readJSON<Record<string, string[]>>(TAGS_KEY, {});
+}
+
+export function setArchiveTags(id: string, tags: string[]) {
+  const all = readArchiveTags();
+  if (tags.length) all[id] = tags;
+  else delete all[id];
+  writeJSON(TAGS_KEY, all);
+}
+
+export function readArchiveTitles(): Record<string, string> {
+  return readJSON<Record<string, string>>(TITLE_KEY, {});
+}
+
+export function setArchiveTitle(id: string, title: string) {
+  const all = readArchiveTitles();
+  if (title.trim()) all[id] = title.trim();
+  else delete all[id];
+  writeJSON(TITLE_KEY, all);
+}
+
+export function archiveDisplayTitle(
+  id: string,
+  item: { text: string; brain_mirror?: { title?: string } | null },
+): string {
+  const custom = readArchiveTitles()[id];
+  if (custom) return custom;
+  const bm = item.brain_mirror?.title?.trim();
+  if (bm) return bm;
+  return item.text.split("\n")[0]?.trim() || item.text;
+}
+
+export function archiveSearchHaystack(item: {
+  text: string;
+  raw_text?: string | null;
+  brain_mirror?: { title?: string; items?: string[] } | null;
+}): string {
+  const parts = [
+    item.text,
+    item.raw_text ?? "",
+    item.brain_mirror?.title ?? "",
+    ...(item.brain_mirror?.items ?? []),
+  ];
+  return parts.join("\n").toLowerCase();
+}

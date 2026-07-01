@@ -10,6 +10,8 @@ export type BrainMirrorCore = {
 export type BrainMirrorResult = BrainMirrorCore & {
   version: number;
   isCurrent: boolean;
+  /** Checklist lines the user marked done in the UI. */
+  completedItems?: string[];
 };
 
 export function suggestedActionForDate(dateText: string): string {
@@ -33,6 +35,7 @@ export function finalizeBrainMirror(
     ...result,
     version: (previous?.version ?? 0) + 1,
     isCurrent: true,
+    completedItems: previous?.completedItems ?? [],
   };
 }
 
@@ -61,10 +64,15 @@ export function parseBrainMirrorResult(raw: unknown): BrainMirrorResult | null {
       ? o.confidence
       : 0.75;
 
-  if (!suggestedAction && items.length === 0) return null;
+  if (items.length === 0) return null;
 
   const version =
     typeof o.version === "number" && o.version >= 1 ? Math.floor(o.version) : 1;
+
+  const completedRaw = o.completedItems;
+  const completedItems = Array.isArray(completedRaw)
+    ? completedRaw.filter((t): t is string => typeof t === "string")
+    : [];
 
   return {
     title: o.title.trim().slice(0, 30),
@@ -74,6 +82,7 @@ export function parseBrainMirrorResult(raw: unknown): BrainMirrorResult | null {
     confidence,
     version,
     isCurrent: o.isCurrent !== false,
+    ...(completedItems.length ? { completedItems } : {}),
   };
 }
 
