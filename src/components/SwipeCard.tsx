@@ -87,7 +87,6 @@ export function SwipeCard({
   }, [pending]);
 
   const tone = pending ?? (dx > 30 ? "right" : dx < -30 ? "left" : null);
-  const rot = dx * 0.06;
 
   return (
     <div className="relative">
@@ -98,7 +97,7 @@ export function SwipeCard({
         onPointerCancel={onUp}
         className={`relative touch-none select-none ${className}`}
         style={{
-          transform: `translateX(${dx}px) rotate(${rot}deg)`,
+          transform: `translateX(${dx}px)`,
           transition: dragging.current
             ? "none"
             : released
@@ -107,27 +106,26 @@ export function SwipeCard({
         }}
       >
         <div
-          className="bg-white border border-ink/10"
+          className="overflow-hidden rounded-[24px] border border-ink/10 bg-white"
           style={{
-            borderRadius: 4,
             boxShadow:
               tone === "right"
                 ? "var(--shadow-yellow)"
                 : tone === "left"
                   ? "var(--shadow-red)"
                   : "var(--shadow-card)",
-            transition: "box-shadow 0.15s ease",
+            transition: "box-shadow 0.2s ease",
           }}
         >
           {children}
         </div>
         {tone === "right" && !pending && (
-          <div className="pointer-events-none absolute -top-3 right-4 rotate-2 bg-primary px-3 py-1 text-[11px] font-extrabold uppercase tracking-widest text-ink">
+          <div className="pointer-events-none absolute -top-3 right-4 animate-swipe-label rounded-full bg-primary px-3 py-1 text-[11px] font-extrabold uppercase tracking-widest text-ink">
             {t("→ 일정", "→ Schedule")}
           </div>
         )}
         {tone === "left" && !pending && (
-          <div className="pointer-events-none absolute -top-3 left-4 -rotate-2 bg-ink px-3 py-1 text-[11px] font-extrabold uppercase tracking-widest text-white">
+          <div className="pointer-events-none absolute -top-3 left-4 animate-swipe-label rounded-full bg-ink px-3 py-1 text-[11px] font-extrabold uppercase tracking-widest text-white">
             {t("← 보관", "← Archive")}
           </div>
         )}

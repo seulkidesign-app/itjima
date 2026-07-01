@@ -6,7 +6,7 @@ import { InputBar } from "@/components/InputBar";
 import { SwipeCard } from "@/components/SwipeCard";
 import { ScheduleSheet } from "@/components/ScheduleSheet";
 import { LoginSheet } from "@/components/LoginSheet";
-import { FocusMode } from "@/components/FocusMode";
+import { CleanupBar } from "@/components/FocusMode";
 import { useOrganizeFx } from "@/components/AIOrganize";
 import { BrainMirrorPanel } from "@/components/BrainMirrorSummary";
 import { isBrainMirrorCandidate, type BrainMirrorResult } from "@/lib/brainMirror";
@@ -40,7 +40,8 @@ function Inbox() {
   });
   const [loginOpen, setLoginOpen] = useState(false);
   
-  const [focusOpen, setFocusOpen] = useState(false);
+  const [cleanupOpen, setCleanupOpen] = useState(false);
+  const [keepIds, setKeepIds] = useState<Set<string>>(new Set());
   const [menuFor, setMenuFor] = useState<string | null>(null);
   const [pasteSheet, setPasteSheet] = useState<{ chunks: string[]; original: string } | null>(null);
   const pressTimer = useRef<number | null>(null);
@@ -104,6 +105,26 @@ function Inbox() {
 
   const cancelMirrorSchedule = async (scheduleId: string) => {
     await schedules.remove(scheduleId);
+  };
+
+  const toggleKeep = (id: string) => {
+    setKeepIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  const exitCleanup = () => {
+    setCleanupOpen(false);
+    setKeepIds(new Set());
+  };
+
+  const deleteUnkept = async () => {
+    const toDelete = items.filter((it) => !keepIds.has(it.id));
+    for (const it of toDelete) await inbox.remove(it.id);
+    exitCleanup();
   };
 
   const handleAdd = async (text: string, images: string[]) => {
@@ -187,12 +208,12 @@ function Inbox() {
   };
 
   return (
-    <div className="flex h-full min-h-full flex-col bg-white pt-2">
+    <div className="flex h-full min-h-full flex-col bg-white">
       {/* NRC-style hero block */}
-      <div className="px-5 pb-3 pt-2">
+      <div className="px-5 pb-3 pt-6">
         <div className="nrc-eyebrow">{t("오늘의 인박스", "Today's Inbox")}</div>
         <div className="mt-1 flex items-end justify-between gap-3">
-          <h1 className="nrc-headline">
+          <h1 className="text-[32px] font-extrabold leading-tight text-ink">
             {items.length > 0
               ? t("생각 정리하기", "Clear Your Mind")
               : t("던져보세요", "Drop A Thought")}
@@ -208,8 +229,13 @@ function Inbox() {
       {items.length >= 2 && (
         <div className="px-5 pb-2">
           <button
-            onClick={() => setFocusOpen(true)}
-            className="pill-ghost inline-flex items-center gap-1.5"
+            onClick={() => {
+              if (cleanupOpen) exitCleanup();
+              else setCleanupOpen(true);
+            }}
+            className={`pill-ghost inline-flex items-center gap-1.5 ${
+              cleanupOpen ? "ring-2 ring-primary" : ""
+            }`}
           >
             <Sparkles size={14} /> {t("정리 모드", "Focus mode")}
           </button>
@@ -218,32 +244,45 @@ function Inbox() {
 
 
       {/* Cards */}
-      <div className="flex-1 px-4 pb-4">
+      <div className="flex-1 px-5 pb-20">
         {items.length === 0 ? (
           <EmptyState />
         ) : (
           <div className="flex flex-col gap-3">
             {itemsAsc.map((it) => {
               const isNewest = it.id === newestId;
+              const kept = keepIds.has(it.id);
               return (
                 <OrganizeFxWrapper key={it.id} id={it.id} fallback={isNewest ? "animate-pop" : "animate-fade-in"}>
-                  <SwipeCard
-                    onSwipe={(dir) =>
-                      dir === "right"
-                        ? setScheduleSheet({ open: true, item: it })
-                        : moveToArchive(it)
-                    }
+                  <div
+                    className={`rounded-[24px] transition-all duration-200 ${
+                      cleanupOpen
+                        ? kept
+                          ? "cursor-pointer opacity-100 ring-2 ring-primary"
+                          : "cursor-pointer opacity-40"
+                        : ""
+                    }`}
+                    onClick={cleanupOpen ? () => toggleKeep(it.id) : undefined}
                   >
-                    <CardBody
-                      item={it}
-                      big={isNewest}
-                      inbox={inbox}
-                      onAutoAct={autoScheduleFromMirror}
-                      onCancelAct={cancelMirrorSchedule}
-                      onLongPressStart={startLongPress}
-                      onLongPressEnd={cancelLongPress}
-                    />
-                  </SwipeCard>
+                    <SwipeCard
+                      disabled={cleanupOpen}
+                      onSwipe={(dir) =>
+                        dir === "right"
+                          ? setScheduleSheet({ open: true, item: it })
+                          : moveToArchive(it)
+                      }
+                    >
+                      <CardBody
+                        item={it}
+                        big={isNewest}
+                        inbox={inbox}
+                        onAutoAct={autoScheduleFromMirror}
+                        onCancelAct={cancelMirrorSchedule}
+                        onLongPressStart={cleanupOpen ? undefined : startLongPress}
+                        onLongPressEnd={cleanupOpen ? undefined : cancelLongPress}
+                      />
+                    </SwipeCard>
+                  </div>
                 </OrganizeFxWrapper>
               );
             })}
@@ -255,6 +294,13 @@ function Inbox() {
 
       {/* Input */}
       <div className="sticky bottom-0 z-20 pb-[env(safe-area-inset-bottom)]">
+        {cleanupOpen && (
+          <CleanupBar
+            deleteCount={items.length - keepIds.size}
+            onCancel={exitCleanup}
+            onDelete={deleteUnkept}
+          />
+        )}
         <InputBar
           onAdd={handleAdd}
           onQuickSave={handleQuick}
@@ -267,7 +313,7 @@ function Inbox() {
         <div className="absolute inset-0 z-50 flex flex-col" onClick={() => setMenuFor(null)}>
           <div className="flex-1 bg-ink/30 backdrop-blur-sm animate-fade-in" />
           <div
-            className="glass-strong animate-slide-up mx-3 mb-[100px] rounded-3xl p-2 shadow-float"
+            className="glass-strong animate-slide-up mx-5 mb-[100px] rounded-[24px] p-2 shadow-float"
             onClick={(e) => e.stopPropagation()}
           >
             {(() => {
@@ -324,7 +370,7 @@ function Inbox() {
                 setPasteSheet(null);
                 toast.success(t(`${pasteSheet.chunks.length}개로 나눠 담았어요`, `Split into ${pasteSheet.chunks.length} items`));
               }}
-              className="mt-4 w-full rounded-2xl bg-primary py-3.5 text-[15px] font-bold text-ink"
+              className="mt-4 w-full rounded-full bg-primary py-3.5 text-[15px] font-bold text-ink"
             >
               {t("항목별로 나누기", "Split into items")}
             </button>
@@ -333,7 +379,7 @@ function Inbox() {
                 await inbox.add({ text: pasteSheet.original, images: [] } as any);
                 setPasteSheet(null);
               }}
-              className="mt-2 w-full rounded-2xl bg-white/70 py-3.5 text-[15px] font-semibold text-ink"
+              className="mt-2 w-full rounded-full bg-white/70 py-3.5 text-[15px] font-semibold text-ink"
             >
               {t("한 덩어리로", "Keep as one")}
             </button>
@@ -347,12 +393,14 @@ function Inbox() {
           initialText={scheduleSheet.item.text}
           initialStart={scheduleSheet.date}
           onClose={() => setScheduleSheet({ open: false })}
-          onSave={async (text, start, end) => {
+          onSave={async (text, start, end, opts) => {
             await schedules.add({
               text,
               start_time: start.toISOString(),
               end_time: end.toISOString(),
               alarm: false,
+              all_day: opts?.allDay ?? false,
+              repeat: opts?.repeat ?? null,
             } as any);
             await inbox.remove(scheduleSheet.item!.id);
             track("schedule_created", { source: "inbox_swipe", text_length: text.length });
@@ -363,14 +411,6 @@ function Inbox() {
       )}
 
       <LoginSheet open={loginOpen} onClose={() => setLoginOpen(false)} />
-      {focusOpen && (
-        <FocusMode
-          items={items}
-          onSchedule={(it) => moveToSchedule(it)}
-          onArchive={(it) => moveToArchive(it)}
-          onClose={() => setFocusOpen(false)}
-        />
-      )}
     </div>
   );
 }
@@ -397,7 +437,7 @@ function CardBody({
   const locale = lang === "en" ? "en-US" : "ko-KR";
   return (
     <div
-      className={`px-4 ${big ? "py-6 min-h-[150px]" : "py-3.5"}`}
+      className="px-[22px] py-5"
       onPointerDown={() => onLongPressStart?.(item.id)}
       onPointerUp={onLongPressEnd}
       onPointerLeave={onLongPressEnd}
@@ -405,11 +445,11 @@ function CardBody({
       {item.images?.length > 0 && (
         <div className="mb-2 flex gap-2 overflow-x-auto">
           {item.images.map((src, i) => (
-            <img key={i} src={src} alt="" className={`rounded-xl object-cover ${big ? "h-24 w-24" : "h-14 w-14"}`} />
+            <img key={i} src={src} alt="" className={`rounded-[24px] object-cover ${big ? "h-24 w-24" : "h-14 w-14"}`} />
           ))}
         </div>
       )}
-      <p className={`whitespace-pre-wrap text-ink ${big ? "text-[17px] font-semibold leading-snug" : "text-[14px] leading-snug"}`}>
+      <p className="card-text whitespace-pre-wrap text-ink">
         {item.text || t("(이미지만)", "(image only)")}
       </p>
       {item.brain_mirror || isBrainMirrorCandidate(item.text) ? (
@@ -420,7 +460,7 @@ function CardBody({
           onCancelAct={onCancelAct}
         />
       ) : null}
-      <div className="mt-2 flex items-center justify-between text-[11px] text-ink-soft">
+      <div className="mt-3 flex items-center justify-between text-meta">
         <span>{new Date(item.created_at).toLocaleString(locale, { month: "numeric", day: "numeric", hour: "2-digit", minute: "2-digit" })}</span>
         <MoreHorizontal size={14} />
       </div>
@@ -462,7 +502,7 @@ function MenuItem({
   return (
     <button
       onClick={onClick}
-      className={`flex w-full items-center gap-3 rounded-2xl px-4 py-3 text-[15px] font-medium ${
+      className={`flex w-full items-center gap-3 rounded-full px-4 py-3 text-[15px] font-medium ${
         danger ? "text-destructive" : "text-ink"
       } hover:bg-white/60`}
     >
@@ -480,13 +520,13 @@ function OrganizeFxWrapper({ id, fallback, children }: { id: string; fallback: s
     ? "translate-x-[120vw] translate-y-[60vh] -rotate-6 opacity-0"
     : "";
   const glowClass = fx.glow === "schedule"
-    ? "ring-4 ring-[#FFD233]/70 shadow-[0_0_30px_rgba(255,210,51,0.6)]"
+    ? "ring-2 ring-[#FFD233]/40 shadow-[0_4px_16px_-4px_rgba(255,210,51,0.35)]"
     : fx.glow === "archive"
-    ? "ring-4 ring-[#87CEEB]/70 shadow-[0_0_30px_rgba(135,206,235,0.6)]"
+    ? "ring-2 ring-[#87CEEB]/40 shadow-[0_4px_16px_-4px_rgba(135,206,235,0.30)]"
     : "";
   return (
     <div
-      className={`rounded-2xl transition-all duration-500 ease-out ${fx.flying ? "" : fallback} ${glowClass} ${flyClass}`}
+      className={`rounded-[24px] transition-all duration-500 ease-out ${fx.flying ? "" : fallback} ${glowClass} ${flyClass}`}
     >
       {children}
     </div>

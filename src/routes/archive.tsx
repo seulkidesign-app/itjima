@@ -220,8 +220,8 @@ function Archive() {
 
 
   return (
-    <div className="flex h-full flex-col bg-white pt-2">
-      <div className="px-5 pb-2 pt-2">
+    <div className="flex h-full flex-col bg-white">
+      <div className="px-5 pb-2 pt-6">
         <div className="nrc-eyebrow">{t("보관함", "Archive")}</div>
         <div className="mt-1 flex items-end justify-between gap-3">
           <h1 className="nrc-headline">{t("기억", "Memory")}</h1>
@@ -252,8 +252,8 @@ function Archive() {
         </div>
       )}
 
-      <div className="px-4 pb-3">
-        <div className="flex items-center gap-2 rounded-2xl border border-ink/10 bg-white px-3.5 py-2.5 shadow-card">
+      <div className="px-5 pb-3">
+        <div className="flex items-center gap-2 rounded-[24px] border border-ink/10 bg-white px-3.5 py-2.5 shadow-card">
           <Search size={16} className="text-ink-soft" />
           <input
             value={q}
@@ -269,7 +269,7 @@ function Archive() {
         </div>
       </div>
 
-      <div className={`flex-1 space-y-5 px-4 ${selecting ? "pb-28" : "pb-8"}`}>
+      <div className={`flex-1 space-y-5 px-5 ${selecting ? "pb-28" : "pb-8"}`}>
         {items.length === 0 ? (
           <Empty />
         ) : (
@@ -288,7 +288,7 @@ function Archive() {
                   setDragOver(null);
                   setDragId(null);
                 }}
-                className={`rounded-2xl transition ${isDropTarget ? "bg-primary/10 ring-2 ring-primary/60" : ""}`}
+                className={`rounded-[24px] transition ${isDropTarget ? "bg-primary/10 ring-2 ring-primary/60" : ""}`}
               >
                 <div
                   onClick={() => toggleCollapse(g.key)}
@@ -307,7 +307,7 @@ function Archive() {
                   />
                 </div>
                 {!isCollapsed && (
-                  <div className={`space-y-2 ${aiPhase === "shimmer" ? "animate-pulse" : ""}`}>
+                  <div className={`flex flex-col gap-3 ${aiPhase === "shimmer" ? "animate-pulse" : ""}`}>
                     {g.items.map((it) => {
                       const isSel = selected.has(it.id);
                       const isDragging = dragId === it.id;
@@ -333,7 +333,7 @@ function Archive() {
                             onPointerUp={cancelLongPress}
                             onPointerLeave={cancelLongPress}
                             onClick={() => toggleSelect(it.id)}
-                            className={`p-3 transition ${
+                            className={`px-[22px] py-5 transition ${
                               isSel ? "ring-2 ring-primary scale-[0.98]" : ""
                             } ${isDragging ? "opacity-40" : ""}`}
                           >
@@ -346,13 +346,13 @@ function Archive() {
                                 </div>
                               )}
                               {it.images?.[0] && (
-                                <img src={it.images[0]} alt="" className="h-14 w-14 rounded-xl object-cover" />
+                                <img src={it.images[0]} alt="" className="h-14 w-14 rounded-[24px] object-cover" />
                               )}
                               <div className="flex-1 min-w-0">
-                                <p className="text-[14px] leading-snug text-ink whitespace-pre-wrap line-clamp-3">
+                                <p className="card-text whitespace-pre-wrap text-ink line-clamp-3">
                                   {it.text}
                                 </p>
-                                <div className="mt-2 flex items-center justify-between gap-2 text-[11px] text-ink-soft">
+                                <div className="mt-3 flex items-center justify-between gap-2 text-meta">
                                   <span>{g.emoji} {g.label}</span>
                                   <div className="flex items-center gap-2">
                                     <span>{new Date(it.created_at).toLocaleDateString(locale)}</span>
@@ -379,7 +379,7 @@ function Archive() {
 
       {/* Selection bottom bar */}
       {selecting && (
-        <div className="fixed inset-x-0 bottom-0 z-30 px-3 pb-[calc(env(safe-area-inset-bottom)+12px)] pt-2 animate-fade-in">
+        <div className="fixed inset-x-0 bottom-0 z-30 px-5 pb-[calc(env(safe-area-inset-bottom)+12px)] pt-2 animate-fade-in">
           <div className="glass-strong card-radius flex items-center gap-2 p-2 shadow-float">
             <button
               onClick={exitSelection}

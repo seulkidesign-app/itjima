@@ -106,8 +106,8 @@ function Schedule() {
   };
 
   return (
-    <div className="flex h-full flex-col bg-white pt-2">
-      <div className="px-5 pb-3 pt-2">
+    <div className="flex h-full flex-col bg-white">
+      <div className="px-5 pb-3 pt-6">
         <div className="nrc-eyebrow">{t("나의 일정", "My Schedule")}</div>
         <h1 className="nrc-headline mt-1">{t("계획", "Plan")}</h1>
       </div>
@@ -135,12 +135,12 @@ function Schedule() {
         </div>
       </div>
 
-      <div className="flex-1 px-4 pb-6">
+      <div className="flex-1 px-5 pb-6">
         {tab === "list" ? (
           sorted.length === 0 ? (
             <Empty />
           ) : (
-            <div className="space-y-3">
+            <div className="flex flex-col gap-3">
               {sorted.map((s) => (
                 <ScheduleCard
                   key={s.id}
@@ -189,14 +189,18 @@ function Schedule() {
           initialText={sheet.edit?.text}
           initialStart={sheet.edit ? new Date(sheet.edit.start_time) : undefined}
           initialEnd={sheet.edit ? new Date(sheet.edit.end_time) : undefined}
+          initialAllDay={sheet.edit?.all_day}
+          initialRepeat={sheet.edit?.repeat}
           saveLabel={sheet.edit ? t("저장", "Save") : undefined}
           onClose={() => setSheet({ open: false })}
-          onSave={async (text, start, end) => {
+          onSave={async (text, start, end, opts) => {
             if (sheet.edit) {
               await update(sheet.edit.id, {
                 text,
                 start_time: start.toISOString(),
                 end_time: end.toISOString(),
+                all_day: opts?.allDay ?? false,
+                repeat: opts?.repeat ?? null,
               } as any);
               toast.success(t("수정됐어요", "Updated"));
             } else {
@@ -205,6 +209,8 @@ function Schedule() {
                 start_time: start.toISOString(),
                 end_time: end.toISOString(),
                 alarm: false,
+                all_day: opts?.allDay ?? false,
+                repeat: opts?.repeat ?? null,
               } as any);
               track("schedule_created", { source: "manual", text_length: text.length });
               toast.success(t("등록됐어요", "Added"));
@@ -253,7 +259,7 @@ function ScheduleCard({
 
   return (
     <div
-      className={`card-radius shadow-card p-4 transition ${
+      className={`card-radius shadow-card px-[22px] py-5 transition ${
         pinned ? "bg-primary/15 ring-2 ring-primary/40" : "glass"
       }`}
       onPointerDown={startPress}
@@ -280,8 +286,8 @@ function ScheduleCard({
               {lang === "en" ? translateCountdown(countdown(start)) : countdown(start)}
             </span>
           </div>
-          <div className="mt-1.5 text-[16px] font-semibold leading-snug text-ink">{s.text}</div>
-          <div className="mt-1 text-[12px] text-ink-soft">
+          <div className="mt-1.5 card-text text-ink">{s.text}</div>
+          <div className="mt-2 text-meta">
             {fmt(start)} → {fmt(end)}
           </div>
         </div>

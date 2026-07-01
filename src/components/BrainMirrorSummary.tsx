@@ -32,7 +32,7 @@ function ThinkingIndicator({ tier }: { tier: ThinkingTier }) {
 
   return (
     <div
-      className="mt-3 animate-[fade-in-soft_0.35s_ease-out] border-t border-ink/[0.06] pt-3"
+      className="mt-3 animate-bm-enter rounded-[24px] bg-ink px-[22px] py-4"
       aria-live="polite"
       aria-busy="true"
     >
@@ -41,12 +41,12 @@ function ThinkingIndicator({ tier }: { tier: ThinkingTier }) {
           {[0, 1, 2].map((i) => (
             <span
               key={i}
-              className="h-1.5 w-1.5 rounded-full bg-ink-soft/35 animate-bounce"
+              className="h-1.5 w-1.5 rounded-full bg-white/35 animate-bounce"
               style={{ animationDelay: `${i * 0.18}s`, animationDuration: "0.9s" }}
             />
           ))}
         </div>
-        <p className="text-[12px] leading-relaxed text-ink-soft/75">{copy}</p>
+        <p className="text-[13px] leading-relaxed text-white/70">{copy}</p>
       </div>
     </div>
   );
@@ -62,20 +62,20 @@ function BrainMirrorResultView({
   const t = useT();
 
   return (
-    <div className="mt-3 animate-[fade-in-soft_0.45s_ease-out] border-t border-ink/[0.06] pt-3">
-      <p className="text-[12px] leading-relaxed text-ink-soft/85">
+    <div className="mt-3 animate-bm-enter rounded-[24px] bg-ink px-[22px] py-5 text-white shadow-card">
+      <p className="text-[13px] font-medium leading-relaxed text-white/60">
         {t("🧠 이렇게 이해했어요", "🧠 Here's how I read it")}
       </p>
 
-      <div className="my-2.5 h-px bg-ink/[0.05]" />
+      <div className="my-3 h-px bg-white/10" />
 
-      <p className="text-[14px] font-semibold leading-snug text-ink/90">{result.title}</p>
+      <p className="text-[16px] font-semibold leading-[1.7] text-white">{result.title}</p>
 
       {result.items.length > 0 && (
-        <ul className="mt-2 space-y-1.5">
+        <ul className="mt-3 space-y-2.5">
           {result.items.map((line) => (
-            <li key={line} className="flex items-start gap-2 text-[13px] leading-snug text-ink-soft">
-              <span className="mt-[3px] text-[11px] text-ink-soft/50" aria-hidden>
+            <li key={line} className="flex items-start gap-2.5 text-[15px] leading-[1.8] text-white/85">
+              <span className="mt-[5px] text-[11px] text-white/40" aria-hidden>
                 □
               </span>
               <span>{line}</span>
@@ -85,14 +85,14 @@ function BrainMirrorResultView({
       )}
 
       {result.suggestedAction && (
-        <p className="mt-3 text-[13px] leading-relaxed text-ink-soft/80">{result.suggestedAction}</p>
+        <p className="mt-4 text-[14px] leading-[1.7] text-white/65">{result.suggestedAction}</p>
       )}
 
-      <div className="mt-3">
+      <div className="mt-4">
         <button
           type="button"
           onClick={onCancel}
-          className="rounded-full px-3 py-1.5 text-[12px] font-medium text-ink-soft/60 transition active:scale-[0.98] hover:text-ink-soft"
+          className="rounded-full px-3 py-1.5 text-[13px] font-medium text-white/50 transition active:scale-[0.98] hover:text-white/75"
         >
           {t("되돌리기", "Undo")}
         </button>

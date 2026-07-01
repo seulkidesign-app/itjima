@@ -19,6 +19,8 @@ export type InboxItem = {
   status?: ThoughtStatus;
   brain_mirror?: BrainMirrorResult | null;
 };
+export type RepeatRule = "daily" | "weekly" | "monthly" | "yearly";
+
 export type ScheduleItem = {
   id: string;
   text: string;
@@ -26,6 +28,8 @@ export type ScheduleItem = {
   end_time: string;
   alarm: boolean;
   created_at: string;
+  all_day?: boolean;
+  repeat?: RepeatRule | null;
 };
 export type ArchiveItem = {
   id: string;
@@ -116,7 +120,7 @@ function stripCloudFields(item: Record<string, unknown>, table: TableName) {
 }
 
 function toCloudRow(table: TableName, item: Record<string, unknown>, userId: string) {
-  const { brain_mirror: _bm, status: _status, ...rest } = item;
+  const { brain_mirror: _bm, status: _status, all_day: _ad, repeat: _rp, ...rest } = item;
   return { ...rest, user_id: userId };
 }
 

@@ -155,9 +155,9 @@ export function InputBar({ onAdd, onPasteMulti }: Props) {
   };
 
   return (
-    <form onSubmit={onSubmit} className="border-t border-ink/5 bg-white/95 backdrop-blur-md shadow-[0_-4px_16px_-8px_rgba(0,0,0,0.08)]">
+    <form onSubmit={onSubmit} className="border-t border-ink/5 bg-white/95 px-5 backdrop-blur-md shadow-[0_-4px_16px_-8px_rgba(0,0,0,0.06)]">
       {images.length > 0 && (
-        <div className="flex gap-2 overflow-x-auto px-3 pt-3">
+        <div className="flex gap-2 overflow-x-auto pt-3">
           {images.map((src, i) => (
             <div key={i} className="relative">
               <img src={src} alt="" className="h-16 w-16 rounded-xl object-cover" />
@@ -171,45 +171,47 @@ export function InputBar({ onAdd, onPasteMulti }: Props) {
           ))}
         </div>
       )}
-      <textarea
-        ref={textareaRef}
-        value={text}
-        onChange={(e) => setText(e.target.value)}
-        onCompositionStart={() => { composingRef.current = true; }}
-        onCompositionEnd={() => { composingRef.current = false; }}
-        onPaste={onPaste}
-        onKeyDownCapture={(e) => {
-          if (e.key !== "Enter" || (!e.metaKey && !e.ctrlKey)) return;
-          e.preventDefault();
-          e.stopPropagation();
-          submitCommandEnter(e.currentTarget);
-        }}
-        onKeyDown={(e) => {
-          const isComposing = composingRef.current || e.nativeEvent.isComposing;
-          if (e.key === "Meta" && !isComposing) primeCommandSubmit(e.currentTarget);
-          if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) {
+      <div className="mt-3 rounded-[28px] border border-ink/10 bg-ink/[0.03] px-4 py-3 transition-[border-color,box-shadow] duration-200 focus-within:border-primary focus-within:shadow-[0_0_0_3px_oklch(0.88_0.16_92_/_0.25)]">
+        <textarea
+          ref={textareaRef}
+          value={text}
+          onChange={(e) => setText(e.target.value)}
+          onCompositionStart={() => { composingRef.current = true; }}
+          onCompositionEnd={() => { composingRef.current = false; }}
+          onPaste={onPaste}
+          onKeyDownCapture={(e) => {
+            if (e.key !== "Enter" || (!e.metaKey && !e.ctrlKey)) return;
             e.preventDefault();
             e.stopPropagation();
             submitCommandEnter(e.currentTarget);
-            return;
-          }
-          if (e.key === "Enter" && !e.shiftKey && !isComposing) {
-            e.preventDefault();
-            submitFromKeyboard(e.currentTarget);
-          }
-        }}
-        onKeyUp={(e) => {
-          const isComposing = composingRef.current || e.nativeEvent.isComposing;
-          if (e.key === "Enter" && !e.shiftKey && !isComposing) {
-            e.preventDefault();
-            submitFromKeyboard(e.currentTarget);
-          }
-        }}
-        rows={1}
-        placeholder={t("메시지 입력", "Message")}
-        className="block w-full resize-none bg-transparent px-4 pt-2.5 pb-1 text-[15px] leading-snug text-ink placeholder:text-ink-soft/70 focus:outline-none max-h-32"
-      />
-      <div className="flex items-center gap-1 px-2 pb-1.5 pt-0.5">
+          }}
+          onKeyDown={(e) => {
+            const isComposing = composingRef.current || e.nativeEvent.isComposing;
+            if (e.key === "Meta" && !isComposing) primeCommandSubmit(e.currentTarget);
+            if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) {
+              e.preventDefault();
+              e.stopPropagation();
+              submitCommandEnter(e.currentTarget);
+              return;
+            }
+            if (e.key === "Enter" && !e.shiftKey && !isComposing) {
+              e.preventDefault();
+              submitFromKeyboard(e.currentTarget);
+            }
+          }}
+          onKeyUp={(e) => {
+            const isComposing = composingRef.current || e.nativeEvent.isComposing;
+            if (e.key === "Enter" && !e.shiftKey && !isComposing) {
+              e.preventDefault();
+              submitFromKeyboard(e.currentTarget);
+            }
+          }}
+          rows={3}
+          placeholder={t("메시지 입력", "Message")}
+          className="block min-h-[72px] w-full resize-none bg-transparent text-[16px] leading-relaxed text-ink placeholder:text-ink-soft/70 focus:outline-none max-h-40"
+        />
+      </div>
+      <div className="flex items-center gap-1 pb-2 pt-1">
         <button
           onClick={onMic}
           className={`flex h-9 w-9 items-center justify-center rounded-full transition ${
