@@ -32,7 +32,7 @@ function ThinkingIndicator({ tier }: { tier: ThinkingTier }) {
 
   return (
     <div
-      className="mt-3 animate-bm-enter rounded-[24px] bg-ink px-[22px] py-4"
+      className="mt-3 animate-bm-enter rounded-[24px] bg-[#111111] px-[22px] py-4"
       aria-live="polite"
       aria-busy="true"
     >
@@ -62,7 +62,7 @@ function BrainMirrorResultView({
   const t = useT();
 
   return (
-    <div className="mt-3 animate-bm-enter rounded-[24px] bg-ink px-[22px] py-5 text-white shadow-card">
+    <div className="mt-3 animate-bm-enter rounded-[24px] bg-[#111111] px-[22px] py-5 text-white shadow-card">
       <p className="text-[13px] font-medium leading-relaxed text-white/60">
         {t("🧠 이렇게 이해했어요", "🧠 Here's how I read it")}
       </p>

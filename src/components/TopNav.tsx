@@ -39,7 +39,7 @@ export function TopNav() {
       style={{ paddingTop: "env(safe-area-inset-top)" }}
     >
       {/* Brand row */}
-      <div className="flex items-center justify-between px-4 pt-2 pb-1.5">
+      <div className="flex items-center justify-between px-5 pt-2 pb-1.5">
         <div className="flex items-center -ml-1.5">
           <button
             type="button"
@@ -86,7 +86,7 @@ export function TopNav() {
         </div>
       </div>
       {/* Tabs — equal width, large tap target */}
-      <nav className="flex items-stretch px-2">
+      <nav className="flex items-stretch px-5">
         {tabs.map(({ to, label }) => {
           const active = path === to;
           return (

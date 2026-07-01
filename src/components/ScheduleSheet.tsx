@@ -106,7 +106,7 @@ export function ScheduleSheet({
           value={text}
           onChange={(e) => setText(e.target.value)}
           placeholder={t("일정 제목", "Event title")}
-          className="mb-4 w-full rounded-[24px] bg-ink/[0.04] px-3.5 py-3 text-[16px] font-semibold text-ink placeholder:text-ink-soft/60 focus:outline-none focus:bg-ink/[0.06] focus:ring-2 focus:ring-primary/30"
+          className="mb-4 w-full rounded-[24px] bg-ink/[0.04] px-3.5 py-3 text-[16px] font-semibold text-ink placeholder:text-ink-soft/60 focus:outline-none focus:bg-ink/[0.06] focus:shadow-[0_0_0_2px_#FFE033]"
         />
         <label className="mb-3 flex items-center gap-2.5 text-[14px] text-ink">
           <input type="checkbox" checked={allDay} onChange={(e) => setAllDay(e.target.checked)} />

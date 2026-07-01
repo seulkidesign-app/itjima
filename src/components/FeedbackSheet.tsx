@@ -103,7 +103,7 @@ export function FeedbackSheet({ open, onClose }: { open: boolean; onClose: () =>
               <button
                 key={c.key}
                 onClick={() => setCategory(c.key)}
-                className={`flex flex-col items-center gap-1 rounded-2xl py-2.5 text-[11px] font-semibold transition ${
+                className={`flex flex-col items-center gap-1 rounded-full py-2.5 text-[11px] font-semibold transition ${
                   active
                     ? "bg-primary text-ink shadow-card"
                     : "bg-white/50 text-ink-soft hover:bg-white/70"
@@ -125,7 +125,7 @@ export function FeedbackSheet({ open, onClose }: { open: boolean; onClose: () =>
             "어떤 점이 좋았나요? 어떤 점이 불편했나요?",
             "What did you like? What was annoying?",
           )}
-          className="w-full resize-none rounded-2xl bg-white/60 px-3.5 py-3 text-[14px] leading-relaxed text-ink placeholder:text-ink-soft/70 focus:outline-none focus:ring-2 focus:ring-primary/40"
+          className="w-full resize-none rounded-[24px] bg-white/60 px-3.5 py-3 text-[14px] leading-relaxed text-ink placeholder:text-ink-soft/70 focus:outline-none focus:shadow-[0_0_0_2px_#FFE033]"
         />
         <div className="mt-1 text-right text-[10px] text-ink-soft">
           {message.length} / 2000
@@ -140,13 +140,13 @@ export function FeedbackSheet({ open, onClose }: { open: boolean; onClose: () =>
             "답장 받을 이메일 (선택)",
             "Email for reply (optional)",
           )}
-          className="mt-2 w-full rounded-2xl bg-white/60 px-3.5 py-2.5 text-[13px] text-ink placeholder:text-ink-soft/70 focus:outline-none focus:ring-2 focus:ring-primary/40"
+          className="mt-2 w-full rounded-full bg-white/60 px-3.5 py-2.5 text-[13px] text-ink placeholder:text-ink-soft/70 focus:outline-none focus:shadow-[0_0_0_2px_#FFE033]"
         />
 
         <button
           onClick={submit}
           disabled={submitting || message.trim().length < 2}
-          className="mt-3 flex w-full items-center justify-center gap-2 rounded-2xl bg-primary py-3 text-sm font-bold text-ink shadow-card disabled:opacity-50"
+          className="mt-3 flex w-full items-center justify-center gap-2 rounded-full bg-primary py-3 text-sm font-bold text-ink shadow-card disabled:opacity-50"
         >
           <Send size={15} />
           {submitting ? t("전송 중...", "Sending...") : t("보내기", "Send")}

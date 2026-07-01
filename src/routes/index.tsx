@@ -143,7 +143,7 @@ function Inbox() {
       if (det) {
         toast.custom(
           (id) => (
-            <div className="flex items-center gap-3 rounded-2xl bg-ink px-4 py-3 text-white shadow-float">
+            <div className="flex items-center gap-3 rounded-[24px] bg-ink px-4 py-3 text-white shadow-float">
               <div className="text-sm">📅 {det.label} — {t("일정으로 등록할까요?", "Add as a schedule?")}</div>
               <button
                 onClick={() => {
@@ -179,7 +179,7 @@ function Inbox() {
     if (u === 3) {
       toast.custom(
         (id) => (
-          <div className="flex items-center gap-3 rounded-2xl bg-ink px-4 py-3 text-white shadow-float">
+          <div className="flex items-center gap-3 rounded-[24px] bg-ink px-4 py-3 text-white shadow-float">
             <div className="text-sm">💾 {t("다른 기기에서도 이어가려면 로그인하세요", "Sign in to keep your thoughts on other devices")}</div>
             <button
               onClick={() => {
@@ -213,7 +213,7 @@ function Inbox() {
       <div className="px-5 pb-3 pt-6">
         <div className="nrc-eyebrow">{t("오늘의 인박스", "Today's Inbox")}</div>
         <div className="mt-1 flex items-end justify-between gap-3">
-          <h1 className="text-[32px] font-extrabold leading-tight text-ink">
+          <h1 className="page-title">
             {items.length > 0
               ? t("생각 정리하기", "Clear Your Mind")
               : t("던져보세요", "Drop A Thought")}
@@ -503,7 +503,7 @@ function MenuItem({
     <button
       onClick={onClick}
       className={`flex w-full items-center gap-3 rounded-full px-4 py-3 text-[15px] font-medium ${
-        danger ? "text-destructive" : "text-ink"
+        danger ? "text-meta" : "text-ink"
       } hover:bg-white/60`}
     >
       {icon}
@@ -522,7 +522,7 @@ function OrganizeFxWrapper({ id, fallback, children }: { id: string; fallback: s
   const glowClass = fx.glow === "schedule"
     ? "ring-2 ring-[#FFD233]/40 shadow-[0_4px_16px_-4px_rgba(255,210,51,0.35)]"
     : fx.glow === "archive"
-    ? "ring-2 ring-[#87CEEB]/40 shadow-[0_4px_16px_-4px_rgba(135,206,235,0.30)]"
+    ? "ring-2 ring-[#9A9A90]/35 shadow-[0_4px_16px_-4px_rgba(154,154,144,0.20)]"
     : "";
   return (
     <div

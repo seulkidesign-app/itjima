@@ -160,7 +160,7 @@ export function InputBar({ onAdd, onPasteMulti }: Props) {
         <div className="flex gap-2 overflow-x-auto pt-3">
           {images.map((src, i) => (
             <div key={i} className="relative">
-              <img src={src} alt="" className="h-16 w-16 rounded-xl object-cover" />
+              <img src={src} alt="" className="h-16 w-16 rounded-[24px] object-cover" />
               <button
                 onClick={() => setImages((p) => p.filter((_, idx) => idx !== i))}
                 className="absolute -right-1 -top-1 rounded-full bg-ink p-0.5 text-white"
@@ -171,7 +171,7 @@ export function InputBar({ onAdd, onPasteMulti }: Props) {
           ))}
         </div>
       )}
-      <div className="mt-3 rounded-[28px] border border-ink/10 bg-ink/[0.03] px-4 py-3 transition-[border-color,box-shadow] duration-200 focus-within:border-primary focus-within:shadow-[0_0_0_3px_oklch(0.88_0.16_92_/_0.25)]">
+      <div className="mt-3 rounded-[28px] bg-ink/[0.03] px-4 py-3 shadow-card transition-[box-shadow] duration-200 focus-within:shadow-[0_0_0_2px_#FFE033,0_4px_16px_-4px_rgba(255,224,51,0.25)]">
         <textarea
           ref={textareaRef}
           value={text}
@@ -215,7 +215,7 @@ export function InputBar({ onAdd, onPasteMulti }: Props) {
         <button
           onClick={onMic}
           className={`flex h-9 w-9 items-center justify-center rounded-full transition ${
-            listening ? "bg-destructive text-white animate-pulse" : "text-ink-soft hover:bg-white/60"
+            listening ? "bg-ink text-white animate-pulse" : "text-ink-soft hover:bg-white/60"
           }`}
           aria-label={t("음성 입력", "Voice input")}
         >

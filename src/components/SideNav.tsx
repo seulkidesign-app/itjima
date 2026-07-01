@@ -52,7 +52,7 @@ export function SideNav() {
             <Link
               key={to}
               to={to}
-              className={`flex items-center gap-3 rounded-2xl px-3 py-2.5 text-[14px] font-semibold transition-all ${
+              className={`flex items-center gap-3 rounded-full px-3 py-2.5 text-[14px] font-semibold transition-all ${
                 active
                   ? "bg-primary text-ink shadow-card"
                   : "text-ink-soft hover:bg-white/60"
@@ -66,7 +66,7 @@ export function SideNav() {
         {isAdmin && (
           <Link
             to="/admin"
-            className={`flex items-center gap-3 rounded-2xl px-3 py-2.5 text-[14px] font-semibold transition-all ${
+            className={`flex items-center gap-3 rounded-full px-3 py-2.5 text-[14px] font-semibold transition-all ${
               path.startsWith("/admin")
                 ? "bg-ink text-white shadow-card"
                 : "text-ink-soft hover:bg-white/60"
@@ -86,14 +86,14 @@ export function SideNav() {
               await supabase.auth.signOut();
               toast(t("로그아웃됨", "Signed out"));
             }}
-            className="flex items-center gap-2 rounded-2xl glass shadow-card px-3 py-2.5 text-[13px] font-semibold text-ink-soft"
+            className="flex items-center gap-2 rounded-full glass shadow-card px-3 py-2.5 text-[13px] font-semibold text-ink-soft"
           >
             <LogOut size={16} /> {t("로그아웃", "Sign out")}
           </button>
         ) : (
           <Link
             to="/auth"
-            className="flex items-center gap-2 rounded-2xl bg-primary shadow-card px-3.5 py-2.5 text-[13px] font-bold text-ink"
+            className="flex items-center gap-2 rounded-full bg-primary shadow-card px-3.5 py-2.5 text-[13px] font-bold text-ink"
           >
             <LogIn size={16} /> {t("로그인", "Sign in")}
           </Link>

@@ -2,9 +2,8 @@
 @source "../src";
 @import "tw-animate-css";
 
-/* ItJima — Nike Run Club inspired light mono system.
- * White bg · heavy black type · #FFD233 accent only.
- * All color tokens defined here; never hardcode in components. */
+/* ItJima — Apple Health inspired light system.
+ * White · #111111 · #FFE033 · #9A9A90 only. */
 
 @theme inline {
   --font-sans: "Pretendard", "Pretendard Variable", "Archivo", -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
@@ -39,58 +38,53 @@
   --color-ink: var(--ink);
   --color-ink-soft: var(--ink-soft);
   --color-meta: var(--meta);
-  --color-sky: var(--sky);
   --color-yellow: var(--brand-yellow);
 }
 
 :root {
   --radius: 24px;
 
-  /* Brand */
-  --brand-yellow: oklch(0.88 0.16 92);     /* #FFD233 */
-  --brand-yellow-soft: oklch(0.95 0.10 95);
-  --sky: oklch(0.85 0.07 235);
-  --sky-deep: oklch(0.72 0.10 235);
-  --sky-mist: oklch(0.96 0.025 230);
+  /* Brand palette */
+  --brand-yellow: #FFE033;
+  --brand-yellow-soft: #FFF4B8;
 
-  /* Surfaces — pure mono */
-  --background: oklch(1 0 0);              /* #FFFFFF */
-  --foreground: oklch(0.12 0 0);           /* near-black */
-  --ink: oklch(0.10 0 0);                  /* #0A0A0A */
-  --ink-soft: oklch(0.45 0 0);             /* mid grey */
+  /* Surfaces */
+  --background: #FFFFFF;
+  --foreground: #111111;
+  --ink: #111111;
+  --ink-soft: #9A9A90;
   --meta: #9A9A90;
 
   --glass: oklch(1 0 0 / 0.92);
-  --glass-border: oklch(0 0 0 / 0.08);
+  --glass-border: oklch(0 0 0 / 0.05);
 
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.10 0 0);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.10 0 0);
+  --card: #FFFFFF;
+  --card-foreground: #111111;
+  --popover: #FFFFFF;
+  --popover-foreground: #111111;
 
-  --primary: oklch(0.88 0.16 92);          /* yellow */
-  --primary-foreground: oklch(0.10 0 0);
-  --secondary: oklch(0.96 0 0);
-  --secondary-foreground: oklch(0.10 0 0);
-  --muted: oklch(0.96 0 0);
-  --muted-foreground: oklch(0.45 0 0);
-  --accent: oklch(0.96 0 0);
-  --accent-foreground: oklch(0.10 0 0);
-  --destructive: oklch(0.60 0.23 27);
-  --destructive-foreground: oklch(1 0 0);
+  --primary: #FFE033;
+  --primary-foreground: #111111;
+  --secondary: #F7F7F5;
+  --secondary-foreground: #111111;
+  --muted: #F7F7F5;
+  --muted-foreground: #9A9A90;
+  --accent: #F7F7F5;
+  --accent-foreground: #111111;
+  --destructive: #111111;
+  --destructive-foreground: #FFFFFF;
 
-  --border: oklch(0 0 0 / 0.08);
-  --input: oklch(0.97 0 0);
-  --ring: oklch(0.10 0 0);
+  --border: oklch(0 0 0 / 0.05);
+  --input: #F7F7F5;
+  --ring: #FFE033;
 
-  /* Flat white bg — no gradient */
   --bg-gradient: #ffffff;
 
   /* Shadows — soft diffused */
-  --shadow-card: 0 2px 12px -2px oklch(0 0 0 / 0.08);
-  --shadow-float: 0 8px 24px -6px oklch(0 0 0 / 0.14);
-  --shadow-yellow: 0 0 0 2px oklch(0.88 0.16 92 / 0.35), 0 8px 20px -4px oklch(0.88 0.16 92 / 0.25);
-  --shadow-red: 0 0 0 2px oklch(0.60 0.23 27 / 0.30), 0 8px 20px -4px oklch(0.60 0.23 27 / 0.22);
+  --shadow-card: 0 2px 16px -4px oklch(0 0 0 / 0.08);
+  --shadow-float: 0 8px 28px -8px oklch(0 0 0 / 0.12);
+  --shadow-yellow: 0 0 0 2px oklch(0.92 0.14 95 / 0.45), 0 8px 24px -6px oklch(0.92 0.14 95 / 0.22);
+  --shadow-muted: 0 0 0 2px oklch(0.62 0.02 100 / 0.25), 0 8px 24px -6px oklch(0 0 0 / 0.08);
 }
 
 @layer base {
@@ -128,14 +122,14 @@
   text-transform: uppercase;
   color: var(--ink-soft);
 }
-@utility nrc-headline {
-  font-family: var(--font-display);
-  font-weight: 400; /* Bebas is already heavy */
-  font-size: clamp(34px, 9vw, 44px);
-  line-height: 0.95;
-  letter-spacing: 0.01em;
-  text-transform: uppercase;
+@utility page-title {
+  font-size: 32px;
+  font-weight: 800;
+  line-height: 1.15;
   color: var(--ink);
+}
+@utility card-padding {
+  padding: 20px 22px;
 }
 
 /* Surfaces */
@@ -276,7 +270,7 @@
   100% { transform: scale(1); opacity: 1; }
 }
 @utility animate-fade-in { animation: fade-in 0.25s ease-out both; }
-@utility animate-bm-enter { animation: bm-enter 0.35s ease-out both; }
+@utility animate-bm-enter { animation: bm-enter 0.4s ease-out both; }
 @utility animate-swipe-label { animation: swipe-label-in 0.25s ease-out both; }
 @utility animate-slide-up { animation: slide-up 0.3s cubic-bezier(0.2, 0.8, 0.2, 1) both; }
 @utility animate-pop { animation: pop 0.2s ease-out both; }

@@ -112,7 +112,7 @@ export function LanguageToggle({ className = "" }: { className?: string }) {
       {open && (
         <ul
           role="listbox"
-          className="absolute right-0 top-[calc(100%+4px)] z-50 min-w-[120px] overflow-hidden rounded-2xl bg-white shadow-card ring-1 ring-black/5"
+          className="absolute right-0 top-[calc(100%+4px)] z-50 min-w-[120px] overflow-hidden rounded-[24px] bg-white shadow-card"
         >
           {([
             { v: "ko" as const, label: "한국어" },

@@ -99,7 +99,7 @@ export function InstallPrompt() {
 
   return (
     <>
-      <div className="fixed left-1/2 bottom-24 z-40 w-[92%] max-w-sm -translate-x-1/2 rounded-2xl border border-ink/10 bg-white px-4 py-3 shadow-xl">
+      <div className="fixed left-1/2 bottom-24 z-40 w-[calc(100%-40px)] max-w-sm -translate-x-1/2 rounded-[24px] bg-white px-4 py-3 shadow-float">
         <button
           onClick={dismiss}
           aria-label={t("닫기", "Close")}
@@ -108,7 +108,7 @@ export function InstallPrompt() {
           <X className="h-4 w-4" />
         </button>
         <div className="flex items-center gap-3 pr-6">
-          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-yellow text-ink">
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-[24px] bg-primary text-ink">
             <Download className="h-5 w-5" />
           </div>
           <div className="min-w-0 flex-1">
@@ -130,7 +130,7 @@ export function InstallPrompt() {
           onClick={dismiss}
         >
           <div
-            className="w-full max-w-sm rounded-2xl bg-white p-5 shadow-2xl"
+            className="w-full max-w-sm rounded-[24px] bg-white p-5 shadow-float"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="mb-3 flex items-center justify-between">

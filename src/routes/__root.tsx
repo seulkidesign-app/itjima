@@ -28,7 +28,7 @@ function RootLayout() {
           <Outlet />
           <Toaster
             position="top-center"
-            theme="dark"
+            theme="light"
             toastOptions={{
               style: {
                 background: "oklch(0.22 0.03 250)",
@@ -73,7 +73,7 @@ function RootLayout() {
           </div>
           <Toaster
             position="top-center"
-            theme="dark"
+            theme="light"
             toastOptions={{
               style: {
                 background: "oklch(0.22 0.03 250)",

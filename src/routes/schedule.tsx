@@ -109,7 +109,7 @@ function Schedule() {
     <div className="flex h-full flex-col bg-white">
       <div className="px-5 pb-3 pt-6">
         <div className="nrc-eyebrow">{t("나의 일정", "My Schedule")}</div>
-        <h1 className="nrc-headline mt-1">{t("계획", "Plan")}</h1>
+        <h1 className="page-title mt-1">{t("계획", "Plan")}</h1>
       </div>
       <div className="px-5 pb-3">
         <div className="inline-flex border-b border-ink/10">
@@ -274,7 +274,7 @@ function ScheduleCard({
             <span
               className={`rounded-full px-2 py-0.5 text-[11px] font-bold ${
                 d.tone === "today"
-                  ? "bg-destructive text-white"
+                  ? "bg-primary text-ink"
                   : d.tone === "soon"
                     ? "bg-primary text-ink"
                     : "bg-white/70 text-ink-soft"
@@ -316,7 +316,7 @@ function ScheduleCard({
         </button>
         <button
           onClick={(e) => { e.stopPropagation(); onDelete(); }}
-          className="text-[12px] font-medium text-ink-soft hover:text-destructive"
+          className="text-[12px] font-medium text-ink-soft hover:text-ink"
         >
           {t("삭제", "Delete")}
         </button>
@@ -438,7 +438,7 @@ function CalendarGrid({
                 onDragOver={(e) => { e.preventDefault(); setDragOver(c); }}
                 onDragLeave={() => setDragOver((d) => (d === c ? null : d))}
                 onDrop={(e) => onCellDrop(e, c)}
-                className={`relative flex aspect-square flex-col items-stretch justify-start rounded-lg p-1 text-left transition ${
+                className={`relative flex aspect-square flex-col items-stretch justify-start rounded-[24px] p-1 text-left transition ${
                   isDragOver
                     ? "bg-primary/40 ring-2 ring-primary"
                     : isSel
@@ -540,12 +540,12 @@ function DayEventChip({
       onPointerUp={onUp}
       onPointerLeave={onUp}
       onClick={() => { if (!fired.current) onClick(); }}
-      className={`flex cursor-grab items-start gap-2 rounded-xl px-2.5 py-2 transition active:cursor-grabbing ${
+      className={`flex cursor-grab items-start gap-2 rounded-[24px] px-2.5 py-2 transition active:cursor-grabbing ${
         pinned ? "bg-primary/30 ring-1 ring-primary" : "bg-white/70 hover:bg-white"
       }`}
     >
       {pinned && <Pin size={11} className="mt-1 fill-primary text-primary" />}
-      <span className="mt-0.5 rounded-md bg-primary/30 px-1.5 py-0.5 text-[10px] font-bold text-ink">
+      <span className="mt-0.5 rounded-full bg-primary/30 px-1.5 py-0.5 text-[10px] font-bold text-ink">
         {st.getHours().toString().padStart(2, "0")}:
         {st.getMinutes().toString().padStart(2, "0")}
       </span>

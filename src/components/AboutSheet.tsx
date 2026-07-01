@@ -32,14 +32,14 @@ export function AboutSheet({ open, onClose }: { open: boolean; onClose: () => vo
 
           <button
             onClick={() => setFeedbackOpen(true)}
-            className="mt-5 flex w-full items-center justify-center gap-2 rounded-2xl bg-white/60 py-3 text-sm font-semibold text-ink hover:bg-white/80"
+            className="mt-5 flex w-full items-center justify-center gap-2 rounded-full bg-white/60 py-3 text-sm font-semibold text-ink hover:bg-white/80"
           >
             <MessageSquarePlus size={16} />
             {t("피드백 보내기", "Send feedback")}
           </button>
           <button
             onClick={onClose}
-            className="mt-2 w-full rounded-2xl bg-primary py-3 text-sm font-bold text-ink"
+            className="mt-2 w-full rounded-full bg-primary py-3 text-sm font-bold text-ink"
           >
             {t("확인", "Got it")}
           </button>

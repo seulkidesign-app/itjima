@@ -15,12 +15,12 @@ export function WheelPicker({
 }) {
   return (
     <div
-      className="relative flex items-stretch justify-between gap-0.5 rounded-2xl bg-white/70 px-1 py-2 backdrop-blur-md"
+      className="relative flex items-stretch justify-between gap-0.5 rounded-[24px] bg-white/70 px-1 py-2 shadow-card backdrop-blur-md"
       onTouchStart={(e) => e.stopPropagation()}
       onClick={(e) => e.stopPropagation()}
     >
       <div
-        className="pointer-events-none absolute left-2 right-2 top-1/2 z-0 -translate-y-1/2 rounded-xl bg-primary/15 ring-1 ring-primary/25"
+        className="pointer-events-none absolute left-2 right-2 top-1/2 z-0 -translate-y-1/2 rounded-[24px] bg-primary/15"
         style={{ height: ROW_H }}
       />
       {columns.map((c, ci) => (

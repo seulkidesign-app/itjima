@@ -224,7 +224,7 @@ function Archive() {
       <div className="px-5 pb-2 pt-6">
         <div className="nrc-eyebrow">{t("보관함", "Archive")}</div>
         <div className="mt-1 flex items-end justify-between gap-3">
-          <h1 className="nrc-headline">{t("기억", "Memory")}</h1>
+          <h1 className="page-title">{t("기억", "Memory")}</h1>
           <div className="text-right leading-none">
             <div className="font-num text-[40px] text-ink">{items.length}</div>
             <div className="nrc-eyebrow mt-0.5">{t("개", "Saved")}</div>
@@ -253,7 +253,7 @@ function Archive() {
       )}
 
       <div className="px-5 pb-3">
-        <div className="flex items-center gap-2 rounded-[24px] border border-ink/10 bg-white px-3.5 py-2.5 shadow-card">
+        <div className="flex items-center gap-2 rounded-[24px] bg-white px-3.5 py-2.5 shadow-card">
           <Search size={16} className="text-ink-soft" />
           <input
             value={q}
@@ -406,7 +406,7 @@ function Archive() {
       {groupModal && (
         <div className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center p-4 animate-fade-in">
           <div className="absolute inset-0 bg-ink/40 backdrop-blur-md" onClick={() => setGroupModal(false)} />
-          <div className="relative w-full max-w-sm rounded-3xl border border-white/40 bg-white/85 p-6 shadow-float backdrop-blur-xl animate-scale-in">
+          <div className="relative w-full max-w-sm rounded-[24px] bg-white/95 p-6 shadow-float backdrop-blur-xl animate-scale-in">
             <div className="text-[17px] font-extrabold text-ink">{t("새 그룹 만들기", "New group")}</div>
             <div className="mt-1 text-xs text-ink-soft">
               {selected.size}{t("개 메모를 이 그룹으로 묶어요.", " notes will be grouped.")}
@@ -415,7 +415,7 @@ function Archive() {
               <input
                 value={newEmoji}
                 onChange={(e) => setNewEmoji(e.target.value.slice(0, 2))}
-                className="h-12 w-14 rounded-2xl bg-white/80 text-center text-2xl text-ink focus:outline-none focus:ring-2 focus:ring-primary"
+                className="h-12 w-14 rounded-full bg-white/80 text-center text-2xl text-ink focus:outline-none focus:shadow-[0_0_0_2px_#FFE033]"
                 aria-label={t("이모지", "Emoji")}
               />
               <input
@@ -423,7 +423,7 @@ function Archive() {
                 onChange={(e) => setNewName(e.target.value)}
                 placeholder={t("그룹 이름", "Group name")}
                 autoFocus
-                className="h-12 flex-1 rounded-2xl bg-white/80 px-4 text-[15px] font-medium text-ink placeholder:text-ink-soft/70 focus:outline-none focus:ring-2 focus:ring-primary"
+                className="h-12 flex-1 rounded-full bg-white/80 px-4 text-[15px] font-medium text-ink placeholder:text-ink-soft/70 focus:outline-none focus:shadow-[0_0_0_2px_#FFE033]"
               />
             </div>
             <div className="mt-5 flex gap-2">

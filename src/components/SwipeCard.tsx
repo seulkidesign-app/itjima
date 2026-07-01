@@ -106,13 +106,13 @@ export function SwipeCard({
         }}
       >
         <div
-          className="overflow-hidden rounded-[24px] border border-ink/10 bg-white"
+          className="overflow-hidden rounded-[24px] bg-white shadow-card"
           style={{
             boxShadow:
               tone === "right"
                 ? "var(--shadow-yellow)"
                 : tone === "left"
-                  ? "var(--shadow-red)"
+                  ? "var(--shadow-muted)"
                   : "var(--shadow-card)",
             transition: "box-shadow 0.2s ease",
           }}
@@ -160,7 +160,7 @@ export function SwipeCard({
           </button>
           <button
             onClick={finish}
-            className="pointer-events-auto flex items-center gap-1.5 rounded-full bg-destructive px-4 py-2.5 text-[13px] font-bold text-destructive-foreground shadow-float animate-pop active:scale-95"
+            className="pointer-events-auto flex items-center gap-1.5 rounded-full bg-ink px-4 py-2.5 text-[13px] font-bold text-white shadow-float animate-pop active:scale-95"
           >
             <Check size={16} strokeWidth={3} /> {t("보관 확정", "Confirm archive")}
           </button>

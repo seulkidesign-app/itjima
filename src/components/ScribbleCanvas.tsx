@@ -22,7 +22,7 @@ export function ScribbleCanvas({ open, onClose, onDone }: Props) {
     if (!ctx) return;
     ctx.fillStyle = "#ffffff";
     ctx.fillRect(0, 0, canvas.width, canvas.height);
-    ctx.strokeStyle = "#0A0A0A";
+    ctx.strokeStyle = "#111111";
     ctx.lineWidth = 3;
     ctx.lineCap = "round";
     ctx.lineJoin = "round";
@@ -85,7 +85,7 @@ export function ScribbleCanvas({ open, onClose, onDone }: Props) {
   return (
     <div className="absolute inset-0 z-[60] flex flex-col bg-black/60 backdrop-blur-sm" onClick={onClose}>
       <div
-        className="mt-auto animate-slide-up rounded-t-[28px] bg-white px-4 pb-[calc(env(safe-area-inset-bottom)+1rem)] pt-3"
+        className="mt-auto animate-slide-up rounded-t-[28px] bg-white px-5 pb-[calc(env(safe-area-inset-bottom)+1rem)] pt-3"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="mx-auto mb-3 h-1.5 w-10 rounded-full bg-ink/15" />
@@ -94,7 +94,7 @@ export function ScribbleCanvas({ open, onClose, onDone }: Props) {
           ref={canvasRef}
           width={800}
           height={480}
-          className="aspect-[5/3] w-full touch-none rounded-2xl border border-ink/10 bg-white"
+          className="aspect-[5/3] w-full touch-none rounded-[24px] bg-white shadow-card"
           onPointerDown={onPointerDown}
           onPointerMove={onPointerMove}
           onPointerUp={onPointerUp}
@@ -104,14 +104,14 @@ export function ScribbleCanvas({ open, onClose, onDone }: Props) {
           <button
             type="button"
             onClick={clear}
-            className="flex-1 rounded-2xl border border-ink/10 py-3 text-sm font-semibold text-ink-soft"
+            className="flex-1 rounded-full py-3 text-sm font-semibold text-ink-soft shadow-card"
           >
             {t("지우기", "Clear")}
           </button>
           <button
             type="button"
             onClick={done}
-            className="flex-1 rounded-2xl bg-primary py-3 text-sm font-bold text-ink"
+            className="flex-1 rounded-full bg-primary py-3 text-sm font-bold text-ink"
           >
             {t("첨부", "Attach")}
           </button>

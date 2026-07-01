@@ -53,7 +53,7 @@ export function LoginSheet({ open, onClose }: { open: boolean; onClose: () => vo
         <button
           onClick={onGoogle}
           disabled={loading}
-          className="mt-5 flex w-full items-center justify-center gap-2 rounded-2xl bg-white py-3.5 text-[15px] font-semibold text-ink shadow-card transition active:scale-[0.98] disabled:opacity-60"
+          className="mt-5 flex w-full items-center justify-center gap-2 rounded-full bg-white py-3.5 text-[15px] font-semibold text-ink shadow-card transition active:scale-[0.98] disabled:opacity-60"
         >
           {loading ? (
             <div className="h-5 w-5 animate-spin rounded-full border-2 border-ink/20 border-t-ink" />
@@ -70,7 +70,7 @@ export function LoginSheet({ open, onClose }: { open: boolean; onClose: () => vo
         <Link
           to="/auth"
           onClick={onClose}
-          className="mt-2 block w-full rounded-2xl py-3 text-center text-sm font-semibold text-ink"
+          className="mt-2 block w-full rounded-full py-3 text-center text-sm font-semibold text-ink"
         >
           {t("이메일로 가입/로그인", "Sign in with email")}
         </Link>
@@ -79,7 +79,7 @@ export function LoginSheet({ open, onClose }: { open: boolean; onClose: () => vo
             dismissLogin();
             onClose();
           }}
-          className="mt-1 w-full rounded-2xl py-3 text-sm font-medium text-ink-soft"
+          className="mt-1 w-full rounded-full py-3 text-sm font-medium text-ink-soft"
         >
           {t("나중에 할게요", "Maybe later")}
         </button>
