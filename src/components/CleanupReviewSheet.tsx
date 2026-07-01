@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { BottomSheet } from "./BottomSheet";
 import { useT, useLang } from "@/lib/i18n";
 import type { InboxItem } from "@/lib/store";
 import { detectJunk, junkReasonLabel, type JunkCandidate } from "@/lib/junkDetect";
@@ -38,13 +39,8 @@ export function CleanupReviewSheet({ items, open, onClose, onConfirmDelete }: Pr
   };
 
   return (
-    <div className="absolute inset-0 z-50 flex flex-col" onClick={onClose}>
-      <div className="flex-1 bg-ink/40 backdrop-blur-[2px] animate-fade-in" />
-      <div
-        className="animate-slide-up max-h-[80vh] overflow-y-auto rounded-t-[28px] bg-background px-5 pb-[calc(env(safe-area-inset-bottom)+1.25rem)] pt-2.5"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <div className="mx-auto mb-4 h-1.5 w-10 rounded-full bg-ink/15" />
+    <BottomSheet open={open} onClose={onClose} maxHeight="80vh">
+      <div className="max-h-[calc(80vh-3rem)] overflow-y-auto px-5 pb-[calc(env(safe-area-inset-bottom)+1.25rem)]">
         <h2 className="text-[17px] font-bold text-ink">
           {t("삭제해도 될 것 같아요", "These look safe to remove")}
         </h2>
@@ -77,7 +73,7 @@ export function CleanupReviewSheet({ items, open, onClose, onConfirmDelete }: Pr
           <button
             type="button"
             onClick={onClose}
-            className="flex-1 rounded-full bg-white/70 py-3.5 text-[15px] font-semibold text-ink"
+            className="flex-1 rounded-full bg-white/70 py-3.5 text-[15px] font-semibold text-ink touch-press"
           >
             {t("취소", "Cancel")}
           </button>
@@ -85,13 +81,13 @@ export function CleanupReviewSheet({ items, open, onClose, onConfirmDelete }: Pr
             type="button"
             onClick={confirm}
             disabled={selected.size === 0}
-            className="flex-1 rounded-full bg-ink py-3.5 text-[15px] font-bold text-white disabled:opacity-40"
+            className="flex-1 rounded-full bg-ink py-3.5 text-[15px] font-bold text-white disabled:opacity-40 touch-press"
           >
             {t("삭제하기", "Delete")}
           </button>
         </div>
       </div>
-    </div>
+    </BottomSheet>
   );
 }
 

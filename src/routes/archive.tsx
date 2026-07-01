@@ -15,6 +15,7 @@ import {
   setArchiveTitle,
   readArchiveTitles,
 } from "@/lib/archiveMeta";
+import { ArchiveGridSkeleton } from "@/components/Skeleton";
 import { SwipeCard } from "@/components/SwipeCard";
 import { track } from "@/lib/analytics";
 
@@ -49,7 +50,7 @@ function writeJSON(key: string, val: unknown) {
 function Archive() {
   const t = useT();
   const { lang } = useLang();
-  const { items, remove } = useArchive();
+  const { items, remove, syncState } = useArchive();
   const schedules = useSchedules();
   const [q, setQ] = useState("");
   const [groupFilter, setGroupFilter] = useState<string>("all");
@@ -332,7 +333,9 @@ function Archive() {
       </div>
 
       <div className={`flex-1 space-y-5 px-5 ${selecting ? "pb-28" : "pb-8"}`}>
-        {items.length === 0 ? (
+        {syncState === "syncing" && items.length === 0 ? (
+          <ArchiveGridSkeleton />
+        ) : items.length === 0 ? (
           <Empty />
         ) : (
           grouped.map((g) => {
@@ -590,10 +593,14 @@ function Archive() {
 function Empty() {
   const t = useT();
   return (
-    <div className="flex h-full min-h-[50dvh] flex-col items-center justify-center text-center">
+    <div className="flex h-full min-h-[50dvh] flex-col items-center justify-center text-center px-4">
       <div className="text-5xl">🗂</div>
-      <div className="mt-3 text-[17px] font-bold text-ink">{t("보관함이 비어 있어요", "Your archive is empty")}</div>
-      <div className="mt-1 text-sm text-ink-soft">{t("생각을 왼쪽으로 밀면 여기에 모여요.", "Swipe a thought left to send it here.")}</div>
+      <div className="mt-3 text-[17px] font-bold text-ink">
+        {t("아직 담긴 게 없어요.", "Nothing saved yet.")}
+      </div>
+      <div className="mt-1 text-sm text-ink-soft">
+        {t("마음에 남는 생각을 왼쪽으로 밀어 모아보세요.", "Swipe left on a thought when you want to keep it.")}
+      </div>
     </div>
   );
 }

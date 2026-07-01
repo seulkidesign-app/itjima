@@ -2,10 +2,12 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useRef, useState, useMemo } from "react";
 import { toast } from "sonner";
 import { Sparkles, Trash2, Calendar, Archive as ArchiveIcon } from "lucide-react";
-import { InputBar } from "@/components/InputBar";
+import { InboxListSkeleton } from "@/components/Skeleton";
+import { usePhoneScrollCompress } from "@/hooks/useScrollVelocity";
 import { ChatSwipeRow } from "@/components/ChatSwipeRow";
 import { FocusSortMode } from "@/components/FocusSortMode";
 import { ScheduleSheet } from "@/components/ScheduleSheet";
+import { ScheduleQuickSheet } from "@/components/ScheduleQuickSheet";
 import { LoginSheet } from "@/components/LoginSheet";
 import { CleanupReviewSheet } from "@/components/CleanupReviewSheet";
 import { ChatBubble } from "@/components/ChatBubble";
@@ -36,6 +38,7 @@ export const Route = createFileRoute("/")({
 function Inbox() {
   const t = useT();
   const inbox = useInbox();
+  const scrollCompress = usePhoneScrollCompress();
   const schedules = useSchedules();
   const archive = useArchive();
   const userId = useUserId();
@@ -46,6 +49,8 @@ function Inbox() {
   const [loginOpen, setLoginOpen] = useState(false);
   
   const [focusSortOpen, setFocusSortOpen] = useState(false);
+  const [scheduleQuick, setScheduleQuick] = useState<{ open: boolean; item?: InboxItem }>({ open: false });
+  const [focusPendingScheduleId, setFocusPendingScheduleId] = useState<string | null>(null);
   const [cleanupReviewOpen, setCleanupReviewOpen] = useState(false);
   const [showSwipeHint, setShowSwipeHint] = useState(false);
   const [menuFor, setMenuFor] = useState<string | null>(null);
@@ -82,6 +87,7 @@ function Inbox() {
   };
 
   const items = inbox.items;
+  const syncing = inbox.syncState === "syncing";
   // KakaoTalk-style: oldest at top, newest at bottom
   const itemsAsc = useMemo(() => [...items].slice().reverse(), [items]);
   const newestId = items[0]?.id;
@@ -130,12 +136,41 @@ function Inbox() {
     );
   };
 
+  const moveToScheduleWithDates = async (it: InboxItem, start: Date, end: Date) => {
+    const text = it.brain_mirror?.title
+      ? formatMirrorScheduleText(it.text, it.brain_mirror)
+      : it.text.split("\n")[0]?.trim() || it.text;
+    const payload = scheduleFromInbox(it, {
+      text,
+      start_time: start.toISOString(),
+      end_time: end.toISOString(),
+    });
+    const snapshot = archiveFromInbox(it);
+    const { item: created } = await schedules.add(payload as any);
+    await inbox.remove(it.id);
+    track("schedule_created", { source: "inbox_swipe", text_length: text.length });
+    showUndoToast(t("일정으로 옮겼어요", "Moved to Schedule"), async () => {
+      await schedules.remove(created.id);
+      const { item: restored } = await inbox.add({
+        text: snapshot.text,
+        images: snapshot.images,
+        brain_mirror: snapshot.brain_mirror,
+      } as any);
+      markBmEligible(restored.id);
+    });
+  };
+
+  const openScheduleQuick = (it: InboxItem, fromFocus = false) => {
+    if (fromFocus) setFocusPendingScheduleId(it.id);
+    setScheduleQuick({ open: true, item: it });
+  };
+
   const moveToArchive = async (it: InboxItem) => {
     const payload = archiveFromInbox(it);
     const { item: created } = await archive.add(payload as any);
     await inbox.remove(it.id);
     track("thought_swiped_archive", { text_length: it.text.length });
-    showUndoToast(t("기억으로 옮겼어요", "Moved to Memory"), async () => {
+    showUndoToast(t("보관했어요", "Archived"), async () => {
       await archive.remove(created.id);
       const { item: restored } = await inbox.add({
         text: payload.text,
@@ -146,49 +181,6 @@ function Inbox() {
     });
   };
 
-  const moveToScheduleInstant = async (it: InboxItem) => {
-    const det =
-      detectDate(it.text) ??
-      (it.brain_mirror?.suggestedDateText ? detectDate(it.brain_mirror.suggestedDateText) : null);
-    const start =
-      det?.start ??
-      (() => {
-        const d = new Date();
-        d.setMinutes(d.getMinutes() + 60, 0, 0);
-        return d;
-      })();
-    const end = det?.end ?? new Date(start.getTime() + 60 * 60 * 1000);
-    const text = it.brain_mirror?.title
-      ? formatMirrorScheduleText(it.text, it.brain_mirror)
-      : it.text.split("\n")[0]?.trim() || it.text;
-
-    const payload = scheduleFromInbox(it, {
-      text,
-      start_time: start.toISOString(),
-      end_time: end.toISOString(),
-    });
-    const snapshot = archiveFromInbox(it);
-
-    const { item: created } = await schedules.add(payload as any);
-    await inbox.remove(it.id);
-    track("schedule_created", { source: "inbox_swipe", text_length: text.length });
-
-    showUndoToast(t("일정으로 옮겼어요", "Moved to Schedule"), async () => {
-      await schedules.remove(created.id);
-      const { item: restored } = await inbox.add({
-        text: snapshot.text,
-        images: snapshot.images,
-        brain_mirror: snapshot.brain_mirror,
-      } as any);
-      markBmEligible(restored.id);
-    });
-
-    if (!det) {
-      toast(t("오늘 기준으로 잡았어요 · 일정 탭에서 시간을 바꿀 수 있어요", "Scheduled for later today · edit time in Schedule"), {
-        duration: 4000,
-      });
-    }
-  };
 
   const autoScheduleFromMirror = async (
     item: InboxItem,
@@ -344,16 +336,18 @@ function Inbox() {
       </div>
 
       <div className="flex-1 px-4 pb-24">
-        {items.length === 0 ? (
+        {syncing && items.length === 0 ? (
+          <InboxListSkeleton />
+        ) : items.length === 0 ? (
           <EmptyState />
         ) : (
-          <div className="flex flex-col gap-4">
+          <div className={`chat-scroll flex flex-col gap-4 ${scrollCompress ? "scroll-compress" : ""}`}>
             {itemsAsc.map((it) => {
               const isNewest = it.id === newestId;
               return (
                 <ChatSwipeRow
                   key={it.id}
-                  onSwipeRight={() => moveToScheduleInstant(it)}
+                  onSwipeRight={() => openScheduleQuick(it)}
                   onSwipeLeft={() => moveToArchive(it)}
                   onLongPress={() => setMenuFor(it.id)}
                 >
@@ -507,11 +501,27 @@ function Inbox() {
         />
       )}
 
+      <ScheduleQuickSheet
+        item={scheduleQuick.item ?? null}
+        open={scheduleQuick.open}
+        onClose={() => {
+          setScheduleQuick({ open: false });
+          setFocusPendingScheduleId(null);
+        }}
+        onConfirm={(start, end) => {
+          const it = scheduleQuick.item;
+          if (!it) return;
+          void moveToScheduleWithDates(it, start, end);
+          setScheduleQuick({ open: false });
+          setFocusPendingScheduleId(null);
+        }}
+      />
+
       <FocusSortMode
         open={focusSortOpen}
-        items={items}
+        items={items.filter((i) => i.id !== focusPendingScheduleId)}
         onClose={() => setFocusSortOpen(false)}
-        onSchedule={(it) => moveToScheduleInstant(it)}
+        onScheduleRequest={(it) => openScheduleQuick(it, true)}
         onArchive={(it) => moveToArchive(it)}
         onSoftDelete={async (it) => {
           await inbox.softDelete(it.id);
@@ -542,12 +552,11 @@ function EmptyState() {
   return (
     <div className="flex h-full min-h-[50dvh] flex-col items-center justify-center px-6 text-center">
       <div className="text-5xl">💭</div>
-      <div className="mt-3 text-[17px] font-bold text-ink">{t("텅 비었어요", "Empty for now")}</div>
+      <div className="mt-3 text-[17px] font-bold text-ink">
+        {t("오늘은 가볍네요.", "Today feels light.")}
+      </div>
       <div className="mt-1 text-sm text-ink-soft">
-        {t(
-          "아래에 적거나 붙여넣으세요. 좌우로 밀면 일정·보관 · 정리하기로 한 장씩 정리",
-          "Type below. Swipe to sort · or tap Sort now for focus mode",
-        )}
+        {t("기다리는 건 없어요. 떠오르는 걸 적어보세요.", "Nothing is waiting. Drop a thought when it comes.")}
       </div>
     </div>
   );

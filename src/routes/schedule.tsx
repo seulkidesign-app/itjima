@@ -1,11 +1,13 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useEffect, useMemo, useRef, useState, type ComponentProps } from "react";
+import { useEffect, useMemo, useRef, useState, type ComponentProps, type PointerEvent as ReactPointerEvent } from "react";
 import { Plus, Pin, Check, Bell, BellOff } from "lucide-react";
 import { useArchive, useSchedules, type ScheduleItem } from "@/lib/store";
-import { countdown, dDay } from "@/lib/dateDetect";
+import { countdown } from "@/lib/dateDetect";
 import { ScheduleSheet } from "@/components/ScheduleSheet";
 import { ReminderSheet } from "@/components/ReminderSheet";
 import { ScheduleAlarmChips } from "@/components/ScheduleAlarmChips";
+import { CalendarDragLayer, CalendarDayCell } from "@/components/CalendarDragLayer";
+import { ScheduleListSkeleton } from "@/components/Skeleton";
 import {
   bindInAppReminders,
   clearReminderOffset,
@@ -19,7 +21,7 @@ import { scheduleDisplayTitle, rawPreview } from "@/lib/thoughtProvenance";
 import { toast } from "sonner";
 import { useT, useLang } from "@/lib/i18n";
 import { track } from "@/lib/analytics";
-import { haptic, tick as hapticTick, confirm as hapticConfirm } from "@/lib/haptics";
+import { haptic, confirm as hapticConfirm } from "@/lib/haptics";
 
 export const Route = createFileRoute("/schedule")({
   component: Schedule,
@@ -55,7 +57,7 @@ function usePins() {
 function Schedule() {
   const t = useT();
   const { lang } = useLang();
-  const { items, update, remove, add } = useSchedules();
+  const { items, update, remove, add, syncState } = useSchedules();
   const archive = useArchive();
   const [tab, setTab] = useState<"today" | "list" | "cal">("list");
   const [sheet, setSheet] = useState<{ open: boolean; edit?: ScheduleItem }>({ open: false });
@@ -194,7 +196,9 @@ function Schedule() {
       </div>
 
       <div className="flex-1 px-5 pb-6">
-        {tab === "today" ? (
+        {syncState === "syncing" && items.length === 0 ? (
+          <ScheduleListSkeleton />
+        ) : tab === "today" ? (
           todayTimerItems.length === 0 && doneItems.length === 0 ? (
             <Empty />
           ) : (
@@ -242,7 +246,7 @@ function Schedule() {
 
       <button
         onClick={() => setSheet({ open: true })}
-        className="absolute right-5 z-30 flex h-14 w-14 items-center justify-center rounded-full bg-primary text-ink shadow-float active:scale-95 transition"
+        className="absolute right-5 z-30 flex h-14 w-14 items-center justify-center rounded-full bg-primary text-ink shadow-float touch-press transition"
         style={{ bottom: "calc(env(safe-area-inset-bottom) + 1.25rem)" }}
         aria-label={t("새 일정", "New event")}
       >
@@ -521,7 +525,6 @@ function CalendarGrid({
       return dt.getFullYear() === y && dt.getMonth() === m && dt.getDate() === day;
     });
   const [selected, setSelected] = useState<number | null>(today.getDate());
-  const [dragOver, setDragOver] = useState<number | null>(null);
   const monthLabel = lang === "en"
     ? new Date(y, m, 1).toLocaleString("en-US", { month: "long", year: "numeric" })
     : `${y}년 ${m + 1}월`;
@@ -532,156 +535,158 @@ function CalendarGrid({
   const selectedEvents = selected ? eventsOf(selected) : [];
   const locale = lang === "en" ? "en-US" : "ko-KR";
 
-  const onChipDragStart = (e: React.DragEvent, id: string) => {
-    e.dataTransfer.setData("text/plain", id);
-    e.dataTransfer.effectAllowed = "move";
-    hapticTick();
-  };
-  const onCellDrop = (e: React.DragEvent, day: number) => {
-    e.preventDefault();
-    const id = e.dataTransfer.getData("text/plain");
-    setDragOver(null);
-    if (id) onDropToDate(id, day, m, y);
-  };
-
   return (
-    <div className="space-y-3">
-      <div className="card-radius glass shadow-card p-3">
-        <div className="mb-3 flex items-center justify-between px-1">
-          <button
-            onClick={() => setView((v) => ({ y: v.m === 0 ? v.y - 1 : v.y, m: (v.m + 11) % 12 }))}
-            className="rounded-full px-2 py-0.5 text-sm text-ink-soft hover:bg-white/60"
-          >‹</button>
-          <div className="text-sm font-bold text-ink">{monthLabel}</div>
-          <button
-            onClick={() => setView((v) => ({ y: v.m === 11 ? v.y + 1 : v.y, m: (v.m + 1) % 12 }))}
-            className="rounded-full px-2 py-0.5 text-sm text-ink-soft hover:bg-white/60"
-          >›</button>
-        </div>
-        <div className="grid grid-cols-7 gap-0.5 text-center text-[11px] text-ink-soft">
-          {weekdays.map((d, i) => (
-            <div key={i}>{d}</div>
-          ))}
-        </div>
-        <div className="mt-1.5 grid grid-cols-7 gap-0.5">
-          {cells.map((c, i) => {
-            if (!c) return <div key={i} className="aspect-square" />;
-            const evs = eventsOf(c);
-            const isToday =
-              c === today.getDate() && m === today.getMonth() && y === today.getFullYear();
-            const isSel = c === selected;
-            const isDragOver = dragOver === c;
-            return (
+    <CalendarDragLayer month={m} year={y} pinned={(id) => pins.has(id)} onDropToDate={onDropToDate}>
+      {({ startDrag, hoverDay, draggingId }) => (
+        <div className="space-y-3">
+          <div className="card-radius glass shadow-card p-3">
+            <div className="mb-3 flex items-center justify-between px-1">
               <button
-                key={i}
-                onClick={() => { setSelected(c); haptic(6); }}
-                onDragOver={(e) => { e.preventDefault(); setDragOver(c); }}
-                onDragLeave={() => setDragOver((d) => (d === c ? null : d))}
-                onDrop={(e) => onCellDrop(e, c)}
-                className={`relative flex aspect-square flex-col items-stretch justify-start rounded-[24px] p-1 text-left transition ${
-                  isDragOver
-                    ? "bg-primary/40 ring-2 ring-primary"
-                    : isSel
-                      ? "bg-primary text-ink shadow-card"
-                      : isToday
-                        ? "bg-primary/20 text-ink"
-                        : "text-ink hover:bg-white/60"
-                }`}
-              >
-                <span className="text-[11px] font-bold leading-none">{c}</span>
-                {evs.length > 0 && (
-                  <span
-                    className={`mt-0.5 line-clamp-2 text-[8px] font-medium leading-[1.1] ${
-                      isSel ? "text-ink/80" : "text-ink-soft"
-                    }`}
-                  >
-                    {pins.has(evs[0].id) && "📌"}
-                    {evs[0].text}
-                    {evs.length > 1 && (
-                      <span className="ml-0.5 opacity-70"> +{evs.length - 1}</span>
-                    )}
-                  </span>
-                )}
-              </button>
-            );
-          })}
-        </div>
-        <div className="mt-2 px-1 text-[10px] text-ink-soft/80">
-          {t("💡 일정을 끌어서 다른 날짜로 옮길 수 있어요", "💡 Drag an event onto another day to move it")}
-        </div>
-      </div>
-
-      {/* Selected day events */}
-      {selected !== null && (
-        <div className="card-radius glass-soft shadow-card p-3">
-          <div className="mb-2 px-1 text-[12px] font-bold text-ink-soft">
-            {new Date(y, m, selected).toLocaleDateString(locale, {
-              month: "short",
-              day: "numeric",
-              weekday: "short",
-            })}
-            <span className="ml-1 text-ink-soft/70">· {selectedEvents.length}</span>
-          </div>
-          {selectedEvents.length === 0 ? (
-            <div className="px-1 py-3 text-center text-[12px] text-ink-soft">
-              {t("이날 일정이 없어요", "No events on this day")}
+                type="button"
+                onClick={() => setView((v) => ({ y: v.m === 0 ? v.y - 1 : v.y, m: (v.m + 11) % 12 }))}
+                className="touch-press rounded-full px-2 py-0.5 text-sm text-ink-soft hover:bg-white/60"
+              >‹</button>
+              <div className="text-sm font-bold text-ink">{monthLabel}</div>
+              <button
+                type="button"
+                onClick={() => setView((v) => ({ y: v.m === 11 ? v.y + 1 : v.y, m: (v.m + 1) % 12 }))}
+                className="touch-press rounded-full px-2 py-0.5 text-sm text-ink-soft hover:bg-white/60"
+              >›</button>
             </div>
-          ) : (
-            <ul className="space-y-1.5">
-              {selectedEvents
-                .slice()
-                .sort((a, b) => +new Date(a.start_time) - +new Date(b.start_time))
-                .map((s) => (
-                  <DayEventChip
-                    key={s.id}
-                    s={s}
-                    pinned={pins.has(s.id)}
-                    onClick={() => onEdit(s)}
-                    onLongPress={() => onTogglePin(s.id)}
-                    onDragStart={(e) => onChipDragStart(e, s.id)}
+            <div className="grid grid-cols-7 gap-0.5 text-center text-[11px] text-ink-soft">
+              {weekdays.map((d, i) => (
+                <div key={i}>{d}</div>
+              ))}
+            </div>
+            <div className="mt-1.5 grid grid-cols-7 gap-0.5">
+              {cells.map((c, i) => {
+                if (!c) return <div key={i} className="aspect-square" />;
+                const evs = eventsOf(c);
+                const isToday =
+                  c === today.getDate() && m === today.getMonth() && y === today.getFullYear();
+                const isSel = c === selected;
+                const preview = evs.length
+                  ? `${pins.has(evs[0].id) ? "📌" : ""}${evs[0].text}`
+                  : undefined;
+                return (
+                  <CalendarDayCell
+                    key={i}
+                    day={c}
+                    hoverDay={hoverDay}
+                    dragging={draggingId !== null}
+                    isToday={isToday}
+                    isSelected={isSel}
+                    eventCount={evs.length}
+                    preview={preview}
+                    onSelect={() => { setSelected(c); haptic(6); }}
                   />
-                ))}
-            </ul>
+                );
+              })}
+            </div>
+            <div className="mt-2 px-1 text-[10px] text-ink-soft/80">
+              {t("💡 일정을 끌어 다른 날로 옮겨보세요", "💡 Drag an event onto another day")}
+            </div>
+          </div>
+
+          {selected !== null && (
+            <div className="card-radius glass-soft shadow-card p-3">
+              <div className="mb-2 px-1 text-[12px] font-bold text-ink-soft">
+                {new Date(y, m, selected).toLocaleDateString(locale, {
+                  month: "short",
+                  day: "numeric",
+                  weekday: "short",
+                })}
+                <span className="ml-1 text-ink-soft/70">· {selectedEvents.length}</span>
+              </div>
+              {selectedEvents.length === 0 ? (
+                <div className="px-1 py-3 text-center text-[12px] text-ink-soft">
+                  {t("이 날은 여유로워요.", "This day is wide open.")}
+                </div>
+              ) : (
+                <ul className="space-y-1.5">
+                  {selectedEvents
+                    .slice()
+                    .sort((a, b) => +new Date(a.start_time) - +new Date(b.start_time))
+                    .map((s) => (
+                      <DayEventChip
+                        key={s.id}
+                        s={s}
+                        pinned={pins.has(s.id)}
+                        dragging={draggingId === s.id}
+                        onClick={() => onEdit(s)}
+                        onLongPress={() => onTogglePin(s.id)}
+                        onDragStart={(e) => startDrag(e, s)}
+                      />
+                    ))}
+                </ul>
+              )}
+            </div>
           )}
         </div>
       )}
-    </div>
+    </CalendarDragLayer>
   );
 }
 
 function DayEventChip({
   s,
   pinned,
+  dragging,
   onClick,
   onLongPress,
   onDragStart,
 }: {
   s: ScheduleItem;
   pinned: boolean;
+  dragging?: boolean;
   onClick: () => void;
   onLongPress: () => void;
-  onDragStart: (e: React.DragEvent) => void;
+  onDragStart: (e: ReactPointerEvent) => void;
 }) {
   const st = new Date(s.start_time);
   const timer = useRef<number | null>(null);
   const fired = useRef(false);
-  const onDown = () => {
-    fired.current = false;
-    timer.current = window.setTimeout(() => { fired.current = true; onLongPress(); }, 500);
-  };
-  const onUp = () => {
+  const start = useRef<{ x: number; y: number } | null>(null);
+  const dragStarted = useRef(false);
+
+  const clearTimer = () => {
     if (timer.current) { clearTimeout(timer.current); timer.current = null; }
   };
+
+  const onDown = (e: ReactPointerEvent) => {
+    fired.current = false;
+    dragStarted.current = false;
+    start.current = { x: e.clientX, y: e.clientY };
+    clearTimer();
+    timer.current = window.setTimeout(() => { fired.current = true; onLongPress(); }, 500);
+  };
+
+  const onMove = (e: ReactPointerEvent) => {
+    if (!start.current || dragStarted.current || fired.current) return;
+    const dx = e.clientX - start.current.x;
+    const dy = e.clientY - start.current.y;
+    if (Math.hypot(dx, dy) > 10) {
+      dragStarted.current = true;
+      clearTimer();
+      onDragStart(e);
+    }
+  };
+
+  const onUp = () => {
+    clearTimer();
+    if (!dragStarted.current && !fired.current) onClick();
+    start.current = null;
+    dragStarted.current = false;
+  };
+
   return (
     <li
-      draggable
-      onDragStart={onDragStart}
       onPointerDown={onDown}
+      onPointerMove={onMove}
       onPointerUp={onUp}
       onPointerLeave={onUp}
-      onClick={() => { if (!fired.current) onClick(); }}
-      className={`flex cursor-grab items-start gap-2 rounded-[24px] px-2.5 py-2 transition active:cursor-grabbing ${
-        pinned ? "bg-primary/30 ring-1 ring-primary" : "bg-white/70 hover:bg-white"
+      className={`flex cursor-grab items-start gap-2 rounded-[24px] px-2.5 py-2 touch-none transition active:cursor-grabbing ${
+        dragging ? "opacity-30 scale-[0.98]" : pinned ? "bg-primary/30 ring-1 ring-primary" : "bg-white/70 hover:bg-white"
       }`}
     >
       {pinned && <Pin size={11} className="mt-1 fill-primary text-primary" />}
@@ -697,10 +702,14 @@ function DayEventChip({
 function Empty() {
   const t = useT();
   return (
-    <div className="flex h-full min-h-[50dvh] flex-col items-center justify-center text-center">
+    <div className="flex h-full min-h-[50dvh] flex-col items-center justify-center text-center px-4">
       <div className="text-5xl">🗓</div>
-      <div className="mt-3 text-[17px] font-bold text-ink">{t("아직 일정이 없어요", "No events yet")}</div>
-      <div className="mt-1 text-sm text-ink-soft">{t("생각을 오른쪽으로 밀거나 + 버튼으로 추가해요.", "Swipe a thought right or hit + to add one.")}</div>
+      <div className="mt-3 text-[17px] font-bold text-ink">
+        {t("시간이 비어 있어요.", "Your calendar is open.")}
+      </div>
+      <div className="mt-1 text-sm text-ink-soft">
+        {t("생각을 오른쪽으로 밀거나 + 로 채워보세요.", "Swipe a thought right or tap + when you're ready.")}
+      </div>
     </div>
   );
 }

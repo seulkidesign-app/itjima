@@ -1,15 +1,15 @@
 import { useEffect, useRef, useState } from "react";
+import { motion } from "framer-motion";
 import type { BrainMirrorResult } from "@/lib/brainMirror";
 import { isBrainMirrorCandidate } from "@/lib/brainMirror";
 import { fetchBrainMirror } from "@/lib/brainMirrorApi";
 import { setInboxBrainMirror, useInbox, type InboxItem } from "@/lib/store";
 import { useT } from "@/lib/i18n";
 import { haptic } from "@/lib/haptics";
+import { SPRING_DEFAULT } from "@/lib/motion";
 
-const MAGIC_DELAY_MS = 300;
-const THINKING_TIER_1_MS = 300;
-const THINKING_TIER_2_MS = 3000;
-const THINKING_TIER_3_MS = 8000;
+const MAGIC_DELAY_MS = 200;
+const THINKING_MAX_MS = 1000;
 
 const SK = {
   attempted: (id: string) => `itjima.bm.attempted.${id}`,
@@ -17,36 +17,21 @@ const SK = {
   schedule: (id: string) => `itjima.bm.schedule.${id}`,
 };
 
-type ThinkingTier = 0 | 1 | 2 | 3;
-
-function ThinkingIndicator({ tier, inline }: { tier: ThinkingTier; inline?: boolean }) {
-  const t = useT();
-  if (tier === 0) return null;
-
-  const copy =
-    tier === 1
-      ? t("잠깐만요", "One moment")
-      : tier === 2
-        ? t("천천히 읽고 있어요", "Reading it slowly")
-        : t("조금 더 걸리네요", "Taking a bit longer");
-
+function ThinkingIndicator({ inline }: { inline?: boolean }) {
   return (
     <div
-      className={`mt-1.5 animate-bm-enter ${inline ? "system-reply" : "rounded-[24px] bg-[#111111] px-[22px] py-4"}`}
+      className={`mt-1.5 ${inline ? "system-reply" : "rounded-[24px] bg-[#111111] px-[22px] py-4"}`}
       aria-live="polite"
       aria-busy="true"
     >
-      <div className="flex items-center gap-2">
-        <div className="flex items-center gap-1.5" aria-hidden>
-          {[0, 1, 2].map((i) => (
-            <span
-              key={i}
-              className={`h-1.5 w-1.5 rounded-full animate-bounce ${inline ? "bg-ink/25" : "bg-white/35"}`}
-              style={{ animationDelay: `${i * 0.18}s`, animationDuration: "0.9s" }}
-            />
-          ))}
-        </div>
-        <p className={`text-[12px] leading-relaxed ${inline ? "text-ink-soft" : "text-white/70"}`}>{copy}</p>
+      <div className="flex items-center gap-1.5 px-0.5 py-0.5" aria-hidden>
+        {[0, 1, 2].map((i) => (
+          <span
+            key={i}
+            className={`imessage-dot ${inline ? "bg-ink/30" : "bg-white/40"}`}
+            style={{ animationDelay: `${i * 0.15}s` }}
+          />
+        ))}
       </div>
     </div>
   );
@@ -69,7 +54,12 @@ function BrainMirrorResultView({
 
   if (inline) {
     return (
-      <div className="system-reply mt-1.5 animate-bm-enter">
+      <motion.div
+        className="system-reply mt-1.5"
+        initial={{ opacity: 0, scale: 0.96 }}
+        animate={{ opacity: 1, scale: 1 }}
+        transition={{ ...SPRING_DEFAULT, duration: 0.15 }}
+      >
         <p className="text-[11px] font-medium text-ink-soft">
           {t("🧠 이렇게 이해했어요", "🧠 Here's how I read it")}
         </p>
@@ -95,12 +85,17 @@ function BrainMirrorResultView({
         >
           {t("되돌리기", "Undo")}
         </button>
-      </div>
+      </motion.div>
     );
   }
 
   return (
-    <div className="mt-3 animate-bm-enter rounded-[24px] bg-[#111111] px-[22px] py-5 text-white shadow-card">
+    <motion.div
+      className="mt-3 rounded-[24px] bg-[#111111] px-[22px] py-5 text-white shadow-card"
+      initial={{ opacity: 0, scale: 0.96 }}
+      animate={{ opacity: 1, scale: 1 }}
+      transition={{ ...SPRING_DEFAULT, duration: 0.15 }}
+    >
       <p className="text-[13px] font-medium leading-relaxed text-white/60">
         {t("🧠 이렇게 이해했어요", "🧠 Here's how I read it")}
       </p>
@@ -146,7 +141,7 @@ function BrainMirrorResultView({
           {t("되돌리기", "Undo")}
         </button>
       </div>
-    </div>
+    </motion.div>
   );
 }
 
@@ -170,7 +165,6 @@ export function BrainMirrorPanel({
   variant?: "inline" | "card";
 }) {
   const [phase, setPhase] = useState<"idle" | "thinking" | "ready" | "hidden">("idle");
-  const [thinkingTier, setThinkingTier] = useState<ThinkingTier>(0);
   const [result, setResult] = useState<BrainMirrorResult | null>(
     item.brain_mirror ? normalizeStored(item.brain_mirror) : null,
   );
@@ -200,7 +194,6 @@ export function BrainMirrorPanel({
 
     sessionStorage.setItem(SK.attempted(item.id), "1");
     setPhase("thinking");
-    setThinkingTier(0);
 
     const abortController = new AbortController();
     const timeouts: number[] = [];
@@ -216,7 +209,6 @@ export function BrainMirrorPanel({
       if (finished) return;
       cleanup();
       setPhase("hidden");
-      setThinkingTier(0);
       if (offerDateFallback) onMirrorMissed?.(item);
     };
 
@@ -229,17 +221,13 @@ export function BrainMirrorPanel({
       cleanup();
       setResult(mirror);
       setPhase("ready");
-      setThinkingTier(0);
       void setInboxBrainMirror(inbox, item.id, mirror);
     };
 
-    timeouts.push(window.setTimeout(() => setThinkingTier(1), THINKING_TIER_1_MS));
-    timeouts.push(window.setTimeout(() => setThinkingTier(2), THINKING_TIER_2_MS));
     timeouts.push(
       window.setTimeout(() => {
-        setThinkingTier(3);
         hideSilently(true);
-      }, THINKING_TIER_3_MS),
+      }, THINKING_MAX_MS),
     );
 
     timeouts.push(
@@ -280,7 +268,7 @@ export function BrainMirrorPanel({
   }, [phase, result, item, onAutoAct]);
 
   if (phase === "idle" || phase === "hidden") return null;
-  if (phase === "thinking") return <ThinkingIndicator tier={thinkingTier} inline={variant === "inline"} />;
+  if (phase === "thinking") return <ThinkingIndicator inline={variant === "inline"} />;
   if (!result?.items.length) return null;
 
   const completedItems = new Set(result.completedItems ?? []);
