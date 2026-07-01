@@ -62,11 +62,11 @@ function RootLayout() {
         <div className="md:flex md:items-start md:justify-center md:gap-6">
           <SideNav />
           <div className="phone-frame">
-            <TopNav />
             <div
               id="phone-scroll"
-              className="absolute inset-0 overflow-y-auto overflow-x-hidden pt-[calc(env(safe-area-inset-top)+72px)]"
+              className="absolute inset-0 overflow-y-auto overflow-x-hidden"
             >
+              <TopNav />
               <Outlet />
             </div>
             <InstallPrompt />
