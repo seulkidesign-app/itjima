@@ -16,6 +16,7 @@ import { ScheduleQuickSheet } from "@/components/ScheduleQuickSheet";
 import { LoginSheet } from "@/components/LoginSheet";
 import { CleanupReviewSheet } from "@/components/CleanupReviewSheet";
 import { ChatBubble } from "@/components/ChatBubble";
+import { InputBar } from "@/components/InputBar";
 import { BrainMirrorPanel } from "@/components/BrainMirrorSummary";
 import {
   isBrainMirrorCandidate,
@@ -613,10 +614,6 @@ function Inbox() {
         onClose={() => setFocusSortOpen(false)}
         onScheduleRequest={(it) => openScheduleQuick(it, true)}
         onArchive={(it) => moveToArchive(it)}
-        onSoftDelete={async (it) => {
-          await inbox.softDelete(it.id);
-          haptic([4, 8, 4]);
-        }}
       />
 
       <CleanupReviewSheet
