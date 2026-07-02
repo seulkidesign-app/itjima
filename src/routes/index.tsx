@@ -215,6 +215,15 @@ function Inbox() {
     });
   };
 
+  const moveToDelete = async (it: InboxItem) => {
+    await inbox.softDelete(it.id);
+    track("thought_swiped_delete", { text_length: it.text.length });
+    showUndoToast(t("삭제했어요", "Deleted"), async () => {
+      await inbox.update(it.id, { status: "active" } as Partial<InboxItem>);
+      if (isBrainMirrorCandidate(it.text)) markBmEligible(it.id);
+    });
+  };
+
   const autoScheduleFromMirror = async (
     item: InboxItem,
     result: BrainMirrorResult,
@@ -291,7 +300,9 @@ function Inbox() {
       text,
       images,
     });
-    markBmEligible(created.id);
+    if (isBrainMirrorCandidate(text)) {
+      markBmEligible(created.id);
+    }
     track("thought_created", {
       text_length: text.length,
       has_images: images.length > 0,
@@ -360,7 +371,10 @@ function Inbox() {
                     {t("나와의 대화", "Chat with myself")}
                   </h1>
                   <p className="mt-0.5 text-[11px] text-ink-soft">
-                    {t("좌우로 밀어 정리", "Swipe left or right to sort")}
+                    {t(
+                      "← 보관 · → 일정 · ↓ 삭제",
+                      "← Archive · → Schedule · ↓ Delete",
+                    )}
                   </p>
                 </div>
                 {items.length >= 1 && (
@@ -380,8 +394,8 @@ function Inbox() {
                   className="chat-swipe-hint rounded-[16px] bg-primary/25 px-3 py-2 text-left text-[12px] text-ink"
                 >
                   {t(
-                    "💡 오른쪽 → 일정 · 왼쪽 → 보관. 밀었다 놓으면 버튼을 눌러도 돼요.",
-                    "💡 Right → Schedule · Left → Archive. Partial swipe, then tap the action.",
+                    "💡 → 일정 · ← 보관 · ↓ 삭제. 밀었다 놓으면 버튼을 눌러도 돼요.",
+                    "💡 → Schedule · ← Archive · ↓ Delete. Partial swipe, then tap the action.",
                   )}
                 </button>
               )}
@@ -409,6 +423,7 @@ function Inbox() {
                   onOpenRowChange={setSwipeOpenId}
                   onSwipeRight={() => openScheduleQuick(it)}
                   onSwipeLeft={() => moveToArchive(it)}
+                  onSwipeDown={() => moveToDelete(it)}
                   onLongPress={() => setMenuFor(it.id)}
                 >
                   <ChatBubble item={it} isNewest={isNewest}>
@@ -491,7 +506,7 @@ function Inbox() {
                     danger
                     onClick={() => {
                       setMenuFor(null);
-                      inbox.remove(it.id);
+                      void moveToDelete(it);
                     }}
                   />
                 </>
@@ -535,7 +550,7 @@ function Inbox() {
                     text: c,
                     images: [],
                   });
-                  markBmEligible(item.id);
+                  if (isBrainMirrorCandidate(c)) markBmEligible(item.id);
                 }
                 setPasteSheet(null);
                 toast.success(
@@ -555,7 +570,9 @@ function Inbox() {
                   text: pasteSheet.original,
                   images: [],
                 });
-                markBmEligible(item.id);
+                if (isBrainMirrorCandidate(pasteSheet.original)) {
+                  markBmEligible(item.id);
+                }
                 setPasteSheet(null);
               }}
               className="mt-2 w-full rounded-full bg-white/70 py-3.5 text-[15px] font-semibold text-ink"

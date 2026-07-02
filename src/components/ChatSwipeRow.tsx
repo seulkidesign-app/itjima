@@ -6,16 +6,19 @@ import {
   type PointerEvent,
   type ReactNode,
 } from "react";
+import { Trash2 } from "lucide-react";
 import { animate } from "framer-motion";
 import { useT } from "@/lib/i18n";
 import { tick, confirm as confirmHaptic } from "@/lib/haptics";
 import { SPRING_SNAP_BACK } from "@/lib/motion";
 
-type Side = "left" | "right";
+type Side = "left" | "right" | "down";
 
-const REVEAL = 80;
+const REVEAL_X = 80;
+const REVEAL_Y = 72;
 const OPEN_AT = 32;
-const MAX_DRAG = 110;
+const MAX_DRAG_X = 110;
+const MAX_DRAG_Y = 96;
 const MAX_ROTATE = 2.5;
 
 export function ChatSwipeRow({
@@ -25,6 +28,7 @@ export function ChatSwipeRow({
   onOpenRowChange,
   onSwipeRight,
   onSwipeLeft,
+  onSwipeDown,
   onLongPress,
   disabled,
 }: {
@@ -34,46 +38,69 @@ export function ChatSwipeRow({
   onOpenRowChange?: (id: string | null) => void;
   onSwipeRight: () => void;
   onSwipeLeft: () => void;
+  onSwipeDown?: () => void;
   onLongPress?: () => void;
   disabled?: boolean;
 }) {
   const t = useT();
   const rowRef = useRef<HTMLDivElement>(null);
-  const [dx, setDx] = useState(0);
+  const [offset, setOffset] = useState({ x: 0, y: 0 });
   const [pending, setPending] = useState<Side | null>(null);
   const [acting, setActing] = useState(false);
   const draggingRef = useRef(false);
-  const dxRef = useRef(0);
-  const startX = useRef(0);
-  const startY = useRef(0);
+  const offsetRef = useRef({ x: 0, y: 0 });
+  const start = useRef({ x: 0, y: 0 });
   const longTimer = useRef<number | null>(null);
   const longFired = useRef(false);
   const moved = useRef(false);
 
-  dxRef.current = dx;
+  offsetRef.current = offset;
 
-  const springTo = useCallback((to: number, onDone?: () => void) => {
-    animate(dxRef.current, to, {
-      ...SPRING_SNAP_BACK,
-      onUpdate: (v) => {
-        dxRef.current = v;
-        setDx(v);
-      },
-      onComplete: onDone,
-    });
-  }, []);
+  const springTo = useCallback(
+    (to: { x: number; y: number }, onDone?: () => void) => {
+      const from = offsetRef.current;
+      let done = 0;
+      const check = () => {
+        done += 1;
+        if (done >= 2) onDone?.();
+      };
+      animate(from.x, to.x, {
+        ...SPRING_SNAP_BACK,
+        onUpdate: (v) => {
+          offsetRef.current = { ...offsetRef.current, x: v };
+          setOffset((o) => ({ ...o, x: v }));
+        },
+        onComplete: check,
+      });
+      animate(from.y, to.y, {
+        ...SPRING_SNAP_BACK,
+        onUpdate: (v) => {
+          offsetRef.current = { ...offsetRef.current, y: v };
+          setOffset((o) => ({ ...o, y: v }));
+        },
+        onComplete: check,
+      });
+    },
+    [],
+  );
 
   const dismiss = useCallback(() => {
     setPending(null);
     if (rowId && onOpenRowChange) onOpenRowChange(null);
-    springTo(0);
+    springTo({ x: 0, y: 0 });
   }, [rowId, onOpenRowChange, springTo]);
 
   const openSide = useCallback(
     (side: Side) => {
       setPending(side);
       if (rowId && onOpenRowChange) onOpenRowChange(rowId);
-      springTo(side === "right" ? REVEAL : -REVEAL);
+      const target =
+        side === "right"
+          ? { x: REVEAL_X, y: 0 }
+          : side === "left"
+            ? { x: -REVEAL_X, y: 0 }
+            : { x: 0, y: REVEAL_Y };
+      springTo(target);
       tick();
     },
     [rowId, onOpenRowChange, springTo],
@@ -84,28 +111,43 @@ export function ChatSwipeRow({
       if (acting) return;
       setActing(true);
       confirmHaptic();
-      const from = dxRef.current;
-      const target = side === "right" ? from + 48 : from - 48;
-      animate(from, target, {
+      const from = offsetRef.current;
+      const target =
+        side === "right"
+          ? { x: from.x + 48, y: from.y }
+          : side === "left"
+            ? { x: from.x - 48, y: from.y }
+            : { x: from.x, y: from.y + 48 };
+      animate(from.x, target.x, {
         type: "spring",
         stiffness: 340,
         damping: 28,
         onUpdate: (v) => {
-          dxRef.current = v;
-          setDx(v);
+          offsetRef.current = { ...offsetRef.current, x: v };
+          setOffset((o) => ({ ...o, x: v }));
+        },
+      });
+      animate(from.y, target.y, {
+        type: "spring",
+        stiffness: 340,
+        damping: 28,
+        onUpdate: (v) => {
+          offsetRef.current = { ...offsetRef.current, y: v };
+          setOffset((o) => ({ ...o, y: v }));
         },
         onComplete: () => {
           if (side === "right") onSwipeRight();
-          else onSwipeLeft();
+          else if (side === "left") onSwipeLeft();
+          else onSwipeDown?.();
           setPending(null);
           setActing(false);
-          dxRef.current = 0;
-          setDx(0);
+          offsetRef.current = { x: 0, y: 0 };
+          setOffset({ x: 0, y: 0 });
           if (rowId && onOpenRowChange) onOpenRowChange(null);
         },
       });
     },
-    [acting, onSwipeLeft, onSwipeRight, rowId, onOpenRowChange],
+    [acting, onSwipeDown, onSwipeLeft, onSwipeRight, rowId, onOpenRowChange],
   );
 
   useEffect(() => {
@@ -143,8 +185,7 @@ export function ChatSwipeRow({
     draggingRef.current = true;
     longFired.current = false;
     moved.current = false;
-    startX.current = e.clientX;
-    startY.current = e.clientY;
+    start.current = { x: e.clientX, y: e.clientY };
     clearLongPress();
     if (onLongPress) {
       longTimer.current = window.setTimeout(() => {
@@ -160,17 +201,21 @@ export function ChatSwipeRow({
 
   const onMove = (e: PointerEvent<HTMLDivElement>) => {
     if (!draggingRef.current || acting) return;
-    let next = e.clientX - startX.current;
-    if (Math.abs(next) > 6 || Math.abs(e.clientY - startY.current) > 6) {
+    let x = e.clientX - start.current.x;
+    let y = e.clientY - start.current.y;
+    if (Math.abs(x) > 6 || Math.abs(y) > 6) {
       moved.current = true;
       clearLongPress();
     }
-    if (pending === "right" && next < 0) next = 0;
-    if (pending === "left" && next > 0) next = 0;
-    next = Math.max(-MAX_DRAG, Math.min(MAX_DRAG, next));
-    dxRef.current = next;
-    setDx(next);
-    if (Math.abs(next) > 14) tick();
+    if (pending === "right" && x < 0) x = 0;
+    if (pending === "left" && x > 0) x = 0;
+    if (pending === "down" && y < 0) y = 0;
+    if (!onSwipeDown && y > 0) y *= 0.25;
+    x = Math.max(-MAX_DRAG_X, Math.min(MAX_DRAG_X, x));
+    y = Math.max(0, Math.min(MAX_DRAG_Y, y));
+    offsetRef.current = { x, y };
+    setOffset({ x, y });
+    if (Math.abs(x) > 14 || y > 14) tick();
   };
 
   const onUp = () => {
@@ -179,42 +224,56 @@ export function ChatSwipeRow({
     clearLongPress();
     if (longFired.current) return;
 
-    const current = dxRef.current;
-    const abs = Math.abs(current);
+    const { x, y } = offsetRef.current;
+    const absX = Math.abs(x);
+    const absY = y;
 
     if (pending) {
-      if (abs < OPEN_AT * 0.6) dismiss();
+      const open =
+        pending === "down" ? absY >= OPEN_AT * 0.6 : absX >= OPEN_AT * 0.6;
+      if (!open) dismiss();
       else openSide(pending);
       return;
     }
 
-    if (abs >= OPEN_AT) {
-      openSide(current > 0 ? "right" : "left");
+    if (onSwipeDown && absY > absX && absY >= OPEN_AT) {
+      openSide("down");
       return;
     }
-    springTo(0);
+    if (absX >= OPEN_AT) {
+      openSide(x > 0 ? "right" : "left");
+      return;
+    }
+    springTo({ x: 0, y: 0 });
   };
 
   const side: Side | null =
     pending ??
-    (dx > OPEN_AT * 0.4 ? "right" : dx < -OPEN_AT * 0.4 ? "left" : null);
+    (offset.y > OPEN_AT * 0.45 && onSwipeDown
+      ? "down"
+      : offset.x > OPEN_AT * 0.4
+        ? "right"
+        : offset.x < -OPEN_AT * 0.4
+          ? "left"
+          : null);
 
-  const revealProgress = pending ? 1 : Math.min(1, Math.abs(dx) / REVEAL);
+  const revealProgress = pending
+    ? 1
+    : side === "down"
+      ? Math.min(1, offset.y / REVEAL_Y)
+      : Math.min(1, Math.abs(offset.x) / REVEAL_X);
 
   const rotate =
     side === "right"
-      ? Math.min(MAX_ROTATE, dx * 0.04)
+      ? Math.min(MAX_ROTATE, offset.x * 0.04)
       : side === "left"
-        ? Math.max(-MAX_ROTATE, dx * 0.04)
+        ? Math.max(-MAX_ROTATE, offset.x * 0.04)
         : 0;
   const scale = draggingRef.current ? 1 + revealProgress * 0.012 : 1;
 
-  const scheduleVisible = side === "right";
-  const archiveVisible = side === "left";
-
   return (
     <div ref={rowRef} className="relative flex justify-end">
-      {scheduleVisible && (
+      {side === "right" && (
         <button
           type="button"
           onClick={(e) => {
@@ -231,7 +290,7 @@ export function ChatSwipeRow({
         </button>
       )}
 
-      {archiveVisible && (
+      {side === "left" && (
         <button
           type="button"
           onClick={(e) => {
@@ -248,6 +307,24 @@ export function ChatSwipeRow({
         </button>
       )}
 
+      {side === "down" && onSwipeDown && (
+        <button
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation();
+            commit("down");
+          }}
+          className="touch-press absolute bottom-0 left-1/2 z-10 flex -translate-x-1/2 translate-y-full items-center gap-1.5 rounded-full bg-red-500 px-4 py-2.5 text-[13px] font-extrabold text-white shadow-card transition-[transform,opacity] duration-150"
+          style={{
+            opacity: revealProgress,
+            transform: `translate(-50%, 100%) scale(${0.88 + revealProgress * 0.12})`,
+          }}
+        >
+          <Trash2 size={14} strokeWidth={2.4} />
+          {t("삭제", "Delete")}
+        </button>
+      )}
+
       <div
         onPointerDown={onDown}
         onPointerMove={onMove}
@@ -255,7 +332,7 @@ export function ChatSwipeRow({
         onPointerCancel={onUp}
         className="relative z-[1] w-full touch-none select-none"
         style={{
-          transform: `translateX(${dx}px) rotate(${rotate}deg) scale(${scale})`,
+          transform: `translate(${offset.x}px, ${offset.y}px) rotate(${rotate}deg) scale(${scale})`,
           transition: draggingRef.current || acting ? "none" : undefined,
         }}
       >

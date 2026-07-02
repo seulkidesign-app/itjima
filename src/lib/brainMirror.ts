@@ -1,4 +1,6 @@
 /** Brain Mirror v0.1 — AI가 먼저 이해하고 보여주는 카드 */
+import { shouldCallBrainMirror } from "@/lib/ruleEngine";
+
 export type BrainMirrorCore = {
   title: string;
   items: string[];
@@ -22,8 +24,7 @@ export function suggestedActionForDate(dateText: string): string {
 }
 
 export function isBrainMirrorCandidate(text: string): boolean {
-  const meaningful = text.replace(/[\s\p{P}\p{S}]/gu, "");
-  return meaningful.length >= 2;
+  return shouldCallBrainMirror(text);
 }
 
 /** Stamp version/isCurrent when persisting a new mirror snapshot. */

@@ -6,7 +6,14 @@ import {
   type PointerEvent,
   type ReactNode,
 } from "react";
-import { Archive, Calendar, ChevronDown, ChevronUp, Pause, X } from "lucide-react";
+import {
+  Archive,
+  Calendar,
+  ChevronDown,
+  ChevronUp,
+  Pause,
+  X,
+} from "lucide-react";
 import { animate, motion } from "framer-motion";
 import { useT } from "@/lib/i18n";
 import { confirm as confirmHaptic, tick } from "@/lib/haptics";
@@ -41,13 +48,7 @@ function sortOldestFirst(list: InboxItem[]) {
   );
 }
 
-function DeckCard({
-  item,
-  compact,
-}: {
-  item: InboxItem;
-  compact?: boolean;
-}) {
+function DeckCard({ item, compact }: { item: InboxItem; compact?: boolean }) {
   const t = useT();
   return (
     <>
@@ -69,7 +70,9 @@ function DeckCard({
         {item.text || t("(이미지만)", "(image only)")}
       </p>
       {item.brain_mirror?.title && (
-        <p className={`mt-3 text-ink-soft ${compact ? "text-[12px]" : "text-[13px]"}`}>
+        <p
+          className={`mt-3 text-ink-soft ${compact ? "text-[12px]" : "text-[13px]"}`}
+        >
           🧠 {item.brain_mirror.title}
         </p>
       )}
@@ -165,14 +168,8 @@ export function FocusSortMode({
     }
   }, [deck.length, cursor]);
 
-  const cardW = useCallback(
-    () => cardRef.current?.offsetWidth ?? 300,
-    [],
-  );
-  const cardH = useCallback(
-    () => cardRef.current?.offsetHeight ?? 360,
-    [],
-  );
+  const cardW = useCallback(() => cardRef.current?.offsetWidth ?? 300, []);
+  const cardH = useCallback(() => cardRef.current?.offsetHeight ?? 360, []);
 
   const springBack = useCallback(() => {
     const from = offsetRef.current;
@@ -323,7 +320,12 @@ export function FocusSortMode({
   const leftProgress = offset.x < 0 ? dragProgress(-offset.x, cardW()) : 0;
   const upProgress = offset.y < 0 ? dragProgress(-offset.y, cardH()) : 0;
   const downProgress = offset.y > 0 ? dragProgress(offset.y, cardH()) : 0;
-  const progressMag = Math.max(rightProgress, leftProgress, upProgress, downProgress);
+  const progressMag = Math.max(
+    rightProgress,
+    leftProgress,
+    upProgress,
+    downProgress,
+  );
   const rotate = Math.max(
     -MAX_ROTATE,
     Math.min(MAX_ROTATE, offset.x * (MAX_ROTATE / (cardW() * 0.5))),
@@ -387,12 +389,19 @@ export function FocusSortMode({
                   {upProgress > downProgress ? (
                     <>
                       <ChevronUp size={18} style={{ opacity: upProgress }} />
-                      <span className="text-[11px] font-bold">{t("다음", "Next")}</span>
+                      <span className="text-[11px] font-bold">
+                        {t("다음", "Next")}
+                      </span>
                     </>
                   ) : (
                     <>
-                      <span className="text-[11px] font-bold">{t("이전", "Prev")}</span>
-                      <ChevronDown size={18} style={{ opacity: downProgress }} />
+                      <span className="text-[11px] font-bold">
+                        {t("이전", "Prev")}
+                      </span>
+                      <ChevronDown
+                        size={18}
+                        style={{ opacity: downProgress }}
+                      />
                     </>
                   )}
                 </div>
@@ -465,7 +474,8 @@ export function FocusSortMode({
               </ActionButton>
             </div>
             <p className="pb-1 text-center text-[10px] font-semibold tracking-wide text-ink-soft/80">
-              {t("보관", "Archive")} · {t("보류", "Hold")} · {t("일정", "Schedule")}
+              {t("보관", "Archive")} · {t("보류", "Hold")} ·{" "}
+              {t("일정", "Schedule")}
             </p>
           </>
         ) : (
