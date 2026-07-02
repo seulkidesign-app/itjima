@@ -1,11 +1,11 @@
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { motion } from "framer-motion";
 import type { BrainMirrorResult } from "@/lib/brainMirror";
 import { isBrainMirrorCandidate } from "@/lib/brainMirror";
 import { fetchBrainMirror } from "@/lib/brainMirrorApi";
 import { setInboxBrainMirror, useInbox, type InboxItem } from "@/lib/store";
 import { useT } from "@/lib/i18n";
-import { haptic } from "@/lib/haptics";
+import { haptic, tick } from "@/lib/haptics";
 import { SPRING_DEFAULT } from "@/lib/motion";
 
 const MAGIC_DELAY_MS = 200;
@@ -37,17 +37,49 @@ function ThinkingIndicator({ inline }: { inline?: boolean }) {
   );
 }
 
+function ReanalyzeButton({
+  onClick,
+  disabled,
+  inline,
+  compact,
+}: {
+  onClick: () => void;
+  disabled?: boolean;
+  inline?: boolean;
+  compact?: boolean;
+}) {
+  const t = useT();
+  return (
+    <button
+      type="button"
+      disabled={disabled}
+      onClick={onClick}
+      className={`touch-press font-semibold disabled:opacity-40 ${
+        compact
+          ? "mt-1.5 text-[11px] text-ink-soft underline-offset-2 hover:underline"
+          : inline
+            ? "mt-2 text-[11px] text-ink-soft underline-offset-2 hover:underline"
+            : "rounded-full px-3 py-1.5 text-[13px] font-medium text-white/50 transition hover:text-white/75 active:scale-[0.98]"
+      }`}
+    >
+      {t("🧠 다시 이해해줘", "🧠 Re-read this")}
+    </button>
+  );
+}
+
 function BrainMirrorResultView({
   result,
   completedItems,
   onToggleItem,
   onCancel,
+  onReanalyze,
   inline,
 }: {
   result: BrainMirrorResult;
   completedItems: Set<string>;
   onToggleItem: (line: string) => void;
   onCancel: () => void;
+  onReanalyze: () => void;
   inline?: boolean;
 }) {
   const t = useT();
@@ -62,6 +94,9 @@ function BrainMirrorResultView({
       >
         <p className="text-[11px] font-medium text-ink-soft">
           {t("🧠 이렇게 이해했어요", "🧠 Here's how I read it")}
+          {result.version > 1 && (
+            <span className="ml-1.5 text-ink-soft/70">v{result.version}</span>
+          )}
         </p>
         <p className="mt-1 text-[13px] font-semibold leading-snug text-ink">
           {result.title}
@@ -87,13 +122,16 @@ function BrainMirrorResultView({
             })}
           </ul>
         )}
-        <button
-          type="button"
-          onClick={onCancel}
-          className="mt-2 text-[11px] font-medium text-ink-soft underline-offset-2 hover:underline"
-        >
-          {t("되돌리기", "Undo")}
-        </button>
+        <div className="mt-2 flex flex-wrap items-center gap-3">
+          <button
+            type="button"
+            onClick={onCancel}
+            className="text-[11px] font-medium text-ink-soft underline-offset-2 hover:underline"
+          >
+            {t("되돌리기", "Undo")}
+          </button>
+          <ReanalyzeButton inline compact onClick={onReanalyze} />
+        </div>
       </motion.div>
     );
   }
@@ -107,6 +145,9 @@ function BrainMirrorResultView({
     >
       <p className="text-[13px] font-medium leading-relaxed text-white/60">
         {t("🧠 이렇게 이해했어요", "🧠 Here's how I read it")}
+        {result.version > 1 && (
+          <span className="ml-1.5 text-white/40">v{result.version}</span>
+        )}
       </p>
 
       <div className="my-3 h-px bg-white/10" />
@@ -145,7 +186,7 @@ function BrainMirrorResultView({
         </p>
       )}
 
-      <div className="mt-4">
+      <div className="mt-4 flex flex-wrap items-center gap-3">
         <button
           type="button"
           onClick={onCancel}
@@ -153,6 +194,7 @@ function BrainMirrorResultView({
         >
           {t("되돌리기", "Undo")}
         </button>
+        <ReanalyzeButton onClick={onReanalyze} />
       </div>
     </motion.div>
   );
@@ -181,12 +223,98 @@ export function BrainMirrorPanel({
   variant?: "inline" | "card";
 }) {
   const [phase, setPhase] = useState<"idle" | "thinking" | "ready" | "hidden">(
-    "idle",
+    () => {
+      if (sessionStorage.getItem(SK.dismissed(item.id))) return "hidden";
+      if (item.brain_mirror && normalizeStored(item.brain_mirror).items.length) {
+        return "ready";
+      }
+      return "idle";
+    },
   );
-  const [result, setResult] = useState<BrainMirrorResult | null>(
+  const [result, setResult] = useState<BrainMirrorResult | null>(() =>
     item.brain_mirror ? normalizeStored(item.brain_mirror) : null,
   );
   const autoActStarted = useRef(false);
+  const skipAutoActOnce = useRef(false);
+  const fetchGen = useRef(0);
+
+  const runAnalysis = useCallback(
+    (manual: boolean) => {
+      if (!item.text.trim()) return;
+      const gen = ++fetchGen.current;
+      if (manual) {
+        skipAutoActOnce.current = true;
+        sessionStorage.removeItem(SK.dismissed(item.id));
+        tick();
+      } else {
+        sessionStorage.setItem(SK.attempted(item.id), "1");
+      }
+
+      setPhase("thinking");
+      const abortController = new AbortController();
+      const timeouts: number[] = [];
+      let finished = false;
+
+      const cleanup = () => {
+        finished = true;
+        abortController.abort();
+        for (const id of timeouts) window.clearTimeout(id);
+      };
+
+      const hideSilently = (offerDateFallback = false) => {
+        if (finished || fetchGen.current !== gen) return;
+        cleanup();
+        setPhase("hidden");
+        if (offerDateFallback && !manual) onMirrorMissed?.(item);
+      };
+
+      const showResult = (mirror: BrainMirrorResult) => {
+        if (finished || fetchGen.current !== gen) return;
+        if (!mirror.items.length) {
+          hideSilently(!manual);
+          return;
+        }
+        cleanup();
+        setResult(mirror);
+        setPhase("ready");
+        void setInboxBrainMirror(inbox, item.id, mirror);
+        haptic([4, 10, 6]);
+      };
+
+      timeouts.push(
+        window.setTimeout(() => hideSilently(!manual), THINKING_MAX_MS),
+      );
+
+      timeouts.push(
+        window.setTimeout(() => {
+          void (async () => {
+            if (finished || fetchGen.current !== gen) return;
+            try {
+              const mirror = await fetchBrainMirror(
+                item.text,
+                abortController.signal,
+              );
+              if (finished || fetchGen.current !== gen) return;
+              if (!mirror) {
+                hideSilently(!manual);
+                return;
+              }
+              showResult(mirror);
+            } catch {
+              if (!finished && fetchGen.current === gen) hideSilently(!manual);
+            }
+          })();
+        }, MAGIC_DELAY_MS),
+      );
+
+      return cleanup;
+    },
+    [inbox, item, onMirrorMissed],
+  );
+
+  const reanalyze = useCallback(() => {
+    runAnalysis(true);
+  }, [runAnalysis]);
 
   useEffect(() => {
     if (sessionStorage.getItem(SK.dismissed(item.id))) {
@@ -206,75 +334,18 @@ export function BrainMirrorPanel({
     }
 
     if (!eligible) return;
-
     if (!isBrainMirrorCandidate(item.text)) return;
     if (sessionStorage.getItem(SK.attempted(item.id))) return;
 
-    sessionStorage.setItem(SK.attempted(item.id), "1");
-    setPhase("thinking");
-
-    const abortController = new AbortController();
-    const timeouts: number[] = [];
-    let finished = false;
-
-    const cleanup = () => {
-      finished = true;
-      abortController.abort();
-      for (const id of timeouts) window.clearTimeout(id);
-    };
-
-    const hideSilently = (offerDateFallback = false) => {
-      if (finished) return;
-      cleanup();
-      setPhase("hidden");
-      if (offerDateFallback) onMirrorMissed?.(item);
-    };
-
-    const showResult = (mirror: BrainMirrorResult) => {
-      if (finished) return;
-      if (!mirror.items.length) {
-        hideSilently(true);
-        return;
-      }
-      cleanup();
-      setResult(mirror);
-      setPhase("ready");
-      void setInboxBrainMirror(inbox, item.id, mirror);
-    };
-
-    timeouts.push(
-      window.setTimeout(() => {
-        hideSilently(true);
-      }, THINKING_MAX_MS),
-    );
-
-    timeouts.push(
-      window.setTimeout(() => {
-        void (async () => {
-          if (finished) return;
-          try {
-            const mirror = await fetchBrainMirror(
-              item.text,
-              abortController.signal,
-            );
-            if (finished) return;
-            if (!mirror) {
-              hideSilently(true);
-              return;
-            }
-            showResult(mirror);
-          } catch {
-            if (!finished) hideSilently(true);
-          }
-        })();
-      }, MAGIC_DELAY_MS),
-    );
-
-    return cleanup;
-  }, [item.id, item.text, item.brain_mirror, eligible, inbox, onMirrorMissed]);
+    return runAnalysis(false);
+  }, [item.id, item.text, item.brain_mirror, eligible, runAnalysis]);
 
   useEffect(() => {
     if (phase !== "ready" || !result || autoActStarted.current) return;
+    if (skipAutoActOnce.current) {
+      skipAutoActOnce.current = false;
+      return;
+    }
     if (sessionStorage.getItem(SK.schedule(item.id))) return;
     if (!shouldAutoAct(result)) return;
 
@@ -288,9 +359,21 @@ export function BrainMirrorPanel({
     })();
   }, [phase, result, item, onAutoAct]);
 
-  if (phase === "idle" || phase === "hidden") return null;
-  if (phase === "thinking")
+  const hasText = item.text.trim().length >= 2;
+
+  if (phase === "thinking") {
     return <ThinkingIndicator inline={variant === "inline"} />;
+  }
+
+  if (phase === "hidden" || phase === "idle") {
+    if (!hasText) return null;
+    return (
+      <div className={variant === "inline" ? "mt-1.5" : "mt-3"}>
+        <ReanalyzeButton inline={variant === "inline"} onClick={reanalyze} />
+      </div>
+    );
+  }
+
   if (!result?.items.length) return null;
 
   const completedItems = new Set(result.completedItems ?? []);
@@ -310,6 +393,8 @@ export function BrainMirrorPanel({
       result={result}
       completedItems={completedItems}
       onToggleItem={toggleItem}
+      onReanalyze={reanalyze}
+      inline={variant === "inline"}
       onCancel={() => {
         sessionStorage.setItem(SK.dismissed(item.id), "1");
         const scheduleId = sessionStorage.getItem(SK.schedule(item.id));
@@ -320,7 +405,6 @@ export function BrainMirrorPanel({
         }
         setPhase("hidden");
       }}
-      inline={variant === "inline"}
     />
   );
 }

@@ -427,19 +427,20 @@ function Inbox() {
                   onLongPress={() => setMenuFor(it.id)}
                 >
                   <ChatBubble item={it} isNewest={isNewest}>
-                    {it.brain_mirror ||
-                    (bmEligibleIds.has(it.id) &&
-                      isBrainMirrorCandidate(it.text)) ? (
+                    {it.text.trim().length >= 2 && (
                       <BrainMirrorPanel
                         item={it}
                         inbox={inbox}
-                        eligible={bmEligibleIds.has(it.id)}
+                        eligible={
+                          bmEligibleIds.has(it.id) &&
+                          isBrainMirrorCandidate(it.text)
+                        }
                         onAutoAct={autoScheduleFromMirror}
                         onCancelAct={cancelMirrorSchedule}
                         onMirrorMissed={offerDateSchedule}
                         variant="inline"
                       />
-                    ) : null}
+                    )}
                   </ChatBubble>
                 </ChatSwipeRow>
               );

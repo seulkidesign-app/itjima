@@ -18,12 +18,13 @@ import { haptic } from "@/lib/haptics";
 import { ArchiveOrganizeSheet } from "@/components/ArchiveOrganizeSheet";
 import {
   archiveDisplayTitle,
-  archiveSearchHaystack,
   readArchivePins,
   toggleArchivePin,
   setArchiveTitle,
   readArchiveTitles,
 } from "@/lib/archiveMeta";
+import { recentArchiveItems, searchArchiveItems } from "@/lib/archiveSearch";
+import { ArchiveRelatedStrip } from "@/components/ArchiveRelatedStrip";
 import { ArchiveGridSkeleton } from "@/components/Skeleton";
 import { SwipeCard } from "@/components/SwipeCard";
 import { track } from "@/lib/analytics";
@@ -89,6 +90,9 @@ function Archive() {
   const [editItem, setEditItem] = useState<ArchiveItem | null>(null);
   const [editTitle, setEditTitle] = useState("");
   const [pins, setPins] = useState<Set<string>>(() => readArchivePins());
+  const [relatedForId, setRelatedForId] = useState<string | null>(null);
+  const [scrollToId, setScrollToId] = useState<string | null>(null);
+  const cardRefs = useRef<Record<string, HTMLDivElement | null>>({});
 
   useEffect(() => {
     const h = () => setPins(readArchivePins());
@@ -131,12 +135,18 @@ function Archive() {
     haptic(4);
   };
 
+  const searchMeta = useMemo(() => searchArchiveItems(items, q), [items, q]);
+
+  const recent = useMemo(() => recentArchiveItems(items, 5), [items]);
+
+  const hitById = useMemo(() => {
+    const m = new Map<string, (typeof searchMeta.hits)[0]>();
+    for (const h of searchMeta.hits) m.set(h.item.id, h);
+    return m;
+  }, [searchMeta.hits]);
+
   const filtered = useMemo(() => {
-    let list = items;
-    if (q.trim()) {
-      const needle = q.trim().toLowerCase();
-      list = list.filter((it) => archiveSearchHaystack(it).includes(needle));
-    }
+    let list = q.trim() ? searchMeta.hits.map((h) => h.item) : [...items];
     if (groupFilter !== "all") {
       list = list.filter((it) => groupOf(it.id, it.text) === groupFilter);
     }
@@ -146,7 +156,7 @@ function Archive() {
       return sortOrder === "newest" ? db - da : da - db;
     });
     return list;
-  }, [items, q, groupFilter, sortOrder, overrides]);
+  }, [items, q, groupFilter, sortOrder, overrides, searchMeta.hits]);
 
   const grouped = useMemo(() => {
     const map = new Map<string, typeof items>();
@@ -164,6 +174,16 @@ function Archive() {
       .filter((g) => g.items.length > 0);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [filtered, lang, overrides, allGroups]);
+
+  useEffect(() => {
+    if (!scrollToId) return;
+    const el = cardRefs.current[scrollToId];
+    if (el) {
+      el.scrollIntoView({ behavior: "smooth", block: "center" });
+      setRelatedForId(scrollToId);
+    }
+    setScrollToId(null);
+  }, [scrollToId, grouped]);
 
   const locale = lang === "en" ? "en-US" : "ko-KR";
 
@@ -337,11 +357,33 @@ function Archive() {
             <Search size={16} className="text-ink-soft" />
             <input
               value={q}
-              onChange={(e) => setQ(e.target.value)}
-              placeholder={t("보관한 생각 검색", "Search archived thoughts")}
+              onChange={(e) => {
+                setQ(e.target.value);
+                setRelatedForId(null);
+              }}
+              placeholder={t(
+                "보관한 생각 검색 (의미로도 찾아요)",
+                "Search thoughts (semantic too)",
+              )}
               className="flex-1 bg-transparent text-[14px] text-ink placeholder:text-ink-soft/70 focus:outline-none"
             />
           </div>
+          {q.trim() && (
+            <p className="mt-1.5 px-1 text-[11px] text-ink-soft">
+              {filtered.length > 0 ? (
+                <>
+                  {t(`${filtered.length}개`, `${filtered.length} results`)}
+                  {searchMeta.usedSemantic && (
+                    <span className="ml-1.5 text-primary">
+                      · {t("의미 검색 포함", "includes semantic matches")}
+                    </span>
+                  )}
+                </>
+              ) : (
+                t("검색 결과가 없어요", "No results")
+              )}
+            </p>
+          )}
           <div className="mt-2 flex flex-wrap items-center gap-1.5">
             <button
               type="button"
@@ -395,186 +437,256 @@ function Archive() {
           <ArchiveGridSkeleton />
         ) : items.length === 0 ? (
           <Empty />
+        ) : filtered.length === 0 && q.trim() ? (
+          <div className="rounded-[24px] bg-ink/[0.04] px-5 py-10 text-center">
+            <p className="text-[15px] font-semibold text-ink">
+              {t("비슷한 생각을 못 찾았어요", "No similar thoughts found")}
+            </p>
+            <p className="mt-1 text-[13px] text-ink-soft">
+              {t("다른 키워드로 검색해 보세요", "Try different keywords")}
+            </p>
+          </div>
         ) : (
-          grouped.map((g) => {
-            const isCollapsed = collapsed.has(g.key);
-            const isDropTarget = dragOver === g.key;
-            return (
-              <section
-                key={g.key}
-                onDragOver={(e) => {
-                  e.preventDefault();
-                  if (dragOver !== g.key) setDragOver(g.key);
-                }}
-                onDragLeave={() => {
-                  if (dragOver === g.key) setDragOver(null);
-                }}
-                onDrop={(e) => {
-                  e.preventDefault();
-                  const id = e.dataTransfer.getData("text/plain") || dragId;
-                  if (id) moveToGroup(id, g.key);
-                  setDragOver(null);
-                  setDragId(null);
-                }}
-                className={`rounded-[24px] transition ${isDropTarget ? "bg-primary/10 ring-2 ring-primary/60" : ""}`}
-              >
-                <div
-                  onClick={() => toggleCollapse(g.key)}
-                  onPointerDown={() => startHeaderPress(g)}
-                  onPointerUp={cancelHeaderPress}
-                  onPointerLeave={cancelHeaderPress}
-                  className="mb-2 flex w-full cursor-pointer items-center justify-between px-1 py-1 text-left select-none"
-                >
-                  <h2 className="text-[11px] font-extrabold uppercase tracking-[0.18em] text-ink">
-                    <span className="text-base">{g.emoji}</span> {g.label}{" "}
-                    <span className="text-ink-soft/70">/ {g.items.length}</span>
-                    {g.custom && (
-                      <span className="ml-1.5 bg-primary px-1.5 py-0.5 text-[9px] font-extrabold text-ink">
-                        {t("MINE", "MINE")}
-                      </span>
-                    )}
-                  </h2>
-                  <ChevronDown
-                    size={16}
-                    className={`text-ink-soft transition-transform ${isCollapsed ? "-rotate-90" : ""}`}
-                  />
+          <>
+            {!q.trim() && recent.length > 0 && (
+              <section className="mb-2">
+                <h2 className="mb-2 px-1 text-[11px] font-extrabold uppercase tracking-[0.18em] text-ink-soft">
+                  {t("최근", "Recent")}
+                </h2>
+                <div className="flex gap-2 overflow-x-auto pb-1">
+                  {recent.map((it) => (
+                    <button
+                      key={it.id}
+                      type="button"
+                      onClick={() => setScrollToId(it.id)}
+                      className="touch-press min-w-[140px] max-w-[180px] shrink-0 rounded-[20px] bg-primary/20 px-3 py-3 text-left"
+                    >
+                      <p className="line-clamp-2 text-[13px] font-semibold text-ink">
+                        {archiveDisplayTitle(it.id, it)}
+                      </p>
+                      <p className="mt-1 text-[10px] text-ink-soft">
+                        {new Date(it.created_at).toLocaleDateString(locale)}
+                      </p>
+                    </button>
+                  ))}
                 </div>
-                {!isCollapsed && (
-                  <div className="flex flex-col gap-3">
-                    {g.items.map((it) => {
-                      const isSel = selected.has(it.id);
-                      const isDragging = dragId === it.id;
-                      const swipeDisabled = selecting || isDragging;
-                      return (
-                        <SwipeCard
-                          key={it.id}
-                          disabled={swipeDisabled}
-                          onSwipe={(dir) => {
-                            if (dir === "right") sendToSchedule(it);
-                            else remove(it.id);
-                          }}
-                        >
-                          <div
-                            draggable
-                            onDragStart={(e) => {
-                              e.dataTransfer.setData("text/plain", it.id);
-                              e.dataTransfer.effectAllowed = "move";
-                              setDragId(it.id);
+              </section>
+            )}
+            {grouped.map((g) => {
+              const isCollapsed = collapsed.has(g.key);
+              const isDropTarget = dragOver === g.key;
+              return (
+                <section
+                  key={g.key}
+                  onDragOver={(e) => {
+                    e.preventDefault();
+                    if (dragOver !== g.key) setDragOver(g.key);
+                  }}
+                  onDragLeave={() => {
+                    if (dragOver === g.key) setDragOver(null);
+                  }}
+                  onDrop={(e) => {
+                    e.preventDefault();
+                    const id = e.dataTransfer.getData("text/plain") || dragId;
+                    if (id) moveToGroup(id, g.key);
+                    setDragOver(null);
+                    setDragId(null);
+                  }}
+                  className={`rounded-[24px] transition ${isDropTarget ? "bg-primary/10 ring-2 ring-primary/60" : ""}`}
+                >
+                  <div
+                    onClick={() => toggleCollapse(g.key)}
+                    onPointerDown={() => startHeaderPress(g)}
+                    onPointerUp={cancelHeaderPress}
+                    onPointerLeave={cancelHeaderPress}
+                    className="mb-2 flex w-full cursor-pointer items-center justify-between px-1 py-1 text-left select-none"
+                  >
+                    <h2 className="text-[11px] font-extrabold uppercase tracking-[0.18em] text-ink">
+                      <span className="text-base">{g.emoji}</span> {g.label}{" "}
+                      <span className="text-ink-soft/70">
+                        / {g.items.length}
+                      </span>
+                      {g.custom && (
+                        <span className="ml-1.5 bg-primary px-1.5 py-0.5 text-[9px] font-extrabold text-ink">
+                          {t("MINE", "MINE")}
+                        </span>
+                      )}
+                    </h2>
+                    <ChevronDown
+                      size={16}
+                      className={`text-ink-soft transition-transform ${isCollapsed ? "-rotate-90" : ""}`}
+                    />
+                  </div>
+                  {!isCollapsed && (
+                    <div className="flex flex-col gap-3">
+                      {g.items.map((it) => {
+                        const isSel = selected.has(it.id);
+                        const isDragging = dragId === it.id;
+                        const swipeDisabled = selecting || isDragging;
+                        return (
+                          <SwipeCard
+                            key={it.id}
+                            disabled={swipeDisabled}
+                            onSwipe={(dir) => {
+                              if (dir === "right") sendToSchedule(it);
+                              else remove(it.id);
                             }}
-                            onDragEnd={() => {
-                              setDragId(null);
-                              setDragOver(null);
-                            }}
-                            onPointerDown={() => startLongPress(it.id)}
-                            onPointerUp={cancelLongPress}
-                            onPointerLeave={cancelLongPress}
-                            onClick={() => toggleSelect(it.id)}
-                            className={`px-[22px] py-5 transition ${
-                              isSel ? "ring-2 ring-primary scale-[0.98]" : ""
-                            } ${isDragging ? "opacity-40" : ""}`}
                           >
-                            <div className="flex gap-3">
-                              {selecting && (
-                                <div
-                                  className={`mt-1 flex h-5 w-5 shrink-0 items-center justify-center rounded-full border-2 ${
-                                    isSel
-                                      ? "border-primary bg-primary text-ink"
-                                      : "border-ink/20"
-                                  }`}
-                                >
-                                  {isSel && <Check size={12} strokeWidth={3} />}
-                                </div>
-                              )}
-                              {it.images?.[0] && (
-                                <img
-                                  src={it.images[0]}
-                                  alt=""
-                                  className="h-14 w-14 rounded-[24px] object-cover"
-                                />
-                              )}
-                              <div className="flex-1 min-w-0">
-                                <div className="flex items-start justify-between gap-2">
-                                  <p className="text-[15px] font-semibold leading-snug text-ink line-clamp-2">
-                                    {archiveDisplayTitle(it.id, it)}
-                                  </p>
-                                  {!selecting && (
-                                    <button
-                                      type="button"
-                                      onClick={(e) => {
-                                        e.stopPropagation();
-                                        toggleArchivePin(it.id);
-                                        setPins(readArchivePins());
-                                        haptic(4);
-                                      }}
-                                      aria-label={t("핀", "Pin")}
-                                    >
-                                      <Pin
-                                        size={14}
-                                        className={
-                                          pins.has(it.id)
-                                            ? "fill-primary text-primary"
-                                            : "text-ink-soft"
-                                        }
-                                      />
-                                    </button>
-                                  )}
-                                </div>
-                                <p className="mt-1 whitespace-pre-wrap text-[13px] leading-relaxed text-ink-soft line-clamp-2">
-                                  {it.raw_text ?? it.text}
-                                </p>
-                                {it.brain_mirror?.title && (
-                                  <p className="mt-1.5 text-[11px] text-ink-soft">
-                                    🧠 {it.brain_mirror.title}
-                                  </p>
+                            <div
+                              ref={(el) => {
+                                cardRefs.current[it.id] = el;
+                              }}
+                              draggable
+                              onDragStart={(e) => {
+                                e.dataTransfer.setData("text/plain", it.id);
+                                e.dataTransfer.effectAllowed = "move";
+                                setDragId(it.id);
+                              }}
+                              onDragEnd={() => {
+                                setDragId(null);
+                                setDragOver(null);
+                              }}
+                              onPointerDown={() => startLongPress(it.id)}
+                              onPointerUp={cancelLongPress}
+                              onPointerLeave={cancelLongPress}
+                              onClick={() => toggleSelect(it.id)}
+                              className={`px-[22px] py-5 transition ${
+                                isSel ? "ring-2 ring-primary scale-[0.98]" : ""
+                              } ${isDragging ? "opacity-40" : ""}`}
+                            >
+                              <div className="flex gap-3">
+                                {selecting && (
+                                  <div
+                                    className={`mt-1 flex h-5 w-5 shrink-0 items-center justify-center rounded-full border-2 ${
+                                      isSel
+                                        ? "border-primary bg-primary text-ink"
+                                        : "border-ink/20"
+                                    }`}
+                                  >
+                                    {isSel && (
+                                      <Check size={12} strokeWidth={3} />
+                                    )}
+                                  </div>
                                 )}
-                                <div className="mt-3 flex items-center justify-between gap-2 text-meta">
-                                  <span>
-                                    {g.emoji} {g.label}
-                                  </span>
-                                  <div className="flex items-center gap-2">
-                                    <button
-                                      type="button"
-                                      onClick={(e) => {
-                                        e.stopPropagation();
-                                        setEditItem(it);
-                                        setEditTitle(
-                                          readArchiveTitles()[it.id] ??
-                                            archiveDisplayTitle(it.id, it),
-                                        );
-                                      }}
-                                      className="text-[11px] underline"
-                                    >
-                                      {t("제목", "Title")}
-                                    </button>
-                                    <span>
-                                      {new Date(
-                                        it.created_at,
-                                      ).toLocaleDateString(locale)}
-                                    </span>
+                                {it.images?.[0] && (
+                                  <img
+                                    src={it.images[0]}
+                                    alt=""
+                                    className="h-14 w-14 rounded-[24px] object-cover"
+                                  />
+                                )}
+                                <div className="flex-1 min-w-0">
+                                  <div className="flex items-start justify-between gap-2">
+                                    <p className="text-[15px] font-semibold leading-snug text-ink line-clamp-2">
+                                      {archiveDisplayTitle(it.id, it)}
+                                    </p>
                                     {!selecting && (
                                       <button
+                                        type="button"
                                         onClick={(e) => {
                                           e.stopPropagation();
-                                          remove(it.id);
+                                          toggleArchivePin(it.id);
+                                          setPins(readArchivePins());
+                                          haptic(4);
                                         }}
-                                        aria-label={t("삭제", "Delete")}
+                                        aria-label={t("핀", "Pin")}
                                       >
-                                        <Trash2 size={13} />
+                                        <Pin
+                                          size={14}
+                                          className={
+                                            pins.has(it.id)
+                                              ? "fill-primary text-primary"
+                                              : "text-ink-soft"
+                                          }
+                                        />
                                       </button>
                                     )}
                                   </div>
+                                  <p className="mt-1 whitespace-pre-wrap text-[13px] leading-relaxed text-ink-soft line-clamp-2">
+                                    {it.raw_text ?? it.text}
+                                  </p>
+                                  {it.brain_mirror?.title && (
+                                    <p className="mt-1.5 text-[11px] text-ink-soft">
+                                      🧠 {it.brain_mirror.title}
+                                    </p>
+                                  )}
+                                  {q.trim() && hitById.get(it.id)?.semantic && (
+                                    <span className="mt-1.5 inline-block rounded-full bg-primary/25 px-2 py-0.5 text-[10px] font-bold text-ink">
+                                      {t("의미 일치", "Semantic match")}
+                                    </span>
+                                  )}
+                                  <div className="mt-3 flex items-center justify-between gap-2 text-meta">
+                                    <span>
+                                      {g.emoji} {g.label}
+                                    </span>
+                                    <div className="flex items-center gap-2">
+                                      {!selecting && (
+                                        <button
+                                          type="button"
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            setRelatedForId((prev) =>
+                                              prev === it.id ? null : it.id,
+                                            );
+                                          }}
+                                          className="text-[11px] font-semibold text-ink-soft underline"
+                                        >
+                                          {relatedForId === it.id
+                                            ? t("접기", "Hide")
+                                            : t("관련", "Related")}
+                                        </button>
+                                      )}
+                                      <button
+                                        type="button"
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          setEditItem(it);
+                                          setEditTitle(
+                                            readArchiveTitles()[it.id] ??
+                                              archiveDisplayTitle(it.id, it),
+                                          );
+                                        }}
+                                        className="text-[11px] underline"
+                                      >
+                                        {t("제목", "Title")}
+                                      </button>
+                                      <span>
+                                        {new Date(
+                                          it.created_at,
+                                        ).toLocaleDateString(locale)}
+                                      </span>
+                                      {!selecting && (
+                                        <button
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            remove(it.id);
+                                          }}
+                                          aria-label={t("삭제", "Delete")}
+                                        >
+                                          <Trash2 size={13} />
+                                        </button>
+                                      )}
+                                    </div>
+                                  </div>
+                                  {relatedForId === it.id && !selecting && (
+                                    <ArchiveRelatedStrip
+                                      item={it}
+                                      items={items}
+                                      onSelect={(rel) => setScrollToId(rel.id)}
+                                    />
+                                  )}
                                 </div>
                               </div>
                             </div>
-                          </div>
-                        </SwipeCard>
-                      );
-                    })}
-                  </div>
-                )}
-              </section>
-            );
-          })
+                          </SwipeCard>
+                        );
+                      })}
+                    </div>
+                  )}
+                </section>
+              );
+            })}
+          </>
         )}
       </div>
 
