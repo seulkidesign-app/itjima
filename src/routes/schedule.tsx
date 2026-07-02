@@ -7,12 +7,14 @@ import {
   type ComponentProps,
   type PointerEvent as ReactPointerEvent,
 } from "react";
-import { Plus, Pin, Check, Bell, BellOff } from "lucide-react";
+import { Plus, Pin, Check, Bell, BellOff, Timer } from "lucide-react";
+import { animate } from "framer-motion";
 import { useArchive, useSchedules, type ScheduleItem } from "@/lib/store";
-import { countdown } from "@/lib/dateDetect";
 import { ScheduleSheet } from "@/components/ScheduleSheet";
 import { ReminderSheet } from "@/components/ReminderSheet";
-import { ScheduleAlarmChips } from "@/components/ScheduleAlarmChips";
+import { ScheduleAlarmSheet } from "@/components/ScheduleAlarmSheet";
+import { ScheduleTimerSheet } from "@/components/ScheduleTimerSheet";
+import { CountdownRing } from "@/components/CountdownRing";
 import {
   CalendarDragLayer,
   CalendarDayCell,
@@ -21,11 +23,22 @@ import { ScheduleListSkeleton } from "@/components/Skeleton";
 import {
   bindInAppReminders,
   clearReminderOffset,
+  clearActiveTimer,
   effectiveAlarmAt,
   formatAlarmLabel,
+  formatTimerLabel,
+  getActiveTimerEnd,
   presetToAlarmAt,
+  presetToTimerEnd,
+  setActiveTimer,
   type AlarmPreset,
+  type TimerPreset,
 } from "@/lib/scheduleReminders";
+import {
+  countdownRingProgress,
+  formatRemainingLong,
+  remainingUntil,
+} from "@/lib/scheduleTime";
 import {
   groupSchedules,
   isMissed,
@@ -74,6 +87,19 @@ function usePins() {
   return { pins, toggle };
 }
 
+function useTimerTick() {
+  const [, setTick] = useState(0);
+  useEffect(() => {
+    const id = setInterval(() => setTick((n) => n + 1), 1000);
+    const h = () => setTick((n) => n + 1);
+    window.addEventListener("itjima:timers", h);
+    return () => {
+      clearInterval(id);
+      window.removeEventListener("itjima:timers", h);
+    };
+  }, []);
+}
+
 function Schedule() {
   const t = useT();
   const { lang } = useLang();
@@ -84,7 +110,9 @@ function Schedule() {
     open: false,
   });
   const [reminderSheet, setReminderSheet] = useState<ScheduleItem | null>(null);
-  const [, tickN] = useState(0);
+  const [alarmSheet, setAlarmSheet] = useState<ScheduleItem | null>(null);
+  const [timerSheet, setTimerSheet] = useState<ScheduleItem | null>(null);
+  useTimerTick();
   const { pins, toggle: togglePin } = usePins();
 
   const activeItems = useMemo(
@@ -97,17 +125,12 @@ function Schedule() {
   );
 
   useEffect(() => {
-    const id = setInterval(() => tickN((n) => n + 1), 30_000);
-    return () => clearInterval(id);
-  }, []);
-
-  useEffect(() => {
     return bindInAppReminders(items, (title, body) => {
       if (Notification.permission === "granted") {
         new Notification(title, { body });
       }
     });
-  }, [items, tickN]);
+  }, [items]);
 
   const armAlarmAt = async (s: ScheduleItem, at: Date) => {
     if ("Notification" in window && Notification.permission === "default") {
@@ -125,6 +148,19 @@ function Schedule() {
   const disarmReminder = async (s: ScheduleItem) => {
     clearReminderOffset(s.id);
     await update(s.id, { alarm: false, alarm_at: null });
+  };
+
+  const startTimer = async (s: ScheduleItem, preset: TimerPreset) => {
+    if ("Notification" in window && Notification.permission === "default") {
+      await Notification.requestPermission();
+    }
+    setActiveTimer(s.id, presetToTimerEnd(preset));
+    toast.success(t("타이머 시작", "Timer started"));
+  };
+
+  const stopTimer = (s: ScheduleItem) => {
+    clearActiveTimer(s.id);
+    toast(t("타이머 종료", "Timer stopped"));
   };
 
   const listSections = useMemo(
@@ -194,8 +230,8 @@ function Schedule() {
     onEdit: () => setSheet({ open: true, edit: s }),
     onComplete: () => markDone(s),
     onMoveToArchive: () => moveDoneToArchive(s),
-    onArmPreset: (preset: AlarmPreset) => armFromPreset(s, preset),
-    onArmCustom: () => setReminderSheet(s),
+    onAlarm: () => setAlarmSheet(s),
+    onTimer: () => setTimerSheet(s),
     onDisarm: () => disarmReminder(s),
     onDelete: () => {
       remove(s.id);
@@ -306,6 +342,7 @@ function Schedule() {
 
       {reminderSheet && (
         <ReminderSheet
+          open
           schedule={reminderSheet}
           onClose={() => setReminderSheet(null)}
           onConfirmAt={(iso) => {
@@ -315,47 +352,72 @@ function Schedule() {
         />
       )}
 
-      {sheet.open && (
-        <ScheduleSheet
-          open
-          initialText={sheet.edit?.text}
-          initialStart={
-            sheet.edit ? new Date(sheet.edit.start_time) : undefined
+      <ScheduleAlarmSheet
+        schedule={alarmSheet}
+        open={!!alarmSheet}
+        onClose={() => setAlarmSheet(null)}
+        armed={alarmSheet?.alarm ?? false}
+        onSelectPreset={(preset) => {
+          if (alarmSheet) void armFromPreset(alarmSheet, preset);
+        }}
+        onCustom={() => {
+          if (alarmSheet) setReminderSheet(alarmSheet);
+        }}
+        onDisarm={() => {
+          if (alarmSheet) void disarmReminder(alarmSheet);
+        }}
+      />
+
+      <ScheduleTimerSheet
+        schedule={timerSheet}
+        open={!!timerSheet}
+        onClose={() => setTimerSheet(null)}
+        active={timerSheet ? !!getActiveTimerEnd(timerSheet.id) : false}
+        onSelectPreset={(preset) => {
+          if (timerSheet) void startTimer(timerSheet, preset);
+        }}
+        onClear={() => {
+          if (timerSheet) stopTimer(timerSheet);
+        }}
+      />
+
+      <ScheduleSheet
+        open={sheet.open}
+        initialText={sheet.edit?.text}
+        initialStart={sheet.edit ? new Date(sheet.edit.start_time) : undefined}
+        initialEnd={sheet.edit ? new Date(sheet.edit.end_time) : undefined}
+        initialAllDay={sheet.edit?.all_day}
+        initialRepeat={sheet.edit?.repeat}
+        saveLabel={sheet.edit ? t("저장", "Save") : undefined}
+        onClose={() => setSheet({ open: false })}
+        onSave={async (text, start, end, opts) => {
+          if (sheet.edit) {
+            await update(sheet.edit.id, {
+              text,
+              start_time: start.toISOString(),
+              end_time: end.toISOString(),
+              all_day: opts?.allDay ?? false,
+              repeat: opts?.repeat ?? null,
+            });
+            toast.success(t("수정됐어요", "Updated"));
+          } else {
+            await add({
+              text,
+              start_time: start.toISOString(),
+              end_time: end.toISOString(),
+              alarm: false,
+              all_day: opts?.allDay ?? false,
+              repeat: opts?.repeat ?? null,
+            });
+            track("schedule_created", {
+              source: "manual",
+              text_length: text.length,
+            });
+            toast.success(t("등록됐어요", "Added"));
           }
-          initialEnd={sheet.edit ? new Date(sheet.edit.end_time) : undefined}
-          initialAllDay={sheet.edit?.all_day}
-          initialRepeat={sheet.edit?.repeat}
-          saveLabel={sheet.edit ? t("저장", "Save") : undefined}
-          onClose={() => setSheet({ open: false })}
-          onSave={async (text, start, end, opts) => {
-            if (sheet.edit) {
-              await update(sheet.edit.id, {
-                text,
-                start_time: start.toISOString(),
-                end_time: end.toISOString(),
-                all_day: opts?.allDay ?? false,
-                repeat: opts?.repeat ?? null,
-              });
-              toast.success(t("수정됐어요", "Updated"));
-            } else {
-              await add({
-                text,
-                start_time: start.toISOString(),
-                end_time: end.toISOString(),
-                alarm: false,
-                all_day: opts?.allDay ?? false,
-                repeat: opts?.repeat ?? null,
-              });
-              track("schedule_created", {
-                source: "manual",
-                text_length: text.length,
-              });
-              toast.success(t("등록됐어요", "Added"));
-            }
-            setSheet({ open: false });
-          }}
-        />
-      )}
+          setSheet({ open: false });
+        }}
+      />
     </div>
   );
 }
@@ -371,8 +433,8 @@ function ScheduleCard({
   onEdit,
   onComplete,
   onMoveToArchive,
-  onArmPreset,
-  onArmCustom,
+  onAlarm,
+  onTimer,
   onDisarm,
   onDelete,
 }: {
@@ -386,144 +448,270 @@ function ScheduleCard({
   onEdit: () => void;
   onComplete: () => void;
   onMoveToArchive?: () => void;
-  onArmPreset: (preset: AlarmPreset) => void;
-  onArmCustom: () => void;
+  onAlarm: () => void;
+  onTimer: () => void;
   onDisarm: () => void;
   onDelete: () => void;
 }) {
   const t = useT();
   const { lang } = useLang();
-  const [showAlarmChips, setShowAlarmChips] = useState(false);
   const start = new Date(s.start_time);
   const end = new Date(s.end_time);
-  const rel =
-    lang === "en" ? translateCountdown(countdown(start)) : countdown(start);
+  const rel = formatRemainingLong(start, lang);
   const title = scheduleDisplayTitle(s);
   const preview = rawPreview(s);
   const alarmAt = s.alarm ? effectiveAlarmAt(s) : null;
+  const timerEnd = getActiveTimerEnd(s.id);
+  const ringProgress = countdownRingProgress(s.start_time, s.created_at);
+  const urgent =
+    remainingUntil(start).ms > 0 && remainingUntil(start).ms < 3600_000;
   const pressTimer = useRef<number | null>(null);
   const longFired = useRef(false);
+  const dragging = useRef(false);
+  const dxRef = useRef(0);
+  const [dx, setDx] = useState(0);
+  const [acting, setActing] = useState(false);
+  const startX = useRef(0);
 
-  const startPress = () => {
-    longFired.current = false;
-    pressTimer.current = window.setTimeout(() => {
-      longFired.current = true;
-      onPin();
-    }, 500);
-  };
-  const endPress = () => {
+  dxRef.current = dx;
+
+  const clearPress = () => {
     if (pressTimer.current) {
       clearTimeout(pressTimer.current);
       pressTimer.current = null;
     }
   };
 
+  const onDown = (e: ReactPointerEvent<HTMLDivElement>) => {
+    if (done || acting) return;
+    dragging.current = true;
+    longFired.current = false;
+    startX.current = e.clientX;
+    clearPress();
+    pressTimer.current = window.setTimeout(() => {
+      if (dragging.current && !acting) {
+        longFired.current = true;
+        onEdit();
+      }
+    }, 480);
+    (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
+  };
+
+  const onMove = (e: ReactPointerEvent<HTMLDivElement>) => {
+    if (!dragging.current || acting || done) return;
+    const next = Math.max(0, Math.min(120, e.clientX - startX.current));
+    if (next > 8) clearPress();
+    dxRef.current = next;
+    setDx(next);
+  };
+
+  const onUp = () => {
+    if (!dragging.current) return;
+    dragging.current = false;
+    clearPress();
+    if (longFired.current) {
+      dxRef.current = 0;
+      setDx(0);
+      return;
+    }
+    if (dxRef.current >= 72) {
+      setActing(true);
+      animate(dxRef.current, 140, {
+        type: "spring",
+        stiffness: 340,
+        damping: 28,
+        onUpdate: (v) => {
+          dxRef.current = v;
+          setDx(v);
+        },
+        onComplete: () => {
+          onComplete();
+          setActing(false);
+          dxRef.current = 0;
+          setDx(0);
+        },
+      });
+      return;
+    }
+    animate(dxRef.current, 0, {
+      type: "spring",
+      stiffness: 420,
+      damping: 32,
+      onUpdate: (v) => {
+        dxRef.current = v;
+        setDx(v);
+      },
+    });
+  };
+
+  const showRing = !done && (emphasize || timer || ringProgress > 0.05);
+  const swipeHint = dx > 24;
+
   return (
-    <div
-      className={`card-radius shadow-card px-[22px] py-5 transition ${
-        done ? "opacity-50" : ""
-      } ${emphasize || timer ? "ring-2 ring-primary/30 bg-primary/10" : pinned ? "bg-primary/15 ring-2 ring-primary/40" : "glass"} ${
-        missed && !done ? "border-l-4 border-amber-300/80" : ""
-      }`}
-      onPointerDown={startPress}
-      onPointerUp={endPress}
-      onPointerLeave={endPress}
-      onClick={() => {
-        if (!longFired.current) onEdit();
-      }}
-    >
-      <div className="flex items-start gap-3">
-        <button
-          type="button"
-          onClick={(e) => {
-            e.stopPropagation();
-            if (done) onMoveToArchive?.();
-            else onComplete();
-          }}
-          className={`mt-1 flex h-6 w-6 shrink-0 items-center justify-center rounded-full border-2 ${
-            done
-              ? "border-primary bg-primary text-ink"
-              : "border-ink/20 hover:border-primary"
-          }`}
-          aria-label={t("완료", "Done")}
+    <div className="relative">
+      {swipeHint && !done && (
+        <div
+          className="pointer-events-none absolute left-3 top-1/2 z-0 flex -translate-y-1/2 items-center gap-1 rounded-full bg-primary/90 px-3 py-1.5 text-[12px] font-extrabold text-ink shadow-card"
+          style={{ opacity: Math.min(1, dx / 72) }}
         >
-          {done && <Check size={14} strokeWidth={3} />}
-        </button>
-        <div className="min-w-0 flex-1">
-          <div className="flex flex-wrap items-center gap-2">
-            {pinned && <Pin size={12} className="fill-primary text-primary" />}
-            <span
-              className={`font-num font-bold text-ink ${emphasize || timer ? "text-[18px]" : "text-[14px]"}`}
-            >
-              {rel}
-            </span>
-            {missed && !done && (
-              <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-bold text-amber-800">
-                {t("시간 지남", "Past due")}
-              </span>
-            )}
-          </div>
-          <div className="mt-1 text-[15px] font-semibold leading-snug text-ink">
-            {title}
-          </div>
-          {preview && preview !== title && (
-            <p className="mt-0.5 line-clamp-1 text-[12px] text-ink-soft">
-              {preview}
-            </p>
-          )}
-          <div className="mt-1.5 text-meta">
-            {fmt(start)} → {fmt(end)}
-          </div>
-          {alarmAt && (
+          <Check size={14} strokeWidth={3} />
+          {t("완료", "Done")}
+        </div>
+      )}
+      <div
+        className={`card-radius shadow-card px-[18px] py-5 transition ${
+          done ? "opacity-50" : ""
+        } ${emphasize || timer ? "ring-2 ring-primary/30 bg-primary/10" : pinned ? "bg-primary/15 ring-2 ring-primary/40" : "glass"} ${
+          missed && !done ? "border-l-4 border-amber-300/80" : ""
+        }`}
+        style={{
+          transform: `translateX(${dx}px)`,
+          transition: dragging.current || acting ? "none" : undefined,
+        }}
+        onPointerDown={onDown}
+        onPointerMove={onMove}
+        onPointerUp={onUp}
+        onPointerCancel={onUp}
+      >
+        <div className="flex items-start gap-3">
+          {showRing ? (
+            <CountdownRing
+              progress={ringProgress}
+              target={start}
+              lang={lang}
+              size={emphasize || timer ? 64 : 56}
+              urgent={urgent || !!missed}
+              className="mt-0.5"
+            />
+          ) : (
             <button
               type="button"
               onClick={(e) => {
                 e.stopPropagation();
-                onDisarm();
+                if (done) onMoveToArchive?.();
+                else onComplete();
               }}
-              className="mt-1.5 inline-flex items-center gap-1 rounded-full bg-primary/30 px-2 py-0.5 text-[11px] font-bold text-ink"
+              className={`mt-1 flex h-6 w-6 shrink-0 items-center justify-center rounded-full border-2 ${
+                done
+                  ? "border-primary bg-primary text-ink"
+                  : "border-ink/20 hover:border-primary"
+              }`}
+              aria-label={t("완료", "Done")}
             >
-              <Bell size={11} /> {formatAlarmLabel(alarmAt, lang)}
+              {done && <Check size={14} strokeWidth={3} />}
             </button>
+          )}
+          <div className="min-w-0 flex-1">
+            <div className="flex flex-wrap items-center gap-2">
+              {pinned && (
+                <Pin size={12} className="fill-primary text-primary" />
+              )}
+              <span
+                className={`font-num font-bold text-ink ${emphasize || timer ? "text-[18px]" : "text-[14px]"}`}
+              >
+                {rel}
+              </span>
+              {missed && !done && (
+                <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-bold text-amber-800">
+                  {t("시간 지남", "Past due")}
+                </span>
+              )}
+            </div>
+            <div className="mt-1 text-[15px] font-semibold leading-snug text-ink">
+              {title}
+            </div>
+            {preview && preview !== title && (
+              <p className="mt-0.5 line-clamp-1 text-[12px] text-ink-soft">
+                {preview}
+              </p>
+            )}
+            <div className="mt-1.5 text-meta">
+              {fmt(start)} → {fmt(end)}
+            </div>
+            {alarmAt && (
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onDisarm();
+                }}
+                className="mt-1.5 inline-flex items-center gap-1 rounded-full bg-primary/30 px-2 py-0.5 text-[11px] font-bold text-ink"
+              >
+                <Bell size={11} /> {formatAlarmLabel(alarmAt, lang)}
+              </button>
+            )}
+            {timerEnd && (
+              <span className="mt-1.5 inline-flex items-center gap-1 rounded-full bg-ink/10 px-2 py-0.5 text-[11px] font-bold text-ink">
+                <Timer size={11} /> {formatTimerLabel(timerEnd, lang)}
+              </span>
+            )}
+          </div>
+          {!done && (
+            <div className="flex shrink-0 flex-col gap-1.5">
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onPin();
+                }}
+                aria-label={t("고정", "Pin")}
+                className={`flex h-8 w-8 items-center justify-center rounded-full transition ${
+                  pinned ? "bg-primary text-ink" : "bg-white/70 text-ink-soft"
+                }`}
+              >
+                <Pin size={14} className={pinned ? "fill-current" : ""} />
+              </button>
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onTimer();
+                }}
+                aria-label={t("타이머", "Timer")}
+                className={`flex h-8 w-8 items-center justify-center rounded-full transition ${
+                  timerEnd ? "bg-ink text-white" : "bg-white/70 text-ink-soft"
+                }`}
+              >
+                <Timer size={14} />
+              </button>
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onAlarm();
+                }}
+                aria-label={t("알림", "Reminder")}
+                className={`flex h-8 w-8 items-center justify-center rounded-full transition ${
+                  s.alarm ? "bg-primary text-ink" : "bg-white/70 text-ink-soft"
+                }`}
+              >
+                {s.alarm ? <Bell size={14} /> : <BellOff size={14} />}
+              </button>
+            </div>
           )}
         </div>
         {!done && (
-          <button
-            type="button"
-            onClick={(e) => {
-              e.stopPropagation();
-              if (s.alarm) onDisarm();
-              else setShowAlarmChips((v) => !v);
-            }}
-            aria-label={t("알림", "Reminder")}
-            className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full transition ${
-              s.alarm ? "bg-primary text-ink" : "bg-white/70 text-ink-soft"
-            }`}
-          >
-            {s.alarm ? <Bell size={16} /> : <BellOff size={16} />}
-          </button>
+          <p className="mt-3 text-[10px] text-ink-soft/80">
+            {t(
+              "→ 밀어 완료 · 길게 눌러 수정",
+              "→ Swipe to complete · Hold to edit",
+            )}
+          </p>
+        )}
+        {!done && (
+          <div className="mt-2 flex justify-end">
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                onDelete();
+              }}
+              className="text-[12px] font-medium text-ink-soft hover:text-ink"
+            >
+              {t("삭제", "Delete")}
+            </button>
+          </div>
         )}
       </div>
-      {showAlarmChips && !done && (
-        <ScheduleAlarmChips
-          onSelect={onArmPreset}
-          onCustom={onArmCustom}
-          onDismiss={() => setShowAlarmChips(false)}
-        />
-      )}
-      {!done && (
-        <div className="mt-3 flex justify-end gap-3">
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              onDelete();
-            }}
-            className="text-[12px] font-medium text-ink-soft hover:text-ink"
-          >
-            {t("삭제", "Delete")}
-          </button>
-        </div>
-      )}
     </div>
   );
 }
@@ -558,18 +746,6 @@ function DoneSection({
       )}
     </section>
   );
-}
-
-function translateCountdown(label: string) {
-  return label
-    .replace(/(\d+)분 후/, "in $1m")
-    .replace(/(\d+)시간 후/, "in $1h")
-    .replace(/(\d+)일 후/, "in $1d")
-    .replace(/(\d+)분 전/, "$1m ago")
-    .replace(/(\d+)시간 전/, "$1h ago")
-    .replace(/(\d+)일 전/, "$1d ago")
-    .replace(/곧/, "soon")
-    .replace(/지금/, "now");
 }
 
 function fmt(d: Date) {

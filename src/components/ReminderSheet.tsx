@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { BottomSheet } from "./BottomSheet";
 import { WheelPicker } from "./WheelPicker";
 import type { ScheduleItem } from "@/lib/store";
 import { useT } from "@/lib/i18n";
@@ -22,6 +23,7 @@ function dateToPicker(d: Date) {
 
 type Props = {
   schedule?: ScheduleItem;
+  open: boolean;
   onClose: () => void;
   /** Legacy: offset before event start */
   onConfirm?: (offset: "at" | "10m" | "1h") => void;
@@ -31,6 +33,7 @@ type Props = {
 
 export function ReminderSheet({
   schedule,
+  open,
   onClose,
   onConfirm,
   onConfirmAt,
@@ -38,6 +41,12 @@ export function ReminderSheet({
   const t = useT();
   const base = schedule ? new Date(schedule.start_time) : new Date();
   const [picker, setPicker] = useState(() => dateToPicker(base));
+
+  useEffect(() => {
+    if (!open) return;
+    const b = schedule ? new Date(schedule.start_time) : new Date();
+    setPicker(dateToPicker(b));
+  }, [open, schedule?.id, schedule?.start_time]);
 
   const colDef = [
     {
@@ -73,13 +82,8 @@ export function ReminderSheet({
   };
 
   return (
-    <div className="absolute inset-0 z-50 flex flex-col" onClick={onClose}>
-      <div className="flex-1 bg-ink/40 backdrop-blur-[2px] animate-fade-in" />
-      <div
-        className="animate-slide-up rounded-t-[28px] bg-background px-5 pb-[calc(env(safe-area-inset-bottom)+1.25rem)] pt-2.5 shadow-[0_-8px_32px_-8px_rgba(0,0,0,0.12)]"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <div className="mx-auto mb-4 h-1.5 w-10 rounded-full bg-ink/15" />
+    <BottomSheet open={open} onClose={onClose} maxHeight="72vh">
+      <div className="px-5 pb-[calc(env(safe-area-inset-bottom)+1.25rem)]">
         <h2 className="text-[17px] font-bold text-ink">
           {t("알림 시간", "Reminder time")}
         </h2>
@@ -106,6 +110,6 @@ export function ReminderSheet({
           </button>
         </div>
       </div>
-    </div>
+    </BottomSheet>
   );
 }

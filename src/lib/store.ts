@@ -174,8 +174,10 @@ const FULL_CLOUD_KEYS: Record<TableName, readonly string[]> = {
 };
 
 function isSchemaColumnError(message: string) {
-  return /Could not find the .+ column of .+ in the schema cache/i.test(
-    message,
+  return (
+    /Could not find the .+ column of .+ in the schema cache/i.test(message) ||
+    /column .+\.status does not exist/i.test(message) ||
+    /42703/.test(message)
   );
 }
 
@@ -187,16 +189,50 @@ function isLegacyCloudSchema() {
 function markLegacyCloudSchema() {
   if (typeof window === "undefined") return;
   localStorage.setItem(CLOUD_SCHEMA_KEY, "legacy");
+  cloudSchemaResolved = "legacy";
 }
 
 function clearLegacyCloudSchema() {
   if (typeof window === "undefined") return;
   localStorage.removeItem(CLOUD_SCHEMA_KEY);
+  cloudSchemaResolved = "full";
 }
 
-async function probeFullCloudSchema(): Promise<boolean> {
-  const { error } = await supabase.from("inbox").select("status").limit(1);
-  return !error;
+type CloudSchemaMode = "unknown" | "legacy" | "full";
+let cloudSchemaResolved: CloudSchemaMode = "unknown";
+let cloudSchemaProbe: Promise<CloudSchemaMode> | null = null;
+
+function cloudSchemaIsLegacy() {
+  if (cloudSchemaResolved === "legacy") return true;
+  if (cloudSchemaResolved === "full") return false;
+  return isLegacyCloudSchema();
+}
+
+/** Probe once per session — avoids repeated 400s when migrations aren't applied. */
+async function ensureCloudSchemaMode(): Promise<CloudSchemaMode> {
+  if (cloudSchemaResolved !== "unknown") return cloudSchemaResolved;
+  if (isLegacyCloudSchema()) {
+    cloudSchemaResolved = "legacy";
+    return "legacy";
+  }
+  if (cloudSchemaProbe) return cloudSchemaProbe;
+
+  cloudSchemaProbe = (async () => {
+    const { error } = await supabase.from("inbox").select("status").limit(1);
+    if (!error) {
+      cloudSchemaResolved = "full";
+      clearLegacyCloudSchema();
+    } else if (isSchemaColumnError(error.message)) {
+      cloudSchemaResolved = "legacy";
+      markLegacyCloudSchema();
+    } else {
+      cloudSchemaResolved = "full";
+    }
+    cloudSchemaProbe = null;
+    return cloudSchemaResolved;
+  })();
+
+  return cloudSchemaProbe;
 }
 
 function pickCloudFields(
@@ -220,7 +256,7 @@ async function cloudMutate(
   fields: Record<string, unknown>,
   id?: string,
 ): Promise<boolean> {
-  let legacy = isLegacyCloudSchema();
+  let legacy = cloudSchemaIsLegacy();
 
   for (let attempt = 0; attempt < 2; attempt++) {
     const row = pickCloudFields(table, fields, userId, legacy);
@@ -327,9 +363,7 @@ function useLocalList<T extends { id: string; created_at: string }>(
       syncingRef.current = true;
       setSyncState("syncing");
 
-      if (isLegacyCloudSchema() && (await probeFullCloudSchema())) {
-        clearLegacyCloudSchema();
-      }
+      await ensureCloudSchemaMode();
 
       const guestKey = storageKey(kind, GUEST);
       const localUser = readLS<T>(key, table);

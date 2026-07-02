@@ -125,6 +125,52 @@ export function formatAlarmLabel(
 
 const HORIZON_MS = 7 * 24 * 60 * 60 * 1000;
 
+const TIMER_KEY = (id: string) => `itjima.schedule.timer.${id}`;
+
+export type TimerPreset = "5m" | "15m" | "25m" | "45m";
+
+export function presetToTimerEnd(preset: TimerPreset, now = new Date()): Date {
+  const mins =
+    preset === "5m" ? 5 : preset === "15m" ? 15 : preset === "25m" ? 25 : 45;
+  return new Date(now.getTime() + mins * 60 * 1000);
+}
+
+export function getActiveTimerEnd(scheduleId: string): Date | null {
+  if (typeof window === "undefined") return null;
+  const raw = localStorage.getItem(TIMER_KEY(scheduleId));
+  if (!raw) return null;
+  const at = new Date(raw);
+  if (at.getTime() <= Date.now()) {
+    localStorage.removeItem(TIMER_KEY(scheduleId));
+    return null;
+  }
+  return at;
+}
+
+export function setActiveTimer(scheduleId: string, end: Date) {
+  localStorage.setItem(TIMER_KEY(scheduleId), end.toISOString());
+  window.dispatchEvent(new CustomEvent("itjima:timers"));
+}
+
+export function clearActiveTimer(scheduleId: string) {
+  localStorage.removeItem(TIMER_KEY(scheduleId));
+  window.dispatchEvent(new CustomEvent("itjima:timers"));
+}
+
+export function formatTimerLabel(
+  end: Date,
+  lang: "ko" | "en",
+  now = new Date(),
+): string {
+  const diffMs = end.getTime() - now.getTime();
+  if (diffMs <= 0) return lang === "en" ? "Done" : "완료";
+  const mins = Math.ceil(diffMs / 60_000);
+  if (mins < 60) return lang === "en" ? `${mins}m timer` : `${mins}분 타이머`;
+  const hrs = Math.floor(mins / 60);
+  const rem = mins % 60;
+  return lang === "en" ? `${hrs}h ${rem}m timer` : `${hrs}시간 ${rem}분 타이머`;
+}
+
 /** In-app notifications while the tab is open. */
 export function bindInAppReminders(
   items: ScheduleItem[],
@@ -145,6 +191,22 @@ export function bindInAppReminders(
       window.setTimeout(() => {
         if (Notification.permission === "granted") {
           notify("⏰ ItJima", s.text);
+        }
+      }, delay),
+    );
+  }
+
+  for (const s of items) {
+    if (s.status === "done") continue;
+    const timerEnd = getActiveTimerEnd(s.id);
+    if (!timerEnd) continue;
+    const delay = timerEnd.getTime() - Date.now();
+    if (delay <= 0 || delay > HORIZON_MS) continue;
+    timers.push(
+      window.setTimeout(() => {
+        clearActiveTimer(s.id);
+        if (Notification.permission === "granted") {
+          notify("⏱ ItJima", s.text);
         }
       }, delay),
     );

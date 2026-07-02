@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { BottomSheet } from "./BottomSheet";
 import { WheelPicker } from "./WheelPicker";
 import { useT } from "@/lib/i18n";
 import type { RepeatRule } from "@/lib/store";
@@ -76,7 +77,31 @@ export function ScheduleSheet({
   );
   const [dateOnly, setDateOnly] = useState(dateToDatePicker(now));
 
-  if (!open) return null;
+  useEffect(() => {
+    if (!open) return;
+    const s = initialStart ?? new Date();
+    const e =
+      initialEnd ??
+      (() => {
+        const d = new Date(s);
+        d.setHours(d.getHours() + 1);
+        return d;
+      })();
+    setText(initialText);
+    setStart(dateToPicker(s));
+    setEnd(dateToPicker(e));
+    setAllDay(initialAllDay ?? false);
+    setRepeat(!!initialRepeat);
+    setRepeatRule(initialRepeat ?? "weekly");
+    setDateOnly(dateToDatePicker(s));
+  }, [
+    open,
+    initialText,
+    initialStart,
+    initialEnd,
+    initialAllDay,
+    initialRepeat,
+  ]);
 
   const colDef = [
     {
@@ -145,18 +170,16 @@ export function ScheduleSheet({
   };
 
   return (
-    <div className="absolute inset-0 z-50 flex flex-col" onClick={onClose}>
-      <div className="flex-1 bg-ink/40 backdrop-blur-[2px] animate-fade-in" />
-      <div
-        className="animate-slide-up max-h-[88vh] overflow-y-auto rounded-t-[28px] bg-background px-5 pb-[calc(env(safe-area-inset-bottom)+1.25rem)] pt-2.5 shadow-[0_-8px_32px_-8px_rgba(0,0,0,0.12)]"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <div className="mx-auto mb-4 h-1.5 w-10 rounded-full bg-ink/15" />
+    <BottomSheet open={open} onClose={onClose} maxHeight="88vh">
+      <div className="max-h-[calc(88vh-2rem)] overflow-y-auto px-5 pb-[calc(env(safe-area-inset-bottom)+1.25rem)]">
+        <h2 className="mb-4 text-[17px] font-bold text-ink">
+          {saveLabel ? t("일정 수정", "Edit event") : t("새 일정", "New event")}
+        </h2>
         <input
           value={text}
           onChange={(e) => setText(e.target.value)}
           placeholder={t("일정 제목", "Event title")}
-          className="mb-4 w-full rounded-[24px] bg-ink/[0.04] px-3.5 py-3 text-[16px] font-semibold text-ink placeholder:text-ink-soft/60 focus:outline-none focus:bg-ink/[0.06] focus:shadow-[0_0_0_2px_#FFE033]"
+          className="mb-4 w-full rounded-[24px] bg-ink/[0.04] px-3.5 py-3 text-[16px] font-semibold text-ink placeholder:text-ink-soft/60 focus:bg-ink/[0.06] focus:shadow-[0_0_0_2px_#FFE033] focus:outline-none"
         />
         <label className="mb-3 flex items-center gap-2.5 text-[14px] text-ink">
           <input
@@ -229,11 +252,11 @@ export function ScheduleSheet({
         )}
         <button
           onClick={handleSave}
-          className="mt-5 w-full rounded-full bg-ink py-4 text-[15px] font-bold text-background active:scale-[0.98] transition"
+          className="mt-5 w-full rounded-full bg-ink py-4 text-[15px] font-bold text-background transition active:scale-[0.98]"
         >
           {saveLabel ?? t("일정 등록", "Save event")}
         </button>
       </div>
-    </div>
+    </BottomSheet>
   );
 }

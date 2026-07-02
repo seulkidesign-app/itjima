@@ -6,6 +6,7 @@ import { WheelPicker } from "./WheelPicker";
 import { useT } from "@/lib/i18n";
 import type { InboxItem } from "@/lib/store";
 import { SPRING_DEFAULT } from "@/lib/motion";
+import { nextWeekendMorning, tonightAt } from "@/lib/scheduleTime";
 
 const TIME_CHIPS = ["09:00", "13:00", "18:00"] as const;
 
@@ -25,7 +26,7 @@ function startOfDay(d: Date) {
 export function ScheduleQuickSheet({ item, open, onClose, onConfirm }: Props) {
   const t = useT();
   const [dayChoice, setDayChoice] = useState<
-    "today" | "tomorrow" | "pick" | null
+    "today" | "tomorrow" | "tonight" | "weekend" | "pick" | null
   >(null);
   const [pickDate, setPickDate] = useState(() => {
     const n = new Date();
@@ -73,7 +74,23 @@ export function ScheduleQuickSheet({ item, open, onClose, onConfirm }: Props) {
     return startOfDay(now);
   }, [dayChoice, pickDate]);
 
-  const pickDay = (choice: "today" | "tomorrow" | "pick") => {
+  const pickDay = (
+    choice: "today" | "tomorrow" | "tonight" | "weekend" | "pick",
+  ) => {
+    if (choice === "tonight") {
+      const start = tonightAt();
+      const end = new Date(start.getTime() + 60 * 60 * 1000);
+      onConfirm(start, end);
+      reset();
+      return;
+    }
+    if (choice === "weekend") {
+      const start = nextWeekendMorning();
+      const end = new Date(start.getTime() + 60 * 60 * 1000);
+      onConfirm(start, end);
+      reset();
+      return;
+    }
     setDayChoice(choice);
     if (choice !== "pick") setStep("time");
   };
@@ -118,6 +135,8 @@ export function ScheduleQuickSheet({ item, open, onClose, onConfirm }: Props) {
               [
                 ["today", t("오늘", "Today")],
                 ["tomorrow", t("내일", "Tomorrow")],
+                ["tonight", t("오늘 저녁", "Tonight")],
+                ["weekend", t("주말", "Weekend")],
                 ["pick", t("날짜 선택", "Pick Date")],
               ] as const
             ).map(([key, label]) => (
