@@ -20,15 +20,21 @@ export function SwipeCard({
   className = "",
   mode = "confirm",
   bare = false,
+  leftLabel,
+  rightLabel,
+  leftConfirmLabel,
+  rightConfirmLabel,
 }: {
   children: ReactNode;
   onSwipe: (dir: Direction) => void;
   disabled?: boolean;
   className?: string;
-  /** instant: no second confirm tap (Home). confirm: two-step (Archive). */
   mode?: "instant" | "confirm";
-  /** Skip outer card chrome (chat bubbles). */
   bare?: boolean;
+  leftLabel?: string;
+  rightLabel?: string;
+  leftConfirmLabel?: string;
+  rightConfirmLabel?: string;
 }) {
   const t = useT();
   const [dx, setDx] = useState(0);
@@ -36,7 +42,7 @@ export function SwipeCard({
   const [released, setReleased] = useState(false);
   const startX = useRef(0);
   const dragging = useRef(false);
-  const lastTone = useRef<"yellow" | "red" | null>(null);
+  const lastTone = useRef<"yellow" | "muted" | null>(null);
   const crossed = useRef(false);
 
   const onDown = (e: PointerEvent<HTMLDivElement>) => {
@@ -50,8 +56,7 @@ export function SwipeCard({
     if (!dragging.current) return;
     const next = e.clientX - startX.current;
     setDx(next);
-    // edge haptic ticks
-    const tone = next > 30 ? "yellow" : next < -30 ? "red" : null;
+    const tone = next > 30 ? "yellow" : next < -30 ? "muted" : null;
     if (tone !== lastTone.current) {
       lastTone.current = tone;
       if (tone) tick();
@@ -95,7 +100,6 @@ export function SwipeCard({
     commitSwipe(pending);
   };
 
-  // Dismiss confirm with Escape
   useEffect(() => {
     if (!pending) return;
     const onKey = (e: KeyboardEvent) => {
@@ -106,6 +110,8 @@ export function SwipeCard({
   }, [pending]);
 
   const tone = pending ?? (dx > 30 ? "right" : dx < -30 ? "left" : null);
+  const rightText = rightLabel ?? t("→ 일정", "→ Schedule");
+  const leftText = leftLabel ?? t("← 삭제", "← Delete");
 
   return (
     <div className="relative">
@@ -148,30 +154,31 @@ export function SwipeCard({
         </div>
         {tone === "right" && !pending && (
           <div className="pointer-events-none absolute -top-3 right-4 animate-swipe-label rounded-full bg-primary px-3 py-1 text-[11px] font-extrabold uppercase tracking-widest text-ink">
-            {t("→ 일정", "→ Schedule")}
+            {rightText}
           </div>
         )}
         {tone === "left" && !pending && (
           <div className="pointer-events-none absolute -top-3 left-4 animate-swipe-label rounded-full bg-ink px-3 py-1 text-[11px] font-extrabold uppercase tracking-widest text-white">
-            {t("← 보관", "← Archive")}
+            {leftText}
           </div>
         )}
       </div>
 
-      {/* Two-step confirm (Archive etc.) */}
       {mode === "confirm" && pending === "right" && (
         <div className="pointer-events-none absolute inset-y-0 left-0 flex w-[160px] items-center justify-start pl-3">
           <button
+            type="button"
             onClick={finish}
-            className="pointer-events-auto flex items-center gap-1.5 rounded-full bg-primary px-4 py-2.5 text-[13px] font-bold text-ink shadow-float animate-pop active:scale-95"
+            className="pointer-events-auto touch-target gap-1.5 rounded-full bg-primary px-4 text-[13px] font-bold text-ink shadow-float animate-pop"
           >
-            <Check size={16} strokeWidth={3} />{" "}
-            {t("일정 확정", "Confirm schedule")}
+            <Check size={16} strokeWidth={3} />
+            {rightConfirmLabel ?? t("일정", "Schedule")}
           </button>
           <button
+            type="button"
             onClick={cancel}
             aria-label={t("취소", "Cancel")}
-            className="pointer-events-auto ml-2 flex h-9 w-9 items-center justify-center rounded-full bg-white/90 text-ink-soft shadow-card active:scale-95"
+            className="pointer-events-auto touch-target ml-2 rounded-full bg-white/90 text-ink-soft shadow-card"
           >
             <X size={16} />
           </button>
@@ -180,18 +187,20 @@ export function SwipeCard({
       {mode === "confirm" && pending === "left" && (
         <div className="pointer-events-none absolute inset-y-0 right-0 flex w-[180px] items-center justify-end pr-3">
           <button
+            type="button"
             onClick={cancel}
             aria-label={t("취소", "Cancel")}
-            className="pointer-events-auto mr-2 flex h-9 w-9 items-center justify-center rounded-full bg-white/90 text-ink-soft shadow-card active:scale-95"
+            className="pointer-events-auto touch-target mr-2 rounded-full bg-white/90 text-ink-soft shadow-card"
           >
             <X size={16} />
           </button>
           <button
+            type="button"
             onClick={finish}
-            className="pointer-events-auto flex items-center gap-1.5 rounded-full bg-ink px-4 py-2.5 text-[13px] font-bold text-white shadow-float animate-pop active:scale-95"
+            className="pointer-events-auto touch-target gap-1.5 rounded-full bg-ink px-4 text-[13px] font-bold text-white shadow-float animate-pop"
           >
-            <Check size={16} strokeWidth={3} />{" "}
-            {t("보관 확정", "Confirm archive")}
+            <Check size={16} strokeWidth={3} />
+            {leftConfirmLabel ?? t("삭제", "Delete")}
           </button>
         </div>
       )}

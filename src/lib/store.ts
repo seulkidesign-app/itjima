@@ -326,15 +326,21 @@ function useLocalList<T extends { id: string; created_at: string }>(
 ) {
   const userId = useUserId();
   const [items, setItems] = useState<T[]>([]);
-  const [syncState, setSyncState] = useState<"idle" | "syncing" | "ready">(
-    "idle",
-  );
+  const [syncState, setSyncState] = useState<
+    "idle" | "syncing" | "ready" | "error"
+  >("idle");
   const syncingRef = useRef(false);
+  const [syncRetry, setSyncRetry] = useState(0);
   const key = storageKey(kind, userId);
 
   const reloadLocal = useCallback(() => {
     setItems(readLS<T>(key, table));
   }, [key, table]);
+
+  const retrySync = useCallback(() => {
+    syncingRef.current = false;
+    setSyncRetry((n) => n + 1);
+  }, []);
 
   useEffect(() => {
     migrateAllBuckets(userId);
@@ -384,7 +390,7 @@ function useLocalList<T extends { id: string; created_at: string }>(
       if (error) {
         console.error(`[sync] fetch ${table}`, error.message);
         writeLS(key, localAll);
-        setSyncState("ready");
+        setSyncState("error");
         syncingRef.current = false;
         return;
       }
@@ -431,7 +437,7 @@ function useLocalList<T extends { id: string; created_at: string }>(
       cancelled = true;
       syncingRef.current = false;
     };
-  }, [userId, key, kind, table]);
+  }, [userId, key, kind, table, syncRetry]);
 
   const add = useCallback(
     async (partial: Partial<T> & { text: string }) => {
@@ -501,7 +507,7 @@ function useLocalList<T extends { id: string; created_at: string }>(
     [key, userId, table],
   );
 
-  return { items, add, update, remove, syncState };
+  return { items, add, update, remove, syncState, retrySync };
 }
 
 function useInboxList() {

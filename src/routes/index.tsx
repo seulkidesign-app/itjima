@@ -8,7 +8,6 @@ import {
   Archive as ArchiveIcon,
 } from "lucide-react";
 import { InboxListSkeleton } from "@/components/Skeleton";
-import { usePhoneScrollCompress } from "@/hooks/useScrollVelocity";
 import { ChatSwipeRow } from "@/components/ChatSwipeRow";
 import { FocusSortMode } from "@/components/FocusSortMode";
 import { ScheduleSheet } from "@/components/ScheduleSheet";
@@ -46,7 +45,6 @@ export const Route = createFileRoute("/")({
 function Inbox() {
   const t = useT();
   const inbox = useInbox();
-  const scrollCompress = usePhoneScrollCompress();
   const schedules = useSchedules();
   const archive = useArchive();
   const userId = useUserId();
@@ -161,41 +159,6 @@ function Inbox() {
   const openFocusSort = (fromId?: string) => {
     setFocusStartId(fromId ?? null);
     setFocusSortOpen(true);
-  };
-
-  const moveToScheduleWithDates = async (
-    it: InboxItem,
-    start: Date,
-    end: Date,
-  ) => {
-    try {
-      const text = it.brain_mirror?.title
-        ? formatMirrorScheduleText(it.text, it.brain_mirror)
-        : it.text.split("\n")[0]?.trim() || it.text;
-      const payload = scheduleFromInbox(it, {
-        text,
-        start_time: start.toISOString(),
-        end_time: end.toISOString(),
-      });
-      const snapshot = archiveFromInbox(it);
-      const { item: created } = await schedules.add(payload);
-      await inbox.remove(it.id);
-      track("schedule_created", {
-        source: "inbox_swipe",
-        text_length: text.length,
-      });
-      showUndoToast(t("일정으로 옮겼어요", "Moved to Schedule"), async () => {
-        await schedules.remove(created.id);
-        const { item: restored } = await inbox.add({
-          text: snapshot.text,
-          images: snapshot.images,
-          brain_mirror: snapshot.brain_mirror,
-        });
-        markBmEligible(restored.id);
-      });
-    } catch {
-      toast.error(t("일정을 저장하지 못했어요", "Couldn't save schedule"));
-    }
   };
 
   const openScheduleFromFocus = (it: InboxItem) => {
@@ -428,7 +391,11 @@ function Inbox() {
 
   return (
     <div className="flex h-full min-h-full flex-col bg-white">
-      <SyncIndicator active={syncing && items.length > 0} />
+      <SyncIndicator
+        syncing={syncing}
+        error={inbox.syncState === "error"}
+        onRetry={inbox.retrySync}
+      />
       {items.length > 0 && (
         <div className="sticky top-0 z-10 shrink-0 bg-white/95 backdrop-blur-sm">
           <div className="flex gap-2 px-5 pb-2 pt-3">
@@ -481,7 +448,7 @@ function Inbox() {
         <>
           <div className="flex-1 px-3 pb-2">
             <div
-              className={`chat-scroll flex flex-col items-stretch gap-2 pb-4 ${scrollCompress ? "scroll-compress" : ""}`}
+              className="chat-scroll flex flex-col items-stretch gap-2 pb-4"
             >
               {itemsAsc.map((it) => {
                 const isNewest = it.id === newestId;
@@ -553,7 +520,7 @@ function Inbox() {
                 <>
                   <MenuItem
                     icon={<Sparkles size={18} />}
-                    label={t("정크 비우기", "Clean junk")}
+                    label={t("정리 모드", "Clean up")}
                     onClick={() => {
                       setMenuFor(null);
                       setCleanupReviewOpen(true);
@@ -564,7 +531,7 @@ function Inbox() {
                     label={t("일정으로", "To schedule")}
                     onClick={() => {
                       setMenuFor(null);
-                      setScheduleSheet({ open: true, item: it });
+                      openHomeSchedule(it);
                     }}
                   />
                   <MenuItem
