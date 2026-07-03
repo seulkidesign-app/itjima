@@ -68,12 +68,12 @@ export function ArchiveOrganizeSheet({
 
   return (
     <div
-      className="absolute inset-0 z-50 flex flex-col"
+      className="fixed inset-0 z-[100] flex flex-col"
       role="dialog"
       aria-modal="true"
       onClick={onClose}
     >
-      <div className="flex-1 bg-ink/40 backdrop-blur-[2px] animate-fade-in" />
+      <div className="flex-1 bg-ink/35 backdrop-blur-sm animate-fade-in" />
       <div
         className="animate-slide-up max-h-[75vh] overflow-y-auto rounded-t-[28px] bg-background px-5 pb-[calc(env(safe-area-inset-bottom)+1.25rem)] pt-2.5"
         onClick={(e) => e.stopPropagation()}

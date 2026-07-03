@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useEffect, useMemo, useRef, useState, type PointerEvent } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { toast } from "sonner";
 import {
@@ -89,7 +89,6 @@ function Archive() {
   const [groupModal, setGroupModal] = useState(false);
   const [newName, setNewName] = useState("");
   const [newEmoji, setNewEmoji] = useState("✨");
-  const pressTimer = useRef<number | null>(null);
 
   const [ungroupTarget, setUngroupTarget] = useState<GroupDef | null>(null);
   const [organizeOpen, setOrganizeOpen] = useState(false);
@@ -101,7 +100,6 @@ function Archive() {
   const [scrollToId, setScrollToId] = useState<string | null>(null);
   const [moveSheetOpen, setMoveSheetOpen] = useState(false);
   const cardRefs = useRef<Record<string, HTMLDivElement | null>>({});
-  const pressOrigin = useRef<{ x: number; y: number; id: string } | null>(null);
 
   useEffect(() => {
     const h = () => setPins(readArchivePins());
@@ -144,6 +142,18 @@ function Archive() {
     haptic(4);
   };
 
+  const groupsWithItems = useMemo(() => {
+    const counts = new Map<string, number>();
+    items.forEach((it) => {
+      const k = groupOf(it.id, it.text);
+      counts.set(k, (counts.get(k) ?? 0) + 1);
+    });
+    return allGroups.filter((g) => (counts.get(g.key) ?? 0) > 0);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [items, overrides, allGroups]);
+
+  const isSearching = q.trim().length > 0;
+
   const searchMeta = useMemo(() => searchArchiveItems(items, q), [items, q]);
 
   const pinnedItems = useMemo(() => {
@@ -180,7 +190,7 @@ function Archive() {
 
   const filtered = useMemo(() => {
     let list = q.trim() ? searchMeta.hits.map((h) => h.item) : [...items];
-    if (groupFilter !== "all") {
+    if (!q.trim() && groupFilter !== "all") {
       list = list.filter((it) => groupOf(it.id, it.text) === groupFilter);
     }
     list = [...list].sort((a, b) => {
@@ -219,6 +229,16 @@ function Archive() {
   }, [scrollToId, grouped, pinnedItems]);
 
   const jumpToMemory = (id: string) => {
+    const it = items.find((x) => x.id === id);
+    if (it) {
+      const gKey = groupOf(it.id, it.text);
+      if (collapsed.has(gKey)) {
+        const next = new Set(collapsed);
+        next.delete(gKey);
+        setCollapsed(next);
+        writeJSON(COLLAPSED_KEY, [...next]);
+      }
+    }
     setExpandedId(id);
     setScrollToId(id);
     haptic(4);
@@ -244,29 +264,12 @@ function Archive() {
     toast.success(t("비슷하게 모았어요", "Grouped gently"));
   };
 
-  // ---- Selection / long-press ----
-  const startLongPress = (id: string, e: PointerEvent) => {
-    pressOrigin.current = { x: e.clientX, y: e.clientY, id };
-    pressTimer.current = window.setTimeout(() => {
-      if (pressOrigin.current?.id !== id) return;
-      haptic([8, 12, 8]);
-      setSelecting(true);
-      setExpandedId(null);
-      setSelected(new Set([id]));
-    }, 450);
-  };
-  const onPressMove = (e: PointerEvent) => {
-    if (!pressOrigin.current) return;
-    const dx = Math.abs(e.clientX - pressOrigin.current.x);
-    const dy = Math.abs(e.clientY - pressOrigin.current.y);
-    if (dx > 10 || dy > 10) cancelLongPress();
-  };
-  const cancelLongPress = () => {
-    if (pressTimer.current) {
-      clearTimeout(pressTimer.current);
-      pressTimer.current = null;
-    }
-    pressOrigin.current = null;
+  // ---- Selection ----
+  const enterSelection = (id: string) => {
+    haptic([8, 12, 8]);
+    setSelecting(true);
+    setExpandedId(null);
+    setSelected(new Set([id]));
   };
   const toggleSelect = (id: string) => {
     if (!selecting) return;
@@ -294,6 +297,7 @@ function Archive() {
     else next[id] = key;
     persistOverrides(next);
     haptic([6, 10, 6]);
+    toast.success(t("옮겼어요", "Moved"), { duration: 2000 });
   };
 
   const moveSelectionToGroup = (key: string) => {
@@ -452,9 +456,11 @@ function Archive() {
       <SwipeCard
         key={it.id}
         mode="instant"
+        softLabels
         disabled={swipeDisabled}
         leftLabel={t("지우기", "Remove")}
         rightLabel={t("그때", "When")}
+        onLongPress={selecting ? undefined : () => enterSelection(it.id)}
         onSwipe={(dir) => {
           if (dir === "right") openScheduleSheet(it);
           else void removeWithUndo(it);
@@ -475,13 +481,6 @@ function Archive() {
             setDragId(null);
             setDragOver(null);
           }}
-          onPointerDown={(e) => startLongPress(it.id, e)}
-          onPointerMove={onPressMove}
-          onPointerUp={cancelLongPress}
-          onPointerLeave={cancelLongPress}
-          onClick={() => {
-            if (selecting) toggleSelect(it.id);
-          }}
         >
           <ArchiveMemoryCard
             item={it}
@@ -496,6 +495,7 @@ function Archive() {
             }
             allItems={items}
             onToggleExpand={() => toggleExpand(it.id)}
+            onToggleSelect={() => toggleSelect(it.id)}
             onTogglePin={() => {
               toggleArchivePin(it.id);
               setPins(readArchivePins());
@@ -597,50 +597,61 @@ function Archive() {
                 )}
               </p>
             )}
-            <div className="mt-2 flex flex-wrap items-center gap-1.5">
-              <button
-                type="button"
-                onClick={() => setGroupFilter("all")}
-                className={`rounded-full px-3 py-1.5 text-[12px] font-medium transition-colors ${
-                  groupFilter === "all"
-                    ? "bg-ink text-white"
-                    : "bg-ink/[0.06] text-ink-soft"
-                }`}
-              >
-                {t("전체", "All")}
-              </button>
-              {allGroups.map((g) => (
+            {!isSearching && (
+              <div className="mt-2 flex flex-wrap items-center gap-1.5">
                 <button
-                  key={g.key}
                   type="button"
-                  onClick={() => setGroupFilter(g.key)}
+                  onClick={() => setGroupFilter("all")}
                   className={`rounded-full px-3 py-1.5 text-[12px] font-medium transition-colors ${
-                    groupFilter === g.key
+                    groupFilter === "all"
                       ? "bg-ink text-white"
                       : "bg-ink/[0.06] text-ink-soft"
                   }`}
                 >
-                  {g.emoji} {lang === "en" ? g.en : g.ko}
+                  {t("전체", "All")}
                 </button>
-              ))}
-              <select
-                value={sortOrder}
-                onChange={(e) =>
-                  setSortOrder(e.target.value as "newest" | "oldest")
-                }
-                className="ml-auto rounded-full bg-ink/[0.06] px-3 py-1.5 text-[12px] font-medium text-ink-soft focus:outline-none"
-                aria-label={t("정렬", "Sort")}
-              >
-                <option value="newest">{t("최신순", "Newest")}</option>
-                <option value="oldest">{t("오래된순", "Oldest")}</option>
-              </select>
-            </div>
-            <p className="mt-2 px-1 text-[11px] text-ink-soft/65">
-              {t(
-                "탭하여 펼치기 · → 그때 · ← 지우기 · 길게 눌러 선택",
-                "Tap to open · → When · ← Remove · hold to select",
-              )}
-            </p>
+                {groupsWithItems.map((g) => (
+                  <button
+                    key={g.key}
+                    type="button"
+                    onClick={() => setGroupFilter(g.key)}
+                    className={`rounded-full px-3 py-1.5 text-[12px] font-medium transition-colors ${
+                      groupFilter === g.key
+                        ? "bg-ink text-white"
+                        : "bg-ink/[0.06] text-ink-soft"
+                    }`}
+                  >
+                    {g.emoji} {lang === "en" ? g.en : g.ko}
+                  </button>
+                ))}
+                <select
+                  value={sortOrder}
+                  onChange={(e) =>
+                    setSortOrder(e.target.value as "newest" | "oldest")
+                  }
+                  className="ml-auto rounded-full bg-ink/[0.06] px-3 py-1.5 text-[12px] font-medium text-ink-soft focus:outline-none"
+                  aria-label={t("정렬", "Sort")}
+                >
+                  <option value="newest">{t("최신순", "Newest")}</option>
+                  <option value="oldest">{t("오래된순", "Oldest")}</option>
+                </select>
+              </div>
+            )}
+            {isSearching && (
+              <div className="mt-2 flex justify-end">
+                <select
+                  value={sortOrder}
+                  onChange={(e) =>
+                    setSortOrder(e.target.value as "newest" | "oldest")
+                  }
+                  className="rounded-full bg-ink/[0.06] px-3 py-1.5 text-[12px] font-medium text-ink-soft focus:outline-none"
+                  aria-label={t("정렬", "Sort")}
+                >
+                  <option value="newest">{t("최신순", "Newest")}</option>
+                  <option value="oldest">{t("오래된순", "Oldest")}</option>
+                </select>
+              </div>
+            )}
           </div>
         )}
       </div>
@@ -674,6 +685,17 @@ function Archive() {
           </div>
         ) : (
           <>
+            {isSearching ? (
+              <section>
+                <h2 className="mb-2.5 px-1 text-[13px] font-semibold text-ink-soft">
+                  {t("찾은 기억", "Found memories")}
+                </h2>
+                <div className="flex flex-col gap-3">
+                  {filtered.map((it) => renderMemoryCard(it))}
+                </div>
+              </section>
+            ) : (
+              <>
             {!q.trim() && pinnedItems.length > 0 && (
               <section>
                 <h2 className="mb-2.5 flex items-center gap-1.5 px-1 text-[13px] font-semibold text-ink-soft">
@@ -784,6 +806,8 @@ function Archive() {
                 </section>
               );
             })}
+              </>
+            )}
           </>
         )}
       </div>

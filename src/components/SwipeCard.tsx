@@ -24,14 +24,19 @@ type Direction = "left" | "right";
 
 const THRESHOLD = 95;
 const MAX_DRAG = 160;
+const LONG_PRESS_MS = 450;
+const MOVE_CANCEL = 10;
+const SWIPE_CAPTURE = 10;
 
 export function SwipeCard({
   children,
   onSwipe,
+  onLongPress,
   disabled,
   className = "",
   mode = "confirm",
   bare = false,
+  softLabels = false,
   leftLabel,
   rightLabel,
   leftConfirmLabel,
@@ -39,10 +44,12 @@ export function SwipeCard({
 }: {
   children: ReactNode;
   onSwipe: (dir: Direction) => void;
+  onLongPress?: () => void;
   disabled?: boolean;
   className?: string;
   mode?: "instant" | "confirm";
   bare?: boolean;
+  softLabels?: boolean;
   leftLabel?: string;
   rightLabel?: string;
   leftConfirmLabel?: string;
@@ -57,14 +64,25 @@ export function SwipeCard({
   const [shadow, setShadow] = useState(12);
   const [pending, setPending] = useState<Direction | null>(null);
   const startX = useRef(0);
+  const startY = useRef(0);
   const startTime = useRef(0);
   const lastX = useRef(0);
   const velocityX = useRef(0);
   const dragging = useRef(false);
+  const pointerCaptured = useRef(false);
+  const longPressFired = useRef(false);
+  const longPressTimer = useRef<number | null>(null);
   const lastTone = useRef<"yellow" | "muted" | null>(null);
   const crossed = useRef(false);
   const acting = useRef(false);
   const dxRef = useRef(0);
+
+  const cancelLongPress = () => {
+    if (longPressTimer.current) {
+      clearTimeout(longPressTimer.current);
+      longPressTimer.current = null;
+    }
+  };
 
   const cardW = () => cardRef.current?.offsetWidth ?? 320;
 
@@ -98,23 +116,49 @@ export function SwipeCard({
   const onDown = (e: PointerEvent<HTMLDivElement>) => {
     if (disabled || pending || acting.current) return;
     dragging.current = true;
+    pointerCaptured.current = false;
+    longPressFired.current = false;
     startX.current = e.clientX;
+    startY.current = e.clientY;
     startTime.current = performance.now();
     lastX.current = e.clientX;
     velocityX.current = 0;
     crossed.current = false;
-    (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
+    cancelLongPress();
+    if (onLongPress) {
+      longPressTimer.current = window.setTimeout(() => {
+        longPressFired.current = true;
+        cancelLongPress();
+        onLongPress();
+      }, LONG_PRESS_MS);
+    }
   };
 
   const onMove = (e: PointerEvent<HTMLDivElement>) => {
     if (!dragging.current) return;
+    const dx = e.clientX - startX.current;
+    const dy = e.clientY - startY.current;
+    if (Math.abs(dx) > MOVE_CANCEL || Math.abs(dy) > MOVE_CANCEL) {
+      cancelLongPress();
+    }
+    if (longPressFired.current) return;
+
+    if (!pointerCaptured.current) {
+      if (Math.abs(dx) > SWIPE_CAPTURE && Math.abs(dx) > Math.abs(dy)) {
+        pointerCaptured.current = true;
+        (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
+      } else {
+        return;
+      }
+    }
+
     const now = performance.now();
     const dt = Math.max(1, now - startTime.current);
     velocityX.current = ((e.clientX - lastX.current) / dt) * 1000;
     lastX.current = e.clientX;
     startTime.current = now;
 
-    const next = e.clientX - startX.current;
+    const next = dx;
     applyTransform(next, { dragging: true });
 
     const tone = next > 30 ? "yellow" : next < -30 ? "muted" : null;
@@ -142,8 +186,22 @@ export function SwipeCard({
   };
 
   const onUp = () => {
+    cancelLongPress();
     if (!dragging.current) return;
     dragging.current = false;
+
+    if (longPressFired.current) {
+      longPressFired.current = false;
+      if (Math.abs(dxRef.current) > 0) springTo(0);
+      lastTone.current = null;
+      return;
+    }
+
+    if (!pointerCaptured.current) {
+      lastTone.current = null;
+      return;
+    }
+
     const abs = Math.abs(dxRef.current);
     if (
       shouldSwipeCommit(abs, THRESHOLD, velocityX.current) &&
@@ -185,12 +243,15 @@ export function SwipeCard({
   const rightText = rightLabel ?? t("→ 일정", "→ Schedule");
   const leftText = leftLabel ?? t("← 삭제", "← Delete");
   const labelOpacity = Math.min(1, dragProgress(Math.abs(dx), cardW()) * 1.4);
+  const labelClass = softLabels
+    ? "pointer-events-none absolute -top-2.5 rounded-full px-3 py-1 text-[12px] font-semibold shadow-card"
+    : "pointer-events-none absolute -top-3 rounded-full px-3 py-1 text-[11px] font-extrabold uppercase tracking-widest shadow-float";
 
   return (
     <div className="relative">
       {tone === "right" && !pending && (
         <div
-          className="pointer-events-none absolute -top-3 right-4 rounded-full bg-primary px-3 py-1 text-[11px] font-extrabold uppercase tracking-widest text-ink shadow-float"
+          className={`${labelClass} right-4 bg-primary text-ink`}
           style={{ opacity: labelOpacity, transform: `scale(${0.9 + labelOpacity * 0.1})` }}
         >
           {rightText}
@@ -198,7 +259,7 @@ export function SwipeCard({
       )}
       {tone === "left" && !pending && (
         <div
-          className="pointer-events-none absolute -top-3 left-4 rounded-full bg-ink px-3 py-1 text-[11px] font-extrabold uppercase tracking-widest text-white shadow-float"
+          className={`${labelClass} left-4 bg-ink text-white`}
           style={{ opacity: labelOpacity, transform: `scale(${0.9 + labelOpacity * 0.1})` }}
         >
           {leftText}
@@ -211,7 +272,7 @@ export function SwipeCard({
         onPointerMove={onMove}
         onPointerUp={onUp}
         onPointerCancel={onUp}
-        className={`relative touch-none select-none will-change-transform ${className}`}
+        className={`relative touch-pan-y select-none will-change-transform ${className}`}
         style={{
           transform: `translateX(${dx}px) rotate(${rotate}deg) scale(${scale})`,
           opacity,

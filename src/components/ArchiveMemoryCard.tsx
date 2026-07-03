@@ -17,6 +17,7 @@ type Props = {
   showSemanticHint?: boolean;
   allItems: ArchiveItem[];
   onToggleExpand: () => void;
+  onToggleSelect?: () => void;
   onTogglePin: () => void;
   onEditTitle: () => void;
   onDelete: () => void;
@@ -34,6 +35,7 @@ export function ArchiveMemoryCard({
   showSemanticHint,
   allItems,
   onToggleExpand,
+  onToggleSelect,
   onTogglePin,
   onEditTitle,
   onDelete,
@@ -48,7 +50,10 @@ export function ArchiveMemoryCard({
   });
 
   const handleActivate = () => {
-    if (selecting) return;
+    if (selecting) {
+      onToggleSelect?.();
+      return;
+    }
     onToggleExpand();
   };
 
@@ -83,7 +88,7 @@ export function ArchiveMemoryCard({
           }
         }}
         className={`block w-full px-5 py-4 text-left ${
-          selecting ? "pl-12" : "cursor-pointer"
+          selecting ? "cursor-pointer pl-12" : "cursor-pointer"
         }`}
       >
         <div className="flex gap-3">
@@ -145,11 +150,6 @@ export function ArchiveMemoryCard({
               {showSemanticHint && (
                 <span className="rounded-full bg-primary/15 px-2 py-0.5 text-[10px] text-ink/80">
                   {t("떠올린 것", "recalled")}
-                </span>
-              )}
-              {!expanded && !selecting && (
-                <span className="ml-auto text-[10px] text-ink-soft/55">
-                  {t("탭하여 펼치기", "Tap to open")}
                 </span>
               )}
             </div>
