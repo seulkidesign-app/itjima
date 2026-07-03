@@ -19,6 +19,8 @@ import {
   CalendarDayCell,
 } from "@/components/CalendarDragLayer";
 import { ScheduleListSkeleton } from "@/components/Skeleton";
+import { EmptyState } from "@/components/EmptyState";
+import { SyncIndicator } from "@/components/SyncIndicator";
 import {
   bindInAppReminders,
   clearReminderOffset,
@@ -35,7 +37,9 @@ import {
 } from "@/lib/scheduleReminders";
 import { formatScheduleTimeLoose, scheduleDotStatus } from "@/lib/scheduleTime";
 import {
-  groupSchedules,
+  groupSchedulesForFeel,
+  feelSectionLabel,
+  scheduleFeelDot,
   isMissed,
   sectionLabel,
   classifySchedule,
@@ -158,8 +162,8 @@ function Schedule() {
     toast(t("타이머 종료", "Timer stopped"));
   };
 
-  const listSections = useMemo(
-    () => groupSchedules(activeItems, pins),
+  const feelSections = useMemo(
+    () => groupSchedulesForFeel(activeItems, pins),
     [activeItems, pins],
   );
 
@@ -228,33 +232,48 @@ function Schedule() {
     onAlarm: () => setAlarmSheet(s),
     onTimer: () => setTimerSheet(s),
     onDisarm: () => disarmReminder(s),
-    onDelete: () => {
-      remove(s.id);
-      if (pins.has(s.id)) togglePin(s.id);
-      toast(t("삭제됨", "Deleted"));
+    onDelete: async () => {
+      try {
+        await remove(s.id);
+        if (pins.has(s.id)) togglePin(s.id);
+        toast(t("삭제됨", "Deleted"));
+      } catch {
+        toast.error(t("삭제하지 못했어요", "Couldn't delete"));
+      }
     },
   });
 
   return (
     <div className="flex h-full flex-col bg-white">
+      <SyncIndicator active={syncState === "syncing" && items.length > 0} />
       <div className="sticky top-0 z-10 shrink-0 bg-white">
-        <div className="px-5 pb-3 pt-6">
-          <div className="nrc-eyebrow">{t("나의 일정", "My Schedule")}</div>
-          <h1 className="page-title mt-1">{t("계획", "Plan")}</h1>
+        <div className="px-5 pb-3 pt-5">
+          <h1 className="page-title">{t("일정", "Schedule")}</h1>
+          <p className="mt-1 text-[13px] text-ink-soft">
+            {activeItems.length > 0
+              ? t(
+                  `${activeItems.length}개의 일정`,
+                  `${activeItems.length} on your mind`,
+                )
+              : t("비어 있어요", "Nothing scheduled")}
+          </p>
         </div>
         <div className="px-5 pb-3">
-          <div className="inline-flex border-b border-ink/10">
+          <div className="inline-flex border-b border-ink/10" role="tablist">
             {(
               [
-                ["list", t("리스트", "List")],
-                ["today", t("오늘", "Today")],
+                ["list", t("목록", "List")],
+                ["today", t("상세", "Detail")],
                 ["cal", t("캘린더", "Calendar")],
               ] as const
             ).map(([k, label]) => (
               <button
                 key={k}
+                type="button"
+                role="tab"
+                aria-selected={tab === k}
                 onClick={() => setTab(k)}
-                className={`relative px-4 py-2 text-[12px] font-extrabold uppercase tracking-[0.16em] transition ${
+                className={`relative min-h-11 px-4 py-2 text-[12px] font-extrabold uppercase tracking-[0.16em] transition ${
                   tab === k ? "text-ink" : "text-ink-soft"
                 }`}
               >
@@ -287,29 +306,32 @@ function Schedule() {
             </div>
           )
         ) : tab === "list" ? (
-          listSections.length === 0 && doneItems.length === 0 ? (
+          feelSections.length === 0 && doneItems.length === 0 ? (
             <Empty />
           ) : (
-            <div className="flex flex-col gap-5">
-              {listSections.map((sec) => (
+            <div className="flex flex-col gap-6 animate-fade-in">
+              {feelSections.map((sec) => (
                 <section key={sec.key}>
-                  <h2 className="mb-2 px-1 text-[11px] font-extrabold uppercase tracking-[0.18em] text-ink-soft">
-                    {sectionLabel(sec.key, lang)}
+                  <h2 className="mb-3 text-[15px] font-bold text-ink">
+                    {feelSectionLabel(sec.key, lang)}
                   </h2>
-                  <div className="flex flex-col gap-3">
+                  <ul className="flex flex-col gap-0.5">
                     {sec.items.map((s) => (
-                      <ScheduleCard
+                      <ScheduleFeelRow
                         key={s.id}
-                        {...cardProps(s)}
-                        emphasize={sec.key === "now"}
+                        s={s}
+                        dot={scheduleFeelDot(s, pins)}
+                        onComplete={() => markDone(s)}
+                        onEdit={() => setSheet({ open: true, edit: s })}
                       />
                     ))}
-                  </div>
+                  </ul>
                 </section>
               ))}
               {doneItems.length > 0 && (
                 <DoneSection items={doneItems} cardProps={cardProps} t={t} />
               )}
+              <ScheduleFeelHint />
             </div>
           )
         ) : (
@@ -414,6 +436,116 @@ function Schedule() {
         }}
       />
     </div>
+  );
+}
+
+function ScheduleFeelRow({
+  s,
+  dot,
+  onComplete,
+  onEdit,
+}: {
+  s: ScheduleItem;
+  dot: "filled" | "hollow";
+  onComplete: () => void;
+  onEdit: () => void;
+}) {
+  const title = scheduleDisplayTitle(s);
+  const dxRef = useRef(0);
+  const [dx, setDx] = useState(0);
+  const [acting, setActing] = useState(false);
+  const dragging = useRef(false);
+  const startX = useRef(0);
+  dxRef.current = dx;
+
+  const onDown = (e: ReactPointerEvent<HTMLLIElement>) => {
+    if (acting) return;
+    dragging.current = true;
+    startX.current = e.clientX;
+    (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
+  };
+
+  const onMove = (e: ReactPointerEvent<HTMLLIElement>) => {
+    if (!dragging.current || acting) return;
+    const next = Math.max(0, Math.min(100, e.clientX - startX.current));
+    dxRef.current = next;
+    setDx(next);
+  };
+
+  const onUp = () => {
+    if (!dragging.current) return;
+    dragging.current = false;
+    if (dxRef.current >= 64) {
+      setActing(true);
+      animate(dxRef.current, 120, {
+        type: "spring",
+        stiffness: 340,
+        damping: 28,
+        onUpdate: (v) => {
+          dxRef.current = v;
+          setDx(v);
+        },
+        onComplete: () => {
+          hapticConfirm();
+          onComplete();
+          setActing(false);
+          dxRef.current = 0;
+          setDx(0);
+        },
+      });
+      return;
+    }
+    if (dxRef.current < 8) onEdit();
+    animate(dxRef.current, 0, {
+      type: "spring",
+      stiffness: 420,
+      damping: 32,
+      onUpdate: (v) => {
+        dxRef.current = v;
+        setDx(v);
+      },
+    });
+  };
+
+  return (
+    <li
+      className="relative flex touch-none select-none items-center gap-3 rounded-[14px] px-1 py-3 active:bg-ink/[0.03]"
+      style={{
+        transform: `translateX(${dx}px)`,
+        transition: dragging.current || acting ? "none" : undefined,
+      }}
+      onPointerDown={onDown}
+      onPointerMove={onMove}
+      onPointerUp={onUp}
+      onPointerCancel={onUp}
+    >
+      {dx > 20 && (
+        <div
+          className="pointer-events-none absolute left-0 top-1/2 z-0 -translate-y-1/2 rounded-full bg-primary/90 px-2.5 py-1 text-[11px] font-bold text-ink"
+          style={{ opacity: Math.min(1, dx / 64) }}
+        >
+          ✓
+        </div>
+      )}
+      <span
+        className={`flex h-3 w-3 shrink-0 items-center justify-center rounded-full ${
+          dot === "filled" ? "bg-ink" : "border-2 border-ink/25 bg-transparent"
+        }`}
+        aria-hidden
+      />
+      <span className="min-w-0 flex-1 truncate text-[16px] font-semibold text-ink">
+        {title}
+      </span>
+    </li>
+  );
+}
+
+function ScheduleFeelHint() {
+  const t = useT();
+  return (
+    <p className="mt-2 px-1 text-[11px] text-ink-soft/70">
+      {t("→ 밀어 완료 · 탭하여 수정", "→ Swipe to complete · Tap to edit")}
+    </p>
   );
 }
 
@@ -579,7 +711,7 @@ function ScheduleCard({
               if (done) onMoveToArchive?.();
               else onComplete();
             }}
-            className={`mt-1 flex h-6 w-6 shrink-0 items-center justify-center rounded-full border-2 ${
+            className={`touch-target mt-1 flex shrink-0 items-center justify-center rounded-full border-2 ${
               done
                 ? "border-primary bg-primary text-ink"
                 : "border-ink/20 hover:border-primary"
@@ -649,7 +781,7 @@ function ScheduleCard({
                   onPin();
                 }}
                 aria-label={t("고정", "Pin")}
-                className={`flex h-8 w-8 items-center justify-center rounded-full transition ${
+                className={`touch-target rounded-full transition ${
                   pinned ? "bg-primary text-ink" : "bg-white/70 text-ink-soft"
                 }`}
               >
@@ -662,7 +794,7 @@ function ScheduleCard({
                   onTimer();
                 }}
                 aria-label={t("타이머", "Timer")}
-                className={`flex h-8 w-8 items-center justify-center rounded-full transition ${
+                className={`touch-target rounded-full transition ${
                   timerEnd ? "bg-ink text-white" : "bg-white/70 text-ink-soft"
                 }`}
               >
@@ -675,7 +807,7 @@ function ScheduleCard({
                   onAlarm();
                 }}
                 aria-label={t("알림", "Reminder")}
-                className={`flex h-8 w-8 items-center justify-center rounded-full transition ${
+                className={`touch-target rounded-full transition ${
                   s.alarm ? "bg-primary text-ink" : "bg-white/70 text-ink-soft"
                 }`}
               >
@@ -699,7 +831,8 @@ function ScheduleCard({
                 e.stopPropagation();
                 onDelete();
               }}
-              className="text-[12px] font-medium text-ink-soft hover:text-ink"
+              className="touch-target text-[12px] font-medium text-ink-soft hover:text-ink"
+              aria-label={t("삭제", "Delete")}
             >
               {t("삭제", "Delete")}
             </button>
@@ -1004,19 +1137,13 @@ function DayEventChip({
 }
 
 function Empty() {
-  const t = useT();
   return (
-    <div className="flex h-full min-h-[50dvh] flex-col items-center justify-center text-center px-4">
-      <div className="text-5xl">🗓</div>
-      <div className="mt-3 text-[17px] font-bold text-ink">
-        {t("시간이 비어 있어요.", "Your calendar is open.")}
-      </div>
-      <div className="mt-1 text-sm text-ink-soft">
-        {t(
-          "생각을 오른쪽으로 밀거나 + 로 채워보세요.",
-          "Swipe a thought right or tap + when you're ready.",
-        )}
-      </div>
-    </div>
+    <EmptyState
+      emoji="🗓"
+      titleKo="시간이 비어 있어요"
+      titleEn="Your calendar is open"
+      hintKo="생각을 오른쪽으로 밀거나 + 로 채워보세요"
+      hintEn="Swipe a thought right or tap + when you're ready"
+    />
   );
 }

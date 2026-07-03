@@ -6,6 +6,7 @@ import { fetchBrainMirror } from "@/lib/brainMirrorApi";
 import { setInboxBrainMirror, useInbox, type InboxItem } from "@/lib/store";
 import { haptic } from "@/lib/haptics";
 import { SPRING_DEFAULT } from "@/lib/motion";
+import { useT } from "@/lib/i18n";
 
 const APPEAR_DELAY_MS = 1500;
 
@@ -60,7 +61,7 @@ function BrainMirrorQuietView({
 
   return (
     <motion.div
-      className="mt-3 rounded-[24px] bg-[#111111] px-[22px] py-5 text-white shadow-card"
+      className="mt-3 rounded-[24px] bg-ink px-[22px] py-5 text-white shadow-card"
       initial={{ opacity: 0, scale: 0.96 }}
       animate={{ opacity: 1, scale: 1 }}
       transition={{ ...SPRING_DEFAULT, duration: 0.15 }}
@@ -87,6 +88,29 @@ function BrainMirrorQuietView({
   );
 }
 
+function BrainMirrorThinking({ inline }: { inline?: boolean }) {
+  const t = useT();
+  if (inline) {
+    return (
+      <div
+        className="mt-2 border-t border-dashed border-ink/15 pt-2"
+        role="status"
+        aria-live="polite"
+      >
+        <div className="skeleton-shimmer h-3 w-2/3 rounded-full" />
+        <div className="skeleton-shimmer mt-1.5 h-3 w-1/2 rounded-full" />
+      </div>
+    );
+  }
+  return (
+    <div className="mt-3 rounded-[24px] bg-ink/5 px-4 py-3" role="status">
+      <p className="text-[12px] text-ink-soft">
+        {t("정리 중…", "Organizing…")}
+      </p>
+    </div>
+  );
+}
+
 type InboxHandle = Pick<ReturnType<typeof useInbox>, "update">;
 
 export function BrainMirrorPanel({
@@ -109,13 +133,18 @@ export function BrainMirrorPanel({
   onMirrorMissed?: (item: InboxItem) => void;
   variant?: "inline" | "card";
 }) {
-  const [phase, setPhase] = useState<"idle" | "ready" | "hidden">(() => {
-    if (sessionStorage.getItem(SK.dismissed(item.id))) return "hidden";
-    if (item.brain_mirror && normalizeStored(item.brain_mirror).items.length) {
-      return "ready";
-    }
-    return "idle";
-  });
+  const [phase, setPhase] = useState<"idle" | "thinking" | "ready" | "hidden">(
+    () => {
+      if (sessionStorage.getItem(SK.dismissed(item.id))) return "hidden";
+      if (
+        item.brain_mirror &&
+        normalizeStored(item.brain_mirror).items.length
+      ) {
+        return "ready";
+      }
+      return "idle";
+    },
+  );
   const [result, setResult] = useState<BrainMirrorResult | null>(() =>
     item.brain_mirror ? normalizeStored(item.brain_mirror) : null,
   );
@@ -126,6 +155,7 @@ export function BrainMirrorPanel({
     if (!item.text.trim()) return;
     const gen = ++fetchGen.current;
     sessionStorage.setItem(SK.attempted(item.id), "1");
+    setPhase("thinking");
 
     const abortController = new AbortController();
     let finished = false;
@@ -217,6 +247,10 @@ export function BrainMirrorPanel({
       }
     })();
   }, [phase, result, item, onAutoAct]);
+
+  if (phase === "thinking") {
+    return <BrainMirrorThinking inline={variant === "inline"} />;
+  }
 
   if (phase !== "ready" || !result?.items.length) return null;
 

@@ -57,7 +57,7 @@ export function TopNav() {
           <button
             type="button"
             aria-label={t("정보", "About")}
-            className="flex h-10 w-10 items-center justify-center rounded-full text-ink-soft active:bg-ink/5 active:text-ink transition"
+            className="touch-target rounded-full text-ink-soft active:bg-ink/5 active:text-ink transition"
             onClick={() => {
               tap();
               setAboutOpen(true);
@@ -68,7 +68,7 @@ export function TopNav() {
           <button
             type="button"
             aria-label={t("문의 · 피드백", "Contact · Feedback")}
-            className="flex h-10 w-10 items-center justify-center rounded-full text-ink-soft active:bg-ink/5 active:text-ink transition"
+            className="touch-target rounded-full text-ink-soft active:bg-ink/5 active:text-ink transition"
             onClick={() => {
               tap();
               setFeedbackOpen(true);
@@ -92,7 +92,8 @@ export function TopNav() {
                 await supabase.auth.signOut();
                 toast(t("로그아웃됨", "Signed out"));
               }}
-              className="flex h-8 items-center px-2 text-[10px] font-extrabold uppercase tracking-widest text-ink-soft"
+              className="touch-target px-2 text-[10px] font-extrabold uppercase tracking-widest text-ink-soft"
+              aria-label={t("로그아웃", "Sign out")}
             >
               {t("로그아웃", "Sign out")}
             </button>

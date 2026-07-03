@@ -22,6 +22,8 @@ type Props = {
   /** Restores pasted text when the split sheet is dismissed. */
   restoreText?: string | null;
   onRestoreConsumed?: () => void;
+  /** Larger hero layout when inbox is empty */
+  hero?: boolean;
 };
 
 export function InputBar({
@@ -29,6 +31,7 @@ export function InputBar({
   onPasteMulti,
   restoreText,
   onRestoreConsumed,
+  hero = false,
 }: Props) {
   const t = useT();
   const { lang } = useLang();
@@ -52,8 +55,9 @@ export function InputBar({
   onAddRef.current = onAdd;
 
   useEffect(() => {
+    if (!hero) return;
     textareaRef.current?.focus();
-  }, []);
+  }, [hero]);
 
   useEffect(() => {
     if (!restoreText) return;
@@ -248,8 +252,18 @@ export function InputBar({
   return (
     <form
       onSubmit={onSubmit}
-      className="border-t border-ink/5 bg-white/95 px-5 backdrop-blur-md shadow-[0_-4px_16px_-8px_rgba(0,0,0,0.06)]"
+      className={`border-t border-ink/5 bg-white/95 backdrop-blur-md shadow-[0_-4px_16px_-8px_rgba(0,0,0,0.06)] ${
+        hero ? "border-t-0 shadow-none" : ""
+      }`}
     >
+      {hero && (
+        <p className="px-5 pt-4 text-center text-[13px] font-medium leading-relaxed text-ink-soft/90">
+          {t(
+            "잊어도 괜찮아요. ItJima가 기억할게요.",
+            "It's okay to forget. ItJima will remember.",
+          )}
+        </p>
+      )}
       {images.length > 0 && (
         <div className="flex gap-2 overflow-x-auto pt-3">
           {images.map((src, i) => (
@@ -264,69 +278,75 @@ export function InputBar({
                 onClick={() =>
                   setImages((p) => p.filter((_, idx) => idx !== i))
                 }
-                className="absolute -right-1 -top-1 rounded-full bg-ink p-0.5 text-white"
+                className="touch-target absolute -right-1 -top-1 rounded-full bg-ink text-white"
+                aria-label={t("이미지 제거", "Remove image")}
               >
-                <X size={12} />
+                <X size={14} />
               </button>
             </div>
           ))}
         </div>
       )}
-      <div className="mt-3 rounded-[28px] bg-ink/[0.03] px-4 py-3 shadow-card transition-[box-shadow] duration-200 focus-within:shadow-[0_0_0_2px_#FFE033,0_4px_16px_-4px_rgba(255,224,51,0.25)]">
-        <textarea
-          ref={textareaRef}
-          value={text}
-          onChange={(e) => setText(e.target.value)}
-          onCompositionStart={() => {
-            composingRef.current = true;
-          }}
-          onCompositionEnd={() => {
-            composingRef.current = false;
-          }}
-          onPaste={onPaste}
-          onKeyDownCapture={(e) => {
-            if (e.key !== "Enter" || (!e.metaKey && !e.ctrlKey)) return;
-            e.preventDefault();
-            e.stopPropagation();
-            submitCommandEnter(e.currentTarget);
-          }}
-          onKeyDown={(e) => {
-            const isComposing =
-              composingRef.current || e.nativeEvent.isComposing;
-            if (e.key === "Meta" && !isComposing)
-              primeCommandSubmit(e.currentTarget);
-            if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) {
+      <div className={`${hero ? "px-5" : "px-5"} ${hero ? "mt-3" : "mt-0"}`}>
+        <div
+          className={`rounded-[28px] bg-ink/[0.03] px-4 input-focus-ring transition-[box-shadow] duration-200 ${
+            hero ? "py-4 ring-1 ring-ink/5" : "py-3"
+          }`}
+        >
+          <textarea
+            ref={textareaRef}
+            value={text}
+            onChange={(e) => setText(e.target.value)}
+            onCompositionStart={() => {
+              composingRef.current = true;
+            }}
+            onCompositionEnd={() => {
+              composingRef.current = false;
+            }}
+            onPaste={onPaste}
+            onKeyDownCapture={(e) => {
+              if (e.key !== "Enter" || (!e.metaKey && !e.ctrlKey)) return;
               e.preventDefault();
               e.stopPropagation();
               submitCommandEnter(e.currentTarget);
-              return;
-            }
-            if (e.key === "Enter" && !e.shiftKey && !isComposing) {
-              e.preventDefault();
-              submitFromKeyboard(e.currentTarget);
-            }
-          }}
-          onKeyUp={(e) => {
-            const isComposing =
-              composingRef.current || e.nativeEvent.isComposing;
-            if (e.key === "Enter" && !e.shiftKey && !isComposing) {
-              e.preventDefault();
-              submitFromKeyboard(e.currentTarget);
-            }
-          }}
-          rows={3}
-          placeholder={t(
-            "메시지 입력 · Shift+Enter 줄바꿈",
-            "Message · Shift+Enter for new line",
-          )}
-          className="block min-h-[72px] w-full resize-none bg-transparent text-[16px] leading-relaxed text-ink placeholder:text-ink-soft/70 focus:outline-none max-h-40"
-        />
+            }}
+            onKeyDown={(e) => {
+              const isComposing =
+                composingRef.current || e.nativeEvent.isComposing;
+              if (e.key === "Meta" && !isComposing)
+                primeCommandSubmit(e.currentTarget);
+              if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) {
+                e.preventDefault();
+                e.stopPropagation();
+                submitCommandEnter(e.currentTarget);
+                return;
+              }
+              if (e.key === "Enter" && !e.shiftKey && !isComposing) {
+                e.preventDefault();
+                submitFromKeyboard(e.currentTarget);
+              }
+            }}
+            onKeyUp={(e) => {
+              const isComposing =
+                composingRef.current || e.nativeEvent.isComposing;
+              if (e.key === "Enter" && !e.shiftKey && !isComposing) {
+                e.preventDefault();
+                submitFromKeyboard(e.currentTarget);
+              }
+            }}
+            rows={hero ? 4 : 3}
+            placeholder={t("생각을 적어보세요", "Type a thought")}
+            className={`block w-full resize-none bg-transparent leading-relaxed text-ink placeholder:text-ink-soft/60 focus:outline-none max-h-40 ${
+              hero ? "min-h-[96px] text-[17px]" : "min-h-[72px] text-[16px]"
+            }`}
+          />
+        </div>
       </div>
-      <div className="flex items-center gap-1 pb-2 pt-1">
+      <div className="flex items-center gap-1 px-5 pb-2 pt-1">
         <button
           type="button"
           onClick={onMic}
-          className={`flex h-9 w-9 items-center justify-center rounded-full transition ${
+          className={`touch-target rounded-full transition ${
             listening
               ? "bg-ink text-white animate-pulse"
               : "text-ink-soft hover:bg-white/60"
@@ -338,7 +358,7 @@ export function InputBar({
         <button
           type="button"
           onClick={() => fileRef.current?.click()}
-          className="flex h-9 w-9 items-center justify-center rounded-full text-ink-soft hover:bg-white/60"
+          className="touch-target rounded-full text-ink-soft hover:bg-white/60"
           aria-label={t("이미지 첨부", "Attach image")}
         >
           <ImageIcon size={18} />
@@ -354,7 +374,7 @@ export function InputBar({
         <button
           type="button"
           onClick={() => setScribbleOpen(true)}
-          className="flex h-9 w-9 items-center justify-center rounded-full text-ink-soft hover:bg-white/60"
+          className="touch-target rounded-full text-ink-soft hover:bg-white/60"
           aria-label={t("낙서", "Scribble")}
         >
           <Pencil size={18} />
@@ -389,12 +409,14 @@ export function InputBar({
         onClose={() => setScribbleOpen(false)}
         onDone={(dataUrl) => void addImage(dataUrl)}
       />
-      <p className="pb-3 text-center text-[11px] text-ink-soft/80">
-        {t(
-          "잊어도 괜찮아요. ItJima가 기억할게요.",
-          "It's okay to forget. ItJima will remember.",
-        )}
-      </p>
+      {!hero && (
+        <p className="px-5 pb-3 text-center text-[11px] text-ink-soft/75">
+          {t(
+            "잊어도 괜찮아요. ItJima가 기억할게요.",
+            "It's okay to forget. ItJima will remember.",
+          )}
+        </p>
+      )}
     </form>
   );
 }

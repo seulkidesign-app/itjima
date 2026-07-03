@@ -93,6 +93,72 @@ export function groupSchedules(
     .filter((g) => g.items.length > 0);
 }
 
+export type FeelSectionKey = "today" | "tomorrow" | "later";
+
+export type FeelSection = {
+  key: FeelSectionKey;
+  items: ScheduleItem[];
+};
+
+export function feelSectionLabel(
+  key: FeelSectionKey,
+  lang: "ko" | "en",
+): string {
+  const ko: Record<FeelSectionKey, string> = {
+    today: "오늘",
+    tomorrow: "내일",
+    later: "나중",
+  };
+  const en: Record<FeelSectionKey, string> = {
+    today: "Today",
+    tomorrow: "Tomorrow",
+    later: "Later",
+  };
+  return lang === "en" ? en[key] : ko[key];
+}
+
+/** Today vs later grouping for feel-first schedule list */
+export function groupSchedulesForFeel(
+  items: ScheduleItem[],
+  pins: Set<string>,
+): FeelSection[] {
+  const active = items.filter((s) => s.status !== "done");
+  const order: FeelSectionKey[] = ["today", "tomorrow", "later"];
+  const buckets = new Map<FeelSectionKey, ScheduleItem[]>(
+    order.map((k) => [k, []]),
+  );
+
+  const sorted = [...active].sort(
+    (a, b) => +new Date(a.start_time) - +new Date(b.start_time),
+  );
+
+  for (const s of sorted) {
+    const k = classifySchedule(s.start_time);
+    const bucket: FeelSectionKey =
+      k === "now" || k === "today"
+        ? "today"
+        : k === "tomorrow"
+          ? "tomorrow"
+          : "later";
+    buckets.get(bucket)!.push(s);
+  }
+
+  return order
+    .map((key) => ({ key, items: buckets.get(key)! }))
+    .filter((g) => g.items.length > 0);
+}
+
+/** Filled dot = do today now; hollow = can wait */
+export function scheduleFeelDot(
+  s: ScheduleItem,
+  pins: Set<string>,
+  now = new Date(),
+): "filled" | "hollow" {
+  const k = classifySchedule(s.start_time, now);
+  if (k === "now" || pins.has(s.id) || isMissed(s, now)) return "filled";
+  return "hollow";
+}
+
 export function sectionLabel(
   key: ScheduleSectionKey,
   lang: "ko" | "en",

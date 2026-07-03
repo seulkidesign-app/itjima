@@ -1,4 +1,5 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
+import { Check } from "lucide-react";
 import { motion } from "framer-motion";
 import { BottomSheet } from "./BottomSheet";
 import { useT, useLang } from "@/lib/i18n";
@@ -6,7 +7,7 @@ import type { InboxItem } from "@/lib/store";
 import { thoughtFirstLine } from "@/lib/brainMirror";
 import { detectDate } from "@/lib/dateDetect";
 import { SPRING_DEFAULT } from "@/lib/motion";
-import { confirm as confirmHaptic } from "@/lib/haptics";
+import { confirm as confirmHaptic, tick } from "@/lib/haptics";
 
 const TIME_CHIPS = ["09:00", "13:00", "18:00"] as const;
 type DayKey = "today" | "tomorrow" | "detected";
@@ -47,6 +48,37 @@ function defaultStart(item: InboxItem): Date {
   return d;
 }
 
+function Chip({
+  active,
+  onClick,
+  children,
+  large,
+}: {
+  active: boolean;
+  onClick: () => void;
+  children: ReactNode;
+  large?: boolean;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={() => {
+        tick();
+        onClick();
+      }}
+      className={`chip-select flex-1 rounded-full font-bold ${
+        large ? "py-3.5 text-[18px]" : "py-2.5 text-[13px]"
+      } ${
+        active
+          ? "chip-select-active bg-primary text-ink"
+          : "bg-ink/[0.05] text-ink-soft"
+      }`}
+    >
+      {children}
+    </button>
+  );
+}
+
 export function FocusScheduleSheet({ item, open, onClose, onConfirm }: Props) {
   const t = useT();
   const { lang } = useLang();
@@ -64,6 +96,7 @@ export function FocusScheduleSheet({ item, open, onClose, onConfirm }: Props) {
   );
 
   const [title, setTitle] = useState("");
+  const [editTitle, setEditTitle] = useState(false);
   const [day, setDay] = useState<DayKey>("today");
   const [timeChip, setTimeChip] = useState("09:00");
   const [alarm, setAlarm] = useState<AlarmKey>("30m");
@@ -72,6 +105,7 @@ export function FocusScheduleSheet({ item, open, onClose, onConfirm }: Props) {
     if (!open || !item) return;
     const start = defaultStart(item);
     setTitle(thoughtFirstLine(item.text));
+    setEditTitle(false);
     if (detected) {
       setDay("detected");
       setTimeChip(
@@ -103,23 +137,11 @@ export function FocusScheduleSheet({ item, open, onClose, onConfirm }: Props) {
   };
 
   const start = buildStart();
-  const summaryDate =
-    day === "detected" && detected
-      ? detected.label
-      : day === "tomorrow"
-        ? t("내일", "Tomorrow")
-        : t("오늘", "Today");
   const summaryTime = start.toLocaleTimeString(locale, {
     hour: "2-digit",
     minute: "2-digit",
     hour12: false,
   });
-  const summaryAlarm =
-    alarm === "off"
-      ? t("알림 없음", "No reminder")
-      : alarm === "1h"
-        ? t("1시간 전", "1 hour before")
-        : t("30분 전", "30 min before");
 
   const handleConfirm = () => {
     confirmHaptic();
@@ -138,59 +160,65 @@ export function FocusScheduleSheet({ item, open, onClose, onConfirm }: Props) {
   }
 
   return (
-    <BottomSheet open={open} onClose={onClose} maxHeight="58vh">
+    <BottomSheet open={open} onClose={onClose} maxHeight="52vh">
       <motion.div
-        className="px-5 pb-[calc(env(safe-area-inset-bottom)+1rem)]"
-        initial={{ opacity: 0, y: 12 }}
+        className="px-5 pb-[calc(env(safe-area-inset-bottom)+1.25rem)]"
+        initial={{ opacity: 0, y: 16 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={SPRING_DEFAULT}
+        transition={{ ...SPRING_DEFAULT, delay: 0.04 }}
       >
-        <input
-          value={title}
-          onChange={(e) => setTitle(e.target.value)}
-          className="mb-3 w-full rounded-[20px] bg-ink/[0.04] px-4 py-3.5 text-[17px] font-semibold text-ink focus:bg-ink/[0.06] focus:outline-none focus:ring-2 focus:ring-primary/40"
-          aria-label={t("일정 제목", "Event title")}
-        />
+        {editTitle ? (
+          <input
+            value={title}
+            onChange={(e) => setTitle(e.target.value)}
+            className="mb-4 w-full rounded-[16px] border border-ink/6 bg-ink/[0.03] px-4 py-3 text-[17px] font-semibold text-ink focus:border-primary/40 focus:outline-none focus:ring-2 focus:ring-primary/25"
+            aria-label={t("일정 제목", "Event title")}
+            autoFocus
+          />
+        ) : (
+          <button
+            type="button"
+            onClick={() => setEditTitle(true)}
+            className="mb-4 w-full rounded-[16px] bg-ink/[0.04] px-4 py-3 text-left text-[17px] font-semibold text-ink"
+          >
+            {title || thoughtFirstLine(item.text)}
+          </button>
+        )}
 
-        <p className="mb-4 text-[13px] text-ink-soft">
-          {summaryDate} · {summaryTime} · {summaryAlarm}
+        {/* 1. 시간 */}
+        <p className="mb-2 text-[11px] font-extrabold uppercase tracking-[0.14em] text-ink-soft">
+          {t("시간", "Time")}
         </p>
-
         <div className="flex gap-2">
-          {dayOptions.map(({ key, label }) => (
-            <button
-              key={key}
-              type="button"
-              onClick={() => setDay(key)}
-              className={`touch-press flex-1 rounded-full py-2.5 text-[14px] font-bold transition ${
-                day === key
-                  ? "bg-primary text-ink"
-                  : "bg-ink/[0.06] text-ink-soft"
-              }`}
-            >
-              {label}
-            </button>
-          ))}
-        </div>
-
-        <div className="mt-2 flex gap-2">
           {TIME_CHIPS.map((chip) => (
-            <button
+            <Chip
               key={chip}
-              type="button"
+              large
+              active={timeChip === chip}
               onClick={() => setTimeChip(chip)}
-              className={`touch-press flex-1 rounded-full py-2.5 text-[14px] font-bold transition ${
-                timeChip === chip
-                  ? "bg-primary text-ink"
-                  : "bg-ink/[0.06] text-ink-soft"
-              }`}
             >
               {chip}
-            </button>
+            </Chip>
           ))}
         </div>
 
-        <div className="mt-3 flex gap-2">
+        {/* 2. 날짜 */}
+        <p className="mb-2 mt-4 text-[11px] font-extrabold uppercase tracking-[0.14em] text-ink-soft">
+          {t("날짜", "Date")}
+        </p>
+        <div className="flex gap-2">
+          {dayOptions.map(({ key, label }) => (
+            <Chip key={key} active={day === key} onClick={() => setDay(key)}>
+              {label}
+            </Chip>
+          ))}
+        </div>
+
+        {/* 3. 알림 */}
+        <p className="mb-2 mt-4 text-[11px] font-extrabold uppercase tracking-[0.14em] text-ink-soft">
+          {t("알림", "Reminder")}
+        </p>
+        <div className="flex gap-2">
           {(
             [
               ["30m", t("30분 전", "30 min")],
@@ -198,27 +226,24 @@ export function FocusScheduleSheet({ item, open, onClose, onConfirm }: Props) {
               ["off", t("없음", "Off")],
             ] as const
           ).map(([key, label]) => (
-            <button
+            <Chip
               key={key}
-              type="button"
+              active={alarm === key}
               onClick={() => setAlarm(key)}
-              className={`touch-press flex-1 rounded-full py-2 text-[12px] font-semibold transition ${
-                alarm === key
-                  ? "bg-ink/[0.1] text-ink"
-                  : "bg-ink/[0.04] text-ink-soft"
-              }`}
             >
               {label}
-            </button>
+            </Chip>
           ))}
         </div>
 
+        {/* 4. 완료 */}
         <button
           type="button"
           onClick={handleConfirm}
-          className="touch-press mt-5 w-full rounded-full bg-ink py-4 text-[16px] font-bold text-white transition active:scale-[0.98]"
+          className="touch-press mt-6 flex w-full items-center justify-center gap-2 rounded-full bg-ink py-4 text-[16px] font-bold text-white shadow-[0_4px_20px_-4px_oklch(0_0_0/0.35)]"
         >
-          {t("일정으로 추가", "Add to schedule")}
+          <Check size={18} strokeWidth={3} />
+          {t("완료", "Done")} · {summaryTime}
         </button>
       </motion.div>
     </BottomSheet>

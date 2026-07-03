@@ -26,6 +26,8 @@ import {
 import { recentArchiveItems, searchArchiveItems } from "@/lib/archiveSearch";
 import { ArchiveRelatedStrip } from "@/components/ArchiveRelatedStrip";
 import { ArchiveGridSkeleton } from "@/components/Skeleton";
+import { EmptyState } from "@/components/EmptyState";
+import { SyncIndicator } from "@/components/SyncIndicator";
 import { SwipeCard } from "@/components/SwipeCard";
 import { track } from "@/lib/analytics";
 
@@ -69,7 +71,7 @@ function writeJSON(key: string, val: unknown) {
 function Archive() {
   const t = useT();
   const { lang } = useLang();
-  const { items, remove, syncState } = useArchive();
+  const { items, remove, add, syncState } = useArchive();
   const schedules = useSchedules();
   const [q, setQ] = useState("");
   const [groupFilter, setGroupFilter] = useState<string>("all");
@@ -295,60 +297,95 @@ function Archive() {
     exitSelection();
   };
 
-  // Swipe → schedule (right) / delete (left)
+  const removeWithUndo = async (it: ArchiveItem) => {
+    const snapshot = { ...it };
+    try {
+      await remove(it.id);
+      track("archive_deleted", { text_length: it.text.length });
+      toast.custom(
+        (toastId) => (
+          <div className="flex items-center gap-3 rounded-[24px] bg-ink px-4 py-3 text-white shadow-float">
+            <div className="text-sm">{t("삭제했어요", "Deleted")}</div>
+            <button
+              type="button"
+              onClick={async () => {
+                await add({
+                  text: snapshot.text,
+                  images: snapshot.images,
+                  source_id: snapshot.source_id,
+                  raw_text: snapshot.raw_text,
+                  brain_mirror: snapshot.brain_mirror,
+                });
+                toast.dismiss(toastId);
+              }}
+              className="touch-target shrink-0 rounded-full bg-primary px-4 text-xs font-bold text-ink"
+            >
+              {t("되돌리기", "Undo")}
+            </button>
+          </div>
+        ),
+        { duration: 10000 },
+      );
+    } catch {
+      toast.error(t("삭제하지 못했어요", "Couldn't delete"));
+    }
+  };
+
   const sendToSchedule = async (it: ArchiveItem) => {
     const det = detectDate(it.text);
     const start = det?.start ?? new Date();
     const end = det?.end ?? new Date(start.getTime() + 60 * 60 * 1000);
-    await schedules.add({
-      text: it.text,
-      start_time: start.toISOString(),
-      end_time: end.toISOString(),
-      alarm: false,
-      source_id: it.source_id ?? it.id,
-      raw_text: it.raw_text ?? it.text,
-      brain_mirror: it.brain_mirror ?? null,
-      status: "active",
-    });
-    await remove(it.id);
-    track("archive_swiped_schedule", { text_length: it.text.length });
-    haptic([6, 18, 8]);
-    toast.success(t("일정으로 옮겼어요", "Moved to schedule"));
+    try {
+      await schedules.add({
+        text: it.text,
+        start_time: start.toISOString(),
+        end_time: end.toISOString(),
+        alarm: false,
+        source_id: it.source_id ?? it.id,
+        raw_text: it.raw_text ?? it.text,
+        brain_mirror: it.brain_mirror ?? null,
+        status: "active",
+      });
+      await remove(it.id);
+      track("archive_swiped_schedule", { text_length: it.text.length });
+      haptic([6, 18, 8]);
+      toast.success(t("일정으로 옮겼어요", "Moved to schedule"));
+    } catch {
+      toast.error(t("일정을 저장하지 못했어요", "Couldn't save schedule"));
+    }
   };
 
   return (
     <div className="flex h-full flex-col bg-white">
+      <SyncIndicator active={syncState === "syncing" && items.length > 0} />
       <div className="sticky top-0 z-10 shrink-0 bg-white pb-1">
         <div className="px-5 pb-2 pt-6">
-          <div className="nrc-eyebrow">{t("보관함", "Archive")}</div>
-          <div className="mt-1 flex items-end justify-between gap-3">
-            <h1 className="page-title">{t("기억", "Memory")}</h1>
-            <div className="text-right leading-none">
-              <div className="font-num text-[40px] text-ink">
-                {items.length}
-              </div>
-              <div className="nrc-eyebrow mt-0.5">{t("개", "Saved")}</div>
-            </div>
-          </div>
+          <p className="text-[13px] font-medium text-ink-soft">
+            {t("잊어도 돼요.", "It's okay to forget.")}
+          </p>
+          <h1 className="mt-1 text-[28px] font-bold tracking-[-0.02em] text-ink">
+            {t("여기 있어요.", "It's here.")}
+          </h1>
+          {items.length > 0 && (
+            <p className="mt-2 text-[13px] text-ink-soft/80">
+              {t(
+                `${items.length}개의 생각이 안전하게 보관 중`,
+                `${items.length} thoughts kept safe`,
+              )}
+            </p>
+          )}
         </div>
         {items.length > 0 && (
           <div className="px-5 pb-3">
             <button
               onClick={runAIOrganize}
-              className="w-full bg-ink py-4 text-[13px] font-extrabold uppercase tracking-[0.18em] text-white transition active:scale-[0.98]"
-              style={{ borderRadius: 999 }}
+              className="touch-press w-full rounded-full border border-ink/10 bg-ink/[0.03] py-3 text-[12px] font-bold text-ink-soft"
             >
               <span className="inline-flex items-center justify-center gap-2">
-                <Sparkles size={14} className="text-primary" />
-                {t("✨ 자동 정리", "✨ Auto-sort")}
+                <Sparkles size={13} />
+                {t("그룹 정리", "Sort into groups")}
               </span>
             </button>
-            <p className="mt-2 px-1 text-[11px] leading-relaxed text-ink-soft">
-              {t(
-                "키워드로 그룹을 다시 나눠요. 직접 만든 그룹은 그대로 둡니다.",
-                "Re-sorts by keywords. Custom groups stay as you set them.",
-              )}
-            </p>
           </div>
         )}
 
@@ -528,8 +565,8 @@ function Archive() {
                             key={it.id}
                             disabled={swipeDisabled}
                             onSwipe={(dir) => {
-                              if (dir === "right") sendToSchedule(it);
-                              else remove(it.id);
+                              if (dir === "right") void sendToSchedule(it);
+                              else void removeWithUndo(it);
                             }}
                           >
                             <div
@@ -549,8 +586,12 @@ function Archive() {
                               onPointerDown={() => startLongPress(it.id)}
                               onPointerUp={cancelLongPress}
                               onPointerLeave={cancelLongPress}
-                              onClick={() => toggleSelect(it.id)}
+                              onClick={() => {
+                                if (selecting) toggleSelect(it.id);
+                              }}
                               className={`px-[22px] py-5 transition ${
+                                selecting ? "cursor-pointer" : "cursor-default"
+                              } ${
                                 isSel ? "ring-2 ring-primary scale-[0.98]" : ""
                               } ${isDragging ? "opacity-40" : ""}`}
                             >
@@ -659,7 +700,7 @@ function Archive() {
                                         <button
                                           onClick={(e) => {
                                             e.stopPropagation();
-                                            remove(it.id);
+                                            void removeWithUndo(it);
                                           }}
                                           aria-label={t("삭제", "Delete")}
                                         >
@@ -813,19 +854,13 @@ function Archive() {
 }
 
 function Empty() {
-  const t = useT();
   return (
-    <div className="flex h-full min-h-[50dvh] flex-col items-center justify-center text-center px-4">
-      <div className="text-5xl">🗂</div>
-      <div className="mt-3 text-[17px] font-bold text-ink">
-        {t("아직 담긴 게 없어요.", "Nothing saved yet.")}
-      </div>
-      <div className="mt-1 text-sm text-ink-soft">
-        {t(
-          "마음에 남는 생각을 왼쪽으로 밀어 모아보세요.",
-          "Swipe left on a thought when you want to keep it.",
-        )}
-      </div>
-    </div>
+    <EmptyState
+      emoji="🗂"
+      titleKo="아직 담긴 게 없어요"
+      titleEn="Nothing saved yet"
+      hintKo="마음에 남는 생각을 왼쪽으로 밀어 모아보세요"
+      hintEn="Swipe left on a thought when you want to keep it"
+    />
   );
 }

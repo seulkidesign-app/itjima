@@ -13,11 +13,12 @@ import { ChatSwipeRow } from "@/components/ChatSwipeRow";
 import { FocusSortMode } from "@/components/FocusSortMode";
 import { ScheduleSheet } from "@/components/ScheduleSheet";
 import { FocusScheduleSheet } from "@/components/FocusScheduleSheet";
-import { ScheduleQuickSheet } from "@/components/ScheduleQuickSheet";
 import { LoginSheet } from "@/components/LoginSheet";
 import { CleanupReviewSheet } from "@/components/CleanupReviewSheet";
 import { ChatBubble } from "@/components/ChatBubble";
 import { InputBar } from "@/components/InputBar";
+import { SyncIndicator } from "@/components/SyncIndicator";
+import { EmptyState } from "@/components/EmptyState";
 import { BrainMirrorPanel } from "@/components/BrainMirrorSummary";
 import {
   isBrainMirrorCandidate,
@@ -65,10 +66,6 @@ function Inbox() {
     open: boolean;
     item?: InboxItem;
   }>({ open: false });
-  const [scheduleQuick, setScheduleQuick] = useState<{
-    open: boolean;
-    item?: InboxItem;
-  }>({ open: false });
   const [focusPendingScheduleId, setFocusPendingScheduleId] = useState<
     string | null
   >(null);
@@ -105,7 +102,7 @@ function Inbox() {
               setScheduleSheet({ open: true, item, date: det.start });
               toast.dismiss(toastId);
             }}
-            className="rounded-full bg-primary px-3 py-1 text-xs font-bold text-ink"
+            className={toastBtn}
           >
             {t("등록", "Add")}
           </button>
@@ -135,6 +132,9 @@ function Inbox() {
     prevCountRef.current = items.length;
   }, [items.length]);
 
+  const toastBtn =
+    "touch-target shrink-0 rounded-full bg-primary px-4 text-xs font-bold text-ink";
+
   const showUndoToast = (
     message: string,
     onUndo: () => void | Promise<void>,
@@ -148,7 +148,7 @@ function Inbox() {
               await onUndo();
               toast.dismiss(toastId);
             }}
-            className="rounded-full bg-primary px-3 py-1 text-xs font-bold text-ink"
+            className={toastBtn}
           >
             {t("되돌리기", "Undo")}
           </button>
@@ -168,30 +168,34 @@ function Inbox() {
     start: Date,
     end: Date,
   ) => {
-    const text = it.brain_mirror?.title
-      ? formatMirrorScheduleText(it.text, it.brain_mirror)
-      : it.text.split("\n")[0]?.trim() || it.text;
-    const payload = scheduleFromInbox(it, {
-      text,
-      start_time: start.toISOString(),
-      end_time: end.toISOString(),
-    });
-    const snapshot = archiveFromInbox(it);
-    const { item: created } = await schedules.add(payload);
-    await inbox.remove(it.id);
-    track("schedule_created", {
-      source: "inbox_swipe",
-      text_length: text.length,
-    });
-    showUndoToast(t("일정으로 옮겼어요", "Moved to Schedule"), async () => {
-      await schedules.remove(created.id);
-      const { item: restored } = await inbox.add({
-        text: snapshot.text,
-        images: snapshot.images,
-        brain_mirror: snapshot.brain_mirror,
+    try {
+      const text = it.brain_mirror?.title
+        ? formatMirrorScheduleText(it.text, it.brain_mirror)
+        : it.text.split("\n")[0]?.trim() || it.text;
+      const payload = scheduleFromInbox(it, {
+        text,
+        start_time: start.toISOString(),
+        end_time: end.toISOString(),
       });
-      markBmEligible(restored.id);
-    });
+      const snapshot = archiveFromInbox(it);
+      const { item: created } = await schedules.add(payload);
+      await inbox.remove(it.id);
+      track("schedule_created", {
+        source: "inbox_swipe",
+        text_length: text.length,
+      });
+      showUndoToast(t("일정으로 옮겼어요", "Moved to Schedule"), async () => {
+        await schedules.remove(created.id);
+        const { item: restored } = await inbox.add({
+          text: snapshot.text,
+          images: snapshot.images,
+          brain_mirror: snapshot.brain_mirror,
+        });
+        markBmEligible(restored.id);
+      });
+    } catch {
+      toast.error(t("일정을 저장하지 못했어요", "Couldn't save schedule"));
+    }
   };
 
   const openScheduleFromFocus = (it: InboxItem) => {
@@ -211,63 +215,71 @@ function Inbox() {
   ) => {
     const it = focusScheduleSheet.item;
     if (!it) return;
-    const payload = scheduleFromInbox(it, {
-      text,
-      start_time: start.toISOString(),
-      end_time: end.toISOString(),
-      alarm: alarmMinutesBefore !== null,
-    });
-    await schedules.add({
-      ...payload,
-      ...(alarmMinutesBefore !== null
-        ? {
-            alarm_at: new Date(
-              start.getTime() - alarmMinutesBefore * 60 * 1000,
-            ).toISOString(),
-          }
-        : {}),
-    });
-    await inbox.remove(it.id);
-    track("schedule_created", {
-      source:
-        focusSortOpen && focusPendingScheduleId === it.id
-          ? "focus_sort"
-          : "inbox_swipe",
-      text_length: text.length,
-    });
-    setFocusScheduleSheet({ open: false });
-    setFocusPendingScheduleId(null);
-    if (focusSortOpen) setScheduleCommittedId(it.id);
-    toast.success(t("일정으로 추가했어요!", "Added to schedule!"));
-  };
-
-  const openScheduleQuick = (it: InboxItem) => {
-    setScheduleQuick({ open: true, item: it });
+    try {
+      const payload = scheduleFromInbox(it, {
+        text,
+        start_time: start.toISOString(),
+        end_time: end.toISOString(),
+        alarm: alarmMinutesBefore !== null,
+      });
+      await schedules.add({
+        ...payload,
+        ...(alarmMinutesBefore !== null
+          ? {
+              alarm_at: new Date(
+                start.getTime() - alarmMinutesBefore * 60 * 1000,
+              ).toISOString(),
+            }
+          : {}),
+      });
+      await inbox.remove(it.id);
+      track("schedule_created", {
+        source:
+          focusSortOpen && focusPendingScheduleId === it.id
+            ? "focus_sort"
+            : "inbox_swipe",
+        text_length: text.length,
+      });
+      setFocusScheduleSheet({ open: false });
+      setFocusPendingScheduleId(null);
+      if (focusSortOpen) setScheduleCommittedId(it.id);
+      toast.success(t("일정으로 추가했어요!", "Added to schedule!"));
+    } catch {
+      toast.error(t("일정을 저장하지 못했어요", "Couldn't save schedule"));
+    }
   };
 
   const moveToArchive = async (it: InboxItem) => {
-    const payload = archiveFromInbox(it);
-    const { item: created } = await archive.add(payload);
-    await inbox.remove(it.id);
-    track("thought_swiped_archive", { text_length: it.text.length });
-    showUndoToast(t("보관했어요", "Archived"), async () => {
-      await archive.remove(created.id);
-      const { item: restored } = await inbox.add({
-        text: payload.text,
-        images: payload.images,
-        brain_mirror: payload.brain_mirror,
+    try {
+      const payload = archiveFromInbox(it);
+      const { item: created } = await archive.add(payload);
+      await inbox.remove(it.id);
+      track("thought_swiped_archive", { text_length: it.text.length });
+      showUndoToast(t("보관했어요", "Archived"), async () => {
+        await archive.remove(created.id);
+        const { item: restored } = await inbox.add({
+          text: payload.text,
+          images: payload.images,
+          brain_mirror: payload.brain_mirror,
+        });
+        markBmEligible(restored.id);
       });
-      markBmEligible(restored.id);
-    });
+    } catch {
+      toast.error(t("보관하지 못했어요", "Couldn't archive"));
+    }
   };
 
   const moveToDelete = async (it: InboxItem) => {
-    await inbox.softDelete(it.id);
-    track("thought_swiped_delete", { text_length: it.text.length });
-    showUndoToast(t("삭제했어요", "Deleted"), async () => {
-      await inbox.update(it.id, { status: "active" } as Partial<InboxItem>);
-      if (isBrainMirrorCandidate(it.text)) markBmEligible(it.id);
-    });
+    try {
+      await inbox.softDelete(it.id);
+      track("thought_swiped_delete", { text_length: it.text.length });
+      showUndoToast(t("삭제했어요", "Deleted"), async () => {
+        await inbox.update(it.id, { status: "active" } as Partial<InboxItem>);
+        if (isBrainMirrorCandidate(it.text)) markBmEligible(it.id);
+      });
+    } catch {
+      toast.error(t("삭제하지 못했어요", "Couldn't delete"));
+    }
   };
 
   const autoScheduleFromMirror = async (
@@ -318,7 +330,7 @@ function Inbox() {
               markBmEligible(restored.id);
               toast.dismiss(toastId);
             }}
-            className="rounded-full bg-primary px-3 py-1 text-xs font-bold text-ink"
+            className={toastBtn}
           >
             {t("되돌리기", "Undo")}
           </button>
@@ -342,30 +354,46 @@ function Inbox() {
   const handleAdd = async (text: string, images: string[]) => {
     if (!text && !images.length) return;
     haptic([6, 16, 10]);
-    const { item: created, cloudSynced } = await inbox.add({
-      text,
-      images,
-    });
-    if (isBrainMirrorCandidate(text)) {
-      markBmEligible(created.id);
+    try {
+      const { item: created, cloudSynced } = await inbox.add({
+        text,
+        images,
+      });
+      if (isBrainMirrorCandidate(text)) {
+        markBmEligible(created.id);
+      }
+      track("thought_created", {
+        text_length: text.length,
+        has_images: images.length > 0,
+        image_count: images.length,
+      });
+      if (cloudSynced) return;
+      toast.success(
+        t("기기에 저장됐어요 (동기화 대기)", "Saved locally (sync pending)"),
+        { duration: 2500 },
+      );
+      if (!isBrainMirrorCandidate(text)) {
+        offerDateSchedule(created);
+      }
+      maybeNudgeLogin();
+    } catch {
+      toast.error(t("저장하지 못했어요", "Couldn't save"));
     }
-    track("thought_created", {
-      text_length: text.length,
-      has_images: images.length > 0,
-      image_count: images.length,
-    });
-    if (cloudSynced) return;
-    toast.success(
-      t("기기에 저장됐어요 (동기화 대기)", "Saved locally (sync pending)"),
-      {
-        duration: 2500,
-      },
-    );
-    if (!isBrainMirrorCandidate(text)) {
-      offerDateSchedule(created);
-    }
-    maybeNudgeLogin();
   };
+
+  useEffect(() => {
+    if (!menuFor && !pasteSheet) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        if (pasteSheet) {
+          setRestorePasteText(pasteSheet.original);
+          setPasteSheet(null);
+        } else setMenuFor(null);
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [menuFor, pasteSheet]);
 
   const maybeNudgeLogin = () => {
     if (userId) return;
@@ -387,7 +415,7 @@ function Inbox() {
                 setLoginOpen(true);
                 toast.dismiss(id);
               }}
-              className="rounded-full bg-primary px-3 py-1 text-xs font-bold text-ink"
+              className={toastBtn}
             >
               {t("로그인", "Sign in")}
             </button>
@@ -400,102 +428,117 @@ function Inbox() {
 
   return (
     <div className="flex h-full min-h-full flex-col bg-white">
-      <div className="sticky top-0 z-10 shrink-0 bg-white">
-        <div className="px-5 pb-2 pt-6">
-          {items.length === 0 ? (
-            <>
-              <div className="nrc-eyebrow">{t("나에게", "To myself")}</div>
-              <h1 className="page-title mt-1">
-                {t("던져보세요", "Drop a thought")}
-              </h1>
-            </>
-          ) : (
-            <div className="flex items-center justify-end gap-2">
-              {items.length >= 1 && (
-                <>
-                  <button
-                    type="button"
-                    onClick={() => setCleanupReviewOpen(true)}
-                    className="shrink-0 rounded-full bg-ink/[0.06] px-4 py-2.5 text-[12px] font-bold text-ink"
-                  >
-                    {t("정리 모드", "Clean up")}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => openFocusSort()}
-                    className="pill-yellow shrink-0 px-4 py-2.5 text-[12px]"
-                  >
-                    {t("집중 모드", "Focus")}
-                  </button>
-                </>
-              )}
-            </div>
-          )}
-        </div>
-      </div>
-
-      <div className="flex-1 px-4 pb-24">
-        {syncing && items.length === 0 ? (
-          <InboxListSkeleton />
-        ) : items.length === 0 ? (
-          <EmptyState />
-        ) : (
-          <div
-            className={`chat-scroll flex flex-col gap-4 ${scrollCompress ? "scroll-compress" : ""}`}
-          >
-            {itemsAsc.map((it) => {
-              const isNewest = it.id === newestId;
-              return (
-                <ChatSwipeRow
-                  key={it.id}
-                  rowId={it.id}
-                  openRowId={swipeOpenId}
-                  onOpenRowChange={setSwipeOpenId}
-                  onSwipeRight={() => openHomeSchedule(it)}
-                  onSwipeLeft={() => moveToArchive(it)}
-                  onSwipeDown={() => moveToDelete(it)}
-                  onLongPress={() => setMenuFor(it.id)}
-                  onTap={() => openFocusSort(it.id)}
-                >
-                  <ChatBubble item={it} isNewest={isNewest}>
-                    {it.text.trim().length >= 2 && (
-                      <BrainMirrorPanel
-                        item={it}
-                        inbox={inbox}
-                        eligible={
-                          bmEligibleIds.has(it.id) &&
-                          isBrainMirrorCandidate(it.text)
-                        }
-                        onAutoAct={autoScheduleFromMirror}
-                        onCancelAct={cancelMirrorSchedule}
-                        onMirrorMissed={offerDateSchedule}
-                        variant="inline"
-                      />
-                    )}
-                  </ChatBubble>
-                </ChatSwipeRow>
-              );
-            })}
-            <div ref={listEndRef} />
+      <SyncIndicator active={syncing && items.length > 0} />
+      {items.length > 0 && (
+        <div className="sticky top-0 z-10 shrink-0 bg-white/95 backdrop-blur-sm">
+          <div className="flex gap-2 px-5 pb-2 pt-3">
+            <button
+              type="button"
+              onClick={() => setCleanupReviewOpen(true)}
+              className="touch-press flex-1 rounded-full border border-ink/8 bg-white py-2.5 text-[12px] font-bold text-ink shadow-[0_1px_4px_oklch(0_0_0/0.04)]"
+            >
+              {t("정리", "Clean")}
+            </button>
+            <button
+              type="button"
+              onClick={() => openFocusSort()}
+              className="pill-yellow touch-press flex-1 py-2.5 text-[12px]"
+            >
+              {t("집중", "Focus")}
+            </button>
           </div>
-        )}
-      </div>
+        </div>
+      )}
 
-      <div className="sticky bottom-0 z-20 pb-[env(safe-area-inset-bottom)]">
-        <InputBar
-          onAdd={handleAdd}
-          onPasteMulti={(chunks, original) =>
-            setPasteSheet({ chunks, original })
-          }
-          restoreText={restorePasteText}
-          onRestoreConsumed={() => setRestorePasteText(null)}
-        />
-      </div>
+      {items.length === 0 ? (
+        <>
+          <div className="shrink-0">
+            <InputBar
+              hero
+              onAdd={handleAdd}
+              onPasteMulti={(chunks, original) =>
+                setPasteSheet({ chunks, original })
+              }
+              restoreText={restorePasteText}
+              onRestoreConsumed={() => setRestorePasteText(null)}
+            />
+          </div>
+          <div className="flex flex-1 flex-col justify-end pb-8">
+            {syncing ? (
+              <InboxListSkeleton />
+            ) : (
+              <EmptyState
+                emoji="✍️"
+                titleKo="여기에 적으면 돼요"
+                titleEn="Just type here"
+                hintKo="적고 Enter — 끝이에요"
+                hintEn="Type and Enter — that's it"
+              />
+            )}
+          </div>
+        </>
+      ) : (
+        <>
+          <div className="flex-1 px-3 pb-2">
+            <div
+              className={`chat-scroll flex flex-col items-stretch gap-2 pb-4 ${scrollCompress ? "scroll-compress" : ""}`}
+            >
+              {itemsAsc.map((it) => {
+                const isNewest = it.id === newestId;
+                return (
+                  <ChatSwipeRow
+                    key={it.id}
+                    rowId={it.id}
+                    openRowId={swipeOpenId}
+                    onOpenRowChange={setSwipeOpenId}
+                    onSwipeRight={() => openHomeSchedule(it)}
+                    onSwipeLeft={() => moveToArchive(it)}
+                    onSwipeDown={() => moveToDelete(it)}
+                    onLongPress={() => setMenuFor(it.id)}
+                    onTap={() => openFocusSort(it.id)}
+                  >
+                    <ChatBubble item={it} isNewest={isNewest}>
+                      {it.text.trim().length >= 2 && (
+                        <BrainMirrorPanel
+                          item={it}
+                          inbox={inbox}
+                          eligible={
+                            bmEligibleIds.has(it.id) &&
+                            isBrainMirrorCandidate(it.text)
+                          }
+                          onAutoAct={autoScheduleFromMirror}
+                          onCancelAct={cancelMirrorSchedule}
+                          onMirrorMissed={offerDateSchedule}
+                          variant="inline"
+                        />
+                      )}
+                    </ChatBubble>
+                  </ChatSwipeRow>
+                );
+              })}
+              <div ref={listEndRef} />
+            </div>
+          </div>
+
+          <div className="sticky bottom-0 z-20 shrink-0 pb-[env(safe-area-inset-bottom)]">
+            <InputBar
+              onAdd={handleAdd}
+              onPasteMulti={(chunks, original) =>
+                setPasteSheet({ chunks, original })
+              }
+              restoreText={restorePasteText}
+              onRestoreConsumed={() => setRestorePasteText(null)}
+            />
+          </div>
+        </>
+      )}
 
       {/* Context menu */}
       {menuFor && (
         <div
           className="absolute inset-0 z-50 flex flex-col"
+          role="dialog"
+          aria-modal="true"
           onClick={() => setMenuFor(null)}
         >
           <div className="flex-1 bg-ink/30 backdrop-blur-sm animate-fade-in" />
@@ -552,6 +595,8 @@ function Inbox() {
       {pasteSheet && (
         <div
           className="absolute inset-0 z-50 flex flex-col"
+          role="dialog"
+          aria-modal="true"
           onClick={() => {
             setRestorePasteText(pasteSheet.original);
             setPasteSheet(null);
@@ -641,22 +686,6 @@ function Inbox() {
         />
       )}
 
-      <ScheduleQuickSheet
-        item={scheduleQuick.item ?? null}
-        open={scheduleQuick.open}
-        onClose={() => {
-          setScheduleQuick({ open: false });
-          setFocusPendingScheduleId(null);
-        }}
-        onConfirm={(start, end) => {
-          const it = scheduleQuick.item;
-          if (!it) return;
-          void moveToScheduleWithDates(it, start, end);
-          setScheduleQuick({ open: false });
-          setFocusPendingScheduleId(null);
-        }}
-      />
-
       <FocusSortMode
         open={focusSortOpen}
         startItemId={focusStartId}
@@ -708,24 +737,6 @@ function formatMirrorScheduleText(
   return text || original;
 }
 
-function EmptyState() {
-  const t = useT();
-  return (
-    <div className="flex h-full min-h-[50dvh] flex-col items-center justify-center px-6 text-center">
-      <div className="text-5xl">💭</div>
-      <div className="mt-3 text-[17px] font-bold text-ink">
-        {t("오늘은 가볍네요.", "Today feels light.")}
-      </div>
-      <div className="mt-1 text-sm text-ink-soft">
-        {t(
-          "기다리는 건 없어요. 떠오르는 걸 적어보세요.",
-          "Nothing is waiting. Drop a thought when it comes.",
-        )}
-      </div>
-    </div>
-  );
-}
-
 function MenuItem({
   icon,
   label,
@@ -740,7 +751,7 @@ function MenuItem({
   return (
     <button
       onClick={onClick}
-      className={`flex w-full items-center gap-3 rounded-full px-4 py-3 text-[15px] font-medium ${
+      className={`flex w-full items-center gap-3 rounded-full px-4 py-3 text-[15px] font-medium min-h-11 ${
         danger ? "text-meta" : "text-ink"
       } hover:bg-white/60`}
     >

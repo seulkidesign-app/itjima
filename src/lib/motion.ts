@@ -20,6 +20,21 @@ export const SPRING_SHEET = {
   mass: 0.85,
 };
 
+/** iOS UITableView row snap */
+export const SPRING_ROW = {
+  type: "spring" as const,
+  stiffness: 520,
+  damping: 38,
+  mass: 0.65,
+};
+
+export const SPRING_CARD_EXIT = {
+  type: "spring" as const,
+  stiffness: 300,
+  damping: 28,
+  mass: 0.9,
+};
+
 export const SWIPE_PREVIEW = 0.3;
 export const SWIPE_COMMIT = 0.6;
 export const MAX_ROTATE = 8;

@@ -111,7 +111,7 @@ export function LanguageToggle({ className = "" }: { className?: string }) {
         aria-label="Select language"
         aria-haspopup="listbox"
         aria-expanded={open}
-        className="flex h-7 items-center gap-1 rounded-full glass px-2.5 text-[11px] font-bold text-ink-soft"
+        className="touch-target gap-1 rounded-full glass px-3 text-[11px] font-bold text-ink-soft"
       >
         <span aria-hidden>🌐</span>
         <span>{lang === "ko" ? "한국어" : "English"}</span>
@@ -137,7 +137,7 @@ export function LanguageToggle({ className = "" }: { className?: string }) {
                   setLang(opt.v);
                   setOpen(false);
                 }}
-                className={`flex w-full items-center justify-between px-3 py-2 text-left text-[13px] font-semibold ${
+                className={`flex min-h-11 w-full items-center justify-between px-3 py-2.5 text-left text-[13px] font-semibold ${
                   lang === opt.v
                     ? "bg-primary/15 text-ink"
                     : "text-ink-soft hover:bg-black/5"
