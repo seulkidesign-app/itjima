@@ -120,7 +120,7 @@ export function FeedbackSheet({
           <button
             onClick={onClose}
             className="rounded-full p-1.5 text-ink-soft hover:bg-white/60"
-            aria-label="Close"
+            aria-label={t("닫기", "Close")}
           >
             <X size={18} />
           </button>

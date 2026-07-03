@@ -30,8 +30,8 @@ export function TopNav() {
   };
   const tabs = [
     { to: "/", label: t("생각", "Inbox") },
-    { to: "/schedule", label: t("일정", "Schedule") },
-    { to: "/archive", label: t("보관", "Archive") },
+    { to: "/schedule", label: t("그때", "When") },
+    { to: "/archive", label: t("기억함", "Saved") },
   ] as const;
 
   // Subtle scroll shadow once scrolled past 4px
@@ -120,7 +120,7 @@ export function TopNav() {
                 key={to}
                 to={to}
                 onClick={tap}
-                className={`relative flex flex-1 items-center justify-center pt-1 pb-3 text-[14px] font-extrabold tracking-[0.04em] transition-colors duration-200 ${
+                className={`relative flex flex-1 items-center justify-center pt-1 pb-3 text-[14px] font-semibold tracking-[-0.01em] transition-colors duration-200 ${
                   active ? "text-ink" : "text-ink-soft"
                 }`}
               >

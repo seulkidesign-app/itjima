@@ -133,12 +133,36 @@ function Schedule() {
   }, [items]);
 
   const armAlarmAt = async (s: ScheduleItem, at: Date) => {
-    if ("Notification" in window && Notification.permission === "default") {
-      await Notification.requestPermission();
+    try {
+      let perm: NotificationPermission | "unsupported" = "unsupported";
+      if ("Notification" in window) {
+        perm =
+          Notification.permission === "default"
+            ? await Notification.requestPermission()
+            : Notification.permission;
+      }
+      clearReminderOffset(s.id);
+      await update(s.id, { alarm: true, alarm_at: at.toISOString() });
+      if (perm === "granted") {
+        toast.success(
+          t(
+            "앱을 열어두면 그때 알려드릴게요",
+            "I'll remind you while the app is open",
+          ),
+        );
+      } else if (perm === "denied") {
+        toast.message(
+          t(
+            "알림은 꺼져 있지만, 그때는 기억해 둘게요",
+            "Notifications off — we'll still remember when",
+          ),
+        );
+      } else {
+        toast.success(t("그때를 기억해 둘게요", "I'll remember this for then"));
+      }
+    } catch {
+      toast.error(t("알림을 설정하지 못했어요", "Couldn't set reminder"));
     }
-    clearReminderOffset(s.id);
-    await update(s.id, { alarm: true, alarm_at: at.toISOString() });
-    toast.success(t("알림을 예약했어요", "Reminder set"));
   };
 
   const armFromPreset = async (s: ScheduleItem, preset: AlarmPreset) => {
@@ -151,11 +175,20 @@ function Schedule() {
   };
 
   const startTimer = async (s: ScheduleItem, preset: TimerPreset) => {
-    if ("Notification" in window && Notification.permission === "default") {
-      await Notification.requestPermission();
+    try {
+      if ("Notification" in window && Notification.permission === "default") {
+        await Notification.requestPermission();
+      }
+      setActiveTimer(s.id, presetToTimerEnd(preset));
+      toast.success(
+        t(
+          "앱을 열어두면 알려드릴게요",
+          "I'll notify you while the app is open",
+        ),
+      );
+    } catch {
+      toast.error(t("타이머를 시작하지 못했어요", "Couldn't start timer"));
     }
-    setActiveTimer(s.id, presetToTimerEnd(preset));
-    toast.success(t("타이머 시작", "Timer started"));
   };
 
   const stopTimer = (s: ScheduleItem) => {
@@ -185,37 +218,49 @@ function Schedule() {
   ) => {
     const it = items.find((x) => x.id === id);
     if (!it) return;
-    const s = new Date(it.start_time);
-    const e = new Date(it.end_time);
-    const dur = e.getTime() - s.getTime();
-    const ns = new Date(year, month, day, s.getHours(), s.getMinutes());
-    const ne = new Date(ns.getTime() + dur);
-    await update(id, {
-      start_time: ns.toISOString(),
-      end_time: ne.toISOString(),
-    });
-    hapticConfirm();
-    toast.success(t("날짜가 옮겨졌어요", "Date moved"));
+    try {
+      const s = new Date(it.start_time);
+      const e = new Date(it.end_time);
+      const dur = e.getTime() - s.getTime();
+      const ns = new Date(year, month, day, s.getHours(), s.getMinutes());
+      const ne = new Date(ns.getTime() + dur);
+      await update(id, {
+        start_time: ns.toISOString(),
+        end_time: ne.toISOString(),
+      });
+      hapticConfirm();
+      toast.success(t("날짜가 옮겨졌어요", "Date moved"));
+    } catch {
+      toast.error(t("날짜를 옮기지 못했어요", "Couldn't move date"));
+    }
   };
 
   const markDone = async (s: ScheduleItem) => {
-    await update(s.id, { status: "done" });
-    hapticConfirm();
-    track("schedule_completed", { text_length: s.text.length });
-    toast.success(t("완료했어요", "Marked done"));
+    try {
+      await update(s.id, { status: "done" });
+      hapticConfirm();
+      track("schedule_completed", { text_length: s.text.length });
+      toast.success(t("다녀온 기억이에요", "You can let this go"));
+    } catch {
+      toast.error(t("완료하지 못했어요", "Couldn't mark done"));
+    }
   };
 
   const moveDoneToArchive = async (s: ScheduleItem) => {
-    await archive.add({
-      text: s.raw_text ?? s.text,
-      images: [],
-      source_id: s.source_id ?? s.id,
-      raw_text: s.raw_text ?? s.text,
-      brain_mirror: s.brain_mirror ?? null,
-    });
-    await remove(s.id);
-    if (pins.has(s.id)) togglePin(s.id);
-    toast.success(t("보관으로 옮겼어요", "Moved to Archive"));
+    try {
+      await archive.add({
+        text: s.raw_text ?? s.text,
+        images: [],
+        source_id: s.source_id ?? s.id,
+        raw_text: s.raw_text ?? s.text,
+        brain_mirror: s.brain_mirror ?? null,
+      });
+      await remove(s.id);
+      if (pins.has(s.id)) togglePin(s.id);
+      toast.success(t("기억함으로 옮겼어요", "Moved to Saved"));
+    } catch {
+      toast.error(t("옮기지 못했어요", "Couldn't move"));
+    }
   };
 
   const cardProps = (s: ScheduleItem) => ({
@@ -253,14 +298,14 @@ function Schedule() {
       />
       <div className="sticky top-0 z-10 shrink-0 bg-white">
         <div className="px-5 pb-3 pt-5">
-          <h1 className="page-title">{t("일정", "Schedule")}</h1>
-          <p className="mt-1 text-[13px] text-ink-soft">
+          <h1 className="page-title">{t("그때", "When")}</h1>
+          <p className="mt-1.5 text-[13px] leading-relaxed text-ink-soft">
             {activeItems.length > 0
               ? t(
-                  `${activeItems.length}개의 일정`,
-                  `${activeItems.length} on your mind`,
+                  `${activeItems.length}가지를 기억하고 있어요`,
+                  `${activeItems.length} moments to remember`,
                 )
-              : t("비어 있어요", "Nothing scheduled")}
+              : t("아직 날짜를 붙인 게 없어요", "Nothing dated yet")}
           </p>
         </div>
         <div className="px-5 pb-3">
@@ -269,7 +314,7 @@ function Schedule() {
               {(
                 [
                   ["list", t("목록", "List")],
-                  ["today", t("상세", "Details")],
+                  ["today", t("오늘", "Today")],
                   ["cal", t("캘린더", "Calendar")],
                 ] as const
               ).map(([k, label]) => (
@@ -279,7 +324,7 @@ function Schedule() {
                   role="tab"
                   aria-selected={tab === k}
                   onClick={() => setTab(k)}
-                  className={`relative min-h-11 px-4 py-2 text-[12px] font-extrabold uppercase tracking-[0.16em] transition-colors duration-200 ${
+                  className={`relative min-h-11 px-4 py-2 text-[13px] font-semibold tracking-[-0.01em] transition-colors duration-200 ${
                     tab === k ? "text-ink" : "text-ink-soft"
                   }`}
                 >
@@ -375,7 +420,7 @@ function Schedule() {
         transition={{ ...SPRING_SNAP_BACK, delay: 0.15 }}
         className="absolute right-5 z-30 flex h-14 w-14 items-center justify-center rounded-full bg-primary text-ink shadow-float touch-press"
         style={{ bottom: "calc(env(safe-area-inset-bottom) + 1.25rem)" }}
-        aria-label={t("새 일정", "New event")}
+        aria-label={t("새로 남기기", "Remember something new")}
       >
         <Plus size={26} strokeWidth={2.5} />
       </motion.button>
@@ -431,42 +476,46 @@ function Schedule() {
         saveLabel={sheet.edit ? t("저장", "Save") : undefined}
         onClose={() => setSheet({ open: false })}
         onSave={async (text, start, end, opts) => {
-          const alarmPayload =
-            opts?.alarmMinutesBefore != null
-              ? {
-                  alarm: true,
-                  alarm_at: new Date(
-                    start.getTime() - opts.alarmMinutesBefore * 60 * 1000,
-                  ).toISOString(),
-                }
-              : { alarm: false };
+          try {
+            const alarmPayload =
+              opts?.alarmMinutesBefore != null
+                ? {
+                    alarm: true,
+                    alarm_at: new Date(
+                      start.getTime() - opts.alarmMinutesBefore * 60 * 1000,
+                    ).toISOString(),
+                  }
+                : { alarm: false };
 
-          if (sheet.edit) {
-            await update(sheet.edit.id, {
-              text,
-              start_time: start.toISOString(),
-              end_time: end.toISOString(),
-              all_day: opts?.allDay ?? false,
-              repeat: opts?.repeat ?? null,
-              ...alarmPayload,
-            });
-            toast.success(t("수정됐어요", "Updated"));
-          } else {
-            await add({
-              text,
-              start_time: start.toISOString(),
-              end_time: end.toISOString(),
-              all_day: opts?.allDay ?? false,
-              repeat: opts?.repeat ?? null,
-              ...alarmPayload,
-            });
-            track("schedule_created", {
-              source: "manual",
-              text_length: text.length,
-            });
-            toast.success(t("등록됐어요", "Added"));
+            if (sheet.edit) {
+              await update(sheet.edit.id, {
+                text,
+                start_time: start.toISOString(),
+                end_time: end.toISOString(),
+                all_day: opts?.allDay ?? false,
+                repeat: opts?.repeat ?? null,
+                ...alarmPayload,
+              });
+              toast.success(t("수정됐어요", "Updated"));
+            } else {
+              await add({
+                text,
+                start_time: start.toISOString(),
+                end_time: end.toISOString(),
+                all_day: opts?.allDay ?? false,
+                repeat: opts?.repeat ?? null,
+                ...alarmPayload,
+              });
+              track("schedule_created", {
+                source: "manual",
+                text_length: text.length,
+              });
+              toast.success(t("기억해 둘게요", "I'll remember this"));
+            }
+            setSheet({ open: false });
+          } catch {
+            toast.error(t("저장하지 못했어요", "Couldn't save"));
           }
-          setSheet({ open: false });
         }}
       />
     </div>
@@ -484,6 +533,7 @@ function ScheduleFeelRow({
   onComplete: () => void;
   onEdit: () => void;
 }) {
+  const t = useT();
   const title = scheduleDisplayTitle(s);
   const dxRef = useRef(0);
   const [dx, setDx] = useState(0);
@@ -544,6 +594,9 @@ function ScheduleFeelRow({
   return (
     <li
       className="relative flex touch-none select-none items-center gap-3 rounded-[14px] px-1 py-3 active:bg-ink/[0.03]"
+      role="button"
+      tabIndex={0}
+      aria-label={`${title}. ${t("밀어 다녀옴, 탭하여 고치기", "Swipe when done, tap to edit")}`}
       style={{
         transform: `translateX(${dx}px)`,
         transition: dragging.current || acting ? "none" : undefined,
@@ -578,7 +631,7 @@ function ScheduleFeelHint() {
   const t = useT();
   return (
     <p className="mt-2 px-1 text-[11px] text-ink-soft/70">
-      {t("→ 밀어 완료 · 탭하여 수정", "→ Swipe to complete · Tap to edit")}
+      {t("→ 밀어 다녀옴 · 탭하여 고치기", "→ Swipe when done · Tap to edit")}
     </p>
   );
 }
@@ -715,7 +768,7 @@ function ScheduleCard({
           style={{ opacity: Math.min(1, dx / 72) }}
         >
           <Check size={14} strokeWidth={3} />
-          {t("완료", "Done")}
+          {t("다녀옴", "Done")}
         </div>
       )}
       <div
@@ -746,7 +799,7 @@ function ScheduleCard({
                 ? "border-primary bg-primary text-ink"
                 : "border-ink/20 hover:border-primary"
             }`}
-            aria-label={t("완료", "Done")}
+            aria-label={t("다녀옴", "Done")}
           >
             {done ? (
               <Check size={14} strokeWidth={3} />
@@ -769,7 +822,7 @@ function ScheduleCard({
               </span>
               {missed && !done && (
                 <span className="rounded-full bg-primary/25 px-2 py-0.5 text-[10px] font-bold text-ink">
-                  {t("시간 지남", "Past due")}
+                  {t("그때가 지났어요", "That moment passed")}
                 </span>
               )}
             </div>
@@ -884,7 +937,7 @@ function DoneSection({
         onClick={() => setOpen((v) => !v)}
         className="mb-2 w-full px-1 text-left text-[11px] font-extrabold uppercase tracking-[0.18em] text-ink-soft touch-press"
       >
-        {t("완료됨", "Done")} · {items.length}{" "}
+        {t("다녀온 기억", "Let go")} · {items.length}{" "}
         <motion.span
           animate={{ rotate: open ? 0 : -90 }}
           transition={{ duration: 0.2 }}
@@ -1041,8 +1094,8 @@ function CalendarGrid({
             </div>
             <div className="mt-2 px-1 text-[10px] text-ink-soft/80">
               {t(
-                "💡 일정을 끌어 다른 날로 옮겨보세요",
-                "💡 Drag an event onto another day",
+                "일정을 끌어 다른 날로 옮겨 보세요",
+                "Drag to another day if the timing shifts",
               )}
             </div>
           </div>
@@ -1061,7 +1114,7 @@ function CalendarGrid({
               </div>
               {selectedEvents.length === 0 ? (
                 <div className="px-1 py-3 text-center text-[12px] text-ink-soft">
-                  {t("이 날은 여유로워요.", "This day is wide open.")}
+                  {t("이 날은 비어 있어요.", "Nothing on this day.")}
                 </div>
               ) : (
                 <ul className="space-y-1.5">
@@ -1177,10 +1230,10 @@ function Empty() {
   return (
     <EmptyState
       emoji="🗓"
-      titleKo="시간이 비어 있어요"
-      titleEn="Your calendar is open"
-      hintKo="생각을 오른쪽으로 밀거나 + 로 채워보세요"
-      hintEn="Swipe a thought right or tap + when you're ready"
+      titleKo="아직 그때가 없어요"
+      titleEn="Nothing dated yet"
+      hintKo="생각을 오른쪽으로 밀거나 + 로 날짜를 붙여 보세요"
+      hintEn="Swipe a thought right, or tap + when a day comes to mind"
     />
   );
 }

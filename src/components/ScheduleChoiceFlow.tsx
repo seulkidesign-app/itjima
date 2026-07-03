@@ -190,7 +190,7 @@ export function ScheduleChoiceFlow({
       <input
         value={title}
         onChange={(e) => onTitleChange(e.target.value)}
-        placeholder={t("일정 제목", "Event title")}
+        placeholder={t("무엇을 기억할까요", "What to remember")}
         className="mb-5 w-full rounded-[20px] border border-transparent bg-ink/[0.04] px-4 py-3.5 text-[18px] font-semibold tracking-[-0.02em] text-ink placeholder:text-ink-soft/55 input-focus-ring focus:border-primary/30 focus:bg-white"
       />
 
@@ -337,7 +337,7 @@ export function ScheduleChoiceFlow({
               className="touch-press mt-6 flex w-full items-center justify-center gap-2 rounded-full bg-ink py-4 text-[16px] font-bold text-white shadow-[0_4px_20px_-4px_oklch(0_0_0/0.35)]"
             >
               <Check size={18} strokeWidth={3} />
-              {t("완료", "Done")} · {summaryTime}
+              {t("남겨둘게요", "Keep it")} · {summaryTime}
             </button>
           </motion.div>
         )}

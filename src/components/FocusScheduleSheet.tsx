@@ -172,7 +172,7 @@ export function FocusScheduleSheet({ item, open, onClose, onConfirm }: Props) {
             value={title}
             onChange={(e) => setTitle(e.target.value)}
             className="mb-4 w-full rounded-[16px] border border-ink/6 bg-ink/[0.03] px-4 py-3 text-[17px] font-semibold text-ink focus:border-primary/40 focus:outline-none focus:ring-2 focus:ring-primary/25"
-            aria-label={t("일정 제목", "Event title")}
+            aria-label={t("무엇을 기억할까요", "What to remember")}
             autoFocus
           />
         ) : (
@@ -243,7 +243,7 @@ export function FocusScheduleSheet({ item, open, onClose, onConfirm }: Props) {
           className="touch-press mt-6 flex w-full items-center justify-center gap-2 rounded-full bg-ink py-4 text-[16px] font-bold text-white shadow-[0_4px_20px_-4px_oklch(0_0_0/0.35)]"
         >
           <Check size={18} strokeWidth={3} />
-          {t("완료", "Done")} · {summaryTime}
+          {t("남겨둘게요", "Keep it")} · {summaryTime}
         </button>
       </motion.div>
     </BottomSheet>

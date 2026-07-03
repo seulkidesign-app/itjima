@@ -66,16 +66,16 @@ export function junkReasonLabel(reason: JunkReason, lang: "ko" | "en"): string {
   const ko: Record<JunkReason, string> = {
     empty: "비어 있음",
     single_char: "한 글자",
-    keyboard_mash: "실수 입력",
-    fragment: "의미 없는 조각",
-    duplicate: "중복 전송",
+    keyboard_mash: "실수로 적은 것",
+    fragment: "짧은 휴지",
+    duplicate: "같은 말을 또",
   };
   const en: Record<JunkReason, string> = {
     empty: "Empty",
     single_char: "Single character",
     keyboard_mash: "Accidental typing",
-    fragment: "Meaningless fragment",
-    duplicate: "Duplicate send",
+    fragment: "Tiny fragment",
+    duplicate: "Sent twice",
   };
   return lang === "en" ? en[reason] : ko[reason];
 }

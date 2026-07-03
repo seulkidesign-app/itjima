@@ -108,7 +108,7 @@ export function InstallPrompt() {
         <button
           onClick={dismiss}
           aria-label={t("닫기", "Close")}
-          className="absolute right-2 top-2 rounded-full p-1 text-ink-soft hover:bg-ink/5"
+          className="touch-target absolute right-1 top-1 rounded-full text-ink-soft hover:bg-ink/5"
         >
           <X className="h-4 w-4" />
         </button>

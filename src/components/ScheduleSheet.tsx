@@ -15,9 +15,8 @@ export function ScheduleSheet({
   open,
   initialText = "",
   initialStart,
-  initialEnd: _initialEnd,
-  initialAllDay: _initialAllDay,
-  initialRepeat: _initialRepeat,
+  initialAllDay,
+  initialRepeat,
   saveLabel,
   onClose,
   onSave,
@@ -50,7 +49,7 @@ export function ScheduleSheet({
       open={open}
       onClose={onClose}
       maxHeight="85vh"
-      title={saveLabel ? t("일정 수정", "Edit event") : t("새 일정", "New event")}
+      title={saveLabel ? t("그때 수정", "Edit when") : t("그때 남기기", "Remember for then")}
     >
       <div className="flex max-h-[85vh] flex-col">
         <div className="flex shrink-0 items-center justify-end px-5 pb-1">
@@ -71,9 +70,9 @@ export function ScheduleSheet({
             initialStart={initialStart}
             editMode={!!saveLabel}
             onConfirm={(start, end, reminderMinutes) => {
-              onSave(text.trim() || t("새 일정", "New event"), start, end, {
-                allDay: false,
-                repeat: null,
+              onSave(text.trim() || t("그때", "When"), start, end, {
+                allDay: initialAllDay ?? false,
+                repeat: initialRepeat ?? null,
                 alarmMinutesBefore: reminderMinutes,
               });
             }}

@@ -33,9 +33,19 @@ export function LoginSheet({
   };
 
   return (
-    <div className="absolute inset-0 z-50 flex flex-col" onClick={onClose}>
+    <div
+      className="absolute inset-0 z-50 flex flex-col"
+      role="dialog"
+      aria-modal="true"
+      onClick={() => {
+        if (!loading) onClose();
+      }}
+    >
       {loading && (
-        <div className="absolute inset-0 z-[60] flex flex-col items-center justify-center bg-black/60 backdrop-blur-sm">
+        <div
+          className="absolute inset-0 z-[60] flex flex-col items-center justify-center bg-black/60 backdrop-blur-sm"
+          onClick={(e) => e.stopPropagation()}
+        >
           <div className="flex flex-col items-center gap-3">
             <div className="h-9 w-9 animate-spin rounded-full border-[3px] border-white/30 border-t-white" />
             <span className="text-[14px] font-semibold text-white">
@@ -57,12 +67,12 @@ export function LoginSheet({
         <div className="mx-auto mb-4 h-1.5 w-10 rounded-full bg-ink/15" />
         <div className="text-center">
           <div className="text-[22px] font-bold text-ink">
-            {t("기기 간에 동기화할까요?", "Sync across devices?")}
+            {t("기기 간에 이어갈까요?", "Keep your thoughts across devices?")}
           </div>
-          <div className="mt-1 text-sm text-ink-soft">
+          <div className="mt-1 text-sm leading-relaxed text-ink-soft">
             {t(
-              "로그인하면 어디서든 생각을 이어갈 수 있어요.",
-              "Sign in to keep your thoughts on any device.",
+              "로그인하면 어디서든 같은 기억함을 열 수 있어요.",
+              "Sign in to open the same vault on any device.",
             )}
           </div>
         </div>

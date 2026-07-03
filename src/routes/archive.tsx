@@ -1,21 +1,23 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, type PointerEvent } from "react";
+import { motion, AnimatePresence } from "framer-motion";
 import { toast } from "sonner";
 import {
   Search,
-  Trash2,
-  Sparkles,
+  Bookmark,
   ChevronDown,
   X,
   FolderPlus,
-  Check,
   Pin,
+  FolderInput,
 } from "lucide-react";
 import { useArchive, useSchedules, type ArchiveItem } from "@/lib/store";
 import { archiveGroup, detectDate } from "@/lib/dateDetect";
 import { useT, useLang } from "@/lib/i18n";
 import { haptic } from "@/lib/haptics";
 import { ArchiveOrganizeSheet } from "@/components/ArchiveOrganizeSheet";
+import { ArchiveMemoryCard } from "@/components/ArchiveMemoryCard";
+import { ArchiveMoveSheet } from "@/components/ArchiveMoveSheet";
 import {
   archiveDisplayTitle,
   readArchivePins,
@@ -24,12 +26,13 @@ import {
   readArchiveTitles,
 } from "@/lib/archiveMeta";
 import { recentArchiveItems, searchArchiveItems } from "@/lib/archiveSearch";
-import { ArchiveRelatedStrip } from "@/components/ArchiveRelatedStrip";
 import { ArchiveGridSkeleton } from "@/components/Skeleton";
 import { EmptyState } from "@/components/EmptyState";
 import { SyncIndicator } from "@/components/SyncIndicator";
 import { SwipeCard } from "@/components/SwipeCard";
+import { ScheduleSheet } from "@/components/ScheduleSheet";
 import { track } from "@/lib/analytics";
+import { SPRING_DEFAULT } from "@/lib/motion";
 
 export const Route = createFileRoute("/archive")({
   component: Archive,
@@ -44,7 +47,7 @@ type GroupDef = {
 };
 
 const BUILTIN_GROUPS: GroupDef[] = [
-  { key: "todo", ko: "할 일", en: "To-do", emoji: "✅" },
+  { key: "todo", ko: "나중에", en: "For later", emoji: "✅" },
   { key: "idea", ko: "아이디어", en: "Ideas", emoji: "💡" },
   { key: "place", ko: "장소", en: "Places", emoji: "📍" },
   { key: "read", ko: "읽기·보기", en: "Read/Watch", emoji: "📚" },
@@ -91,11 +94,14 @@ function Archive() {
   const [ungroupTarget, setUngroupTarget] = useState<GroupDef | null>(null);
   const [organizeOpen, setOrganizeOpen] = useState(false);
   const [editItem, setEditItem] = useState<ArchiveItem | null>(null);
+  const [scheduleItem, setScheduleItem] = useState<ArchiveItem | null>(null);
   const [editTitle, setEditTitle] = useState("");
   const [pins, setPins] = useState<Set<string>>(() => readArchivePins());
-  const [relatedForId, setRelatedForId] = useState<string | null>(null);
+  const [expandedId, setExpandedId] = useState<string | null>(null);
   const [scrollToId, setScrollToId] = useState<string | null>(null);
+  const [moveSheetOpen, setMoveSheetOpen] = useState(false);
   const cardRefs = useRef<Record<string, HTMLDivElement | null>>({});
+  const pressOrigin = useRef<{ x: number; y: number; id: string } | null>(null);
 
   useEffect(() => {
     const h = () => setPins(readArchivePins());
@@ -140,7 +146,31 @@ function Archive() {
 
   const searchMeta = useMemo(() => searchArchiveItems(items, q), [items, q]);
 
-  const recent = useMemo(() => recentArchiveItems(items, 5), [items]);
+  const pinnedItems = useMemo(() => {
+    if (q.trim()) return [];
+    let list = items.filter((it) => pins.has(it.id));
+    if (groupFilter !== "all") {
+      list = list.filter((it) => groupOf(it.id, it.text) === groupFilter);
+    }
+    return [...list].sort((a, b) => {
+      const da = +new Date(a.created_at);
+      const db = +new Date(b.created_at);
+      return sortOrder === "newest" ? db - da : da - db;
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [items, pins, q, groupFilter, sortOrder, overrides]);
+
+  const pinnedIds = useMemo(
+    () => new Set(pinnedItems.map((it) => it.id)),
+    [pinnedItems],
+  );
+
+  const recentDisplay = useMemo(() => {
+    if (q.trim()) return [];
+    return recentArchiveItems(items, 8)
+      .filter((it) => !pins.has(it.id))
+      .slice(0, 5);
+  }, [items, pins, q]);
 
   const hitById = useMemo(() => {
     const m = new Map<string, (typeof searchMeta.hits)[0]>();
@@ -164,6 +194,7 @@ function Archive() {
   const grouped = useMemo(() => {
     const map = new Map<string, typeof items>();
     filtered.forEach((it) => {
+      if (!q.trim() && pinnedIds.has(it.id)) return;
       const k = groupOf(it.id, it.text);
       if (!map.has(k)) map.set(k, []);
       map.get(k)!.push(it);
@@ -176,17 +207,27 @@ function Archive() {
       }))
       .filter((g) => g.items.length > 0);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [filtered, lang, overrides, allGroups]);
+  }, [filtered, lang, overrides, allGroups, pinnedIds]);
 
   useEffect(() => {
     if (!scrollToId) return;
     const el = cardRefs.current[scrollToId];
     if (el) {
       el.scrollIntoView({ behavior: "smooth", block: "center" });
-      setRelatedForId(scrollToId);
     }
     setScrollToId(null);
-  }, [scrollToId, grouped]);
+  }, [scrollToId, grouped, pinnedItems]);
+
+  const jumpToMemory = (id: string) => {
+    setExpandedId(id);
+    setScrollToId(id);
+    haptic(4);
+  };
+
+  const toggleExpand = (id: string) => {
+    setExpandedId((prev) => (prev === id ? null : id));
+    haptic(3);
+  };
 
   const locale = lang === "en" ? "en-US" : "ko-KR";
 
@@ -200,22 +241,32 @@ function Archive() {
   const applyOrganize = (next: Record<string, string>) => {
     persistOverrides(next);
     haptic([6, 20, 8]);
-    toast.success(t("그룹을 업데이트했어요", "Groups updated"));
+    toast.success(t("비슷하게 모았어요", "Grouped gently"));
   };
 
   // ---- Selection / long-press ----
-  const startLongPress = (id: string) => {
+  const startLongPress = (id: string, e: PointerEvent) => {
+    pressOrigin.current = { x: e.clientX, y: e.clientY, id };
     pressTimer.current = window.setTimeout(() => {
+      if (pressOrigin.current?.id !== id) return;
       haptic([8, 12, 8]);
       setSelecting(true);
+      setExpandedId(null);
       setSelected(new Set([id]));
     }, 450);
+  };
+  const onPressMove = (e: PointerEvent) => {
+    if (!pressOrigin.current) return;
+    const dx = Math.abs(e.clientX - pressOrigin.current.x);
+    const dy = Math.abs(e.clientY - pressOrigin.current.y);
+    if (dx > 10 || dy > 10) cancelLongPress();
   };
   const cancelLongPress = () => {
     if (pressTimer.current) {
       clearTimeout(pressTimer.current);
       pressTimer.current = null;
     }
+    pressOrigin.current = null;
   };
   const toggleSelect = (id: string) => {
     if (!selecting) return;
@@ -243,6 +294,21 @@ function Archive() {
     else next[id] = key;
     persistOverrides(next);
     haptic([6, 10, 6]);
+  };
+
+  const moveSelectionToGroup = (key: string) => {
+    const next = { ...overrides };
+    selected.forEach((id) => {
+      const it = items.find((x) => x.id === id);
+      if (!it) return;
+      const auto = archiveGroup(it.text).key;
+      if (key === auto) delete next[id];
+      else next[id] = key;
+    });
+    persistOverrides(next);
+    haptic([6, 18, 8]);
+    toast.success(t("옮겼어요", "Moved"));
+    exitSelection();
   };
 
   // ---- Long-press a group header → ungroup (custom groups only) ----
@@ -293,7 +359,7 @@ function Archive() {
       toast.custom(
         (toastId) => (
           <div className="flex items-center gap-3 rounded-[24px] bg-ink px-4 py-3 text-white shadow-float">
-            <div className="text-sm">{t("삭제했어요", "Deleted")}</div>
+            <div className="text-sm">{t("지웠어요", "Removed")}</div>
             <button
               type="button"
               onClick={async () => {
@@ -319,16 +385,36 @@ function Archive() {
     }
   };
 
-  const sendToSchedule = async (it: ArchiveItem) => {
-    const det = detectDate(it.text);
-    const start = det?.start ?? new Date();
-    const end = det?.end ?? new Date(start.getTime() + 60 * 60 * 1000);
+  const openScheduleSheet = (it: ArchiveItem) => {
+    setScheduleItem(it);
+  };
+
+  const confirmScheduleFromArchive = async (
+    text: string,
+    start: Date,
+    end: Date,
+    alarmMinutes: number | null,
+  ) => {
+    if (!scheduleItem) return;
+    const it = scheduleItem;
     try {
+      const alarmPayload =
+        alarmMinutes != null
+          ? {
+              alarm: true,
+              alarm_at: new Date(
+                start.getTime() - alarmMinutes * 60 * 1000,
+              ).toISOString(),
+            }
+          : { alarm: false };
       await schedules.add({
-        text: it.text,
+        text,
         start_time: start.toISOString(),
         end_time: end.toISOString(),
-        alarm: false,
+        alarm: alarmPayload.alarm ?? false,
+        alarm_at: alarmPayload.alarm
+          ? (alarmPayload as { alarm_at: string }).alarm_at
+          : null,
         source_id: it.source_id ?? it.id,
         raw_text: it.raw_text ?? it.text,
         brain_mirror: it.brain_mirror ?? null,
@@ -337,9 +423,10 @@ function Archive() {
       await remove(it.id);
       track("archive_swiped_schedule", { text_length: it.text.length });
       haptic([6, 18, 8]);
-      toast.success(t("일정으로 옮겼어요", "Moved to schedule"));
+      toast.success(t("그때를 기억해 둘게요", "I'll remember this for then"));
+      setScheduleItem(null);
     } catch {
-      toast.error(t("일정을 저장하지 못했어요", "Couldn't save schedule"));
+      toast.error(t("남기지 못했어요", "Couldn't save it"));
     }
   };
 
@@ -353,7 +440,80 @@ function Archive() {
     });
     persistOverrides(next);
     setUngroupTarget(null);
-    toast.success(t("그룹을 해제했어요", "Group removed"));
+    toast.success(t("묶음을 풀었어요", "Ungrouped"));
+  };
+
+  const renderMemoryCard = (it: ArchiveItem) => {
+    const isSel = selected.has(it.id);
+    const isDragging = dragId === it.id;
+    const swipeDisabled = selecting || isDragging;
+
+    return (
+      <SwipeCard
+        key={it.id}
+        mode="instant"
+        disabled={swipeDisabled}
+        leftLabel={t("지우기", "Remove")}
+        rightLabel={t("그때", "When")}
+        onSwipe={(dir) => {
+          if (dir === "right") openScheduleSheet(it);
+          else void removeWithUndo(it);
+        }}
+      >
+        <div
+          ref={(el) => {
+            cardRefs.current[it.id] = el;
+          }}
+          draggable={!selecting}
+          onDragStart={(e) => {
+            if (selecting) return;
+            e.dataTransfer.setData("text/plain", it.id);
+            e.dataTransfer.effectAllowed = "move";
+            setDragId(it.id);
+          }}
+          onDragEnd={() => {
+            setDragId(null);
+            setDragOver(null);
+          }}
+          onPointerDown={(e) => startLongPress(it.id, e)}
+          onPointerMove={onPressMove}
+          onPointerUp={cancelLongPress}
+          onPointerLeave={cancelLongPress}
+          onClick={() => {
+            if (selecting) toggleSelect(it.id);
+          }}
+        >
+          <ArchiveMemoryCard
+            item={it}
+            locale={locale}
+            expanded={expandedId === it.id}
+            selected={isSel}
+            selecting={selecting}
+            pinned={pins.has(it.id)}
+            isDragging={isDragging}
+            showSemanticHint={
+              !!q.trim() && !!hitById.get(it.id)?.semantic
+            }
+            allItems={items}
+            onToggleExpand={() => toggleExpand(it.id)}
+            onTogglePin={() => {
+              toggleArchivePin(it.id);
+              setPins(readArchivePins());
+              haptic(4);
+            }}
+            onEditTitle={() => {
+              setEditItem(it);
+              setEditTitle(
+                readArchiveTitles()[it.id] ??
+                  archiveDisplayTitle(it.id, it),
+              );
+            }}
+            onDelete={() => void removeWithUndo(it)}
+            onJumpTo={(id) => jumpToMemory(id)}
+          />
+        </div>
+      </SwipeCard>
+    );
   };
 
   return (
@@ -369,108 +529,120 @@ function Archive() {
             {t("잊어도 돼요.", "It's okay to forget.")}
           </p>
           <h1 className="mt-1 text-[28px] font-bold tracking-[-0.02em] text-ink">
-            {t("여기 있어요.", "It's here.")}
+            {t("여기 있어요.", "It's here for you.")}
           </h1>
           {items.length > 0 && (
             <p className="mt-2 text-[13px] text-ink-soft/80">
               {t(
-                `${items.length}개의 생각이 안전하게 보관 중`,
-                `${items.length} thoughts kept safe`,
+                `${items.length}개의 생각이 조용히 기다리고 있어요`,
+                `${items.length} thoughts safely waiting here`,
               )}
             </p>
           )}
         </div>
-        {items.length > 0 && (
+        {items.length >= 2 && (
           <div className="px-5 pb-3">
             <button
               onClick={runAIOrganize}
-              className="touch-press w-full rounded-full border border-ink/10 bg-ink/[0.03] py-3 text-[12px] font-bold text-ink-soft"
+              className="touch-press w-full rounded-full border border-ink/10 bg-ink/[0.03] py-3 text-[12px] font-semibold text-ink-soft"
             >
               <span className="inline-flex items-center justify-center gap-2">
-                <Sparkles size={13} />
-                {t("그룹 정리", "Sort into groups")}
+                <Bookmark size={13} />
+                {t("비슷한 기억끼리", "Similar memories together")}
               </span>
             </button>
           </div>
         )}
 
-        <div className="px-5 pb-3">
-          <div className="flex items-center gap-2 rounded-[24px] bg-white px-3.5 py-2.5 shadow-card">
-            <Search size={16} className="text-ink-soft" />
-            <input
-              value={q}
-              onChange={(e) => {
-                setQ(e.target.value);
-                setRelatedForId(null);
-              }}
-              placeholder={t(
-                "보관한 생각 검색 (의미로도 찾아요)",
-                "Search thoughts (semantic too)",
+        {items.length > 0 && (
+          <div className="px-5 pb-3">
+            <div className="flex items-center gap-2 rounded-[24px] bg-white px-3.5 py-2.5 shadow-card">
+              <Search size={16} className="shrink-0 text-ink-soft" />
+              <input
+                value={q}
+                onChange={(e) => {
+                  setQ(e.target.value);
+                  setExpandedId(null);
+                }}
+                placeholder={t(
+                  "떠올리고 싶은 걸 찾아보세요",
+                  "Search what you remember",
+                )}
+                className="flex-1 bg-transparent text-[14px] text-ink placeholder:text-ink-soft/70 focus:outline-none"
+              />
+              {q.trim() && (
+                <button
+                  type="button"
+                  onClick={() => setQ("")}
+                  className="touch-target shrink-0 rounded-full text-ink-soft"
+                  aria-label={t("지우기", "Clear")}
+                >
+                  <X size={16} />
+                </button>
               )}
-              className="flex-1 bg-transparent text-[14px] text-ink placeholder:text-ink-soft/70 focus:outline-none"
-            />
-          </div>
-          {q.trim() && (
-            <p className="mt-1.5 px-1 text-[11px] text-ink-soft">
-              {filtered.length > 0 ? (
-                <>
-                  {t(`${filtered.length}개`, `${filtered.length} results`)}
-                  {searchMeta.usedSemantic && (
-                    <span className="ml-1.5 text-primary">
-                      · {t("의미 검색 포함", "includes semantic matches")}
-                    </span>
-                  )}
-                </>
-              ) : (
-                t("검색 결과가 없어요", "No results")
-              )}
-            </p>
-          )}
-          <div className="mt-2 flex flex-wrap items-center gap-1.5">
-            <button
-              type="button"
-              onClick={() => setGroupFilter("all")}
-              className={`rounded-full px-3 py-1 text-[12px] font-medium ${
-                groupFilter === "all"
-                  ? "bg-ink text-white"
-                  : "bg-ink/[0.06] text-ink-soft"
-              }`}
-            >
-              {t("전체", "All")}
-            </button>
-            {allGroups.map((g) => (
+            </div>
+            {q.trim() && (
+              <p className="mt-1.5 px-1 text-[11px] text-ink-soft">
+                {filtered.length > 0 ? (
+                  <>
+                    {t(`${filtered.length}개`, `${filtered.length} results`)}
+                    {searchMeta.usedSemantic && (
+                      <span className="ml-1.5 text-primary">
+                        · {t("비슷한 것도 찾았어요", "also found similar ones")}
+                      </span>
+                    )}
+                  </>
+                ) : (
+                  t("검색 결과가 없어요", "No results")
+                )}
+              </p>
+            )}
+            <div className="mt-2 flex flex-wrap items-center gap-1.5">
               <button
-                key={g.key}
                 type="button"
-                onClick={() => setGroupFilter(g.key)}
-                className={`rounded-full px-3 py-1 text-[12px] font-medium ${
-                  groupFilter === g.key
+                onClick={() => setGroupFilter("all")}
+                className={`rounded-full px-3 py-1.5 text-[12px] font-medium transition-colors ${
+                  groupFilter === "all"
                     ? "bg-ink text-white"
                     : "bg-ink/[0.06] text-ink-soft"
                 }`}
               >
-                {g.emoji} {lang === "en" ? g.en : g.ko}
+                {t("전체", "All")}
               </button>
-            ))}
-            <select
-              value={sortOrder}
-              onChange={(e) =>
-                setSortOrder(e.target.value as "newest" | "oldest")
-              }
-              className="ml-auto rounded-full bg-ink/[0.06] px-3 py-1 text-[12px] font-medium text-ink-soft focus:outline-none"
-              aria-label={t("정렬", "Sort")}
-            >
-              <option value="newest">{t("최신순", "Newest")}</option>
-              <option value="oldest">{t("오래된순", "Oldest")}</option>
-            </select>
+              {allGroups.map((g) => (
+                <button
+                  key={g.key}
+                  type="button"
+                  onClick={() => setGroupFilter(g.key)}
+                  className={`rounded-full px-3 py-1.5 text-[12px] font-medium transition-colors ${
+                    groupFilter === g.key
+                      ? "bg-ink text-white"
+                      : "bg-ink/[0.06] text-ink-soft"
+                  }`}
+                >
+                  {g.emoji} {lang === "en" ? g.en : g.ko}
+                </button>
+              ))}
+              <select
+                value={sortOrder}
+                onChange={(e) =>
+                  setSortOrder(e.target.value as "newest" | "oldest")
+                }
+                className="ml-auto rounded-full bg-ink/[0.06] px-3 py-1.5 text-[12px] font-medium text-ink-soft focus:outline-none"
+                aria-label={t("정렬", "Sort")}
+              >
+                <option value="newest">{t("최신순", "Newest")}</option>
+                <option value="oldest">{t("오래된순", "Oldest")}</option>
+              </select>
+            </div>
+            <p className="mt-2 px-1 text-[11px] text-ink-soft/65">
+              {t(
+                "탭하여 펼치기 · → 그때 · ← 지우기 · 길게 눌러 선택",
+                "Tap to open · → When · ← Remove · hold to select",
+              )}
+            </p>
           </div>
-          <div className="mt-2 px-1 text-[11px] text-ink-soft/70">
-            {t(
-              "→ 일정 · ← 삭제 · 길게 눌러 선택",
-              "→ Schedule · ← Delete · hold to select",
-            )}
-          </div>
-        </div>
+        )}
       </div>
 
       <div className={`flex-1 space-y-5 px-5 ${selecting ? "pb-28" : "pb-8"}`}>
@@ -478,41 +650,70 @@ function Archive() {
           <ArchiveGridSkeleton />
         ) : items.length === 0 ? (
           <Empty />
-        ) : filtered.length === 0 && q.trim() ? (
+        ) : filtered.length === 0 ? (
           <div className="rounded-[24px] bg-ink/[0.04] px-5 py-10 text-center">
             <p className="text-[15px] font-semibold text-ink">
-              {t("비슷한 생각을 못 찾았어요", "No similar thoughts found")}
+              {q.trim()
+                ? t("비슷한 생각을 못 찾았어요", "No similar thoughts found")
+                : t("이 묶음은 비어 있어요", "Nothing in this group yet")}
             </p>
             <p className="mt-1 text-[13px] text-ink-soft">
-              {t("다른 키워드로 검색해 보세요", "Try different keywords")}
+              {q.trim()
+                ? t("다른 키워드로 검색해 보세요", "Try different keywords")
+                : t("다른 묶음을 둘러보세요", "Browse another group")}
             </p>
+            {!q.trim() && groupFilter !== "all" && (
+              <button
+                type="button"
+                onClick={() => setGroupFilter("all")}
+                className="touch-press mt-4 rounded-full bg-primary px-5 py-2.5 text-[13px] font-semibold text-ink"
+              >
+                {t("전체 보기", "Show all")}
+              </button>
+            )}
           </div>
         ) : (
           <>
-            {!q.trim() && recent.length > 0 && (
-              <section className="mb-2">
-                <h2 className="mb-2 px-1 text-[11px] font-extrabold uppercase tracking-[0.18em] text-ink-soft">
+            {!q.trim() && pinnedItems.length > 0 && (
+              <section>
+                <h2 className="mb-2.5 flex items-center gap-1.5 px-1 text-[13px] font-semibold text-ink-soft">
+                  <Pin size={14} className="text-primary" />
+                  {t("자주 보는 기억", "Pinned memories")}
+                </h2>
+                <div className="flex flex-col gap-3">
+                  {pinnedItems.map((it) => renderMemoryCard(it))}
+                </div>
+              </section>
+            )}
+
+            {!q.trim() && recentDisplay.length > 0 && (
+              <section>
+                <h2 className="mb-2.5 px-1 text-[13px] font-semibold text-ink-soft">
                   {t("최근", "Recent")}
                 </h2>
-                <div className="flex gap-2 overflow-x-auto pb-1">
-                  {recent.map((it) => (
+                <div className="-mx-1 flex gap-2 overflow-x-auto px-1 pb-1">
+                  {recentDisplay.map((it) => (
                     <button
                       key={it.id}
                       type="button"
-                      onClick={() => setScrollToId(it.id)}
-                      className="touch-press min-w-[140px] max-w-[180px] shrink-0 rounded-[20px] bg-primary/20 px-3 py-3 text-left"
+                      onClick={() => jumpToMemory(it.id)}
+                      className="touch-press min-w-[148px] max-w-[200px] shrink-0 rounded-[20px] bg-ink/[0.04] px-3.5 py-3 text-left ring-1 ring-ink/[0.04] active:bg-ink/[0.07]"
                     >
-                      <p className="line-clamp-2 text-[13px] font-semibold text-ink">
+                      <p className="line-clamp-2 text-[13px] font-semibold leading-snug text-ink">
                         {archiveDisplayTitle(it.id, it)}
                       </p>
-                      <p className="mt-1 text-[10px] text-ink-soft">
-                        {new Date(it.created_at).toLocaleDateString(locale)}
+                      <p className="mt-1.5 text-[11px] text-ink-soft/75">
+                        {new Date(it.created_at).toLocaleDateString(locale, {
+                          month: "short",
+                          day: "numeric",
+                        })}
                       </p>
                     </button>
                   ))}
                 </div>
               </section>
             )}
+
             {grouped.map((g) => {
               const isCollapsed = collapsed.has(g.key);
               const isDropTarget = dragOver === g.key;
@@ -533,201 +734,53 @@ function Archive() {
                     setDragOver(null);
                     setDragId(null);
                   }}
-                  className={`rounded-[24px] transition ${isDropTarget ? "bg-primary/10 ring-2 ring-primary/60" : ""}`}
+                  className={`rounded-[24px] transition-colors duration-200 ${
+                    isDropTarget ? "bg-primary/8 ring-2 ring-primary/40" : ""
+                  }`}
                 >
-                  <div
+                  <button
+                    type="button"
                     onClick={() => toggleCollapse(g.key)}
                     onPointerDown={() => startHeaderPress(g)}
                     onPointerUp={cancelHeaderPress}
                     onPointerLeave={cancelHeaderPress}
-                    className="mb-2 flex w-full cursor-pointer items-center justify-between px-1 py-1 text-left select-none"
+                    className="mb-2 flex w-full items-center justify-between rounded-xl px-1 py-1.5 text-left select-none active:bg-ink/[0.03]"
                   >
-                    <h2 className="text-[11px] font-extrabold uppercase tracking-[0.18em] text-ink">
-                      <span className="text-base">{g.emoji}</span> {g.label}{" "}
-                      <span className="text-ink-soft/70">
-                        / {g.items.length}
+                    <h2 className="flex items-center gap-2 text-[15px] font-semibold text-ink">
+                      <span>{g.emoji}</span>
+                      <span>{g.label}</span>
+                      <span className="text-[13px] font-medium text-ink-soft/70">
+                        {g.items.length}
                       </span>
                       {g.custom && (
-                        <span className="ml-1.5 bg-primary px-1.5 py-0.5 text-[9px] font-extrabold text-ink">
-                          {t("MINE", "MINE")}
+                        <span className="rounded-full bg-primary/25 px-2 py-0.5 text-[10px] font-semibold text-ink/80">
+                          {t("내 그룹", "Mine")}
                         </span>
                       )}
                     </h2>
                     <ChevronDown
-                      size={16}
-                      className={`text-ink-soft transition-transform ${isCollapsed ? "-rotate-90" : ""}`}
+                      size={18}
+                      className={`text-ink-soft/70 transition-transform duration-200 ${
+                        isCollapsed ? "-rotate-90" : ""
+                      }`}
                     />
-                  </div>
-                  {!isCollapsed && (
-                    <div className="flex flex-col gap-3">
-                      {g.items.map((it) => {
-                        const isSel = selected.has(it.id);
-                        const isDragging = dragId === it.id;
-                        const swipeDisabled = selecting || isDragging;
-                        return (
-                          <SwipeCard
-                            key={it.id}
-                            disabled={swipeDisabled}
-                            onSwipe={(dir) => {
-                              if (dir === "right") void sendToSchedule(it);
-                              else void removeWithUndo(it);
-                            }}
-                          >
-                            <div
-                              ref={(el) => {
-                                cardRefs.current[it.id] = el;
-                              }}
-                              draggable
-                              onDragStart={(e) => {
-                                e.dataTransfer.setData("text/plain", it.id);
-                                e.dataTransfer.effectAllowed = "move";
-                                setDragId(it.id);
-                              }}
-                              onDragEnd={() => {
-                                setDragId(null);
-                                setDragOver(null);
-                              }}
-                              onPointerDown={() => startLongPress(it.id)}
-                              onPointerUp={cancelLongPress}
-                              onPointerLeave={cancelLongPress}
-                              onClick={() => {
-                                if (selecting) toggleSelect(it.id);
-                              }}
-                              className={`px-[22px] py-5 transition ${
-                                selecting ? "cursor-pointer" : "cursor-default"
-                              } ${
-                                isSel ? "ring-2 ring-primary scale-[0.98]" : ""
-                              } ${isDragging ? "opacity-40" : ""}`}
-                            >
-                              <div className="flex gap-3">
-                                {selecting && (
-                                  <div
-                                    className={`mt-1 flex h-5 w-5 shrink-0 items-center justify-center rounded-full border-2 ${
-                                      isSel
-                                        ? "border-primary bg-primary text-ink"
-                                        : "border-ink/20"
-                                    }`}
-                                  >
-                                    {isSel && (
-                                      <Check size={12} strokeWidth={3} />
-                                    )}
-                                  </div>
-                                )}
-                                {it.images?.[0] && (
-                                  <img
-                                    src={it.images[0]}
-                                    alt=""
-                                    className="h-14 w-14 rounded-[24px] object-cover"
-                                  />
-                                )}
-                                <div className="flex-1 min-w-0">
-                                  <div className="flex items-start justify-between gap-2">
-                                    <p className="text-[15px] font-semibold leading-snug text-ink line-clamp-2">
-                                      {archiveDisplayTitle(it.id, it)}
-                                    </p>
-                                    {!selecting && (
-                                      <button
-                                        type="button"
-                                        onClick={(e) => {
-                                          e.stopPropagation();
-                                          toggleArchivePin(it.id);
-                                          setPins(readArchivePins());
-                                          haptic(4);
-                                        }}
-                                        aria-label={t("핀", "Pin")}
-                                      >
-                                        <Pin
-                                          size={14}
-                                          className={
-                                            pins.has(it.id)
-                                              ? "fill-primary text-primary"
-                                              : "text-ink-soft"
-                                          }
-                                        />
-                                      </button>
-                                    )}
-                                  </div>
-                                  <p className="mt-1 whitespace-pre-wrap text-[13px] leading-relaxed text-ink-soft line-clamp-2">
-                                    {it.raw_text ?? it.text}
-                                  </p>
-                                  {it.brain_mirror?.title && (
-                                    <p className="mt-1.5 text-[11px] text-ink-soft">
-                                      🧠 {it.brain_mirror.title}
-                                    </p>
-                                  )}
-                                  {q.trim() && hitById.get(it.id)?.semantic && (
-                                    <span className="mt-1.5 inline-block rounded-full bg-primary/25 px-2 py-0.5 text-[10px] font-bold text-ink">
-                                      {t("의미 일치", "Semantic match")}
-                                    </span>
-                                  )}
-                                  <div className="mt-3 flex items-center justify-between gap-2 text-meta">
-                                    <span>
-                                      {g.emoji} {g.label}
-                                    </span>
-                                    <div className="flex items-center gap-2">
-                                      {!selecting && (
-                                        <button
-                                          type="button"
-                                          onClick={(e) => {
-                                            e.stopPropagation();
-                                            setRelatedForId((prev) =>
-                                              prev === it.id ? null : it.id,
-                                            );
-                                          }}
-                                          className="text-[11px] font-semibold text-ink-soft underline"
-                                        >
-                                          {relatedForId === it.id
-                                            ? t("접기", "Hide")
-                                            : t("관련", "Related")}
-                                        </button>
-                                      )}
-                                      <button
-                                        type="button"
-                                        onClick={(e) => {
-                                          e.stopPropagation();
-                                          setEditItem(it);
-                                          setEditTitle(
-                                            readArchiveTitles()[it.id] ??
-                                              archiveDisplayTitle(it.id, it),
-                                          );
-                                        }}
-                                        className="text-[11px] underline"
-                                      >
-                                        {t("제목", "Title")}
-                                      </button>
-                                      <span>
-                                        {new Date(
-                                          it.created_at,
-                                        ).toLocaleDateString(locale)}
-                                      </span>
-                                      {!selecting && (
-                                        <button
-                                          onClick={(e) => {
-                                            e.stopPropagation();
-                                            void removeWithUndo(it);
-                                          }}
-                                          aria-label={t("삭제", "Delete")}
-                                        >
-                                          <Trash2 size={13} />
-                                        </button>
-                                      )}
-                                    </div>
-                                  </div>
-                                  {relatedForId === it.id && !selecting && (
-                                    <ArchiveRelatedStrip
-                                      item={it}
-                                      items={items}
-                                      onSelect={(rel) => setScrollToId(rel.id)}
-                                    />
-                                  )}
-                                </div>
-                              </div>
-                            </div>
-                          </SwipeCard>
-                        );
-                      })}
-                    </div>
-                  )}
+                  </button>
+                  <AnimatePresence initial={false}>
+                    {!isCollapsed && (
+                      <motion.div
+                        key="items"
+                        initial={{ height: 0, opacity: 0 }}
+                        animate={{ height: "auto", opacity: 1 }}
+                        exit={{ height: 0, opacity: 0 }}
+                        transition={SPRING_DEFAULT}
+                        className="overflow-hidden"
+                      >
+                        <div className="flex flex-col gap-3 pb-1">
+                          {g.items.map((it) => renderMemoryCard(it))}
+                        </div>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
                 </section>
               );
             })}
@@ -751,11 +804,19 @@ function Archive() {
               {t("개 선택됨", " selected")}
             </div>
             <button
+              onClick={() => setMoveSheetOpen(true)}
+              disabled={selected.size === 0}
+              className="touch-press inline-flex items-center gap-1 rounded-full bg-ink/[0.06] px-3 py-2 text-[12px] font-semibold text-ink disabled:opacity-50"
+            >
+              <FolderInput size={14} />
+              {t("옮기기", "Move")}
+            </button>
+            <button
               onClick={() => setGroupModal(true)}
               disabled={selected.size === 0}
               className="pill-yellow inline-flex items-center gap-1 disabled:opacity-50"
             >
-              <FolderPlus size={14} /> {t("그룹 만들기", "Create group")}
+              <FolderPlus size={14} /> {t("그룹 만들기", "New group")}
             </button>
           </div>
         </div>
@@ -801,8 +862,7 @@ function Archive() {
               <button
                 onClick={createGroupFromSelection}
                 disabled={!newName.trim()}
-                className="flex-1 rounded-full py-3 text-[14px] font-bold text-ink active:scale-95 disabled:opacity-50"
-                className="bg-primary"
+                className="touch-press flex-1 rounded-full bg-primary py-3 text-[14px] font-bold text-ink active:scale-95 disabled:opacity-50"
               >
                 {t("만들기", "Create")}
               </button>
@@ -810,6 +870,14 @@ function Archive() {
           </div>
         </div>
       )}
+
+      <ArchiveMoveSheet
+        open={moveSheetOpen}
+        groups={allGroups}
+        count={selected.size}
+        onClose={() => setMoveSheetOpen(false)}
+        onPick={moveSelectionToGroup}
+      />
 
       <ArchiveOrganizeSheet
         open={organizeOpen}
@@ -894,6 +962,29 @@ function Archive() {
           </div>
         </div>
       )}
+      <ScheduleSheet
+        open={!!scheduleItem}
+        initialText={
+          scheduleItem
+            ? archiveDisplayTitle(scheduleItem.id, scheduleItem)
+            : undefined
+        }
+        initialStart={
+          scheduleItem
+            ? (detectDate(scheduleItem.text)?.start ??
+              detectDate(scheduleItem.raw_text ?? "")?.start)
+            : undefined
+        }
+        onClose={() => setScheduleItem(null)}
+        onSave={(text, start, end, opts) => {
+          void confirmScheduleFromArchive(
+            text,
+            start,
+            end,
+            opts?.alarmMinutesBefore ?? null,
+          );
+        }}
+      />
     </div>
   );
 }
@@ -902,10 +993,10 @@ function Empty() {
   return (
     <EmptyState
       emoji="🗂"
-      titleKo="아직 담긴 게 없어요"
-      titleEn="Nothing saved yet"
-      hintKo="마음에 남는 생각을 왼쪽으로 밀어 모아보세요"
-      hintEn="Swipe left on a thought when you want to keep it"
+      titleKo="아직 남겨둔 게 없어요"
+      titleEn="Nothing kept here yet"
+      hintKo="마음에 남는 생각을 왼쪽으로 밀어 두면, 여기서 다시 만날 수 있어요"
+      hintEn="Swipe left on a thought you want to keep — it'll wait here for you"
     />
   );
 }

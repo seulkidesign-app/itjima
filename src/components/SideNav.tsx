@@ -42,8 +42,8 @@ export function SideNav() {
 
   const items = [
     { to: "/", label: t("생각", "Inbox"), Icon: Inbox },
-    { to: "/schedule", label: t("일정", "Schedule"), Icon: Calendar },
-    { to: "/archive", label: t("보관", "Archive"), Icon: Archive },
+    { to: "/schedule", label: t("그때", "When"), Icon: Calendar },
+    { to: "/archive", label: t("기억함", "Saved"), Icon: Archive },
     { to: "/about", label: "About", Icon: Info },
   ] as const;
 

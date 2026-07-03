@@ -106,7 +106,11 @@ export function InputBar({
     const currentText =
       textSnapshot ?? textareaRef.current?.value ?? textRef.current;
     const trimmedText = currentText.replace(/\s*\[…\]\s*$/, "").trim();
-    if (!trimmedText && currentImages.length === 0) return;
+    if (!trimmedText && currentImages.length === 0) {
+      light();
+      textareaRef.current?.focus();
+      return;
+    }
     confirm();
     onAddRef.current(trimmedText, currentImages);
     reset();
@@ -369,7 +373,10 @@ export function InputBar({
               }
             }}
             rows={hero ? 4 : 3}
-            placeholder={t("생각을 적어보세요", "Type a thought")}
+            placeholder={t(
+              "머릿속에 떠오른 걸 적어보세요",
+              "Write what came to mind",
+            )}
             className={`block w-full resize-none bg-transparent leading-relaxed text-ink placeholder:text-ink-soft/55 placeholder:transition-opacity focus:outline-none max-h-40 ${
               hero ? "min-h-[96px] text-[17px]" : "min-h-[72px] text-[16px]"
             }`}
@@ -450,7 +457,7 @@ export function InputBar({
               ? "bg-ink px-4 text-white shadow-float"
               : "bg-primary px-4 text-ink"
           }`}
-          aria-label={t("추가", "Add")}
+          aria-label={t("남기기", "Leave it")}
         >
           <AnimatePresence mode="wait" initial={false}>
             {hasContent ? (
@@ -463,7 +470,7 @@ export function InputBar({
                 className="flex items-center gap-1"
               >
                 <ArrowUp size={16} strokeWidth={3} />
-                {t("보내기", "Send")}
+                {t("남기기", "Leave it")}
               </motion.span>
             ) : (
               <motion.span
@@ -475,7 +482,7 @@ export function InputBar({
                 className="flex items-center gap-1"
               >
                 <Plus size={14} strokeWidth={3} />
-                {t("추가", "Add")}
+                {t("남기기", "Leave it")}
               </motion.span>
             )}
           </AnimatePresence>

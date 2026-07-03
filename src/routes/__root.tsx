@@ -11,6 +11,19 @@ import { SideNav } from "@/components/SideNav";
 import { TopNav } from "@/components/TopNav";
 import { LanguageProvider } from "@/lib/i18n";
 
+const calmToastOptions = {
+  style: {
+    background: "rgba(255,255,255,0.96)",
+    color: "#111111",
+    border: "1px solid oklch(0 0 0 / 0.06)",
+    borderRadius: 20,
+    boxShadow:
+      "0 2px 8px oklch(0 0 0 / 0.04), 0 12px 32px -8px oklch(0 0 0 / 0.1)",
+    fontSize: 14,
+    fontWeight: 500,
+  },
+} as const;
+
 export const Route = createRootRoute({
   component: RootLayout,
 });
@@ -33,14 +46,7 @@ function RootLayout() {
           <Toaster
             position="top-center"
             theme="light"
-            toastOptions={{
-              style: {
-                background: "oklch(0.22 0.03 250)",
-                color: "white",
-                border: "none",
-                borderRadius: 16,
-              },
-            }}
+            toastOptions={calmToastOptions}
           />
         </div>
       </LanguageProvider>
@@ -78,14 +84,7 @@ function RootLayout() {
           <Toaster
             position="top-center"
             theme="light"
-            toastOptions={{
-              style: {
-                background: "oklch(0.22 0.03 250)",
-                color: "white",
-                border: "none",
-                borderRadius: 16,
-              },
-            }}
+            toastOptions={calmToastOptions}
           />
         </div>
       )}

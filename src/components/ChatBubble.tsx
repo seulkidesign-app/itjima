@@ -41,7 +41,7 @@ export function ChatBubble({
         </div>
       )}
       <div className="chat-bubble w-fit max-w-full text-left">
-        <p className="whitespace-pre-wrap text-[16px] font-semibold leading-[1.65] tracking-[-0.015em] text-ink">
+        <p className="whitespace-pre-wrap text-[16px] font-medium leading-[1.65] tracking-[-0.015em] text-ink">
           {item.text.trim() || t("(이미지만)", "(image only)")}
         </p>
         {children}

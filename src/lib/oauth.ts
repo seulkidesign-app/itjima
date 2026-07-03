@@ -215,6 +215,17 @@ export async function signInWithEmail(email: string, password: string) {
   return { data, error };
 }
 
+export async function sendPasswordResetEmail(email: string) {
+  const redirectTo =
+    typeof window !== "undefined"
+      ? `${window.location.origin}/auth/callback`
+      : undefined;
+  const { data, error } = await supabase.auth.resetPasswordForEmail(email, {
+    redirectTo,
+  });
+  return { data, error };
+}
+
 export function mapAuthError(message: string, lang: "ko" | "en") {
   const lower = message.toLowerCase();
 

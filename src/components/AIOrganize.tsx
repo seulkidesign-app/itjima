@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Sparkles } from "lucide-react";
 import type { InboxItem } from "@/lib/store";
 import { haptic } from "@/lib/haptics";
+import { useT } from "@/lib/i18n";
 
 export type Bucket = "schedule" | "archive";
 
@@ -73,6 +74,7 @@ type Props = {
 };
 
 export function AIOrganizeButton({ items, onCommit, label, analyzing }: Props) {
+  const t = useT();
   const [phase, setPhase] = useState<
     "idle" | "analyzing" | "animating" | "committing" | "done"
   >("idle");
@@ -129,8 +131,6 @@ export function AIOrganizeButton({ items, onCommit, label, analyzing }: Props) {
     window.dispatchEvent(new CustomEvent("ai-organize:state"));
   }, [flying, glow]);
 
-  const reduction = counts.total ? 43 : 0;
-
   return (
     <>
       {items.length >= 1 && (
@@ -166,20 +166,20 @@ export function AIOrganizeButton({ items, onCommit, label, analyzing }: Props) {
           />
           <div className="relative w-full max-w-sm rounded-3xl border border-white/40 bg-white/70 p-7 text-center shadow-float backdrop-blur-xl animate-scale-in">
             <div className="text-6xl">🧠</div>
-            <div className="mt-3 text-[20px] font-extrabold text-ink">
-              머릿속이 가벼워졌어요
+            <div className="mt-3 text-[20px] font-semibold tracking-[-0.02em] text-ink">
+              {t("머릿속이 가벼워졌어요", "Your mind feels lighter")}
             </div>
             <div className="mt-2 text-sm text-ink-soft">
-              📅 일정 {counts.s}개 &nbsp; 🗂 보관 {counts.a}개 로 정리했어요
-            </div>
-            <div className="mt-5 rounded-2xl bg-white/60 px-4 py-4 text-[18px] font-extrabold leading-snug text-ink">
-              당신의 머릿속이 {reduction}% 가벼워졌어요.
+              {t(
+                `그때 ${counts.s} · 기억함 ${counts.a}`,
+                `${counts.s} for when · ${counts.a} kept safe`,
+              )}
             </div>
             <button
               onClick={reset}
-              className="mt-5 w-full rounded-full bg-primary py-3 text-[15px] font-bold text-ink active:scale-95"
+              className="mt-5 w-full rounded-full bg-primary py-3 text-[15px] font-bold text-ink active:scale-95 touch-press"
             >
-              확인
+              {t("알겠어요", "Got it")}
             </button>
           </div>
         </div>

@@ -5,7 +5,7 @@ import {
   useState,
   type PointerEvent,
 } from "react";
-import { Archive, Calendar, Trash2 } from "lucide-react";
+import { Archive, Calendar, Trash2, X } from "lucide-react";
 import { animate, motion, AnimatePresence } from "framer-motion";
 import { useT } from "@/lib/i18n";
 import { confirm as confirmHaptic, tickDebounced, haptic } from "@/lib/haptics";
@@ -231,6 +231,15 @@ export function FocusSortMode({
   const progress = initialTotal.current
     ? initialTotal.current - deck.length + (current ? 1 : 0)
     : 0;
+
+  useEffect(() => {
+    if (!open) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape" && !dragging) onClose();
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [open, onClose, dragging]);
 
   useEffect(() => {
     if (!finished) return;
@@ -541,6 +550,9 @@ export function FocusSortMode({
       {open && (
         <motion.div
           className="absolute inset-0 z-[60] flex flex-col bg-white/78 backdrop-blur-[28px] backdrop-saturate-[1.4]"
+          role="dialog"
+          aria-modal="true"
+          aria-label={t("하나씩", "One by one")}
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
@@ -549,8 +561,17 @@ export function FocusSortMode({
             if (e.target === e.currentTarget && !dragging) onClose();
           }}
         >
-          <div className="flex justify-center px-5 pb-2 pt-[max(1.25rem,env(safe-area-inset-top))]">
+          <div className="flex items-center justify-between px-5 pb-2 pt-[max(1.25rem,env(safe-area-inset-top))]">
+            <button
+              type="button"
+              onClick={onClose}
+              className="touch-target rounded-full text-ink-soft active:bg-ink/5 active:text-ink"
+              aria-label={t("닫기", "Close")}
+            >
+              <X size={22} strokeWidth={2.25} />
+            </button>
             <ProgressDots total={initialTotal.current} current={progress} />
+            <div className="w-11" aria-hidden />
           </div>
 
           <div className="relative flex flex-1 items-center justify-center px-8 pb-10">
@@ -560,13 +581,13 @@ export function FocusSortMode({
                   side="left"
                   progress={leftProgress}
                   icon={Archive}
-                  label={t("보관", "Archive")}
+                  label={t("기억함", "Keep here")}
                 />
                 <DestinationZone
                   side="right"
                   progress={rightProgress}
                   icon={Calendar}
-                  label={t("일정", "Schedule")}
+                  label={t("그때", "When")}
                 />
                 <DestinationZone
                   side="top"
@@ -618,8 +639,8 @@ export function FocusSortMode({
                 </p>
                 <p className="mt-2 text-[15px] leading-relaxed text-ink-soft">
                   {t(
-                    "오늘은 더 버릴 생각이 없네요",
-                    "Nothing left to sort for now",
+                    "오늘은 더 남길 게 없네요",
+                    "Nothing left to leave here for now",
                   )}
                 </p>
               </motion.div>

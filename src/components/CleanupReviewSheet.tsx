@@ -51,20 +51,20 @@ export function CleanupReviewSheet({
     <BottomSheet open={open} onClose={onClose} maxHeight="80vh">
       <div className="max-h-[calc(80vh-3rem)] overflow-y-auto px-5 pb-[calc(env(safe-area-inset-bottom)+1.25rem)]">
         <h2 className="text-[17px] font-bold text-ink">
-          {t("삭제해도 될 것 같아요", "These look safe to remove")}
+          {t("가볍게 비울까요?", "Lighten up a little?")}
         </h2>
-        <p className="mt-1 text-sm text-ink-soft">
+        <p className="mt-1.5 text-sm leading-relaxed text-ink-soft">
           {t(
-            "의미 없는 입력만 골라봤어요. 남길 건 체크 해제하세요.",
-            "We picked likely junk. Uncheck anything you want to keep.",
+            "비워도 괜찮아 보이는 것만 골라봤어요. 남기고 싶은 건 체크를 해제하세요.",
+            "These look safe to let go. Uncheck anything you want to keep.",
           )}
         </p>
 
         {candidates.length === 0 ? (
           <p className="mt-6 text-center text-sm text-ink-soft">
             {t(
-              "지금은 정리할 항목이 없어요.",
-              "Nothing to clean up right now.",
+              "지금은 비울 게 없어요.",
+              "Nothing to lighten right now.",
             )}
           </p>
         ) : (
@@ -95,7 +95,7 @@ export function CleanupReviewSheet({
             disabled={selected.size === 0}
             className="flex-1 rounded-full bg-ink py-3.5 text-[15px] font-bold text-white disabled:opacity-40 touch-press"
           >
-            {t("삭제하기", "Delete")}
+            {t("비우기", "Let go")}
           </button>
         </div>
       </div>
@@ -125,6 +125,7 @@ function CandidateRow({
         className={`flex w-full items-start gap-3 rounded-[20px] px-3.5 py-3 text-left transition ${
           checked ? "bg-ink/[0.06]" : "bg-white shadow-card"
         }`}
+        aria-pressed={checked}
       >
         <span
           className={`mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-md border-2 ${

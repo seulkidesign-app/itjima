@@ -242,20 +242,24 @@ export function ChatSwipeRow({
     if (pending) {
       const hold =
         pending === "down" ? absY >= OPEN_AT * 0.5 : absX >= OPEN_AT * 0.5;
-      if (!hold) dismiss();
+      if (hold) {
+        commit(pending);
+      } else {
+        dismiss();
+      }
       return;
     }
 
     if (onSwipeDown && absY > absX && absY >= OPEN_AT) {
-      snapOpen("down");
+      commit("down");
       return;
     }
     if (x >= OPEN_AT) {
-      snapOpen("right");
+      commit("right");
       return;
     }
     if (x <= -OPEN_AT) {
-      snapOpen("left");
+      commit("left");
       return;
     }
     if (!moved.current && onTap) onTap();
@@ -282,10 +286,10 @@ export function ChatSwipeRow({
           style={{
             opacity: Math.max(scheduleReveal, pending === "right" ? 1 : 0),
           }}
-          aria-label={t("일정", "Schedule")}
+          aria-label={t("그때", "When")}
         >
           <Calendar size={20} strokeWidth={2.2} />
-          {t("일정", "Schedule")}
+          {t("그때", "When")}
         </button>
       </div>
 
@@ -300,10 +304,10 @@ export function ChatSwipeRow({
           style={{
             opacity: Math.max(archiveReveal, pending === "left" ? 1 : 0),
           }}
-          aria-label={t("보관", "Archive")}
+          aria-label={t("기억함", "Keep here")}
         >
           <Archive size={20} strokeWidth={2.2} />
-          {t("보관", "Archive")}
+          {t("기억함", "Keep here")}
         </button>
       </div>
 

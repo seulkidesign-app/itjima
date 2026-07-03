@@ -4,7 +4,7 @@ import type { BrainMirrorResult } from "@/lib/brainMirror";
 import { isBrainMirrorCandidate } from "@/lib/brainMirror";
 import { fetchBrainMirror } from "@/lib/brainMirrorApi";
 import { setInboxBrainMirror, useInbox, type InboxItem } from "@/lib/store";
-import { haptic } from "@/lib/haptics";
+import { haptic, tap } from "@/lib/haptics";
 import { SPRING_DEFAULT } from "@/lib/motion";
 import { useT } from "@/lib/i18n";
 
@@ -19,9 +19,21 @@ const SK = {
 function BrainMirrorQuietView({
   result,
   inline,
+  showDateOffer,
+  dateLabel,
+  acting,
+  onAcceptDate,
+  onKeepHere,
+  onDismiss,
 }: {
   result: BrainMirrorResult;
   inline?: boolean;
+  showDateOffer?: boolean;
+  dateLabel?: string | null;
+  acting?: boolean;
+  onAcceptDate?: () => void;
+  onKeepHere?: () => void;
+  onDismiss?: () => void;
 }) {
   const t = useT();
   const interpretive =
@@ -29,6 +41,52 @@ function BrainMirrorQuietView({
     (result.items.length === 1
       ? t(`${result.items[0]} 같아요.`, `Sounds like ${result.items[0]}.`)
       : null);
+
+  const actions = (
+    <div className="mt-2.5 flex flex-col gap-1.5">
+      {showDateOffer && (
+        <>
+          {dateLabel && (
+            <p className="text-[11px] font-medium text-ink-soft">
+              📅 {dateLabel}
+            </p>
+          )}
+          <button
+            type="button"
+            disabled={acting}
+            onClick={() => {
+              tap();
+              onAcceptDate?.();
+            }}
+            className="touch-press w-full rounded-full bg-ink py-2.5 text-[12px] font-semibold text-white disabled:opacity-50"
+          >
+            {t("그때 기억하기", "Remember for then")}
+          </button>
+          <button
+            type="button"
+            disabled={acting}
+            onClick={() => {
+              tap();
+              onKeepHere?.();
+            }}
+            className="touch-press w-full rounded-full bg-ink/[0.06] py-2.5 text-[12px] font-semibold text-ink disabled:opacity-50"
+          >
+            {t("여기에 둘게요", "Keep it here")}
+          </button>
+        </>
+      )}
+      <button
+        type="button"
+        onClick={() => {
+          tap();
+          onDismiss?.();
+        }}
+        className="touch-press py-1 text-[11px] font-medium text-ink-soft/80"
+      >
+        {t("숨기기", "Hide")}
+      </button>
+    </div>
+  );
 
   if (inline) {
     return (
@@ -58,6 +116,7 @@ function BrainMirrorQuietView({
             {interpretive}
           </p>
         )}
+        {actions}
       </motion.div>
     );
   }
@@ -87,6 +146,7 @@ function BrainMirrorQuietView({
           {interpretive}
         </p>
       )}
+      {actions}
     </motion.div>
   );
 }
@@ -108,7 +168,7 @@ function BrainMirrorThinking({ inline }: { inline?: boolean }) {
   return (
     <div className="mt-3 rounded-[24px] bg-ink/5 px-4 py-3" role="status">
       <p className="text-[12px] text-ink-soft">
-        {t("정리 중…", "Organizing…")}
+        {t("잠깐만요…", "Just a moment…")}
       </p>
     </div>
   );
@@ -121,7 +181,7 @@ export function BrainMirrorPanel({
   inbox,
   eligible,
   onAutoAct,
-  onCancelAct,
+  onCancelAct: _onCancelAct,
   onMirrorMissed,
   variant = "inline",
 }: {
@@ -151,8 +211,13 @@ export function BrainMirrorPanel({
   const [result, setResult] = useState<BrainMirrorResult | null>(() =>
     item.brain_mirror ? normalizeStored(item.brain_mirror) : null,
   );
-  const autoActStarted = useRef(false);
+  const [acting, setActing] = useState(false);
   const fetchGen = useRef(0);
+
+  const dismiss = useCallback(() => {
+    sessionStorage.setItem(SK.dismissed(item.id), "1");
+    setPhase("hidden");
+  }, [item.id]);
 
   const runAnalysis = useCallback(() => {
     if (!item.text.trim()) return;
@@ -236,20 +301,21 @@ export function BrainMirrorPanel({
     return runAnalysis();
   }, [item.id, item.text, item.brain_mirror, eligible, runAnalysis]);
 
-  useEffect(() => {
-    if (phase !== "ready" || !result || autoActStarted.current) return;
+  const acceptDate = async () => {
+    if (!result || acting) return;
     if (sessionStorage.getItem(SK.schedule(item.id))) return;
-    if (!shouldAutoAct(result)) return;
-
-    autoActStarted.current = true;
-    void (async () => {
+    setActing(true);
+    try {
       const scheduleId = await onAutoAct(item, result);
       if (scheduleId) {
         sessionStorage.setItem(SK.schedule(item.id), scheduleId);
         haptic([4, 10, 6]);
+        setPhase("hidden");
       }
-    })();
-  }, [phase, result, item, onAutoAct]);
+    } finally {
+      setActing(false);
+    }
+  };
 
   if (phase === "thinking") {
     return <BrainMirrorThinking inline={variant === "inline"} />;
@@ -257,10 +323,25 @@ export function BrainMirrorPanel({
 
   if (phase !== "ready" || !result?.items.length) return null;
 
-  return <BrainMirrorQuietView result={result} inline={variant === "inline"} />;
+  const alreadyScheduled = Boolean(sessionStorage.getItem(SK.schedule(item.id)));
+  const showDateOffer =
+    shouldOfferDate(result) && !alreadyScheduled;
+
+  return (
+    <BrainMirrorQuietView
+      result={result}
+      inline={variant === "inline"}
+      showDateOffer={showDateOffer}
+      dateLabel={result.suggestedDateText?.trim() || null}
+      acting={acting}
+      onAcceptDate={() => void acceptDate()}
+      onKeepHere={dismiss}
+      onDismiss={dismiss}
+    />
+  );
 }
 
-function shouldAutoAct(result: BrainMirrorResult): boolean {
+function shouldOfferDate(result: BrainMirrorResult): boolean {
   return Boolean(result.suggestedDateText?.trim());
 }
 

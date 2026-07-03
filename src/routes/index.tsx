@@ -2,7 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useRef, useState, useMemo } from "react";
 import { toast } from "sonner";
 import {
-  Sparkles,
+  Wind,
   Trash2,
   Calendar,
   Archive as ArchiveIcon,
@@ -13,6 +13,7 @@ import { FocusSortMode } from "@/components/FocusSortMode";
 import { FocusScheduleSheet } from "@/components/FocusScheduleSheet";
 import { LoginSheet } from "@/components/LoginSheet";
 import { CleanupReviewSheet } from "@/components/CleanupReviewSheet";
+import { detectJunk } from "@/lib/junkDetect";
 import { ChatBubble } from "@/components/ChatBubble";
 import { InputBar } from "@/components/InputBar";
 import { SyncIndicator } from "@/components/SyncIndicator";
@@ -84,7 +85,7 @@ function Inbox() {
       (toastId) => (
         <div className="flex items-center gap-3 rounded-[24px] bg-ink px-4 py-3 text-white shadow-float">
           <div className="text-sm">
-            📅 {det.label} — {t("일정으로 등록할까요?", "Add as a schedule?")}
+            📅 {det.label} — {t("그때 다시 떠올릴까요?", "Remember this for then?")}
           </div>
           <button
             onClick={() => {
@@ -93,7 +94,7 @@ function Inbox() {
             }}
             className={toastBtn}
           >
-            {t("등록", "Add")}
+            {t("남겨둘게요", "Keep it")}
           </button>
         </div>
       ),
@@ -202,7 +203,7 @@ function Inbox() {
       setFocusScheduleSheet({ open: false });
       setFocusPendingScheduleId(null);
       if (focusSortOpen) setScheduleCommittedId(it.id);
-      toast.success(t("일정으로 추가했어요!", "Added to schedule!"));
+      toast.success(t("그때 다시 떠올릴게요", "I'll remember this for then"));
     } catch {
       toast.error(t("일정을 저장하지 못했어요", "Couldn't save schedule"));
     }
@@ -214,7 +215,7 @@ function Inbox() {
       const { item: created } = await archive.add(payload);
       await inbox.remove(it.id);
       track("thought_swiped_archive", { text_length: it.text.length });
-      showUndoToast(t("보관했어요", "Archived"), async () => {
+      showUndoToast(t("기억함에 남겨뒀어요", "Safely kept here"), async () => {
         await archive.remove(created.id);
         const { item: restored } = await inbox.add({
           text: payload.text,
@@ -224,7 +225,7 @@ function Inbox() {
         markBmEligible(restored.id);
       });
     } catch {
-      toast.error(t("보관하지 못했어요", "Couldn't archive"));
+      toast.error(t("남기지 못했어요", "Couldn't save it here"));
     }
   };
 
@@ -232,7 +233,7 @@ function Inbox() {
     try {
       await inbox.softDelete(it.id);
       track("thought_swiped_delete", { text_length: it.text.length });
-      showUndoToast(t("삭제했어요", "Deleted"), async () => {
+      showUndoToast(t("지웠어요", "Removed"), async () => {
         await inbox.update(it.id, { status: "active" } as Partial<InboxItem>);
         if (isBrainMirrorCandidate(it.text)) markBmEligible(it.id);
       });
@@ -276,7 +277,7 @@ function Inbox() {
       (toastId) => (
         <div className="flex items-center gap-3 rounded-[24px] bg-ink px-4 py-3 text-white shadow-float">
           <div className="text-sm">
-            📅 {t("일정 탭으로 옮겼어요", "Moved to the Schedule tab")}
+            📅 {t("그때를 기억함에 옮겼어요", "Moved to when you'll remember")}
           </div>
           <button
             onClick={async () => {
@@ -306,8 +307,12 @@ function Inbox() {
   };
 
   const confirmCleanupDelete = async (ids: string[]) => {
-    for (const id of ids) await inbox.softDelete(id);
-    toast.success(t("정리했어요", "Cleaned up"));
+    try {
+      for (const id of ids) await inbox.softDelete(id);
+      toast.success(t("가벼워졌어요", "Feels lighter now"));
+    } catch {
+      toast.error(t("비우지 못했어요", "Couldn't lighten up"));
+    }
   };
 
   const handleAdd = async (text: string, images: string[]) => {
@@ -328,7 +333,7 @@ function Inbox() {
       });
       if (cloudSynced) return;
       toast.success(
-        t("기기에 저장됐어요 (동기화 대기)", "Saved locally (sync pending)"),
+        t("여기에 안전하게 남았어요", "Safely kept on this device"),
         { duration: 2500 },
       );
       if (!isBrainMirrorCandidate(text)) {
@@ -365,8 +370,8 @@ function Inbox() {
             <div className="text-sm">
               💾{" "}
               {t(
-                "다른 기기에서도 이어가려면 로그인하세요",
-                "Sign in to keep your thoughts on other devices",
+                "다른 기기에서도 이어가려면 로그인해 주세요",
+                "Sign in to keep your thoughts on every device",
               )}
             </div>
             <button
@@ -397,17 +402,28 @@ function Inbox() {
           <div className="flex gap-2 px-5 pb-2 pt-3">
             <button
               type="button"
-              onClick={() => setCleanupReviewOpen(true)}
-              className="touch-press flex-1 rounded-full border border-ink/8 bg-white py-2.5 text-[12px] font-bold text-ink shadow-[0_1px_4px_oklch(0_0_0/0.04)]"
+              onClick={() => {
+                if (detectJunk(items).length === 0) {
+                  toast.message(
+                    t(
+                      "지금은 비울 게 없어요",
+                      "Nothing to lighten right now",
+                    ),
+                  );
+                  return;
+                }
+                setCleanupReviewOpen(true);
+              }}
+              className="touch-press flex-1 rounded-full border border-ink/8 bg-white py-2.5 text-[12px] font-semibold text-ink shadow-[0_1px_4px_oklch(0_0_0/0.04)]"
             >
-              {t("정리", "Clean")}
+              {t("가볍게", "Lighten")}
             </button>
             <button
               type="button"
               onClick={() => openFocusSort()}
               className="pill-yellow touch-press flex-1 py-2.5 text-[12px]"
             >
-              {t("집중", "Focus")}
+              {t("하나씩", "One by one")}
             </button>
           </div>
         </div>
@@ -435,16 +451,16 @@ function Inbox() {
                 emoji="✨"
                 titleKo="머리가 가벼워졌어요"
                 titleEn="Your mind feels lighter"
-                hintKo="오늘은 더 버릴 생각이 없네요"
-                hintEn="Nothing left to sort for now"
+                hintKo="오늘은 더 남길 게 없네요"
+                hintEn="Nothing left to leave here for now"
               />
             ) : (
               <EmptyState
                 emoji="✍️"
-                titleKo="여기에 적으면 돼요"
-                titleEn="Just type here"
-                hintKo="적고 Enter — 끝이에요"
-                hintEn="Type and Enter — that's it"
+                titleKo="여기에 남겨두세요"
+                titleEn="Leave it here"
+                hintKo="적고 Enter — 이제 잊어도 돼요"
+                hintEn="Type and Enter — you don't have to hold it anymore"
               />
             )}
           </div>
@@ -522,16 +538,25 @@ function Inbox() {
               return (
                 <>
                   <MenuItem
-                    icon={<Sparkles size={18} />}
-                    label={t("정리 모드", "Clean up")}
+                    icon={<Wind size={18} />}
+                    label={t("가볍게 비우기", "Lighten up")}
                     onClick={() => {
                       setMenuFor(null);
+                      if (detectJunk(items).length === 0) {
+                        toast.message(
+                          t(
+                            "지금은 비울 게 없어요",
+                            "Nothing to lighten right now",
+                          ),
+                        );
+                        return;
+                      }
                       setCleanupReviewOpen(true);
                     }}
                   />
                   <MenuItem
                     icon={<Calendar size={18} />}
-                    label={t("일정으로", "To schedule")}
+                    label={t("그때 기억하기", "Remember for then")}
                     onClick={() => {
                       setMenuFor(null);
                       openHomeSchedule(it);
@@ -539,7 +564,7 @@ function Inbox() {
                   />
                   <MenuItem
                     icon={<ArchiveIcon size={18} />}
-                    label={t("보관하기", "Archive")}
+                    label={t("기억함에 남기기", "Keep here")}
                     onClick={() => {
                       setMenuFor(null);
                       moveToArchive(it);
@@ -580,36 +605,40 @@ function Inbox() {
             <div className="mx-auto mb-3 h-1.5 w-10 rounded-full bg-ink/15" />
             <div className="text-[17px] font-bold text-ink">
               {t(
-                "붙여넣은 텍스트를 어떻게 할까요?",
-                "What to do with the pasted text?",
+                "붙여넣은 글, 어떻게 남길까요?",
+                "How should we keep this pasted text?",
               )}
             </div>
             <div className="mt-1 text-sm text-ink-soft">
               {t(
-                `${pasteSheet.chunks.length}개 줄이 감지됐어요.`,
-                `${pasteSheet.chunks.length} lines detected.`,
+                `${pasteSheet.chunks.length}줄이에요.`,
+                `${pasteSheet.chunks.length} lines here.`,
               )}
             </div>
             <button
               onClick={async () => {
-                for (const c of pasteSheet.chunks) {
-                  const { item } = await inbox.add({
-                    text: c,
-                    images: [],
-                  });
-                  if (isBrainMirrorCandidate(c)) markBmEligible(item.id);
+                try {
+                  for (const c of pasteSheet.chunks) {
+                    const { item } = await inbox.add({
+                      text: c,
+                      images: [],
+                    });
+                    if (isBrainMirrorCandidate(c)) markBmEligible(item.id);
+                  }
+                  setPasteSheet(null);
+                  toast.success(
+                    t(
+                      `${pasteSheet.chunks.length}개로 나눠 남겼어요`,
+                      `Kept as ${pasteSheet.chunks.length} separate thoughts`,
+                    ),
+                  );
+                } catch {
+                  toast.error(t("저장하지 못했어요", "Couldn't save"));
                 }
-                setPasteSheet(null);
-                toast.success(
-                  t(
-                    `${pasteSheet.chunks.length}개로 나눠 담았어요`,
-                    `Split into ${pasteSheet.chunks.length} items`,
-                  ),
-                );
               }}
               className="mt-4 w-full rounded-full bg-primary py-3.5 text-[15px] font-bold text-ink"
             >
-              {t("항목별로 나누기", "Split into items")}
+              {t("나눠서 남기기", "Keep separately")}
             </button>
             <button
               onClick={async () => {
@@ -624,7 +653,7 @@ function Inbox() {
               }}
               className="mt-2 w-full rounded-full bg-white/70 py-3.5 text-[15px] font-semibold text-ink"
             >
-              {t("한 덩어리로", "Keep as one")}
+              {t("한 덩어리로 남기기", "Keep as one")}
             </button>
           </div>
         </div>

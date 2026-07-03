@@ -24,38 +24,40 @@ export function EmptyState({
 
   return (
     <motion.div
-      className="flex min-h-[44dvh] flex-col items-center justify-center px-6 text-center"
+      className="flex min-h-[44dvh] flex-col items-center justify-center px-7 text-center"
       role="status"
-      initial={{ opacity: 0, y: variant === "success" ? 6 : 14 }}
+      initial={{ opacity: 0, y: variant === "success" ? 4 : 10 }}
       animate={{ opacity: 1, y: 0 }}
       transition={spring}
     >
       <motion.div
         className={
           variant === "success"
-            ? "flex h-16 w-16 items-center justify-center rounded-full bg-primary/15"
-            : "text-5xl"
+            ? "flex h-[4.5rem] w-[4.5rem] items-center justify-center rounded-full bg-primary/12"
+            : "text-[3.25rem] leading-none"
         }
         aria-hidden
-        initial={{ scale: variant === "success" ? 0.88 : 0.92, opacity: 0 }}
+        initial={{ scale: variant === "success" ? 0.9 : 0.94, opacity: 0 }}
         animate={{ scale: 1, opacity: 1 }}
         transition={{ ...spring, delay: 0.05 }}
       >
-        <span className={variant === "success" ? "text-2xl" : ""}>{emoji}</span>
+        <span className={variant === "success" ? "text-[1.65rem]" : ""}>
+          {emoji}
+        </span>
       </motion.div>
       <motion.p
-        className={`mt-4 font-bold tracking-[-0.02em] text-ink ${
-          variant === "success" ? "text-[20px]" : "text-[17px]"
+        className={`mt-5 font-semibold tracking-[-0.025em] text-ink ${
+          variant === "success" ? "text-[21px]" : "text-[18px]"
         }`}
-        initial={{ opacity: 0, y: 8 }}
+        initial={{ opacity: 0, y: 6 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ ...spring, delay: 0.1 }}
       >
         {t(titleKo, titleEn)}
       </motion.p>
       <motion.p
-        className="mt-2 max-w-[280px] text-[14px] leading-relaxed text-ink-soft"
-        initial={{ opacity: 0, y: 8 }}
+        className="mt-2.5 max-w-[300px] text-[14px] leading-[1.55] text-ink-soft/90"
+        initial={{ opacity: 0, y: 6 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ ...spring, delay: 0.16 }}
       >

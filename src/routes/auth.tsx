@@ -9,6 +9,7 @@ import {
   signInWithEmail,
   signInWithGoogle,
   signUpWithEmail,
+  sendPasswordResetEmail,
 } from "@/lib/oauth";
 
 export const Route = createFileRoute("/auth")({
@@ -131,6 +132,34 @@ function AuthPage() {
     }
   };
 
+  const onForgotPassword = async () => {
+    const trimmed = email.trim();
+    if (!trimmed) {
+      toast.error(t("이메일을 먼저 입력해 주세요", "Enter your email first"));
+      return;
+    }
+    setLoading(true);
+    try {
+      const { error } = await sendPasswordResetEmail(trimmed);
+      if (error) throw error;
+      toast.success(
+        t(
+          "비밀번호 재설정 링크를 보냈어요. 메일함을 확인해 주세요.",
+          "Password reset link sent — check your inbox.",
+        ),
+        { duration: 8000 },
+      );
+    } catch (err: unknown) {
+      const message =
+        err instanceof Error
+          ? err.message
+          : t("오류가 발생했어요", "Something went wrong");
+      toast.error(mapAuthError(message, lang));
+    } finally {
+      setLoading(false);
+    }
+  };
+
   if (!ready) {
     return (
       <div className="flex h-full items-center justify-center">
@@ -238,6 +267,16 @@ function AuthPage() {
           placeholder={t("비밀번호 (6자 이상)", "Password (6+ characters)")}
           className="w-full rounded-2xl border border-white/70 bg-white/85 px-4 py-3.5 text-[15px] text-ink placeholder:text-ink-soft outline-none focus:border-primary"
         />
+        {mode === "signin" && (
+          <button
+            type="button"
+            onClick={() => void onForgotPassword()}
+            disabled={loading || googleLoading}
+            className="w-full py-1 text-right text-[12px] font-medium text-ink-soft"
+          >
+            {t("비밀번호를 잊으셨나요?", "Forgot password?")}
+          </button>
+        )}
         <button
           type="submit"
           disabled={loading || googleLoading}

@@ -19,11 +19,11 @@ export function ArchiveRelatedStrip({ item, items, onSelect }: Props) {
       className="mt-3 rounded-[18px] bg-ink/[0.04] px-3 py-2.5"
       onClick={(e) => e.stopPropagation()}
     >
-      <p className="text-[10px] font-extrabold uppercase tracking-[0.14em] text-ink-soft">
-        {t("관련 생각", "Related thoughts")}
+      <p className="text-[12px] font-semibold text-ink-soft/80">
+        {t("가까운 기억", "Nearby memories")}
       </p>
       <div className="mt-2 flex flex-col gap-1.5">
-        {related.map(({ item: rel, score }) => (
+        {related.map(({ item: rel }) => (
           <button
             key={rel.id}
             type="button"
@@ -36,8 +36,8 @@ export function ArchiveRelatedStrip({ item, items, onSelect }: Props) {
             <p className="mt-0.5 line-clamp-1 text-[11px] text-ink-soft">
               {(rel.raw_text ?? rel.text).slice(0, 60)}
             </p>
-            <span className="mt-1 inline-block text-[10px] font-bold text-primary">
-              {Math.round(score * 100)}% {t("유사", "match")}
+            <span className="mt-1 inline-block text-[10px] font-medium text-ink-soft/80">
+              {t("가까워요", "close match")}
             </span>
           </button>
         ))}
