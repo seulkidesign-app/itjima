@@ -5,24 +5,28 @@ import {
   useState,
   type PointerEvent,
 } from "react";
-import { Archive, Calendar, Trash2, X } from "lucide-react";
+import { Archive, Calendar, Trash2 } from "lucide-react";
 import { animate, motion, AnimatePresence } from "framer-motion";
 import { useT } from "@/lib/i18n";
 import { confirm as confirmHaptic, tickDebounced, haptic } from "@/lib/haptics";
 import type { InboxItem } from "@/lib/store";
-import { thoughtFirstLine } from "@/lib/brainMirror";
 import {
   SWIPE_COMMIT,
   SWIPE_PREVIEW,
-  MAX_ROTATE,
   dragProgress,
   cardShadowBlur,
-  cardScale,
   indicatorScale,
   SPRING_SNAP_BACK,
-  SPRING_DEFAULT,
-  SPRING_CARD_EXIT,
 } from "@/lib/motion";
+import {
+  MOTION_SUCCESS,
+  exitSpring,
+} from "@/lib/motionLanguage";
+import {
+  rubberBand,
+  swipeRotation,
+  swipeOpacity,
+} from "@/lib/swipePhysics";
 
 type Props = {
   open: boolean;
@@ -39,6 +43,9 @@ type Props = {
 
 type ExitDir = "left" | "right" | "up";
 
+const MAX_DRAG_X = 420;
+const MAX_DRAG_Y = 320;
+
 function sortOldestFirst(list: InboxItem[]) {
   return [...list].sort(
     (a, b) => +new Date(a.created_at) - +new Date(b.created_at),
@@ -53,34 +60,36 @@ function DeckCard({ item }: { item: InboxItem }) {
   return (
     <>
       {item.images?.length > 0 && (
-        <div className="mb-4 flex gap-2 overflow-x-auto">
+        <div className="mb-5 flex gap-2 overflow-x-auto">
           {item.images.map((src, i) => (
             <img
               key={i}
               src={src}
               alt=""
-              className="h-20 w-20 rounded-[20px] object-cover"
+              className="h-24 w-24 rounded-[20px] object-cover shadow-card ring-1 ring-ink/8"
             />
           ))}
         </div>
       )}
-      <p className="whitespace-pre-wrap text-[18px] font-semibold leading-[1.65] text-ink">
+      <p className="whitespace-pre-wrap text-[20px] font-semibold leading-[1.72] tracking-[-0.025em] text-ink">
         {item.text || t("(이미지만)", "(image only)")}
       </p>
       {bm?.title && (
-        <div className="mt-4 border-t border-dashed border-ink/15 pt-3">
-          <p className="text-[14px] font-semibold text-ink/85">{bm.title}</p>
+        <div className="mt-6 border-t border-dashed border-ink/12 pt-4">
+          <p className="text-[15px] font-semibold text-ink/80">{bm.title}</p>
           {bm.items.length > 1 && (
-            <ul className="mt-1.5 space-y-1">
+            <ul className="mt-2 space-y-1.5">
               {bm.items.slice(0, 4).map((line) => (
-                <li key={line} className="text-[13px] text-ink/70">
+                <li key={line} className="text-[14px] leading-relaxed text-ink/65">
                   · {line}
                 </li>
               ))}
             </ul>
           )}
           {interpretive && (
-            <p className="mt-2 text-[13px] text-ink-soft">{interpretive}</p>
+            <p className="mt-3 text-[13px] leading-relaxed text-ink-soft">
+              {interpretive}
+            </p>
           )}
         </div>
       )}
@@ -109,16 +118,80 @@ function ProgressDots({ total, current }: { total: number; current: number }) {
             layout
             className={`rounded-full ${
               active
-                ? "h-2 w-5 bg-ink"
+                ? "h-2 w-6 bg-ink"
                 : done
-                  ? "h-1.5 w-1.5 bg-ink/45"
-                  : "h-1.5 w-1.5 bg-ink/15"
+                  ? "h-1.5 w-1.5 bg-ink/40"
+                  : "h-1.5 w-1.5 bg-ink/12"
             }`}
             transition={{ type: "spring", stiffness: 420, damping: 32 }}
           />
         );
       })}
     </div>
+  );
+}
+
+function DestinationZone({
+  side,
+  progress,
+  icon: Icon,
+  label,
+}: {
+  side: "left" | "right" | "top";
+  progress: number;
+  icon: typeof Archive;
+  label: string;
+}) {
+  const visible = progress > SWIPE_PREVIEW * 0.5;
+  const scale = progress > SWIPE_PREVIEW ? indicatorScale(progress) : 0.85;
+
+  const position =
+    side === "left"
+      ? "left-0 top-0 bottom-0 w-[28%]"
+      : side === "right"
+        ? "right-0 top-0 bottom-0 w-[28%]"
+        : "left-0 right-0 top-0 h-[22%]";
+
+  const bg =
+    side === "right"
+      ? `rgba(255, 224, 51, ${progress * 0.35})`
+      : side === "left"
+        ? `rgba(17, 17, 17, ${progress * 0.12})`
+        : `rgba(17, 17, 17, ${progress * 0.08})`;
+
+  return (
+    <motion.div
+      className={`pointer-events-none absolute z-0 flex items-center justify-center ${position}`}
+      style={{ background: bg }}
+      animate={{ opacity: visible ? 1 : 0 }}
+      transition={{ duration: 0.15 }}
+    >
+      <motion.div
+        className={`flex flex-col items-center gap-2 ${
+          side === "right"
+            ? "text-ink"
+            : side === "left"
+              ? "text-ink"
+              : "text-ink-soft"
+        }`}
+        style={{ scale }}
+      >
+        <div
+          className={`flex h-12 w-12 items-center justify-center rounded-full ${
+            side === "right"
+              ? "bg-primary shadow-float"
+              : side === "left"
+                ? "bg-white/90 shadow-card"
+                : "bg-white/80 shadow-card"
+          }`}
+        >
+          <Icon size={20} strokeWidth={2.25} />
+        </div>
+        <span className="text-[11px] font-extrabold uppercase tracking-[0.12em]">
+          {label}
+        </span>
+      </motion.div>
+    </motion.div>
   );
 }
 
@@ -147,6 +220,7 @@ export function FocusSortMode({
   const [offset, setOffset] = useState({ x: 0, y: 0 });
   const [dragging, setDragging] = useState(false);
   const [exiting, setExiting] = useState(false);
+  const [cardOpacity, setCardOpacity] = useState(1);
   const start = useRef({ x: 0, y: 0 });
   const offsetRef = useRef({ x: 0, y: 0 });
 
@@ -160,7 +234,7 @@ export function FocusSortMode({
 
   useEffect(() => {
     if (!finished) return;
-    const id = window.setTimeout(() => onClose(), 2000);
+    const id = window.setTimeout(() => onClose(), 2800);
     return () => window.clearTimeout(id);
   }, [finished, onClose]);
 
@@ -169,14 +243,12 @@ export function FocusSortMode({
       const ordered = sortOldestFirst(items);
       initialTotal.current = ordered.length;
       const startIdx = startItemId
-        ? Math.max(
-            0,
-            ordered.findIndex((i) => i.id === startItemId),
-          )
+        ? Math.max(0, ordered.findIndex((i) => i.id === startItemId))
         : 0;
       setDeck(ordered);
       setCursor(startIdx >= 0 ? startIdx : 0);
       setOffset({ x: 0, y: 0 });
+      setCardOpacity(1);
       setExiting(false);
       thresholdFired.current = null;
     }
@@ -206,7 +278,7 @@ export function FocusSortMode({
     }
   }, [deck.length, cursor]);
 
-  const cardW = useCallback(() => cardRef.current?.offsetWidth ?? 300, []);
+  const cardW = useCallback(() => cardRef.current?.offsetWidth ?? 320, []);
   const cardH = useCallback(() => cardRef.current?.offsetHeight ?? 360, []);
 
   const springBack = useCallback(() => {
@@ -215,11 +287,19 @@ export function FocusSortMode({
     const from = offsetRef.current;
     animate(from.x, 0, {
       ...SPRING_SNAP_BACK,
-      onUpdate: (v) => setOffset((o) => ({ ...o, x: v })),
+      onUpdate: (v) => {
+        const bandedX = rubberBand(v, MAX_DRAG_X);
+        setOffset((o) => ({ ...o, x: bandedX }));
+        setCardOpacity(swipeOpacity(Math.abs(bandedX), MAX_DRAG_X));
+      },
     });
     animate(from.y, 0, {
       ...SPRING_SNAP_BACK,
-      onUpdate: (v) => setOffset((o) => ({ ...o, y: v })),
+      onUpdate: (v) => {
+        const bandedY = v < 0 ? rubberBand(v, MAX_DRAG_Y) : Math.max(0, v * 0.2);
+        setOffset((o) => ({ ...o, y: bandedY }));
+      },
+      onComplete: () => setCardOpacity(1),
     });
   }, []);
 
@@ -232,11 +312,11 @@ export function FocusSortMode({
     if (!current || exiting) return;
     setExiting(true);
     const w = cardW();
+    const spring = exitSpring("right");
     const from = offsetRef.current;
-    await animate(from.x, w * 0.42, {
-      type: "spring",
-      stiffness: 300,
-      damping: 28,
+    await animate(from.x, w * 0.55, {
+      ...spring,
+      velocity: velocity.current.x * 0.3,
       onUpdate: (v) => setOffset((o) => ({ ...o, x: v })),
     }).finished;
     onScheduleRequest(current);
@@ -247,21 +327,22 @@ export function FocusSortMode({
     if (exiting) return;
     setExiting(true);
     const w = cardW();
+    const spring = exitSpring("right");
     const from = offsetRef.current;
-    await Promise.all([
-      animate(from.x, w * 1.7, {
-        ...SPRING_CARD_EXIT,
-        velocity: velocity.current.x * 0.35,
-        onUpdate: (v) => setOffset((o) => ({ ...o, x: v })),
-      }).finished,
-      animate(from.y, 24, {
-        ...SPRING_CARD_EXIT,
-        velocity: velocity.current.y * 0.2,
-        onUpdate: (v) => setOffset((o) => ({ ...o, y: v })),
-      }).finished,
-    ]);
+      await Promise.all([
+        animate(from.x, w * 1.8, {
+          ...spring,
+          velocity: velocity.current.x * 0.4,
+          onUpdate: (v) => {
+            setOffset((o) => ({ ...o, x: v }));
+            setCardOpacity(swipeOpacity(Math.abs(v), MAX_DRAG_X));
+          },
+        }).finished,
+      ]);
+      setCardOpacity(0);
     removeAtCursor();
     setOffset({ x: 0, y: 0 });
+    setCardOpacity(1);
     setExiting(false);
   }, [cardW, exiting, removeAtCursor]);
 
@@ -275,22 +356,27 @@ export function FocusSortMode({
       setExiting(true);
       const w = cardW();
       const h = cardH();
+      const spring = exitSpring(dir);
       const from = offsetRef.current;
-      const targetX = dir === "left" ? -w * 1.7 : from.x;
-      const targetY = dir === "up" ? -h * 1.4 : 24;
+      const targetX = dir === "left" ? -w * 1.8 : from.x;
+      const targetY = dir === "up" ? -h * 1.5 : Math.min(from.y, 40);
 
       await Promise.all([
         animate(from.x, targetX, {
-          ...SPRING_CARD_EXIT,
-          velocity: velocity.current.x * 0.4,
-          onUpdate: (v) => setOffset((o) => ({ ...o, x: v })),
+          ...spring,
+          velocity: velocity.current.x * 0.45,
+          onUpdate: (v) => {
+            setOffset((o) => ({ ...o, x: v }));
+            setCardOpacity(swipeOpacity(Math.abs(v), MAX_DRAG_X));
+          },
         }).finished,
         animate(from.y, targetY, {
-          ...SPRING_CARD_EXIT,
+          ...spring,
           velocity: velocity.current.y * 0.35,
           onUpdate: (v) => setOffset((o) => ({ ...o, y: v })),
         }).finished,
       ]);
+      if (dir === "up") setCardOpacity(0);
 
       const item = current;
       if (dir === "left") await onArchive(item);
@@ -298,6 +384,7 @@ export function FocusSortMode({
 
       removeAtCursor();
       setOffset({ x: 0, y: 0 });
+      setCardOpacity(1);
       setExiting(false);
     },
     [
@@ -376,9 +463,12 @@ export function FocusSortMode({
     };
     lastMove.current = { x: e.clientX, y: e.clientY, t: now };
 
-    const x = e.clientX - start.current.x;
-    const y = e.clientY - start.current.y;
+    const rawX = e.clientX - start.current.x;
+    const rawY = e.clientY - start.current.y;
+    const x = rubberBand(rawX, MAX_DRAG_X);
+    const y = rawY < 0 ? rubberBand(rawY, MAX_DRAG_Y) : rawY * 0.15;
     setOffset({ x, y });
+    setCardOpacity(swipeOpacity(Math.abs(x), MAX_DRAG_X));
 
     const w = cardW();
     const h = cardH();
@@ -414,18 +504,23 @@ export function FocusSortMode({
     const { x, y } = offsetRef.current;
     const absX = Math.abs(x);
     const absY = Math.abs(y);
+    const vx = velocity.current.x;
 
-    if (absY > absX && y < 0 && absY > h * SWIPE_COMMIT) {
+    if (
+      absY > absX &&
+      y < 0 &&
+      (absY > h * SWIPE_COMMIT || velocity.current.y < -800)
+    ) {
       confirmHaptic();
       void flyAway("up");
       return;
     }
-    if (x > w * SWIPE_COMMIT) {
+    if (x > 0 && (x > w * SWIPE_COMMIT || vx > 600)) {
       confirmHaptic();
       void flyAway("right");
       return;
     }
-    if (x < -w * SWIPE_COMMIT) {
+    if (x < 0 && (absX > w * SWIPE_COMMIT || vx < -600)) {
       confirmHaptic();
       void flyAway("left");
       return;
@@ -437,158 +532,95 @@ export function FocusSortMode({
   const leftProgress = offset.x < 0 ? dragProgress(-offset.x, cardW()) : 0;
   const upProgress = offset.y < 0 ? dragProgress(-offset.y, cardH()) : 0;
   const progressMag = Math.max(rightProgress, leftProgress, upProgress);
-  const rotate = Math.max(
-    -MAX_ROTATE,
-    Math.min(MAX_ROTATE, offset.x * (MAX_ROTATE / (cardW() * 0.5))),
-  );
-  const scale = dragging || exiting ? cardScale(progressMag) : 1;
+  const rotate = swipeRotation(offset.x, cardW());
+  const scale = dragging || exiting ? 1 + progressMag * 0.04 : 1;
   const shadow = cardShadowBlur(progressMag);
-
-  const behind1 = deck[cursor + 1];
-  const behind2 = deck[cursor + 2];
-
-  const zoneScale = (p: number) =>
-    p > SWIPE_PREVIEW ? indicatorScale(p) : 0.92;
-
-  const bgTint =
-    rightProgress > leftProgress && rightProgress > upProgress
-      ? `rgba(255, 224, 51, ${rightProgress * 0.12})`
-      : leftProgress > rightProgress && leftProgress > upProgress
-        ? `rgba(59, 130, 246, ${leftProgress * 0.1})`
-        : upProgress > SWIPE_PREVIEW
-          ? `rgba(239, 68, 68, ${upProgress * 0.08})`
-          : "white";
 
   return (
     <AnimatePresence>
       {open && (
         <motion.div
-          className="absolute inset-0 z-[60] flex flex-col bg-white/72 backdrop-blur-2xl backdrop-saturate-150"
+          className="absolute inset-0 z-[60] flex flex-col bg-white/78 backdrop-blur-[28px] backdrop-saturate-[1.4]"
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
-          transition={{ duration: 0.28, ease: [0.32, 0.72, 0, 1] }}
-          style={{ backgroundColor: bgTint }}
+          transition={{ duration: 0.32, ease: [0.32, 0.72, 0, 1] }}
+          onClick={(e) => {
+            if (e.target === e.currentTarget && !dragging) onClose();
+          }}
         >
-          <div className="flex items-center justify-between px-5 pb-3 pt-6">
+          <div className="flex justify-center px-5 pb-2 pt-[max(1.25rem,env(safe-area-inset-top))]">
             <ProgressDots total={initialTotal.current} current={progress} />
-            <button
-              type="button"
-              onClick={onClose}
-              className="touch-press flex h-10 w-10 items-center justify-center rounded-full bg-ink/[0.06] text-ink-soft backdrop-blur-sm"
-              aria-label={t("닫기", "Close")}
-            >
-              <X size={18} />
-            </button>
           </div>
 
-          <div className="relative flex flex-1 flex-col items-center justify-center px-6 pb-4">
+          <div className="relative flex flex-1 items-center justify-center px-8 pb-10">
             {!finished && current ? (
-              <>
-                <div className="relative flex w-full max-w-[340px] flex-1 items-center justify-center">
-                  {behind2 && (
-                    <motion.div
-                      className="focus-sort-card pointer-events-none absolute w-full"
-                      initial={false}
-                      animate={{ scale: 0.9, y: 18, opacity: 0.22 }}
-                      aria-hidden
-                    >
-                      <div className="px-7 py-6">
-                        <p className="line-clamp-2 text-[15px] font-semibold text-ink/80">
-                          {thoughtFirstLine(behind2.text)}
-                        </p>
-                      </div>
-                    </motion.div>
-                  )}
-                  {behind1 && (
-                    <motion.div
-                      className="focus-sort-card pointer-events-none absolute w-full"
-                      initial={false}
-                      animate={{ scale: 0.945, y: 10, opacity: 0.42 }}
-                      aria-hidden
-                    >
-                      <div className="px-7 py-7">
-                        <p className="line-clamp-2 text-[16px] font-semibold text-ink/90">
-                          {thoughtFirstLine(behind1.text)}
-                        </p>
-                      </div>
-                    </motion.div>
-                  )}
+              <div className="relative flex h-full w-full max-w-[360px] items-center justify-center">
+                <DestinationZone
+                  side="left"
+                  progress={leftProgress}
+                  icon={Archive}
+                  label={t("보관", "Archive")}
+                />
+                <DestinationZone
+                  side="right"
+                  progress={rightProgress}
+                  icon={Calendar}
+                  label={t("일정", "Schedule")}
+                />
+                <DestinationZone
+                  side="top"
+                  progress={upProgress}
+                  icon={Trash2}
+                  label={t("삭제", "Delete")}
+                />
 
-                  {upProgress > SWIPE_PREVIEW && (
-                    <motion.div
-                      className="pointer-events-none absolute left-1/2 top-2 z-0 flex -translate-x-1/2 items-center gap-1.5 rounded-full bg-ink/85 px-3.5 py-2 text-[12px] font-extrabold text-white shadow-float"
-                      style={{ opacity: upProgress }}
-                      animate={{ scale: zoneScale(upProgress) }}
-                    >
-                      <Trash2 size={14} strokeWidth={2.5} />
-                      {t("삭제", "Delete")}
-                    </motion.div>
-                  )}
-                  {rightProgress > SWIPE_PREVIEW && (
-                    <motion.div
-                      className="pointer-events-none absolute right-2 top-1/2 z-0 -translate-y-1/2 flex items-center gap-1.5 rounded-full bg-primary px-3.5 py-2 text-[12px] font-extrabold text-ink shadow-float"
-                      style={{ opacity: rightProgress }}
-                      animate={{ scale: zoneScale(rightProgress) }}
-                    >
-                      <Calendar size={14} strokeWidth={2.5} />
-                      {t("일정", "Schedule")}
-                    </motion.div>
-                  )}
-                  {leftProgress > SWIPE_PREVIEW && (
-                    <motion.div
-                      className="pointer-events-none absolute left-2 top-1/2 z-0 -translate-y-1/2 flex items-center gap-1.5 rounded-full bg-ink px-3.5 py-2 text-[12px] font-extrabold text-white shadow-float"
-                      style={{ opacity: leftProgress }}
-                      animate={{ scale: zoneScale(leftProgress) }}
-                    >
-                      <Archive size={14} strokeWidth={2.5} />
-                      {t("보관", "Archive")}
-                    </motion.div>
-                  )}
-
-                  <motion.div
-                    ref={cardRef}
-                    onPointerDown={onDown}
-                    onPointerMove={onMove}
-                    onPointerUp={onUp}
-                    onPointerCancel={onUp}
-                    className={`focus-sort-card relative z-[1] w-full touch-none select-none px-7 py-8 will-change-transform ${
-                      pendingScheduleId === current.id
-                        ? "ring-2 ring-primary/40 ring-offset-2"
-                        : ""
-                    }`}
-                    style={{
-                      transform: `translate(${offset.x}px, ${offset.y}px) rotate(${rotate}deg) scale(${scale})`,
-                      boxShadow: `0 ${shadow}px ${shadow * 1.4}px -${shadow * 0.3}px rgba(0,0,0,${0.08 + progressMag * 0.1})`,
-                      transition: dragging || exiting ? "none" : undefined,
-                    }}
-                  >
-                    <DeckCard item={current} />
-                  </motion.div>
-                </div>
-
-                <p className="mt-4 text-center text-[11px] font-medium text-ink-soft/60">
-                  {t(
-                    "← 보관 · → 일정 · ↑ 삭제",
-                    "← Archive · → Schedule · ↑ Delete",
-                  )}
-                </p>
-              </>
+                <motion.div
+                  ref={cardRef}
+                  onPointerDown={onDown}
+                  onPointerMove={onMove}
+                  onPointerUp={onUp}
+                  onPointerCancel={onUp}
+                  className={`focus-sort-card relative z-[1] w-full touch-none select-none px-9 py-10 will-change-transform ${
+                    pendingScheduleId === current.id
+                      ? "ring-2 ring-primary/35 ring-offset-4 ring-offset-transparent"
+                      : ""
+                  }`}
+                  style={{
+                    transform: `translate(${offset.x}px, ${offset.y}px) rotate(${rotate}deg) scale(${scale})`,
+                    opacity: cardOpacity,
+                    boxShadow: `0 ${shadow}px ${shadow * 1.5}px -${shadow * 0.35}px rgba(0,0,0,${0.07 + progressMag * 0.12})`,
+                    transition: dragging || exiting ? "none" : undefined,
+                  }}
+                >
+                  <DeckCard item={current} />
+                </motion.div>
+              </div>
             ) : (
               <motion.div
-                className="px-6 text-center"
-                initial={{ opacity: 0, scale: 0.88, y: 12 }}
+                className="max-w-[300px] px-6 text-center"
+                initial={{ opacity: 0, scale: 0.94, y: 8 }}
                 animate={{ opacity: 1, scale: 1, y: 0 }}
-                transition={{ ...SPRING_DEFAULT, duration: 0.35 }}
+                transition={MOTION_SUCCESS}
               >
-                <div className="focus-complete-ring mx-auto flex h-20 w-20 items-center justify-center rounded-full bg-primary/25">
-                  <span className="text-4xl">✨</span>
-                </div>
-                <p className="mt-5 text-[20px] font-bold tracking-[-0.02em] text-ink">
+                <motion.div
+                  className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-primary/20"
+                  initial={{ scale: 0.8 }}
+                  animate={{ scale: 1 }}
+                  transition={MOTION_SUCCESS}
+                >
+                  <span className="text-2xl" aria-hidden>
+                    ✨
+                  </span>
+                </motion.div>
+                <p className="mt-6 text-[22px] font-bold tracking-[-0.03em] text-ink">
                   {t("머리가 가벼워졌어요", "Your mind feels lighter")}
                 </p>
-                <p className="mt-2 text-[14px] font-medium text-ink-soft">
-                  {t("잘 정리했어요", "All sorted")}
+                <p className="mt-2 text-[15px] leading-relaxed text-ink-soft">
+                  {t(
+                    "오늘은 더 버릴 생각이 없네요",
+                    "Nothing left to sort for now",
+                  )}
                 </p>
               </motion.div>
             )}

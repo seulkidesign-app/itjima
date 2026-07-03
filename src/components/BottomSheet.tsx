@@ -1,4 +1,4 @@
-import { type CSSProperties, type ReactNode, useEffect, useId } from "react";
+import { type CSSProperties, type ReactNode, useEffect, useId, useState } from "react";
 import { motion, AnimatePresence, useDragControls } from "framer-motion";
 import { useT } from "@/lib/i18n";
 import { light } from "@/lib/haptics";
@@ -23,6 +23,24 @@ export function BottomSheet({
   const t = useT();
   const dragControls = useDragControls();
   const titleId = useId();
+  const [keyboardInset, setKeyboardInset] = useState(0);
+
+  useEffect(() => {
+    if (!open) return;
+    const vv = window.visualViewport;
+    if (!vv) return;
+    const sync = () => {
+      const inset = Math.max(0, window.innerHeight - vv.height - vv.offsetTop);
+      setKeyboardInset(inset > 40 ? inset : 0);
+    };
+    sync();
+    vv.addEventListener("resize", sync);
+    vv.addEventListener("scroll", sync);
+    return () => {
+      vv.removeEventListener("resize", sync);
+      vv.removeEventListener("scroll", sync);
+    };
+  }, [open]);
 
   useEffect(() => {
     if (!open) return;
@@ -84,11 +102,13 @@ export function BottomSheet({
             animate={{ y: 0 }}
             exit={{ y: "100%" }}
             transition={SPRING_SHEET}
-            onAnimationComplete={(def) => {
-              if (def === "animate") light();
-            }}
             className="sheet-chrome relative w-full shrink-0 max-h-[var(--sheet-max-h)] overflow-hidden bg-white/98 shadow-[0_-20px_60px_-10px_rgba(0,0,0,0.22)] backdrop-blur-2xl"
-            style={{ "--sheet-max-h": maxHeight } as CSSProperties}
+            style={
+              {
+                "--sheet-max-h": maxHeight,
+                paddingBottom: keyboardInset,
+              } as CSSProperties
+            }
           >
             {title && (
               <span id={titleId} className="sr-only">

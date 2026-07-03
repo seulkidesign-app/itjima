@@ -431,6 +431,16 @@ function Schedule() {
         saveLabel={sheet.edit ? t("저장", "Save") : undefined}
         onClose={() => setSheet({ open: false })}
         onSave={async (text, start, end, opts) => {
+          const alarmPayload =
+            opts?.alarmMinutesBefore != null
+              ? {
+                  alarm: true,
+                  alarm_at: new Date(
+                    start.getTime() - opts.alarmMinutesBefore * 60 * 1000,
+                  ).toISOString(),
+                }
+              : { alarm: false };
+
           if (sheet.edit) {
             await update(sheet.edit.id, {
               text,
@@ -438,6 +448,7 @@ function Schedule() {
               end_time: end.toISOString(),
               all_day: opts?.allDay ?? false,
               repeat: opts?.repeat ?? null,
+              ...alarmPayload,
             });
             toast.success(t("수정됐어요", "Updated"));
           } else {
@@ -445,9 +456,9 @@ function Schedule() {
               text,
               start_time: start.toISOString(),
               end_time: end.toISOString(),
-              alarm: false,
               all_day: opts?.allDay ?? false,
               repeat: opts?.repeat ?? null,
+              ...alarmPayload,
             });
             track("schedule_created", {
               source: "manual",

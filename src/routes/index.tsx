@@ -108,8 +108,13 @@ function Inbox() {
   const newestId = items[0]?.id;
   const listEndRef = useRef<HTMLDivElement | null>(null);
   const prevCountRef = useRef(items.length);
+  const [inboxJustCleared, setInboxJustCleared] = useState(false);
 
   useEffect(() => {
+    if (prevCountRef.current > 0 && items.length === 0) {
+      setInboxJustCleared(true);
+    }
+    if (items.length > 0) setInboxJustCleared(false);
     if (items.length > prevCountRef.current) {
       requestAnimationFrame(() => {
         listEndRef.current?.scrollIntoView({
@@ -424,6 +429,15 @@ function Inbox() {
           <div className="flex flex-1 flex-col justify-end pb-8">
             {syncing ? (
               <InboxListSkeleton />
+            ) : inboxJustCleared ? (
+              <EmptyState
+                variant="success"
+                emoji="✨"
+                titleKo="머리가 가벼워졌어요"
+                titleEn="Your mind feels lighter"
+                hintKo="오늘은 더 버릴 생각이 없네요"
+                hintEn="Nothing left to sort for now"
+              />
             ) : (
               <EmptyState
                 emoji="✍️"
