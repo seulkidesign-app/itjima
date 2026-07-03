@@ -177,8 +177,7 @@ export function AIOrganizeButton({ items, onCommit, label, analyzing }: Props) {
             </div>
             <button
               onClick={reset}
-              className="mt-5 w-full rounded-full py-3 text-[15px] font-bold text-ink active:scale-95"
-              style={{ backgroundColor: "#FFD233" }}
+              className="mt-5 w-full rounded-full bg-primary py-3 text-[15px] font-bold text-ink active:scale-95"
             >
               확인
             </button>

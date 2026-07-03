@@ -102,7 +102,7 @@ function useTimerTick() {
 function Schedule() {
   const t = useT();
   const { lang } = useLang();
-  const { items, update, remove, add, syncState } = useSchedules();
+  const { items, update, remove, add, syncState, retrySync } = useSchedules();
   const archive = useArchive();
   const [tab, setTab] = useState<"today" | "list" | "cal">("list");
   const [sheet, setSheet] = useState<{ open: boolean; edit?: ScheduleItem }>({
@@ -214,7 +214,7 @@ function Schedule() {
     });
     await remove(s.id);
     if (pins.has(s.id)) togglePin(s.id);
-    toast.success(t("기억으로 옮겼어요", "Moved to Memory"));
+    toast.success(t("보관으로 옮겼어요", "Moved to Archive"));
   };
 
   const cardProps = (s: ScheduleItem) => ({
@@ -245,7 +245,11 @@ function Schedule() {
 
   return (
     <div className="flex h-full flex-col bg-white">
-      <SyncIndicator active={syncState === "syncing" && items.length > 0} />
+      <SyncIndicator
+        syncing={syncState === "syncing"}
+        error={syncState === "error"}
+        onRetry={retrySync}
+      />
       <div className="sticky top-0 z-10 shrink-0 bg-white">
         <div className="px-5 pb-3 pt-5">
           <h1 className="page-title">{t("일정", "Schedule")}</h1>
@@ -263,7 +267,7 @@ function Schedule() {
             {(
               [
                 ["list", t("목록", "List")],
-                ["today", t("상세", "Detail")],
+                ["today", t("상세", "Details")],
                 ["cal", t("캘린더", "Calendar")],
               ] as const
             ).map(([k, label]) => (
@@ -289,7 +293,7 @@ function Schedule() {
         </div>
       </div>
 
-      <div className="flex-1 px-5 pb-6">
+      <div className="flex-1 px-5 pb-24">
         {syncState === "syncing" && items.length === 0 ? (
           <ScheduleListSkeleton />
         ) : tab === "today" ? (
@@ -671,11 +675,7 @@ function ScheduleCard({
 
   const swipeHint = dx > 24;
   const dotColor =
-    dot === "urgent"
-      ? "bg-red-500"
-      : dot === "today"
-        ? "bg-primary"
-        : "bg-ink/25";
+    dot === "urgent" ? "bg-ink" : dot === "today" ? "bg-primary" : "bg-ink/25";
 
   return (
     <div className="relative">
@@ -692,7 +692,7 @@ function ScheduleCard({
         className={`card-radius shadow-card px-[18px] py-5 transition ${
           done ? "opacity-50" : ""
         } ${emphasize || timer ? "ring-2 ring-primary/30 bg-primary/10" : pinned ? "bg-primary/15 ring-2 ring-primary/40" : "glass"} ${
-          missed && !done ? "border-l-4 border-amber-300/80" : ""
+          missed && !done ? "border-l-4 border-primary/40" : ""
         }`}
         style={{
           transform: `translateX(${dx}px)`,
@@ -738,7 +738,7 @@ function ScheduleCard({
                 {rel}
               </span>
               {missed && !done && (
-                <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-bold text-amber-800">
+                <span className="rounded-full bg-primary/25 px-2 py-0.5 text-[10px] font-bold text-ink">
                   {t("시간 지남", "Past due")}
                 </span>
               )}
@@ -816,14 +816,6 @@ function ScheduleCard({
             </div>
           )}
         </div>
-        {!done && (
-          <p className="mt-3 text-[10px] text-ink-soft/80">
-            {t(
-              "→ 밀어 완료 · 길게 눌러 수정",
-              "→ Swipe to complete · Hold to edit",
-            )}
-          </p>
-        )}
         {!done && (
           <div className="mt-2 flex justify-end">
             <button

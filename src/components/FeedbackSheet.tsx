@@ -157,7 +157,7 @@ export function FeedbackSheet({
             "어떤 점이 좋았나요? 어떤 점이 불편했나요?",
             "What did you like? What was annoying?",
           )}
-          className="w-full resize-none rounded-[24px] bg-white/60 px-3.5 py-3 text-[14px] leading-relaxed text-ink placeholder:text-ink-soft/70 focus:outline-none focus:shadow-[0_0_0_2px_#FFE033]"
+          className="w-full resize-none rounded-[24px] bg-white/60 px-3.5 py-3 text-[14px] leading-relaxed text-ink placeholder:text-ink-soft/70 input-focus-ring"
         />
         <div className="mt-1 text-right text-[10px] text-ink-soft">
           {message.length} / 2000
@@ -172,7 +172,7 @@ export function FeedbackSheet({
             "답장 받을 이메일 (선택)",
             "Email for reply (optional)",
           )}
-          className="mt-2 w-full rounded-full bg-white/60 px-3.5 py-2.5 text-[13px] text-ink placeholder:text-ink-soft/70 focus:outline-none focus:shadow-[0_0_0_2px_#FFE033]"
+          className="mt-2 w-full rounded-full bg-white/60 px-3.5 py-2.5 text-[13px] text-ink placeholder:text-ink-soft/70 input-focus-ring"
         />
 
         <button

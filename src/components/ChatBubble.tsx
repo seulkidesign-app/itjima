@@ -41,14 +41,16 @@ export function ChatBubble({
         </p>
         {children}
       </div>
-      <p className="mt-1 pr-0.5 text-[10px] font-medium tabular-nums text-ink-soft/55">
-        {new Date(item.created_at).toLocaleString(locale, {
-          month: "numeric",
-          day: "numeric",
-          hour: "2-digit",
-          minute: "2-digit",
-        })}
-      </p>
+      {isNewest && (
+        <p className="mt-1 pr-0.5 text-[10px] font-medium tabular-nums text-ink-soft/55">
+          {new Date(item.created_at).toLocaleString(locale, {
+            month: "numeric",
+            day: "numeric",
+            hour: "2-digit",
+            minute: "2-digit",
+          })}
+        </p>
+      )}
     </div>
   );
 }

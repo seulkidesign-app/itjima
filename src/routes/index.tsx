@@ -10,7 +10,6 @@ import {
 import { InboxListSkeleton } from "@/components/Skeleton";
 import { ChatSwipeRow } from "@/components/ChatSwipeRow";
 import { FocusSortMode } from "@/components/FocusSortMode";
-import { ScheduleSheet } from "@/components/ScheduleSheet";
 import { FocusScheduleSheet } from "@/components/FocusScheduleSheet";
 import { LoginSheet } from "@/components/LoginSheet";
 import { CleanupReviewSheet } from "@/components/CleanupReviewSheet";
@@ -49,15 +48,7 @@ function Inbox() {
   const archive = useArchive();
   const userId = useUserId();
 
-  const [scheduleSheet, setScheduleSheet] = useState<{
-    open: boolean;
-    item?: InboxItem;
-    date?: Date;
-  }>({
-    open: false,
-  });
   const [loginOpen, setLoginOpen] = useState(false);
-
   const [focusSortOpen, setFocusSortOpen] = useState(false);
   const [focusStartId, setFocusStartId] = useState<string | null>(null);
   const [focusScheduleSheet, setFocusScheduleSheet] = useState<{
@@ -97,7 +88,7 @@ function Inbox() {
           </div>
           <button
             onClick={() => {
-              setScheduleSheet({ open: true, item, date: det.start });
+              openHomeSchedule(item);
               toast.dismiss(toastId);
             }}
             className={toastBtn}
@@ -447,9 +438,7 @@ function Inbox() {
       ) : (
         <>
           <div className="flex-1 px-3 pb-2">
-            <div
-              className="chat-scroll flex flex-col items-stretch gap-2 pb-4"
-            >
+            <div className="chat-scroll flex flex-col items-stretch gap-2 pb-4">
               {itemsAsc.map((it) => {
                 const isNewest = it.id === newestId;
                 return (
@@ -625,32 +614,6 @@ function Inbox() {
             </button>
           </div>
         </div>
-      )}
-
-      {scheduleSheet.open && scheduleSheet.item && (
-        <ScheduleSheet
-          open
-          initialText={scheduleSheet.item.text}
-          initialStart={scheduleSheet.date}
-          onClose={() => setScheduleSheet({ open: false })}
-          onSave={async (text, start, end, opts) => {
-            await schedules.add(
-              scheduleFromInbox(scheduleSheet.item!, {
-                text,
-                start_time: start.toISOString(),
-                end_time: end.toISOString(),
-                all_day: opts?.allDay ?? false,
-              }),
-            );
-            await inbox.remove(scheduleSheet.item!.id);
-            track("schedule_created", {
-              source: "inbox_swipe",
-              text_length: text.length,
-            });
-            setScheduleSheet({ open: false });
-            toast.success(t("일정으로 등록됐어요", "Scheduled"));
-          }}
-        />
       )}
 
       <FocusSortMode

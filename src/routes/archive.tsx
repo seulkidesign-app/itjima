@@ -71,7 +71,7 @@ function writeJSON(key: string, val: unknown) {
 function Archive() {
   const t = useT();
   const { lang } = useLang();
-  const { items, remove, add, syncState } = useArchive();
+  const { items, remove, add, syncState, retrySync } = useArchive();
   const schedules = useSchedules();
   const [q, setQ] = useState("");
   const [groupFilter, setGroupFilter] = useState<string>("all");
@@ -88,6 +88,7 @@ function Archive() {
   const [newEmoji, setNewEmoji] = useState("✨");
   const pressTimer = useRef<number | null>(null);
 
+  const [ungroupTarget, setUngroupTarget] = useState<GroupDef | null>(null);
   const [organizeOpen, setOrganizeOpen] = useState(false);
   const [editItem, setEditItem] = useState<ArchiveItem | null>(null);
   const [editTitle, setEditTitle] = useState("");
@@ -250,20 +251,7 @@ function Archive() {
     if (!g.custom) return;
     headerPressTimer.current = window.setTimeout(() => {
       haptic([10, 20, 10]);
-      const ok = window.confirm(
-        t(
-          `"${g.ko}" 그룹을 해제할까요? 메모는 그대로 남아요.`,
-          `Ungroup "${g.en}"? Notes stay.`,
-        ),
-      );
-      if (!ok) return;
-      // Remove custom group and clear overrides pointing to it.
-      persistCustom(customGroups.filter((x) => x.key !== g.key));
-      const next: Record<string, string> = {};
-      Object.entries(overrides).forEach(([id, k]) => {
-        if (k !== g.key) next[id] = k;
-      });
-      persistOverrides(next);
+      setUngroupTarget(g);
     }, 600);
   };
   const cancelHeaderPress = () => {
@@ -355,9 +343,26 @@ function Archive() {
     }
   };
 
+  const confirmUngroup = () => {
+    if (!ungroupTarget) return;
+    const g = ungroupTarget;
+    persistCustom(customGroups.filter((x) => x.key !== g.key));
+    const next: Record<string, string> = {};
+    Object.entries(overrides).forEach(([id, k]) => {
+      if (k !== g.key) next[id] = k;
+    });
+    persistOverrides(next);
+    setUngroupTarget(null);
+    toast.success(t("그룹을 해제했어요", "Group removed"));
+  };
+
   return (
     <div className="flex h-full flex-col bg-white">
-      <SyncIndicator active={syncState === "syncing" && items.length > 0} />
+      <SyncIndicator
+        syncing={syncState === "syncing"}
+        error={syncState === "error"}
+        onRetry={retrySync}
+      />
       <div className="sticky top-0 z-10 shrink-0 bg-white pb-1">
         <div className="px-5 pb-2 pt-6">
           <p className="text-[13px] font-medium text-ink-soft">
@@ -459,11 +464,10 @@ function Archive() {
               <option value="oldest">{t("오래된순", "Oldest")}</option>
             </select>
           </div>
-          <div className="mt-2 flex items-center gap-1.5 px-1 text-[11px] text-ink-soft">
-            <Sparkles size={11} className="text-primary" />
+          <div className="mt-2 px-1 text-[11px] text-ink-soft/70">
             {t(
-              "→ 일정으로 보내기 · ← 삭제 · 길게 눌러 다중 선택 · 그룹 헤더 길게 눌러 해제",
-              "Swipe → Schedule · ← Delete · long-press to multi-select · long-press header to ungroup",
+              "→ 일정 · ← 삭제 · 길게 눌러 선택",
+              "→ Schedule · ← Delete · hold to select",
             )}
           </div>
         </div>
@@ -776,7 +780,7 @@ function Archive() {
               <input
                 value={newEmoji}
                 onChange={(e) => setNewEmoji(e.target.value.slice(0, 2))}
-                className="h-12 w-14 rounded-full bg-white/80 text-center text-2xl text-ink focus:outline-none focus:shadow-[0_0_0_2px_#FFE033]"
+                className="h-12 w-14 rounded-full bg-white/80 text-center text-2xl text-ink input-focus-ring"
                 aria-label={t("이모지", "Emoji")}
               />
               <input
@@ -784,7 +788,7 @@ function Archive() {
                 onChange={(e) => setNewName(e.target.value)}
                 placeholder={t("그룹 이름", "Group name")}
                 autoFocus
-                className="h-12 flex-1 rounded-full bg-white/80 px-4 text-[15px] font-medium text-ink placeholder:text-ink-soft/70 focus:outline-none focus:shadow-[0_0_0_2px_#FFE033]"
+                className="h-12 flex-1 rounded-full bg-white/80 px-4 text-[15px] font-medium text-ink placeholder:text-ink-soft/70 input-focus-ring"
               />
             </div>
             <div className="mt-5 flex gap-2">
@@ -798,7 +802,7 @@ function Archive() {
                 onClick={createGroupFromSelection}
                 disabled={!newName.trim()}
                 className="flex-1 rounded-full py-3 text-[14px] font-bold text-ink active:scale-95 disabled:opacity-50"
-                style={{ backgroundColor: "#FFD233" }}
+                className="bg-primary"
               >
                 {t("만들기", "Create")}
               </button>
@@ -817,12 +821,53 @@ function Archive() {
         onApply={applyOrganize}
       />
 
+      {ungroupTarget && (
+        <div
+          className="absolute inset-0 z-50 flex flex-col justify-end"
+          role="dialog"
+          aria-modal="true"
+          onClick={() => setUngroupTarget(null)}
+        >
+          <div className="flex-1 animate-fade-in bg-ink/30 backdrop-blur-sm" />
+          <div
+            className="animate-slide-up rounded-t-[28px] bg-white px-5 pb-[calc(env(safe-area-inset-bottom)+1rem)] pt-4"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <p className="text-[16px] font-bold text-ink">
+              {t(
+                `"${ungroupTarget.ko}" 그룹을 해제할까요?`,
+                `Remove group "${ungroupTarget.en}"?`,
+              )}
+            </p>
+            <p className="mt-1 text-[13px] text-ink-soft">
+              {t("메모는 그대로 남아요.", "Your notes stay.")}
+            </p>
+            <div className="mt-4 flex gap-2">
+              <button
+                type="button"
+                onClick={() => setUngroupTarget(null)}
+                className="touch-press flex-1 rounded-full border border-ink/10 py-3 text-[14px] font-bold text-ink"
+              >
+                {t("취소", "Cancel")}
+              </button>
+              <button
+                type="button"
+                onClick={confirmUngroup}
+                className="touch-press flex-1 rounded-full bg-ink py-3 text-[14px] font-bold text-white"
+              >
+                {t("해제", "Remove")}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {editItem && (
         <div
           className="absolute inset-0 z-50 flex flex-col"
           onClick={() => setEditItem(null)}
         >
-          <div className="flex-1 bg-ink/30 backdrop-blur-sm" />
+          <div className="flex-1 animate-fade-in bg-ink/30 backdrop-blur-sm" />
           <div
             className="animate-slide-up rounded-t-[28px] bg-background px-5 pb-[calc(env(safe-area-inset-bottom)+1rem)] pt-3"
             onClick={(e) => e.stopPropagation()}
@@ -833,7 +878,7 @@ function Archive() {
             <input
               value={editTitle}
               onChange={(e) => setEditTitle(e.target.value)}
-              className="mt-3 w-full rounded-[20px] bg-ink/[0.04] px-3.5 py-3 text-[15px] focus:outline-none focus:shadow-[0_0_0_2px_#FFE033]"
+              className="mt-3 w-full rounded-[20px] bg-ink/[0.04] px-3.5 py-3 text-[15px] input-focus-ring"
             />
             <button
               type="button"

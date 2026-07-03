@@ -77,7 +77,7 @@ export function ScheduleAlarmSheet({
                 onDisarm();
                 onClose();
               }}
-              className="touch-press mt-1 w-full rounded-[20px] bg-red-500/10 px-4 py-3.5 text-[15px] font-semibold text-red-600"
+              className="touch-press mt-1 w-full rounded-[20px] bg-ink/[0.06] px-4 py-3.5 text-[15px] font-semibold text-ink"
             >
               {t("알림 끄기", "Turn off alarm")}
             </button>

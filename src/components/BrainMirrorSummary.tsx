@@ -23,9 +23,12 @@ function BrainMirrorQuietView({
   result: BrainMirrorResult;
   inline?: boolean;
 }) {
+  const t = useT();
   const interpretive =
     result.suggestedAction?.trim() ||
-    (result.items.length === 1 ? `${result.items[0]} 같아요.` : null);
+    (result.items.length === 1
+      ? t(`${result.items[0]} 같아요.`, `Sounds like ${result.items[0]}.`)
+      : null);
 
   if (inline) {
     return (

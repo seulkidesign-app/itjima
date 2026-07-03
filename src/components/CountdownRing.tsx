@@ -52,7 +52,7 @@ export function CountdownRing({
           strokeDasharray={c}
           strokeDashoffset={offset}
           className={
-            past ? "text-ink/30" : urgent ? "text-amber-500" : "text-primary"
+            past ? "text-ink/30" : urgent ? "text-ink" : "text-primary"
           }
           style={{ transition: "stroke-dashoffset 0.35s ease" }}
         />

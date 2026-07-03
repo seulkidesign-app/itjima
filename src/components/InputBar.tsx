@@ -401,7 +401,7 @@ export function InputBar({
           }}
           className="pill-yellow flex items-center gap-1"
         >
-          <Plus size={14} strokeWidth={3} /> {t("새 메모", "New note")}
+          <Plus size={14} strokeWidth={3} /> {t("추가", "Add")}
         </button>
       </div>
       <ScribbleCanvas

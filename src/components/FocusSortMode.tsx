@@ -486,23 +486,6 @@ export function FocusSortMode({
             {!finished && current ? (
               <>
                 <div className="relative flex w-full max-w-[340px] flex-1 items-center justify-center">
-                  {/* Always-visible direction hints */}
-                  <div className="pointer-events-none absolute inset-x-0 top-3 z-0 flex justify-center">
-                    <span className="rounded-full bg-red-500/10 px-3 py-1 text-[10px] font-bold tracking-wide text-red-600/70">
-                      ↑ {t("삭제", "Delete")}
-                    </span>
-                  </div>
-                  <div className="pointer-events-none absolute inset-y-0 left-0 z-0 flex items-center">
-                    <span className="-rotate-90 rounded-full bg-blue-500/10 px-3 py-1 text-[10px] font-bold tracking-wide text-blue-600/70">
-                      {t("보관", "Archive")} ←
-                    </span>
-                  </div>
-                  <div className="pointer-events-none absolute inset-y-0 right-0 z-0 flex items-center">
-                    <span className="rotate-90 rounded-full bg-primary/25 px-3 py-1 text-[10px] font-bold tracking-wide text-ink/60">
-                      → {t("일정", "Schedule")}
-                    </span>
-                  </div>
-
                   {behind2 && (
                     <motion.div
                       className="focus-sort-card pointer-events-none absolute w-full"
@@ -534,7 +517,7 @@ export function FocusSortMode({
 
                   {upProgress > SWIPE_PREVIEW && (
                     <motion.div
-                      className="pointer-events-none absolute left-1/2 top-2 z-0 flex -translate-x-1/2 items-center gap-1.5 rounded-full bg-red-500 px-3.5 py-2 text-[12px] font-extrabold text-white shadow-float"
+                      className="pointer-events-none absolute left-1/2 top-2 z-0 flex -translate-x-1/2 items-center gap-1.5 rounded-full bg-ink/85 px-3.5 py-2 text-[12px] font-extrabold text-white shadow-float"
                       style={{ opacity: upProgress }}
                       animate={{ scale: zoneScale(upProgress) }}
                     >
@@ -554,7 +537,7 @@ export function FocusSortMode({
                   )}
                   {leftProgress > SWIPE_PREVIEW && (
                     <motion.div
-                      className="pointer-events-none absolute left-2 top-1/2 z-0 -translate-y-1/2 flex items-center gap-1.5 rounded-full bg-blue-500 px-3.5 py-2 text-[12px] font-extrabold text-white shadow-float"
+                      className="pointer-events-none absolute left-2 top-1/2 z-0 -translate-y-1/2 flex items-center gap-1.5 rounded-full bg-ink px-3.5 py-2 text-[12px] font-extrabold text-white shadow-float"
                       style={{ opacity: leftProgress }}
                       animate={{ scale: zoneScale(leftProgress) }}
                     >
@@ -571,7 +554,7 @@ export function FocusSortMode({
                     onPointerCancel={onUp}
                     className={`focus-sort-card relative z-[1] w-full touch-none select-none px-7 py-8 will-change-transform ${
                       pendingScheduleId === current.id
-                        ? "opacity-50 saturate-50"
+                        ? "ring-2 ring-primary/40 ring-offset-2"
                         : ""
                     }`}
                     style={{

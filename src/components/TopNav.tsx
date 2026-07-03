@@ -124,7 +124,7 @@ export function TopNav() {
               {label}
               {tabCounts[to] > 0 && (
                 <span className="ml-1 font-num text-[12px] text-ink-soft">
-                  {tabCounts[to]}
+                  {tabCounts[to] > 99 ? "99+" : tabCounts[to]}
                 </span>
               )}
               <span
