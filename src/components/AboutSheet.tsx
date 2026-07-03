@@ -15,7 +15,7 @@ export function AboutSheet({
   if (!open) return null;
   return (
     <>
-      <div className="absolute inset-0 z-50 flex flex-col" onClick={onClose}>
+      <div className="fixed inset-0 z-50 flex flex-col" onClick={onClose}>
         <div className="flex-1 bg-ink/30 backdrop-blur-sm animate-fade-in" />
         <div
           role="dialog"

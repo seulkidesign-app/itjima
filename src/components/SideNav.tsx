@@ -7,18 +7,24 @@ import {
   Shield,
   LogIn,
   LogOut,
+  MessageSquarePlus,
 } from "lucide-react";
 import { toast } from "sonner";
 import { useEffect, useState } from "react";
 import { useT, LanguageToggle } from "@/lib/i18n";
 import { useUserId } from "@/lib/store";
 import { supabase } from "@/integrations/supabase/client";
+import { AboutSheet } from "@/components/AboutSheet";
+import { FeedbackSheet } from "@/components/FeedbackSheet";
+import { tap } from "@/lib/haptics";
 
 export function SideNav() {
   const t = useT();
   const path = useRouterState({ select: (s) => s.location.pathname });
   const userId = useUserId();
   const [isAdmin, setIsAdmin] = useState(false);
+  const [aboutOpen, setAboutOpen] = useState(false);
+  const [feedbackOpen, setFeedbackOpen] = useState(false);
 
   useEffect(() => {
     if (!userId) {
@@ -44,7 +50,6 @@ export function SideNav() {
     { to: "/", label: t("생각", "Inbox"), Icon: Inbox },
     { to: "/schedule", label: t("그때", "When"), Icon: Calendar },
     { to: "/archive", label: t("기억함", "Saved"), Icon: Archive },
-    { to: "/about", label: t("소개", "About"), Icon: Info },
   ] as const;
 
   return (
@@ -87,6 +92,30 @@ export function SideNav() {
       </nav>
 
       <div className="mt-auto flex flex-col gap-2 pt-4">
+        <div className="flex gap-1 px-1">
+          <button
+            type="button"
+            aria-label={t("정보", "About")}
+            className="touch-target rounded-full text-ink-soft hover:bg-white/60 hover:text-ink"
+            onClick={() => {
+              tap();
+              setAboutOpen(true);
+            }}
+          >
+            <Info size={18} strokeWidth={2.25} />
+          </button>
+          <button
+            type="button"
+            aria-label={t("문의 · 피드백", "Contact · Feedback")}
+            className="touch-target rounded-full text-ink-soft hover:bg-white/60 hover:text-ink"
+            onClick={() => {
+              tap();
+              setFeedbackOpen(true);
+            }}
+          >
+            <MessageSquarePlus size={18} strokeWidth={2.25} />
+          </button>
+        </div>
         <LanguageToggle className="self-start" />
         {userId ? (
           <button
@@ -107,6 +136,11 @@ export function SideNav() {
           </Link>
         )}
       </div>
+      <AboutSheet open={aboutOpen} onClose={() => setAboutOpen(false)} />
+      <FeedbackSheet
+        open={feedbackOpen}
+        onClose={() => setFeedbackOpen(false)}
+      />
     </aside>
   );
 }

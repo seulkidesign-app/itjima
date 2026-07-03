@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   Bug,
   Lightbulb,
@@ -40,6 +40,15 @@ export function FeedbackSheet({
   const [message, setMessage] = useState("");
   const [email, setEmail] = useState("");
   const [submitting, setSubmitting] = useState(false);
+
+  useEffect(() => {
+    if (!open) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onClose();
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [open, onClose]);
 
   if (!open) return null;
 
@@ -98,7 +107,7 @@ export function FeedbackSheet({
   };
 
   return (
-    <div className="absolute inset-0 z-50 flex flex-col" onClick={onClose}>
+    <div className="fixed inset-0 z-50 flex flex-col" onClick={onClose}>
       <div className="flex-1 bg-ink/30 backdrop-blur-sm animate-fade-in" />
       <div
         role="dialog"
