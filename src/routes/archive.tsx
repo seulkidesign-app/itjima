@@ -4,7 +4,6 @@ import { motion, AnimatePresence } from "framer-motion";
 import { toast } from "sonner";
 import {
   Search,
-  Bookmark,
   ChevronDown,
   X,
   FolderPlus,
@@ -24,8 +23,15 @@ import {
   toggleArchivePin,
   setArchiveTitle,
   readArchiveTitles,
+  recordArchiveVisit,
+  readRevivalHint,
+  clearRevivalHint,
+  type RevivalHint,
 } from "@/lib/archiveMeta";
 import { recentArchiveItems, searchArchiveItems } from "@/lib/archiveSearch";
+import { useMemoryLenses } from "@/hooks/useMemoryLenses";
+import { ArchiveDiscoverySection } from "@/components/ArchiveDiscoverySection";
+import { MemoryRevivalHint } from "@/components/MemoryRevivalHint";
 import { ArchiveGridSkeleton } from "@/components/Skeleton";
 import { EmptyState } from "@/components/EmptyState";
 import { SyncIndicator } from "@/components/SyncIndicator";
@@ -99,10 +105,18 @@ function Archive() {
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [scrollToId, setScrollToId] = useState<string | null>(null);
   const [moveSheetOpen, setMoveSheetOpen] = useState(false);
+  const [revival, setRevival] = useState<RevivalHint | null>(() =>
+    readRevivalHint(),
+  );
   const cardRefs = useRef<Record<string, HTMLDivElement | null>>({});
 
+  const { lenses, ready: lensesReady } = useMemoryLenses(items);
+
   useEffect(() => {
-    const h = () => setPins(readArchivePins());
+    const h = () => {
+      setPins(readArchivePins());
+      setRevival(readRevivalHint());
+    };
     window.addEventListener("itjima:archive-meta", h);
     return () => window.removeEventListener("itjima:archive-meta", h);
   }, []);
@@ -240,12 +254,17 @@ function Archive() {
       }
     }
     setExpandedId(id);
+    recordArchiveVisit(id);
     setScrollToId(id);
     haptic(4);
   };
 
   const toggleExpand = (id: string) => {
-    setExpandedId((prev) => (prev === id ? null : id));
+    setExpandedId((prev) => {
+      const next = prev === id ? null : id;
+      if (next) recordArchiveVisit(id);
+      return next;
+    });
     haptic(3);
   };
 
@@ -491,7 +510,8 @@ function Archive() {
             pinned={pins.has(it.id)}
             isDragging={isDragging}
             showSemanticHint={
-              !!q.trim() && !!hitById.get(it.id)?.semantic
+              !!q.trim() &&
+              (!!hitById.get(it.id)?.semantic || !!hitById.get(it.id)?.connected)
             }
             allItems={items}
             onToggleExpand={() => toggleExpand(it.id)}
@@ -541,15 +561,13 @@ function Archive() {
           )}
         </div>
         {items.length >= 2 && (
-          <div className="px-5 pb-3">
+          <div className="px-5 pb-2">
             <button
+              type="button"
               onClick={runAIOrganize}
-              className="touch-press w-full rounded-full border border-ink/10 bg-ink/[0.03] py-3 text-[12px] font-semibold text-ink-soft"
+              className="touch-press text-[12px] font-medium text-ink-soft/80 underline-offset-2 hover:text-ink-soft active:underline"
             >
-              <span className="inline-flex items-center justify-center gap-2">
-                <Bookmark size={13} />
-                {t("비슷한 기억끼리", "Similar memories together")}
-              </span>
+              {t("비슷한 기억끼리 정리하기", "Gently group similar memories")}
             </button>
           </div>
         )}
@@ -589,6 +607,11 @@ function Archive() {
                     {searchMeta.usedSemantic && (
                       <span className="ml-1.5 text-primary">
                         · {t("비슷한 것도 찾았어요", "also found similar ones")}
+                      </span>
+                    )}
+                    {searchMeta.usedConnected && (
+                      <span className="ml-1.5 text-primary">
+                        · {t("연결된 기억도", "linked memories too")}
                       </span>
                     )}
                   </>
@@ -696,6 +719,30 @@ function Archive() {
               </section>
             ) : (
               <>
+            {revival && !isSearching && (
+              <MemoryRevivalHint
+                count={revival.relatedIds.length}
+                onView={() => {
+                  jumpToMemory(revival.newId);
+                  clearRevivalHint();
+                  setRevival(null);
+                }}
+                onDismiss={() => {
+                  clearRevivalHint();
+                  setRevival(null);
+                }}
+              />
+            )}
+
+            {!isSearching && (
+              <ArchiveDiscoverySection
+                lenses={lenses}
+                items={items}
+                loading={!lensesReady}
+                onOpenMemory={jumpToMemory}
+              />
+            )}
+
             {!q.trim() && pinnedItems.length > 0 && (
               <section>
                 <h2 className="mb-2.5 flex items-center gap-1.5 px-1 text-[13px] font-semibold text-ink-soft">

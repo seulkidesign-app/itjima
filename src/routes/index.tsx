@@ -24,6 +24,8 @@ import {
   type BrainMirrorResult,
 } from "@/lib/brainMirror";
 import { archiveFromInbox, scheduleFromInbox } from "@/lib/thoughtProvenance";
+import { setRevivalHint } from "@/lib/archiveMeta";
+import { findStronglyRelatedMemories } from "@/lib/memoryDiscovery";
 import {
   useInbox,
   useSchedules,
@@ -212,9 +214,20 @@ function Inbox() {
   const moveToArchive = async (it: InboxItem) => {
     try {
       const payload = archiveFromInbox(it);
+      const existing = archive.items;
       const { item: created } = await archive.add(payload);
       await inbox.remove(it.id);
       track("thought_swiped_archive", { text_length: it.text.length });
+
+      const related = findStronglyRelatedMemories(created, existing);
+      if (related.length > 0) {
+        setRevivalHint({
+          newId: created.id,
+          relatedIds: related.map((r) => r.item.id),
+          at: Date.now(),
+        });
+      }
+
       showUndoToast(t("기억함에 남겨뒀어요", "Safely kept here"), async () => {
         await archive.remove(created.id);
         const { item: restored } = await inbox.add({

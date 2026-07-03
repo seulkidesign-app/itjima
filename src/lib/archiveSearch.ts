@@ -9,6 +9,7 @@ export type ArchiveSearchHit = {
   score: number;
   keyword: boolean;
   semantic: boolean;
+  connected?: boolean;
 };
 
 function hangulBigrams(text: string): string[] {
@@ -81,11 +82,25 @@ function cosineTfIdf(
 }
 
 const SEMANTIC_MIN = 0.12;
+/** Expand search only through memories already linked to a direct hit. */
+const CONNECTED_EXPAND_MIN = 0.26;
+
+export function memorySimilarity(
+  a: ArchiveItem,
+  b: ArchiveItem,
+  corpus: ArchiveItem[],
+): number {
+  const tokens = corpus.map((it) => tokenize(archiveDocument(it)));
+  const idf = buildIdf(tokens);
+  const ta = termFreq(tokenize(archiveDocument(a)));
+  const tb = termFreq(tokenize(archiveDocument(b)));
+  return cosineTfIdf(ta, tb, idf);
+}
 
 export function searchArchiveItems(
   items: ArchiveItem[],
   query: string,
-): { hits: ArchiveSearchHit[]; usedSemantic: boolean } {
+): { hits: ArchiveSearchHit[]; usedSemantic: boolean; usedConnected: boolean } {
   const needle = query.trim().toLowerCase();
   if (!needle) {
     return {
@@ -96,6 +111,7 @@ export function searchArchiveItems(
         semantic: false,
       })),
       usedSemantic: false,
+      usedConnected: false,
     };
   }
 
@@ -131,14 +147,46 @@ export function searchArchiveItems(
   });
 
   semanticHits.sort((a, b) => b.score - a.score);
-  const hits = [...keywordHits.values(), ...semanticHits];
-  return { hits, usedSemantic: semanticHits.length > 0 };
+
+  const connectedHits = new Map<string, ArchiveSearchHit>();
+  for (const hit of keywordHits.values()) {
+    const related = findRelatedArchiveItems(
+      hit.item,
+      items,
+      8,
+      CONNECTED_EXPAND_MIN,
+    );
+    for (const r of related) {
+      if (keywordHits.has(r.item.id) || semanticHits.some((s) => s.item.id === r.item.id)) {
+        continue;
+      }
+      const prev = connectedHits.get(r.item.id);
+      if (!prev || prev.score < r.score) {
+        connectedHits.set(r.item.id, {
+          ...r,
+          connected: true,
+        });
+      }
+    }
+  }
+
+  const hits = [
+    ...keywordHits.values(),
+    ...semanticHits,
+    ...connectedHits.values(),
+  ];
+  return {
+    hits,
+    usedSemantic: semanticHits.length > 0,
+    usedConnected: connectedHits.size > 0,
+  };
 }
 
 export function findRelatedArchiveItems(
   target: ArchiveItem,
   items: ArchiveItem[],
   limit = 4,
+  minScore = SEMANTIC_MIN * 0.85,
 ): ArchiveSearchHit[] {
   const others = items.filter((it) => it.id !== target.id);
   if (!others.length) return [];
@@ -155,7 +203,7 @@ export function findRelatedArchiveItems(
       keyword: false,
       semantic: true,
     }))
-    .filter((h) => h.score >= SEMANTIC_MIN * 0.85)
+    .filter((h) => h.score >= minScore)
     .sort((a, b) => b.score - a.score);
 
   if (target.source_id) {
