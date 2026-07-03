@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { X } from "lucide-react";
 import { BottomSheet } from "./BottomSheet";
 import { WheelPicker } from "./WheelPicker";
 import { useT } from "@/lib/i18n";
@@ -171,38 +172,52 @@ export function ScheduleSheet({
 
   return (
     <BottomSheet open={open} onClose={onClose} maxHeight="88vh">
-      <div className="max-h-[calc(88vh-2rem)] overflow-y-auto px-5 pb-[calc(env(safe-area-inset-bottom)+1.25rem)]">
-        <h2 className="mb-4 text-[17px] font-bold text-ink">
-          {saveLabel ? t("일정 수정", "Edit event") : t("새 일정", "New event")}
-        </h2>
-        <input
-          value={text}
-          onChange={(e) => setText(e.target.value)}
-          placeholder={t("일정 제목", "Event title")}
-          className="mb-4 w-full rounded-[24px] bg-ink/[0.04] px-3.5 py-3 text-[16px] font-semibold text-ink placeholder:text-ink-soft/60 focus:bg-ink/[0.06] input-focus-ring"
-        />
-        <label className="mb-3 flex items-center gap-2.5 text-[14px] text-ink">
+      <div className="flex max-h-[calc(88vh-3rem)] flex-col">
+        <div className="flex shrink-0 items-start justify-between gap-3 px-5 pb-2">
+          <h2 className="text-[17px] font-bold text-ink">
+            {saveLabel
+              ? t("일정 수정", "Edit event")
+              : t("새 일정", "New event")}
+          </h2>
+          <button
+            type="button"
+            onClick={onClose}
+            className="touch-target shrink-0 rounded-full text-ink-soft active:bg-ink/5 active:text-ink"
+            aria-label={t("닫기", "Close")}
+          >
+            <X size={20} strokeWidth={2.25} />
+          </button>
+        </div>
+        <div className="min-h-0 flex-1 overflow-y-auto px-5">
           <input
-            type="checkbox"
-            checked={allDay}
-            onChange={(e) => setAllDay(e.target.checked)}
+            value={text}
+            onChange={(e) => setText(e.target.value)}
+            placeholder={t("일정 제목", "Event title")}
+            className="mb-4 w-full rounded-[24px] bg-ink/[0.04] px-3.5 py-3 text-[16px] font-semibold text-ink placeholder:text-ink-soft/60 focus:bg-ink/[0.06] input-focus-ring"
           />
-          {t("하루 종일", "All day")}
-        </label>
-        {SHOW_REPEAT_UI && (
-          <>
-            <label className="mb-3 flex items-center gap-2.5 text-[14px] text-ink">
-              <input
-                type="checkbox"
-                checked={repeat}
-                onChange={(e) => setRepeat(e.target.checked)}
-              />
-              {t("반복", "Repeat")}
-            </label>
-            {repeat && (
-              <div className="mb-4 flex flex-wrap gap-2">
-                {(["daily", "weekly", "monthly", "yearly"] as RepeatRule[]).map(
-                  (rule) => (
+          <label className="mb-3 flex items-center gap-2.5 text-[14px] text-ink">
+            <input
+              type="checkbox"
+              checked={allDay}
+              onChange={(e) => setAllDay(e.target.checked)}
+            />
+            {t("하루 종일", "All day")}
+          </label>
+          {SHOW_REPEAT_UI && (
+            <>
+              <label className="mb-3 flex items-center gap-2.5 text-[14px] text-ink">
+                <input
+                  type="checkbox"
+                  checked={repeat}
+                  onChange={(e) => setRepeat(e.target.checked)}
+                />
+                {t("반복", "Repeat")}
+              </label>
+              {repeat && (
+                <div className="mb-4 flex flex-wrap gap-2">
+                  {(
+                    ["daily", "weekly", "monthly", "yearly"] as RepeatRule[]
+                  ).map((rule) => (
                     <button
                       key={rule}
                       type="button"
@@ -221,41 +236,43 @@ export function ScheduleSheet({
                             ? t("매월", "Monthly")
                             : t("매년", "Yearly")}
                     </button>
-                  ),
-                )}
+                  ))}
+                </div>
+              )}
+            </>
+          )}
+          {allDay ? (
+            <>
+              <div className="mb-1.5 text-[11px] font-bold uppercase tracking-wider text-ink-soft">
+                {t("날짜", "Date")}
               </div>
-            )}
-          </>
-        )}
-        {allDay ? (
-          <>
-            <div className="mb-1.5 text-[11px] font-bold uppercase tracking-wider text-ink-soft">
-              {t("날짜", "Date")}
-            </div>
-            <WheelPicker
-              columns={dateColDef}
-              value={dateOnly}
-              onChange={setDateOnly}
-            />
-          </>
-        ) : (
-          <>
-            <div className="mb-1.5 text-[11px] font-bold uppercase tracking-wider text-ink-soft">
-              {t("시작", "Start")}
-            </div>
-            <WheelPicker columns={colDef} value={start} onChange={setStart} />
-            <div className="mb-1.5 mt-4 text-[11px] font-bold uppercase tracking-wider text-ink-soft">
-              {t("종료", "End")}
-            </div>
-            <WheelPicker columns={colDef} value={end} onChange={setEnd} />
-          </>
-        )}
-        <button
-          onClick={handleSave}
-          className="mt-5 w-full rounded-full bg-ink py-4 text-[15px] font-bold text-background transition active:scale-[0.98]"
-        >
-          {saveLabel ?? t("일정 등록", "Save event")}
-        </button>
+              <WheelPicker
+                columns={dateColDef}
+                value={dateOnly}
+                onChange={setDateOnly}
+              />
+            </>
+          ) : (
+            <>
+              <div className="mb-1.5 text-[11px] font-bold uppercase tracking-wider text-ink-soft">
+                {t("시작", "Start")}
+              </div>
+              <WheelPicker columns={colDef} value={start} onChange={setStart} />
+              <div className="mb-1.5 mt-4 text-[11px] font-bold uppercase tracking-wider text-ink-soft">
+                {t("종료", "End")}
+              </div>
+              <WheelPicker columns={colDef} value={end} onChange={setEnd} />
+            </>
+          )}
+        </div>
+        <div className="shrink-0 px-5 pb-[calc(env(safe-area-inset-bottom)+1.25rem)] pt-3">
+          <button
+            onClick={handleSave}
+            className="w-full rounded-full bg-ink py-4 text-[15px] font-bold text-background transition active:scale-[0.98]"
+          >
+            {saveLabel ?? t("일정 등록", "Save event")}
+          </button>
+        </div>
       </div>
     </BottomSheet>
   );

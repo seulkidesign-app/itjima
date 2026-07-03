@@ -9,7 +9,7 @@ import {
 import { Archive, Calendar, Trash2 } from "lucide-react";
 import { animate } from "framer-motion";
 import { useT } from "@/lib/i18n";
-import { tick, confirm as confirmHaptic } from "@/lib/haptics";
+import { tickDebounced, confirm as confirmHaptic } from "@/lib/haptics";
 import { SPRING_ROW, SPRING_SNAP_BACK } from "@/lib/motion";
 
 type Side = "left" | "right" | "down";
@@ -112,7 +112,7 @@ export function ChatSwipeRow({
             ? { x: -ACTION_W, y: 0 }
             : { x: 0, y: DELETE_H };
       springTo(target);
-      tick();
+      tickDebounced();
     },
     [rowId, onOpenRowChange, springTo],
   );
@@ -225,7 +225,7 @@ export function ChatSwipeRow({
 
     offsetRef.current = { x, y };
     setOffset({ x, y });
-    if (Math.abs(x) > 14 || y > 14) tick();
+    if (Math.abs(x) > 14 || y > 14) tickDebounced();
   };
 
   const onUp = () => {

@@ -8,7 +8,7 @@ import {
   type PointerEvent as ReactPointerEvent,
 } from "react";
 import { Plus, Pin, Check, Bell, BellOff, Timer } from "lucide-react";
-import { animate } from "framer-motion";
+import { animate, motion, AnimatePresence, LayoutGroup } from "framer-motion";
 import { useArchive, useSchedules, type ScheduleItem } from "@/lib/store";
 import { ScheduleSheet } from "@/components/ScheduleSheet";
 import { ReminderSheet } from "@/components/ReminderSheet";
@@ -45,6 +45,7 @@ import {
   classifySchedule,
 } from "@/lib/scheduleGroups";
 import { scheduleDisplayTitle, rawPreview } from "@/lib/thoughtProvenance";
+import { SPRING_TAB, SPRING_SNAP_BACK } from "@/lib/motion";
 import { toast } from "sonner";
 import { useT, useLang } from "@/lib/i18n";
 import { track } from "@/lib/analytics";
@@ -263,37 +264,49 @@ function Schedule() {
           </p>
         </div>
         <div className="px-5 pb-3">
-          <div className="inline-flex border-b border-ink/10" role="tablist">
-            {(
-              [
-                ["list", t("목록", "List")],
-                ["today", t("상세", "Details")],
-                ["cal", t("캘린더", "Calendar")],
-              ] as const
-            ).map(([k, label]) => (
-              <button
-                key={k}
-                type="button"
-                role="tab"
-                aria-selected={tab === k}
-                onClick={() => setTab(k)}
-                className={`relative min-h-11 px-4 py-2 text-[12px] font-extrabold uppercase tracking-[0.16em] transition ${
-                  tab === k ? "text-ink" : "text-ink-soft"
-                }`}
-              >
-                {label}
-                <span
-                  className={`absolute inset-x-0 -bottom-px h-[3px] transition-all ${
-                    tab === k ? "bg-ink" : "bg-transparent"
+          <LayoutGroup>
+            <div className="inline-flex border-b border-ink/10" role="tablist">
+              {(
+                [
+                  ["list", t("목록", "List")],
+                  ["today", t("상세", "Details")],
+                  ["cal", t("캘린더", "Calendar")],
+                ] as const
+              ).map(([k, label]) => (
+                <button
+                  key={k}
+                  type="button"
+                  role="tab"
+                  aria-selected={tab === k}
+                  onClick={() => setTab(k)}
+                  className={`relative min-h-11 px-4 py-2 text-[12px] font-extrabold uppercase tracking-[0.16em] transition-colors duration-200 ${
+                    tab === k ? "text-ink" : "text-ink-soft"
                   }`}
-                />
-              </button>
-            ))}
-          </div>
+                >
+                  {label}
+                  {tab === k && (
+                    <motion.span
+                      layoutId="schedule-tab-underline"
+                      className="absolute inset-x-1 -bottom-px h-[3px] rounded-full bg-ink"
+                      transition={SPRING_TAB}
+                    />
+                  )}
+                </button>
+              ))}
+            </div>
+          </LayoutGroup>
         </div>
       </div>
 
       <div className="flex-1 px-5 pb-24">
+        <AnimatePresence mode="wait">
+          <motion.div
+            key={tab}
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -6 }}
+            transition={{ duration: 0.22, ease: [0.32, 0.72, 0, 1] }}
+          >
         {syncState === "syncing" && items.length === 0 ? (
           <ScheduleListSkeleton />
         ) : tab === "today" ? (
@@ -350,16 +363,22 @@ function Schedule() {
             onDropToDate={moveEventToDate}
           />
         )}
+          </motion.div>
+        </AnimatePresence>
       </div>
 
-      <button
+      <motion.button
         onClick={() => setSheet({ open: true })}
-        className="absolute right-5 z-30 flex h-14 w-14 items-center justify-center rounded-full bg-primary text-ink shadow-float touch-press transition"
+        whileTap={{ scale: 0.94 }}
+        initial={{ scale: 0, opacity: 0 }}
+        animate={{ scale: 1, opacity: 1 }}
+        transition={{ ...SPRING_SNAP_BACK, delay: 0.15 }}
+        className="absolute right-5 z-30 flex h-14 w-14 items-center justify-center rounded-full bg-primary text-ink shadow-float touch-press"
         style={{ bottom: "calc(env(safe-area-inset-bottom) + 1.25rem)" }}
         aria-label={t("새 일정", "New event")}
       >
         <Plus size={26} strokeWidth={2.5} />
-      </button>
+      </motion.button>
 
       {reminderSheet && (
         <ReminderSheet
@@ -852,17 +871,32 @@ function DoneSection({
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
-        className="mb-2 w-full px-1 text-left text-[11px] font-extrabold uppercase tracking-[0.18em] text-ink-soft"
+        className="mb-2 w-full px-1 text-left text-[11px] font-extrabold uppercase tracking-[0.18em] text-ink-soft touch-press"
       >
-        {t("완료됨", "Done")} · {items.length} {open ? "▾" : "▸"}
+        {t("완료됨", "Done")} · {items.length}{" "}
+        <motion.span
+          animate={{ rotate: open ? 0 : -90 }}
+          transition={{ duration: 0.2 }}
+          className="inline-block"
+        >
+          ▾
+        </motion.span>
       </button>
-      {open && (
-        <div className="flex flex-col gap-3">
-          {items.map((s) => (
-            <ScheduleCard key={s.id} {...cardProps(s)} done />
-          ))}
-        </div>
-      )}
+      <AnimatePresence initial={false}>
+        {open && (
+          <motion.div
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: "auto", opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            transition={{ duration: 0.28, ease: [0.32, 0.72, 0, 1] }}
+            className="flex flex-col gap-3 overflow-hidden"
+          >
+            {items.map((s) => (
+              <ScheduleCard key={s.id} {...cardProps(s)} done />
+            ))}
+          </motion.div>
+        )}
+      </AnimatePresence>
     </section>
   );
 }

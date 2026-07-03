@@ -5,13 +5,25 @@ import {
   type PointerEvent,
   type ReactNode,
 } from "react";
+import { animate } from "framer-motion";
 import { useT } from "@/lib/i18n";
-import { tick, confirm as confirmHaptic } from "@/lib/haptics";
+import { tickDebounced, confirm as confirmHaptic } from "@/lib/haptics";
+import {
+  rubberBand,
+  swipeRotation,
+  swipeOpacity,
+  dragProgress,
+  cardScale,
+  cardShadowBlur,
+  shouldSwipeCommit,
+} from "@/lib/swipePhysics";
+import { SPRING_SNAP_BACK, SPRING_CARD_EXIT } from "@/lib/motion";
 import { Check, X } from "lucide-react";
 
 type Direction = "left" | "right";
 
 const THRESHOLD = 95;
+const MAX_DRAG = 160;
 
 export function SwipeCard({
   children,
@@ -37,62 +49,122 @@ export function SwipeCard({
   rightConfirmLabel?: string;
 }) {
   const t = useT();
+  const cardRef = useRef<HTMLDivElement>(null);
   const [dx, setDx] = useState(0);
+  const [rotate, setRotate] = useState(0);
+  const [scale, setScale] = useState(1);
+  const [opacity, setOpacity] = useState(1);
+  const [shadow, setShadow] = useState(12);
   const [pending, setPending] = useState<Direction | null>(null);
-  const [released, setReleased] = useState(false);
   const startX = useRef(0);
+  const startTime = useRef(0);
+  const lastX = useRef(0);
+  const velocityX = useRef(0);
   const dragging = useRef(false);
   const lastTone = useRef<"yellow" | "muted" | null>(null);
   const crossed = useRef(false);
+  const acting = useRef(false);
+  const dxRef = useRef(0);
+
+  const cardW = () => cardRef.current?.offsetWidth ?? 320;
+
+  const applyTransform = (
+    x: number,
+    opts?: { dragging?: boolean; exiting?: boolean },
+  ) => {
+    const w = cardW();
+    const banded = rubberBand(x, MAX_DRAG);
+    const progress = dragProgress(Math.abs(banded), w);
+    dxRef.current = banded;
+    setDx(banded);
+    setRotate(swipeRotation(banded, w));
+    setScale(opts?.exiting ? 0.92 : cardScale(progress));
+    setOpacity(opts?.exiting ? 0 : swipeOpacity(Math.abs(banded), MAX_DRAG));
+    setShadow(cardShadowBlur(progress));
+  };
+
+  const springTo = (x: number, onDone?: () => void) => {
+    acting.current = true;
+    animate(dxRef.current, x, {
+      ...SPRING_SNAP_BACK,
+      onUpdate: (v) => applyTransform(v),
+      onComplete: () => {
+        acting.current = false;
+        onDone?.();
+      },
+    });
+  };
 
   const onDown = (e: PointerEvent<HTMLDivElement>) => {
-    if (disabled || pending) return;
+    if (disabled || pending || acting.current) return;
     dragging.current = true;
     startX.current = e.clientX;
+    startTime.current = performance.now();
+    lastX.current = e.clientX;
+    velocityX.current = 0;
     crossed.current = false;
-    (e.target as HTMLElement).setPointerCapture(e.pointerId);
+    (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
   };
+
   const onMove = (e: PointerEvent<HTMLDivElement>) => {
     if (!dragging.current) return;
+    const now = performance.now();
+    const dt = Math.max(1, now - startTime.current);
+    velocityX.current = ((e.clientX - lastX.current) / dt) * 1000;
+    lastX.current = e.clientX;
+    startTime.current = now;
+
     const next = e.clientX - startX.current;
-    setDx(next);
+    applyTransform(next, { dragging: true });
+
     const tone = next > 30 ? "yellow" : next < -30 ? "muted" : null;
     if (tone !== lastTone.current) {
       lastTone.current = tone;
-      if (tone) tick();
+      if (tone) tickDebounced();
     }
     if (!crossed.current && Math.abs(next) >= THRESHOLD) {
       crossed.current = true;
-      tick();
+      tickDebounced(120);
     }
   };
+
   const commitSwipe = (dir: Direction) => {
     confirmHaptic();
-    setReleased(true);
-    setDx(dir === "right" ? 600 : -600);
-    setTimeout(() => onSwipe(dir), 220);
+    acting.current = true;
+    animate(dxRef.current, dir === "right" ? 640 : -640, {
+      ...SPRING_CARD_EXIT,
+      onUpdate: (v) => applyTransform(v, { exiting: true }),
+      onComplete: () => {
+        acting.current = false;
+        onSwipe(dir);
+      },
+    });
   };
 
   const onUp = () => {
     if (!dragging.current) return;
     dragging.current = false;
-    if (Math.abs(dx) >= THRESHOLD) {
-      const dir: Direction = dx > 0 ? "right" : "left";
+    const abs = Math.abs(dxRef.current);
+    if (
+      shouldSwipeCommit(abs, THRESHOLD, velocityX.current) &&
+      !pending
+    ) {
+      const dir: Direction = dxRef.current > 0 ? "right" : "left";
       if (mode === "instant") {
         commitSwipe(dir);
         return;
       }
       setPending(dir);
-      setDx(dir === "right" ? 140 : -140);
-    } else {
-      setDx(0);
+      springTo(dir === "right" ? 140 : -140);
+    } else if (!pending) {
+      springTo(0);
     }
     lastTone.current = null;
   };
 
   const cancel = () => {
     setPending(null);
-    setDx(0);
+    springTo(0);
   };
 
   const finish = () => {
@@ -112,29 +184,45 @@ export function SwipeCard({
   const tone = pending ?? (dx > 30 ? "right" : dx < -30 ? "left" : null);
   const rightText = rightLabel ?? t("→ 일정", "→ Schedule");
   const leftText = leftLabel ?? t("← 삭제", "← Delete");
+  const labelOpacity = Math.min(1, dragProgress(Math.abs(dx), cardW()) * 1.4);
 
   return (
     <div className="relative">
+      {tone === "right" && !pending && (
+        <div
+          className="pointer-events-none absolute -top-3 right-4 rounded-full bg-primary px-3 py-1 text-[11px] font-extrabold uppercase tracking-widest text-ink shadow-float"
+          style={{ opacity: labelOpacity, transform: `scale(${0.9 + labelOpacity * 0.1})` }}
+        >
+          {rightText}
+        </div>
+      )}
+      {tone === "left" && !pending && (
+        <div
+          className="pointer-events-none absolute -top-3 left-4 rounded-full bg-ink px-3 py-1 text-[11px] font-extrabold uppercase tracking-widest text-white shadow-float"
+          style={{ opacity: labelOpacity, transform: `scale(${0.9 + labelOpacity * 0.1})` }}
+        >
+          {leftText}
+        </div>
+      )}
+
       <div
+        ref={cardRef}
         onPointerDown={onDown}
         onPointerMove={onMove}
         onPointerUp={onUp}
         onPointerCancel={onUp}
-        className={`relative touch-none select-none ${className}`}
+        className={`relative touch-none select-none will-change-transform ${className}`}
         style={{
-          transform: `translateX(${dx}px)`,
-          transition: dragging.current
-            ? "none"
-            : released
-              ? "transform 0.22s ease-out"
-              : "transform 0.28s cubic-bezier(0.2, 0.9, 0.3, 1.2)",
+          transform: `translateX(${dx}px) rotate(${rotate}deg) scale(${scale})`,
+          opacity,
+          transition: dragging.current || acting.current ? "none" : undefined,
         }}
       >
         <div
           className={
             bare
               ? "overflow-visible"
-              : "overflow-hidden rounded-[24px] bg-white shadow-card"
+              : "thought-card overflow-hidden rounded-[24px]"
           }
           style={
             bare
@@ -145,23 +233,13 @@ export function SwipeCard({
                       ? "var(--shadow-yellow)"
                       : tone === "left"
                         ? "var(--shadow-muted)"
-                        : "var(--shadow-card)",
-                  transition: "box-shadow 0.2s ease",
+                        : `0 ${shadow}px ${shadow * 1.5}px -${shadow * 0.4}px oklch(0 0 0 / ${0.06 + shadow * 0.004})`,
+                  transition: dragging.current ? "none" : "box-shadow 0.2s ease",
                 }
           }
         >
           {children}
         </div>
-        {tone === "right" && !pending && (
-          <div className="pointer-events-none absolute -top-3 right-4 animate-swipe-label rounded-full bg-primary px-3 py-1 text-[11px] font-extrabold uppercase tracking-widest text-ink">
-            {rightText}
-          </div>
-        )}
-        {tone === "left" && !pending && (
-          <div className="pointer-events-none absolute -top-3 left-4 animate-swipe-label rounded-full bg-ink px-3 py-1 text-[11px] font-extrabold uppercase tracking-widest text-white">
-            {leftText}
-          </div>
-        )}
       </div>
 
       {mode === "confirm" && pending === "right" && (

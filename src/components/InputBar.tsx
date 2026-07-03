@@ -6,7 +6,8 @@ import {
   type ClipboardEvent,
   type FormEvent,
 } from "react";
-import { Mic, Image as ImageIcon, Plus, X, Pencil } from "lucide-react";
+import { Mic, Image as ImageIcon, Plus, X, Pencil, ArrowUp } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
 import { toast } from "sonner";
 import { ScribbleCanvas } from "./ScribbleCanvas";
 import { useT, useLang } from "@/lib/i18n";
@@ -15,6 +16,8 @@ import {
   compressImageFile,
   MAX_IMAGES,
 } from "@/lib/imageCompress";
+import { confirm, light, tap } from "@/lib/haptics";
+import { SPRING_MICRO } from "@/lib/motion";
 
 type Props = {
   onAdd: (text: string, images: string[]) => void;
@@ -38,6 +41,7 @@ export function InputBar({
   const [text, setText] = useState("");
   const [images, setImages] = useState<string[]>([]);
   const [listening, setListening] = useState(false);
+  const [focused, setFocused] = useState(false);
   const [scribbleOpen, setScribbleOpen] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const textRef = useRef(text);
@@ -53,6 +57,8 @@ export function InputBar({
   textRef.current = text;
   imagesRef.current = images;
   onAddRef.current = onAdd;
+
+  const hasContent = text.trim().length > 0 || images.length > 0;
 
   useEffect(() => {
     if (!hero) return;
@@ -75,6 +81,7 @@ export function InputBar({
     try {
       const compressed = await compressDataUrl(dataUrl);
       setImages((p) => [...p, compressed]);
+      light();
     } catch {
       toast.error(t("이미지를 불러오지 못했어요", "Couldn't load image"));
     }
@@ -100,6 +107,7 @@ export function InputBar({
       textSnapshot ?? textareaRef.current?.value ?? textRef.current;
     const trimmedText = currentText.replace(/\s*\[…\]\s*$/, "").trim();
     if (!trimmedText && currentImages.length === 0) return;
+    confirm();
     onAddRef.current(trimmedText, currentImages);
     reset();
   };
@@ -175,8 +183,10 @@ export function InputBar({
     }
     if (listening) {
       recogRef.current?.stop();
+      tap();
       return;
     }
+    tap();
     const r = new SR();
     r.lang = lang === "en" ? "en-US" : "ko-KR";
     r.interimResults = true;
@@ -213,6 +223,7 @@ export function InputBar({
       try {
         const compressed = await compressImageFile(f);
         setImages((p) => [...p, compressed]);
+        light();
       } catch {
         toast.error(t("이미지를 불러오지 못했어요", "Couldn't load image"));
       }
@@ -236,67 +247,90 @@ export function InputBar({
         }
       }
     }
-    const t = e.clipboardData?.getData("text") ?? "";
-    if (!t) return;
-    const lines = t
+    const pasted = e.clipboardData?.getData("text") ?? "";
+    if (!pasted) return;
+    const lines = pasted
       .split(/\r?\n/)
       .map((l) => l.trim())
       .filter(Boolean);
     const bullety = /^[-•*·\u25AA]\s/.test(lines[0] ?? "");
     if (lines.length >= 3 || bullety) {
       e.preventDefault();
-      onPasteMulti(lines, t);
+      onPasteMulti(lines, pasted);
     }
   };
 
   return (
-    <form
+    <motion.form
       onSubmit={onSubmit}
-      className={`border-t border-ink/5 bg-white/95 backdrop-blur-md shadow-[0_-4px_16px_-8px_rgba(0,0,0,0.06)] ${
+      initial={false}
+      animate={{ y: 0 }}
+      className={`border-t border-ink/5 bg-white/95 backdrop-blur-xl shadow-[0_-8px_32px_-12px_rgba(0,0,0,0.08)] pb-[env(safe-area-inset-bottom)] ${
         hero ? "border-t-0 shadow-none" : ""
       }`}
     >
       {hero && (
-        <p className="px-5 pt-4 text-center text-[13px] font-medium leading-relaxed text-ink-soft/90">
+        <motion.p
+          initial={{ opacity: 0, y: 6 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.35, ease: [0.32, 0.72, 0, 1] }}
+          className="px-5 pt-4 text-center text-[13px] font-medium leading-relaxed text-ink-soft/90"
+        >
           {t(
             "잊어도 괜찮아요. ItJima가 기억할게요.",
             "It's okay to forget. ItJima will remember.",
           )}
-        </p>
+        </motion.p>
       )}
       {images.length > 0 && (
-        <div className="flex gap-2 overflow-x-auto pt-3">
+        <motion.div
+          layout
+          className="flex gap-2 overflow-x-auto px-5 pt-3"
+          initial={{ opacity: 0, height: 0 }}
+          animate={{ opacity: 1, height: "auto" }}
+        >
           {images.map((src, i) => (
-            <div key={i} className="relative">
+            <motion.div
+              key={i}
+              layout
+              initial={{ opacity: 0, scale: 0.85 }}
+              animate={{ opacity: 1, scale: 1 }}
+              className="relative"
+            >
               <img
                 src={src}
                 alt=""
-                className="h-16 w-16 rounded-[24px] object-cover"
+                className="h-16 w-16 rounded-[20px] object-cover shadow-card ring-1 ring-ink/8"
               />
               <button
                 type="button"
-                onClick={() =>
-                  setImages((p) => p.filter((_, idx) => idx !== i))
-                }
-                className="touch-target absolute -right-1 -top-1 rounded-full bg-ink text-white"
+                onClick={() => {
+                  tap();
+                  setImages((p) => p.filter((_, idx) => idx !== i));
+                }}
+                className="touch-target absolute -right-1 -top-1 rounded-full bg-ink text-white shadow-float"
                 aria-label={t("이미지 제거", "Remove image")}
               >
                 <X size={14} />
               </button>
-            </div>
+            </motion.div>
           ))}
-        </div>
+        </motion.div>
       )}
-      <div className={`${hero ? "px-5" : "px-5"} ${hero ? "mt-3" : "mt-0"}`}>
-        <div
-          className={`rounded-[28px] bg-ink/[0.03] px-4 input-focus-ring transition-[box-shadow] duration-200 ${
-            hero ? "py-4 ring-1 ring-ink/5" : "py-3"
-          }`}
+      <div className={`px-5 ${hero ? "mt-3" : "mt-2"}`}>
+        <motion.div
+          layout
+          transition={SPRING_MICRO}
+          className={`input-shell px-4 input-focus-ring ${
+            focused ? "input-shell-focused" : ""
+          } ${hero ? "py-4 ring-1 ring-ink/5" : "py-3"}`}
         >
           <textarea
             ref={textareaRef}
             value={text}
             onChange={(e) => setText(e.target.value)}
+            onFocus={() => setFocused(true)}
+            onBlur={() => setFocused(false)}
             onCompositionStart={() => {
               composingRef.current = true;
             }}
@@ -336,33 +370,38 @@ export function InputBar({
             }}
             rows={hero ? 4 : 3}
             placeholder={t("생각을 적어보세요", "Type a thought")}
-            className={`block w-full resize-none bg-transparent leading-relaxed text-ink placeholder:text-ink-soft/60 focus:outline-none max-h-40 ${
+            className={`block w-full resize-none bg-transparent leading-relaxed text-ink placeholder:text-ink-soft/55 placeholder:transition-opacity focus:outline-none max-h-40 ${
               hero ? "min-h-[96px] text-[17px]" : "min-h-[72px] text-[16px]"
             }`}
           />
-        </div>
+        </motion.div>
       </div>
-      <div className="flex items-center gap-1 px-5 pb-2 pt-1">
-        <button
+      <div className="flex items-center gap-1 px-5 pb-2 pt-2">
+        <motion.button
           type="button"
+          whileTap={{ scale: 0.9 }}
           onClick={onMic}
-          className={`touch-target rounded-full transition ${
+          className={`touch-target rounded-full transition-colors ${
             listening
-              ? "bg-ink text-white animate-pulse"
-              : "text-ink-soft hover:bg-white/60"
+              ? "bg-ink text-white shadow-float"
+              : "text-ink-soft hover:bg-ink/[0.05]"
           }`}
           aria-label={t("음성 입력", "Voice input")}
         >
-          <Mic size={18} />
-        </button>
-        <button
+          <Mic size={18} className={listening ? "animate-pulse" : ""} />
+        </motion.button>
+        <motion.button
           type="button"
-          onClick={() => fileRef.current?.click()}
-          className="touch-target rounded-full text-ink-soft hover:bg-white/60"
+          whileTap={{ scale: 0.9 }}
+          onClick={() => {
+            tap();
+            fileRef.current?.click();
+          }}
+          className="touch-target rounded-full text-ink-soft hover:bg-ink/[0.05]"
           aria-label={t("이미지 첨부", "Attach image")}
         >
           <ImageIcon size={18} />
-        </button>
+        </motion.button>
         <input
           ref={fileRef}
           type="file"
@@ -371,17 +410,24 @@ export function InputBar({
           onChange={onFile}
           className="hidden"
         />
-        <button
+        <motion.button
           type="button"
-          onClick={() => setScribbleOpen(true)}
-          className="touch-target rounded-full text-ink-soft hover:bg-white/60"
+          whileTap={{ scale: 0.9 }}
+          onClick={() => {
+            tap();
+            setScribbleOpen(true);
+          }}
+          className="touch-target rounded-full text-ink-soft hover:bg-ink/[0.05]"
           aria-label={t("낙서", "Scribble")}
         >
           <Pencil size={18} />
-        </button>
+        </motion.button>
         <div className="flex-1" />
-        <button
+        <motion.button
           type="button"
+          layout
+          whileTap={{ scale: 0.94 }}
+          transition={SPRING_MICRO}
           onPointerDown={(e) => {
             e.preventDefault();
             if (buttonSubmitRef.current) return;
@@ -399,10 +445,41 @@ export function InputBar({
               buttonSubmitRef.current = false;
             }, 250);
           }}
-          className="pill-yellow flex items-center gap-1"
+          className={`flex h-11 min-w-11 items-center justify-center gap-1.5 rounded-full font-extrabold text-[13px] uppercase tracking-[0.04em] transition-shadow ${
+            hasContent
+              ? "bg-ink px-4 text-white shadow-float"
+              : "bg-primary px-4 text-ink"
+          }`}
+          aria-label={t("추가", "Add")}
         >
-          <Plus size={14} strokeWidth={3} /> {t("추가", "Add")}
-        </button>
+          <AnimatePresence mode="wait" initial={false}>
+            {hasContent ? (
+              <motion.span
+                key="send"
+                initial={{ opacity: 0, y: 6, scale: 0.8 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                exit={{ opacity: 0, y: -4, scale: 0.8 }}
+                transition={{ duration: 0.18 }}
+                className="flex items-center gap-1"
+              >
+                <ArrowUp size={16} strokeWidth={3} />
+                {t("보내기", "Send")}
+              </motion.span>
+            ) : (
+              <motion.span
+                key="add"
+                initial={{ opacity: 0, y: 6, scale: 0.8 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                exit={{ opacity: 0, y: -4, scale: 0.8 }}
+                transition={{ duration: 0.18 }}
+                className="flex items-center gap-1"
+              >
+                <Plus size={14} strokeWidth={3} />
+                {t("추가", "Add")}
+              </motion.span>
+            )}
+          </AnimatePresence>
+        </motion.button>
       </div>
       <ScribbleCanvas
         open={scribbleOpen}
@@ -417,6 +494,6 @@ export function InputBar({
           )}
         </p>
       )}
-    </form>
+    </motion.form>
   );
 }

@@ -1,7 +1,9 @@
 import { Link, useRouterState } from "@tanstack/react-router";
 import { Info, MessageSquarePlus } from "lucide-react";
 import { useEffect, useState } from "react";
+import { motion, LayoutGroup } from "framer-motion";
 import { useT, LanguageToggle } from "@/lib/i18n";
+import { SPRING_TAB } from "@/lib/motion";
 import { useInbox, useSchedules, useArchive, useUserId } from "@/lib/store";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -109,33 +111,37 @@ export function TopNav() {
         </div>
       </div>
       {/* Tabs — equal width, large tap target */}
-      <nav className="flex items-stretch px-5">
-        {tabs.map(({ to, label }) => {
-          const active = path === to;
-          return (
-            <Link
-              key={to}
-              to={to}
-              onClick={tap}
-              className={`relative flex flex-1 items-center justify-center pt-1 pb-3 text-[14px] font-extrabold tracking-[0.04em] transition ${
-                active ? "text-ink" : "text-ink-soft"
-              }`}
-            >
-              {label}
-              {tabCounts[to] > 0 && (
-                <span className="ml-1 font-num text-[12px] text-ink-soft">
-                  {tabCounts[to] > 99 ? "99+" : tabCounts[to]}
-                </span>
-              )}
-              <span
-                className={`absolute inset-x-3 bottom-0 h-[3px] rounded-full transition-all ${
-                  active ? "bg-ink" : "bg-transparent"
+      <LayoutGroup>
+        <nav className="flex items-stretch px-5">
+          {tabs.map(({ to, label }) => {
+            const active = path === to;
+            return (
+              <Link
+                key={to}
+                to={to}
+                onClick={tap}
+                className={`relative flex flex-1 items-center justify-center pt-1 pb-3 text-[14px] font-extrabold tracking-[0.04em] transition-colors duration-200 ${
+                  active ? "text-ink" : "text-ink-soft"
                 }`}
-              />
-            </Link>
-          );
-        })}
-      </nav>
+              >
+                {label}
+                {tabCounts[to] > 0 && (
+                  <span className="ml-1 font-num text-[12px] text-ink-soft">
+                    {tabCounts[to] > 99 ? "99+" : tabCounts[to]}
+                  </span>
+                )}
+                {active && (
+                  <motion.span
+                    layoutId="topnav-tab-underline"
+                    className="absolute inset-x-3 bottom-0 h-[3px] rounded-full bg-ink"
+                    transition={SPRING_TAB}
+                  />
+                )}
+              </Link>
+            );
+          })}
+        </nav>
+      </LayoutGroup>
       <AboutSheet open={aboutOpen} onClose={() => setAboutOpen(false)} />
       <FeedbackSheet
         open={feedbackOpen}

@@ -1,6 +1,8 @@
 import type { ReactNode } from "react";
+import { motion } from "framer-motion";
 import { useT, useLang } from "@/lib/i18n";
 import type { InboxItem } from "@/lib/store";
+import { SPRING_DEFAULT } from "@/lib/motion";
 
 export function ChatBubble({
   item,
@@ -16,10 +18,13 @@ export function ChatBubble({
   const locale = lang === "en" ? "en-US" : "ko-KR";
 
   return (
-    <div
+    <motion.div
       className={`flex w-full max-w-[min(340px,88vw)] flex-col items-end ${
-        isNewest ? "animate-pop" : "animate-fade-in"
+        isNewest ? "" : ""
       }`}
+      initial={isNewest ? { opacity: 0, y: 14, scale: 0.96 } : { opacity: 0, y: 8 }}
+      animate={{ opacity: 1, y: 0, scale: 1 }}
+      transition={SPRING_DEFAULT}
     >
       {item.images?.length > 0 && (
         <div className="mb-2 flex max-w-full justify-end gap-2 overflow-x-auto">
@@ -36,7 +41,7 @@ export function ChatBubble({
         </div>
       )}
       <div className="chat-bubble w-fit max-w-full text-left">
-        <p className="whitespace-pre-wrap text-[15px] font-semibold leading-[1.6] tracking-[-0.01em] text-ink">
+        <p className="whitespace-pre-wrap text-[16px] font-semibold leading-[1.65] tracking-[-0.015em] text-ink">
           {item.text.trim() || t("(이미지만)", "(image only)")}
         </p>
         {children}
@@ -51,6 +56,6 @@ export function ChatBubble({
           })}
         </p>
       )}
-    </div>
+    </motion.div>
   );
 }

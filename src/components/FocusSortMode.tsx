@@ -8,7 +8,7 @@ import {
 import { Archive, Calendar, Trash2, X } from "lucide-react";
 import { animate, motion, AnimatePresence } from "framer-motion";
 import { useT } from "@/lib/i18n";
-import { confirm as confirmHaptic, tick, haptic } from "@/lib/haptics";
+import { confirm as confirmHaptic, tickDebounced, haptic } from "@/lib/haptics";
 import type { InboxItem } from "@/lib/store";
 import { thoughtFirstLine } from "@/lib/brainMirror";
 import {
@@ -396,7 +396,7 @@ export function FocusSortMode({
 
     if (mag >= SWIPE_PREVIEW && previewFired.current !== dir) {
       previewFired.current = dir;
-      tick();
+      tickDebounced();
     }
     if (mag >= SWIPE_COMMIT && thresholdFired.current !== dir) {
       thresholdFired.current = dir;
@@ -463,11 +463,11 @@ export function FocusSortMode({
     <AnimatePresence>
       {open && (
         <motion.div
-          className="absolute inset-0 z-[60] flex flex-col"
+          className="absolute inset-0 z-[60] flex flex-col bg-white/72 backdrop-blur-2xl backdrop-saturate-150"
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
-          transition={{ duration: 0.22 }}
+          transition={{ duration: 0.28, ease: [0.32, 0.72, 0, 1] }}
           style={{ backgroundColor: bgTint }}
         >
           <div className="flex items-center justify-between px-5 pb-3 pt-6">

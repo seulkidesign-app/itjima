@@ -35,6 +35,24 @@ export const SPRING_CARD_EXIT = {
   mass: 0.9,
 };
 
+/** Tab underline / small UI chrome */
+export const SPRING_TAB = {
+  type: "spring" as const,
+  stiffness: 480,
+  damping: 36,
+  mass: 0.55,
+};
+
+/** Input focus / micro scale */
+export const SPRING_MICRO = {
+  type: "spring" as const,
+  stiffness: 520,
+  damping: 32,
+  mass: 0.5,
+};
+
+export const EASE_OUT_APP = [0.32, 0.72, 0, 1] as const;
+
 export const SWIPE_PREVIEW = 0.3;
 export const SWIPE_COMMIT = 0.6;
 export const MAX_ROTATE = 8;
