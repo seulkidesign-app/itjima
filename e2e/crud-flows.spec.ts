@@ -1,0 +1,123 @@
+import { test, expect } from "@playwright/test";
+import {
+  resetAppState,
+  gotoInbox,
+  addThought,
+  openContextMenu,
+  getTabCount,
+  readGuestList,
+  phone,
+  GUEST_INBOX_KEY,
+  GUEST_ARCHIVE_KEY,
+  GUEST_SCHEDULE_KEY,
+} from "./helpers";
+
+test.describe("CRUD flows (guest / offline)", () => {
+  test.beforeEach(async ({ page }) => {
+    await resetAppState(page);
+  });
+
+  test("add thought appears in inbox and persists on refresh", async ({
+    page,
+  }) => {
+    const text = `QA thought ${Date.now()}`;
+    await addThought(page, text);
+
+    expect(await getTabCount(page, "Inbox")).toBe(1);
+
+    await page.reload();
+    await phone(page).getByText(text, { exact: true }).waitFor({ state: "visible" });
+
+    const inbox = await readGuestList(page, GUEST_INBOX_KEY);
+    expect(inbox.length).toBe(1);
+    expect((inbox[0] as { text: string }).text).toBe(text);
+  });
+
+  test("archive from context menu updates inbox, archive tab, and localStorage", async ({
+    page,
+  }) => {
+    const text = `Archive me ${Date.now()}`;
+    await addThought(page, text);
+
+    await openContextMenu(page, text);
+    await phone(page)
+      .getByRole("dialog")
+      .getByRole("button", { name: "Save", exact: true })
+      .click();
+
+    await expect(phone(page).getByText(text, { exact: true })).toHaveCount(0);
+    expect(await getTabCount(page, "Inbox")).toBe(0);
+    expect(await getTabCount(page, "Saved")).toBe(1);
+
+    await phone(page).getByRole("link", { name: /^Saved/ }).click();
+    await phone(page).getByText(text, { exact: true }).first().waitFor({
+      state: "visible",
+    });
+
+    const inbox = await readGuestList(page, GUEST_INBOX_KEY);
+    const archive = await readGuestList(page, GUEST_ARCHIVE_KEY);
+    expect(inbox.length).toBe(0);
+    expect(archive.length).toBe(1);
+    expect((archive[0] as { text: string }).text).toBe(text);
+  });
+
+  test("delete from context menu removes thought with undo toast", async ({
+    page,
+  }) => {
+    const text = `Delete me ${Date.now()}`;
+    await addThought(page, text);
+
+    await openContextMenu(page, text);
+    await phone(page)
+      .getByRole("dialog")
+      .getByRole("button", { name: "Delete", exact: true })
+      .click();
+
+    await expect(phone(page).getByText(text, { exact: true })).toHaveCount(0);
+    await page.getByText("Removed").waitFor({ state: "visible" });
+
+    await page.getByRole("button", { name: "Undo" }).click();
+    await phone(page).getByText(text, { exact: true }).waitFor({ state: "visible" });
+  });
+
+  test("schedule via context menu updates When tab without refresh", async ({
+    page,
+  }) => {
+    const text = `Tomorrow meeting ${Date.now()}`;
+    await addThought(page, text);
+
+    await openContextMenu(page, text);
+    await phone(page)
+      .getByRole("dialog")
+      .getByRole("button", { name: "Remember for then", exact: true })
+      .click();
+
+    await phone(page).getByRole("dialog").last().waitFor({ state: "visible" });
+    await phone(page).getByRole("button", { name: /Keep it/ }).click();
+
+    await expect(phone(page).getByText(text, { exact: true })).toHaveCount(0);
+    expect(await getTabCount(page, "When")).toBeGreaterThan(0);
+
+    await phone(page).getByRole("link", { name: /^When/ }).click();
+    await phone(page).getByText(text).first().waitFor({ state: "visible" });
+
+    const schedules = await readGuestList(page, GUEST_SCHEDULE_KEY);
+    expect(schedules.length).toBeGreaterThan(0);
+  });
+
+  test("create schedule from When FAB", async ({ page }) => {
+    await phone(page).getByRole("link", { name: /^When/ }).click();
+    await phone(page)
+      .getByRole("button", { name: "Remember something new" })
+      .click();
+
+    const text = `FAB schedule ${Date.now()}`;
+    await phone(page).getByPlaceholder("What to remember").fill(text);
+    await phone(page).getByRole("button", { name: "Next", exact: true }).click();
+    await phone(page).getByRole("button", { name: "Next", exact: true }).click();
+    await phone(page).getByRole("button", { name: /Keep it/ }).click();
+
+    await phone(page).getByText(text).first().waitFor({ state: "visible" });
+    expect(await getTabCount(page, "When")).toBe(1);
+  });
+});

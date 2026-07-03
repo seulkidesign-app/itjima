@@ -1,0 +1,97 @@
+import { test, expect } from "@playwright/test";
+import {
+  resetAppState,
+  gotoInbox,
+  addThought,
+  openContextMenu,
+  openAbout,
+  openFeedback,
+  phone,
+} from "./helpers";
+
+test.describe("Navigation and modals", () => {
+  test.beforeEach(async ({ page }) => {
+    await resetAppState(page);
+  });
+
+  test("all main tabs load without console errors", async ({ page }) => {
+    const errors: string[] = [];
+    page.on("console", (m) => {
+      if (m.type() === "error") errors.push(m.text());
+    });
+    page.on("pageerror", (e) => errors.push(e.message));
+
+    await phone(page).getByRole("link", { name: /^When/ }).click();
+    await phone(page).getByRole("heading", { name: "When" }).waitFor();
+    await phone(page).getByRole("link", { name: /^Saved/ }).click();
+    await phone(page)
+      .getByRole("heading", { name: "It's here for you." })
+      .waitFor();
+    await phone(page).getByRole("link", { name: /^Inbox/ }).click();
+    await phone(page).getByText("Leave it here").waitFor();
+
+    const ignorable = errors.filter(
+      (e) =>
+        !e.includes("favicon") &&
+        !e.includes("404") &&
+        !e.includes("Failed to load resource"),
+    );
+    expect(ignorable).toEqual([]);
+  });
+
+  test("about sheet opens and closes without trapping focus", async ({
+    page,
+  }) => {
+    await openAbout(page);
+    await page.getByRole("dialog").waitFor({ state: "visible" });
+    await page.getByRole("button", { name: "Got it" }).click();
+    await expect(page.getByRole("dialog")).toHaveCount(0);
+  });
+
+  test("feedback sheet opens and closes with Escape", async ({ page }) => {
+    await openFeedback(page);
+    await page.getByRole("dialog").waitFor({ state: "visible" });
+    await page.keyboard.press("Escape");
+    await expect(page.getByRole("dialog")).toHaveCount(0);
+  });
+
+  test("archive expand and edit title persists", async ({ page }) => {
+    const text = `Title edit ${Date.now()}`;
+    await addThought(page, text);
+
+    await openContextMenu(page, text);
+    await phone(page)
+      .getByRole("dialog")
+      .getByRole("button", { name: "Save", exact: true })
+      .click();
+
+    await phone(page).getByRole("link", { name: /^Saved/ }).click();
+    await phone(page)
+      .getByRole("button")
+      .filter({ hasText: text })
+      .first()
+      .click();
+    await phone(page).getByRole("button", { name: "Title", exact: true }).click();
+
+    const newTitle = `Renamed ${Date.now()}`;
+    await page.getByRole("dialog").locator("input").fill(newTitle);
+    await page.getByRole("dialog").getByRole("button", { name: "Save" }).click();
+
+    await page.reload();
+    await phone(page).getByRole("link", { name: /^Saved/ }).click();
+    await phone(page).getByText(newTitle).first().waitFor({ state: "visible" });
+  });
+
+  test("schedule tabs switch without duplicate panels", async ({ page }) => {
+    await phone(page).getByRole("link", { name: /^When/ }).click();
+
+    await phone(page).getByRole("tab", { name: "Today" }).click();
+    await expect(phone(page).getByRole("tabpanel")).toHaveCount(1);
+
+    await phone(page).getByRole("tab", { name: "Calendar" }).click();
+    await expect(phone(page).getByRole("tabpanel")).toHaveCount(1);
+
+    await phone(page).getByRole("tab", { name: "List" }).click();
+    await expect(phone(page).getByRole("tabpanel")).toHaveCount(1);
+  });
+});
