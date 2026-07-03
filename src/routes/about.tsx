@@ -1,5 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useEffect } from "react";
+import { useEffect, useMemo } from "react";
 import { useT, LanguageToggle } from "@/lib/i18n";
 
 export const Route = createFileRoute("/about")({
@@ -26,60 +26,153 @@ function AboutPage() {
     return () => io.disconnect();
   }, []);
 
-  const STORY = [
-    { line: '아침에 일어나자마자 "아 맞다" 한 번.', cap: "" },
-    {
-      line: "나에게 카톡 보내고 나중에 못 찾음.",
-      cap: "카카오톡 나에게 보내기는 훌륭한 메모앱입니다. 찾기 전까지는.",
-    },
-    {
-      line: "노션 새 페이지 열고 3초 만에 닫음.",
-      cap: "빈 페이지는 생각보다 무겁습니다.",
-    },
-    {
-      line: "알람 27개 설정. 전부 무시함.",
-      cap: "이미 알고 있었죠. 알람은 끄려고 보는 거라는 걸.",
-    },
-    {
-      line: "자기 전에 갑자기 할 일 8개가 생각남.",
-      cap: "뇌는 당신이 쉬려는 순간을 좋아합니다.",
-    },
-  ];
+  const STORY = useMemo(
+    () => [
+      {
+        line: t(
+          '아침에 일어나자마자 "아 맞다" 한 번.',
+          'Wake up and immediately think "Oh right."',
+        ),
+        cap: "",
+      },
+      {
+        line: t(
+          "나에게 카톡 보내고 나중에 못 찾음.",
+          "Message yourself on KakaoTalk and never find it again.",
+        ),
+        cap: t(
+          "카카오톡 나에게 보내기는 훌륭한 메모앱입니다. 찾기 전까지는.",
+          "Save to self works great — until you need to find it.",
+        ),
+      },
+      {
+        line: t(
+          "노션 새 페이지 열고 3초 만에 닫음.",
+          "Open a new Notion page and close it in three seconds.",
+        ),
+        cap: t(
+          "빈 페이지는 생각보다 무겁습니다.",
+          "A blank page is heavier than it looks.",
+        ),
+      },
+      {
+        line: t(
+          "알람 27개 설정. 전부 무시함.",
+          "Set 27 alarms. Ignore all of them.",
+        ),
+        cap: t(
+          "이미 알고 있었죠. 알람은 끄려고 보는 거라는 걸.",
+          "You already knew — alarms are for dismissing.",
+        ),
+      },
+      {
+        line: t(
+          "자기 전에 갑자기 할 일 8개가 생각남.",
+          "Eight to-dos appear right before bed.",
+        ),
+        cap: t(
+          "뇌는 당신이 쉬려는 순간을 좋아합니다.",
+          "Your brain loves the moment you try to rest.",
+        ),
+      },
+    ],
+    [t],
+  );
 
-  const ME = [
-    "메모앱이 세 개 이상인 사람",
-    "브라우저 탭이 항상 20개 넘는 사람",
-    "스크린샷이 사실상 메모장인 사람",
-    "링크 저장해두고 한 번도 안 본 사람",
-    "벼락치기가 가장 생산적인 사람",
-    "생각은 많은데 시작이 어려운 사람",
-    '"아 맞다"를 하루 세 번 이상 하는 사람',
-  ];
+  const ME = useMemo(
+    () => [
+      t("메모앱이 세 개 이상인 사람", "Someone with three or more note apps"),
+      t(
+        "브라우저 탭이 항상 20개 넘는 사람",
+        "Someone who always has 20+ browser tabs open",
+      ),
+      t(
+        "스크린샷이 사실상 메모장인 사람",
+        "Someone whose camera roll is basically a notebook",
+      ),
+      t(
+        "링크 저장해두고 한 번도 안 본 사람",
+        "Someone who saves links and never opens them",
+      ),
+      t(
+        "벼락치기가 가장 생산적인 사람",
+        "Someone who works best at the last minute",
+      ),
+      t(
+        "생각은 많은데 시작이 어려운 사람",
+        "Someone with plenty of thoughts but a hard time starting",
+      ),
+      t(
+        '"아 맞다"를 하루 세 번 이상 하는 사람',
+        'Someone who says "Oh right" at least three times a day',
+      ),
+    ],
+    [t],
+  );
 
-  const HOW = [
-    {
-      n: "01",
-      t: "떠오르면 그냥 던진다.",
-      d: "카테고리 없음. 태그 없음. 생각 날 때 0.5초 안에 기록하는 게 전부입니다.",
-    },
-    {
-      n: "02",
-      t: "스와이프로 0.5초 결정.",
-      d: "오른쪽 = 일정. 왼쪽 = 보관. 틴더처럼. 그게 전부입니다.",
-    },
-    {
-      n: "03",
-      t: "알람이 울리면 그때 생각한다.",
-      d: "팝업이 아니라 알람처럼 울립니다. 그래야 실제로 움직이니까요.",
-    },
-  ];
+  const HOW = useMemo(
+    () => [
+      {
+        n: "01",
+        t: t("떠오르면 그냥 던진다.", "Drop it the moment it appears."),
+        d: t(
+          "카테고리 없음. 태그 없음. 생각 날 때 0.5초 안에 기록하는 게 전부입니다.",
+          "No categories. No tags. Just capture it in half a second.",
+        ),
+      },
+      {
+        n: "02",
+        t: t("스와이프로 0.5초 결정.", "Swipe to decide in half a second."),
+        d: t(
+          "오른쪽 = 그때. 왼쪽 = 기억함. 틴더처럼. 그게 전부입니다.",
+          "Right = when. Left = saved. Like swiping cards. That's it.",
+        ),
+      },
+      {
+        n: "03",
+        t: t("그때가 되면 다시 떠올린다.", "When the time comes, it resurfaces."),
+        d: t(
+          "앱을 열어두면 그때 알려드려요. 조용히, 부담 없이.",
+          "Keep the app open and we'll remind you then — quietly, without pressure.",
+        ),
+      },
+    ],
+    [t],
+  );
 
-  const PHIL = [
-    { n: "01", t: "정리하려 하지 마세요. 일단 버리세요." },
-    { n: "02", t: "완벽한 메모 필요 없습니다. 대충 써도 됩니다." },
-    { n: "03", t: "AI가 분류하지 않습니다. 당신이 결정합니다." },
-    { n: "04", t: "팝업 알림 없습니다. 알람처럼 울립니다." },
-  ];
+  const PHIL = useMemo(
+    () => [
+      {
+        n: "01",
+        t: t(
+          "정리하려 하지 마세요. 일단 버리세요.",
+          "Don't organize. Just offload.",
+        ),
+      },
+      {
+        n: "02",
+        t: t(
+          "완벽한 메모 필요 없습니다. 대충 써도 됩니다.",
+          "Perfect notes aren't required. Messy is fine.",
+        ),
+      },
+      {
+        n: "03",
+        t: t(
+          "분류는 제안일 뿐. 결정은 당신 몫.",
+          "Suggestions only — you stay in control.",
+        ),
+      },
+      {
+        n: "04",
+        t: t(
+          "팝업 알림 없습니다. 필요할 때만 조용히.",
+          "No popup alerts. Only quiet nudges when it matters.",
+        ),
+      },
+    ],
+    [t],
+  );
 
   return (
     <div className="landing">
@@ -105,27 +198,33 @@ function AboutPage() {
 
       {/* HERO */}
       <section className="hero">
-        <div className="badge reveal">Mental Inbox · Beta</div>
+        <div className="badge reveal">{t("생각함 · Beta", "Mental Inbox · Beta")}</div>
         <h1 className="reveal" style={{ transitionDelay: "70ms" }}>
-          기억하지 말고
+          {t("기억하지 말고", "Don't memorize.")}
           <br />
-          <span className="hl">맡겨라.</span>
+          <span className="hl">{t("맡겨라.", "Offload it.")}</span>
         </h1>
         <p className="hero-sub reveal" style={{ transitionDelay: "140ms" }}>
-          머릿속이 복잡한 건 의지력 문제가 아닙니다.
+          {t(
+            "머릿속이 복잡한 건 의지력 문제가 아닙니다.",
+            "A cluttered mind isn't a willpower problem.",
+          )}
           <br />
-          그냥 뇌가 저장공간이 아닌 거예요.
+          {t(
+            "그냥 뇌가 저장공간이 아닌 거예요.",
+            "Your brain just isn't built for storage.",
+          )}
         </p>
         <div className="hero-btns reveal" style={{ transitionDelay: "210ms" }}>
           <Link to="/" className="btn-yellow">
-            지금 던지러 가기 →
+            {t("지금 던지러 가기 →", "Drop a thought now →")}
           </Link>
           <a href="#me" className="btn-ghost">
-            이거 나인데?
+            {t("이거 나인데?", "That's me")}
           </a>
         </div>
         <div className="micro reveal" style={{ transitionDelay: "280ms" }}>
-          무료 · 설치 없음 · 30초면 시작
+          {t("무료 · 설치 없음 · 30초면 시작", "Free · no install · 30 seconds to start")}
         </div>
       </section>
 
@@ -133,7 +232,7 @@ function AboutPage() {
 
       {/* STORY */}
       <section className="sec">
-        <div className="eyebrow reveal">당신의 하루</div>
+        <div className="eyebrow reveal">{t("당신의 하루", "Your day")}</div>
         <div className="story">
           {STORY.map((s, i) => (
             <div key={i}>
@@ -154,15 +253,15 @@ function AboutPage() {
 
       {/* ME */}
       <section id="me" className="sec">
-        <div className="eyebrow reveal">혹시 이런 사람?</div>
+        <div className="eyebrow reveal">{t("혹시 이런 사람?", "Sound like you?")}</div>
         <ul className="me-list">
           {ME.map((m, i) => (
             <li
-              key={m}
+              key={i}
               className="me-item reveal"
               style={{ transitionDelay: `${i * 70}ms` }}
             >
-              <span className="me-tag">나인데</span>
+              <span className="me-tag">{t("나인데", "Me")}</span>
               <span className="me-text">{m}</span>
             </li>
           ))}
@@ -174,16 +273,22 @@ function AboutPage() {
       {/* QUOTE */}
       <section className="sec quote-sec">
         <h2 className="quote reveal">
-          당신 머릿속은
+          {t("당신 머릿속은", "Your head isn't")}
           <br />
-          <span className="hl">꽉 찬 게 아니라</span>
+          <span className="hl">{t("꽉 찬 게 아니라", "full —")}</span>
           <br />
-          그냥 안 비운 거예요.
+          {t("그냥 안 비운 거예요.", "it just hasn't been emptied.")}
         </h2>
         <p className="quote-sub reveal" style={{ transitionDelay: "140ms" }}>
-          ItJima는 뇌의 저장공간 문제를 해결합니다.
+          {t(
+            "ItJima는 뇌의 저장공간 문제를 해결합니다.",
+            "ItJima solves the storage problem in your head.",
+          )}
           <br />
-          메모앱도, 일정관리 앱도 아닌 — 기억 외주 서비스.
+          {t(
+            "메모앱도, 일정관리 앱도 아닌 — 기억 외주 서비스.",
+            "Not a notes app, not a planner — memory outsourcing.",
+          )}
         </p>
       </section>
 
@@ -191,7 +296,7 @@ function AboutPage() {
 
       {/* HOW */}
       <section className="sec">
-        <div className="eyebrow reveal">어떻게 쓰나요</div>
+        <div className="eyebrow reveal">{t("어떻게 쓰나요", "How it works")}</div>
         <div className="how">
           {HOW.map((h, i) => (
             <div key={h.n}>
@@ -199,7 +304,7 @@ function AboutPage() {
                 className="how-item reveal"
                 style={{ transitionDelay: `${i * 70}ms` }}
               >
-                <div className="how-n">Step {h.n}</div>
+                <div className="how-n">{t("Step", "Step")} {h.n}</div>
                 <div className="how-t">{h.t}</div>
                 <div className="how-d">{h.d}</div>
               </div>
@@ -213,7 +318,7 @@ function AboutPage() {
 
       {/* PHILOSOPHY */}
       <section className="sec">
-        <div className="eyebrow reveal">ItJima 철학</div>
+        <div className="eyebrow reveal">{t("ItJima 철학", "ItJima philosophy")}</div>
         <div className="phil">
           {PHIL.map((p, i) => (
             <div key={p.n}>
@@ -236,23 +341,27 @@ function AboutPage() {
       {/* FINAL CTA */}
       <section className="sec cta">
         <h2 className="cta-h reveal">
-          지금 머릿속에
+          {t("지금 머릿속에", "There's something")}
           <br />
-          맴도는 거<br />
-          <span className="hl">있잖아요.</span>
+          {t("맴도는 거", "on your mind")}
+          <br />
+          <span className="hl">{t("있잖아요.", "right now.")}</span>
         </h2>
         <p className="cta-sub reveal" style={{ transitionDelay: "140ms" }}>
-          그거 지금 던지세요. 30초면 됩니다.
+          {t("그거 지금 던지세요. 30초면 됩니다.", "Drop it here. Thirty seconds.")}
         </p>
         <Link
           to="/"
           className="btn-yellow big reveal"
           style={{ transitionDelay: "210ms" }}
         >
-          뇌 비우러 가기 →
+          {t("뇌 비우러 가기 →", "Empty your head →")}
         </Link>
         <div className="micro reveal" style={{ transitionDelay: "280ms" }}>
-          무료 · 회원가입 없음 · 설치 없음
+          {t(
+            "무료 · 로그인 없이도 사용 가능 · 설치 없음",
+            "Free · works without signing in · no install",
+          )}
         </div>
       </section>
 
@@ -260,7 +369,7 @@ function AboutPage() {
         <div className="lfoot-logo">
           ItJima<span className="hl-dot">.</span>
         </div>
-        <div className="lfoot-tag">기억하지 말고 맡겨라.</div>
+        <div className="lfoot-tag">{t("기억하지 말고 맡겨라.", "Don't memorize. Offload it.")}</div>
         <div className="lfoot-cp">© 2026 ItJima</div>
       </footer>
     </div>

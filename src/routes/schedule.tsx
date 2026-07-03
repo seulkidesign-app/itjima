@@ -18,7 +18,6 @@ import {
   CalendarDragLayer,
   CalendarDayCell,
 } from "@/components/CalendarDragLayer";
-import { ScheduleListSkeleton } from "@/components/Skeleton";
 import { EmptyState } from "@/components/EmptyState";
 import { SyncIndicator } from "@/components/SyncIndicator";
 import {
@@ -313,16 +312,18 @@ function Schedule() {
             <div className="inline-flex border-b border-ink/10" role="tablist">
               {(
                 [
-                  ["list", t("목록", "List")],
-                  ["today", t("오늘", "Today")],
-                  ["cal", t("캘린더", "Calendar")],
+                  ["list", t("목록", "List"), "schedule-panel-list"],
+                  ["today", t("오늘", "Today"), "schedule-panel-today"],
+                  ["cal", t("캘린더", "Calendar"), "schedule-panel-cal"],
                 ] as const
-              ).map(([k, label]) => (
+              ).map(([k, label, panelId]) => (
                 <button
                   key={k}
                   type="button"
                   role="tab"
+                  id={`schedule-tab-${k}`}
                   aria-selected={tab === k}
+                  aria-controls={panelId}
                   onClick={() => setTab(k)}
                   className={`relative min-h-11 px-4 py-2 text-[13px] font-semibold tracking-[-0.01em] transition-colors duration-200 ${
                     tab === k ? "text-ink" : "text-ink-soft"
@@ -347,13 +348,22 @@ function Schedule() {
         <AnimatePresence mode="wait">
           <motion.div
             key={tab}
+            id={
+              tab === "list"
+                ? "schedule-panel-list"
+                : tab === "today"
+                  ? "schedule-panel-today"
+                  : "schedule-panel-cal"
+            }
+            role="tabpanel"
+            aria-labelledby={`schedule-tab-${tab}`}
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -6 }}
             transition={{ duration: 0.22, ease: [0.32, 0.72, 0, 1] }}
           >
         {syncState === "syncing" && items.length === 0 ? (
-          <ScheduleListSkeleton />
+          <Empty />
         ) : tab === "today" ? (
           todayTimerItems.length === 0 && doneItems.length === 0 ? (
             <Empty />
@@ -605,6 +615,15 @@ function ScheduleFeelRow({
       onPointerMove={onMove}
       onPointerUp={onUp}
       onPointerCancel={onUp}
+      onKeyDown={(e) => {
+        if (e.key === "Enter") {
+          e.preventDefault();
+          onEdit();
+        } else if (e.key === " ") {
+          e.preventDefault();
+          onComplete();
+        }
+      }}
     >
       {dx > 20 && (
         <div
@@ -669,6 +688,7 @@ function ScheduleCard({
 }) {
   const t = useT();
   const { lang } = useLang();
+  const locale = lang === "en" ? "en-US" : "ko-KR";
   const start = new Date(s.start_time);
   const end = new Date(s.end_time);
   const rel = formatScheduleTimeLoose(start, lang);
@@ -835,7 +855,7 @@ function ScheduleCard({
               </p>
             )}
             <div className="mt-1.5 text-meta">
-              {fmt(start)} → {fmt(end)}
+              {fmt(start, locale)} → {fmt(end, locale)}
             </div>
             {alarmAt && (
               <button
@@ -965,8 +985,14 @@ function DoneSection({
   );
 }
 
-function fmt(d: Date) {
-  return `${d.getMonth() + 1}/${d.getDate()} ${d.getHours().toString().padStart(2, "0")}:${d.getMinutes().toString().padStart(2, "0")}`;
+function fmt(d: Date, locale: string) {
+  return d.toLocaleString(locale, {
+    month: "numeric",
+    day: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+  });
 }
 
 function CalendarGrid({
@@ -1014,7 +1040,7 @@ function CalendarGrid({
       : `${y}년 ${m + 1}월`;
   const weekdays =
     lang === "en"
-      ? ["S", "M", "T", "W", "T", "F", "S"]
+      ? ["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"]
       : ["일", "월", "화", "수", "목", "금", "토"];
 
   const selectedEvents = selected ? eventsOf(selected) : [];
@@ -1093,10 +1119,11 @@ function CalendarGrid({
               })}
             </div>
             <div className="mt-2 px-1 text-[10px] text-ink-soft/80">
-              {t(
-                "일정을 끌어 다른 날로 옮겨 보세요",
-                "Drag to another day if the timing shifts",
-              )}
+              {items.length > 0 &&
+                t(
+                  "일정을 끌어 다른 날로 옮겨 보세요",
+                  "Drag to another day if the timing shifts",
+                )}
             </div>
           </div>
 

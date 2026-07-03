@@ -7,7 +7,6 @@ import {
   Calendar,
   Archive as ArchiveIcon,
 } from "lucide-react";
-import { InboxListSkeleton } from "@/components/Skeleton";
 import { ChatSwipeRow } from "@/components/ChatSwipeRow";
 import { FocusSortMode } from "@/components/FocusSortMode";
 import { FocusScheduleSheet } from "@/components/FocusScheduleSheet";
@@ -48,6 +47,9 @@ import { haptic } from "@/lib/haptics";
 export const Route = createFileRoute("/")({
   component: Inbox,
 });
+
+const toastBtn =
+  "touch-target shrink-0 rounded-full bg-primary px-4 text-xs font-bold text-ink";
 
 function Inbox() {
   const t = useT();
@@ -233,8 +235,9 @@ function Inbox() {
       if (related) {
         setRevivalHint(related);
       }
+      if (inboxRevival?.sourceId === it.id) setInboxRevival(null);
 
-      showUndoToast(t("기억함에 남겨뒀어요", "Safely kept here"), async () => {
+      showUndoToast(t("기억함에 저장했어요", "Saved"), async () => {
         await archive.remove(created.id);
         const { item: restored } = await inbox.add({
           text: payload.text,
@@ -346,11 +349,7 @@ function Inbox() {
         markBmEligible(created.id);
       }
 
-      const revivalPool = [
-        ...archive.items,
-        ...inbox.items.filter((i) => i.id !== created.id),
-      ];
-      const revival = buildRevivalHint(created, revivalPool, "inbox");
+      const revival = buildRevivalHint(created, archive.items, "inbox");
       if (revival) setInboxRevival(revival);
 
       track("thought_created", {
@@ -359,12 +358,14 @@ function Inbox() {
         image_count: images.length,
       });
       if (cloudSynced) return;
-      toast.success(
-        t("여기에 안전하게 남았어요", "Safely kept on this device"),
-        { duration: 2500 },
-      );
-      if (!isBrainMirrorCandidate(text)) {
-        offerDateSchedule(created);
+      if (!revival) {
+        toast.success(
+          t("여기에 안전하게 남았어요", "Safely kept on this device"),
+          { duration: 2500 },
+        );
+        if (!isBrainMirrorCandidate(text)) {
+          offerDateSchedule(created);
+        }
       }
       maybeNudgeLogin();
     } catch {
@@ -470,9 +471,7 @@ function Inbox() {
             />
           </div>
           <div className="flex flex-1 flex-col justify-end pb-8">
-            {syncing ? (
-              <InboxListSkeleton />
-            ) : inboxJustCleared ? (
+            {inboxJustCleared ? (
               <EmptyState
                 variant="success"
                 emoji="✨"
@@ -511,6 +510,15 @@ function Inbox() {
                     onTap={() => openFocusSort(it.id)}
                   >
                     <ChatBubble item={it} isNewest={isNewest}>
+                      {inboxRevival?.sourceId === it.id && (
+                        <MemoryRevivalHint
+                          hint={inboxRevival}
+                          compact
+                          delayMs={900}
+                          onRevisit={revisitArchiveMemory}
+                          onDismiss={() => setInboxRevival(null)}
+                        />
+                      )}
                       {it.text.trim().length >= 2 && (
                         <BrainMirrorPanel
                           item={it}
@@ -592,7 +600,7 @@ function Inbox() {
                   />
                   <MenuItem
                     icon={<ArchiveIcon size={18} />}
-                    label={t("기억함에 남기기", "Keep here")}
+                    label={t("기억함에 저장", "Save")}
                     onClick={() => {
                       setMenuFor(null);
                       moveToArchive(it);

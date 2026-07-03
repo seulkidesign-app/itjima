@@ -21,7 +21,7 @@ export function ArchiveRelatedStrip({ item, items, onSelect }: Props) {
       onClick={(e) => e.stopPropagation()}
     >
       <p className="text-[11px] font-medium text-ink-soft/70">
-        {t("이어지는 기억", "Threads that connect")}
+        {t("이어지는 기억", "Related here")}
       </p>
       <div className="mt-2 flex flex-col gap-1">
         {related.map(({ item: rel }) => (

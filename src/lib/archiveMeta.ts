@@ -1,12 +1,12 @@
+import type { RevivalHint } from "@/lib/memoryRevival";
+
+export type { RevivalHint };
+
 const PIN_KEY = "itjima.archive.pinned";
 const TAGS_KEY = "itjima.archive.tags";
 const TITLE_KEY = "itjima.archive.titles";
 const VISIT_KEY = "itjima.archive.visits";
 const REVIVAL_KEY = "itjima.archive.revival";
-
-import type { RevivalHint } from "@/lib/memoryRevival";
-
-export type { RevivalHint };
 
 function readJSON<T>(key: string, fallback: T): T {
   if (typeof window === "undefined") return fallback;

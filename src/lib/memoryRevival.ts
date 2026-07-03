@@ -1,4 +1,4 @@
-import { archiveDisplayTitle, archiveSearchHaystack } from "@/lib/archiveMeta";
+import { archiveDisplayTitle, archiveSearchHaystack, readArchiveVisits } from "@/lib/archiveMeta";
 import {
   findRelatedArchiveItems,
   memorySimilarity,
@@ -33,6 +33,8 @@ export type RevivalHint = {
   messageEn: string;
   at: number;
 };
+
+const MIN_REVIVAL_AGE_DAYS = 2;
 
 const STOP = new Set([
   "the",
@@ -147,6 +149,7 @@ export function findRevivalMatches(
   const matches: RevivalMatch[] = [];
   for (const hit of hits) {
     if (hit.item.id === newItem.id) continue;
+    if (daysBetween(hit.item.created_at) < MIN_REVIVAL_AGE_DAYS) continue;
     const theme = sharedTheme(newItem, hit.item);
     matches.push({
       id: hit.item.id,
@@ -175,11 +178,20 @@ export function buildRevivalHint(
   const matches = findRevivalMatches(newItem, pool);
   if (!matches.length) return null;
 
+  const visits = readArchiveVisits();
   const primary = matches.reduce((best, m) => {
-    const bestAge = +new Date(best.createdAt);
-    const mAge = +new Date(m.createdAt);
     if (m.score > best.score + 0.04) return m;
-    if (Math.abs(m.score - best.score) <= 0.04 && mAge < bestAge) return m;
+    if (Math.abs(m.score - best.score) <= 0.04) {
+      const bestVisits = visits[best.id] ?? 0;
+      const mVisits = visits[m.id] ?? 0;
+      if (mVisits < bestVisits) return m;
+      if (
+        mVisits === bestVisits &&
+        +new Date(m.createdAt) < +new Date(best.createdAt)
+      ) {
+        return m;
+      }
+    }
     return best;
   }, matches[0]);
 

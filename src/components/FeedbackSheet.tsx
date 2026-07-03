@@ -101,13 +101,16 @@ export function FeedbackSheet({
     <div className="absolute inset-0 z-50 flex flex-col" onClick={onClose}>
       <div className="flex-1 bg-ink/30 backdrop-blur-sm animate-fade-in" />
       <div
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="feedback-sheet-title"
         className="glass-strong animate-slide-up rounded-t-[28px] px-5 pb-[calc(env(safe-area-inset-bottom)+1.25rem)] pt-3"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="mx-auto mb-3 h-1.5 w-10 rounded-full bg-ink/15" />
         <div className="mb-3 flex items-center justify-between">
           <div>
-            <div className="text-[18px] font-bold text-ink">
+            <div id="feedback-sheet-title" className="text-[18px] font-bold text-ink">
               {t("문의 · 피드백", "Contact · Feedback")}
             </div>
             <div className="text-xs text-ink-soft">

@@ -78,7 +78,7 @@ function DeckCard({ item }: { item: InboxItem }) {
         <div
           className="mt-6 border-t border-ink/[0.07] pt-4"
           role="complementary"
-          aria-label="Reflection"
+          aria-label={t("되비침", "Reflection")}
         >
           <BrainMirrorReflectionBody
             result={bm}
@@ -575,7 +575,7 @@ export function FocusSortMode({
                   side="left"
                   progress={leftProgress}
                   icon={Archive}
-                  label={t("기억함", "Keep here")}
+                  label={t("기억함", "Saved")}
                 />
                 <DestinationZone
                   side="right"

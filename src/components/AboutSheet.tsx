@@ -18,11 +18,14 @@ export function AboutSheet({
       <div className="absolute inset-0 z-50 flex flex-col" onClick={onClose}>
         <div className="flex-1 bg-ink/30 backdrop-blur-sm animate-fade-in" />
         <div
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="about-sheet-title"
           className="glass-strong animate-slide-up rounded-t-[28px] px-6 pb-[calc(env(safe-area-inset-bottom)+1.5rem)] pt-3"
           onClick={(e) => e.stopPropagation()}
         >
           <div className="mx-auto mb-4 h-1.5 w-10 rounded-full bg-ink/15" />
-          <div className="text-[22px] font-semibold tracking-[-0.02em] text-ink">
+          <div id="about-sheet-title" className="text-[22px] font-semibold tracking-[-0.02em] text-ink">
             ItJima
           </div>
           <div className="text-sm text-ink-soft">
@@ -39,7 +42,7 @@ export function AboutSheet({
               {t("→ 오른쪽: 그때를 기억하기", "→ Swipe right: remember for then")}
             </div>
             <div>
-              {t("← 왼쪽: 기억함에 남기기", "← Swipe left: keep here")}
+              {t("← 왼쪽: 기억함에 저장", "← Swipe left: save")}
             </div>
             <div>
               {t(

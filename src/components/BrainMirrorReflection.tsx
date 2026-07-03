@@ -156,13 +156,15 @@ export function BrainMirrorReflectionShell({
   compact,
   children,
 }: ShellProps) {
+  const t = useT();
+  const reflectionLabel = t("되비침", "Reflection");
   if (!visible) return null;
 
   if (compact) {
     return (
       <motion.div
         role="complementary"
-        aria-label="Reflection"
+        aria-label={reflectionLabel}
         className="mt-2.5 border-t border-ink/[0.07] pt-2.5"
         initial={{ opacity: 0, y: 5 }}
         animate={{ opacity: 1, y: 0 }}
@@ -176,7 +178,7 @@ export function BrainMirrorReflectionShell({
   return (
     <motion.div
       role="complementary"
-      aria-label="Reflection"
+      aria-label={reflectionLabel}
       className="mt-3 border-t border-ink/[0.07] pt-3"
       initial={{ opacity: 0, y: 6 }}
       animate={{ opacity: 1, y: 0 }}

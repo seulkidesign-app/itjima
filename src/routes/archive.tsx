@@ -31,7 +31,12 @@ import {
 import { recentArchiveItems, searchArchiveItems } from "@/lib/archiveSearch";
 import { useMemoryLenses } from "@/hooks/useMemoryLenses";
 import { ArchiveDiscoverySection } from "@/components/ArchiveDiscoverySection";
+import { ThinkingInsightsSection } from "@/components/ThinkingInsightsSection";
+import { useThinkingInsights } from "@/hooks/useThinkingInsights";
+import { MemoryJourneySection } from "@/components/MemoryJourneySection";
+import { useMemoryJourney } from "@/hooks/useMemoryJourney";
 import { MemoryRevivalHint } from "@/components/MemoryRevivalHint";
+import { consumeRevivalJumpTarget } from "@/lib/memoryRevival";
 import { ArchiveGridSkeleton } from "@/components/Skeleton";
 import { EmptyState } from "@/components/EmptyState";
 import { SyncIndicator } from "@/components/SyncIndicator";
@@ -111,6 +116,25 @@ function Archive() {
   const cardRefs = useRef<Record<string, HTMLDivElement | null>>({});
 
   const { lenses } = useMemoryLenses(items);
+  const { insights: thinkingInsights } = useThinkingInsights();
+  const { chapters: journeyChapters, thoughts: journeyThoughts } =
+    useMemoryJourney(pins);
+
+  const archiveInsightIds = useMemo(
+    () => new Set(items.map((it) => it.id)),
+    [items],
+  );
+
+  const insightsForArchive = useMemo(
+    () =>
+      thinkingInsights.map((insight) => ({
+        ...insight,
+        memoryIds: insight.memoryIds.filter((id) =>
+          archiveInsightIds.has(id),
+        ),
+      })),
+    [thinkingInsights, archiveInsightIds],
+  );
 
   useEffect(() => {
     const h = () => {
@@ -126,6 +150,19 @@ function Archive() {
     setCustomGroups(readJSON<GroupDef[]>(CUSTOM_KEY, []));
     setCollapsed(new Set(readJSON<string[]>(COLLAPSED_KEY, [])));
   }, []);
+
+  useEffect(() => {
+    setFinePointer(window.matchMedia("(pointer: fine)").matches);
+  }, []);
+
+  useEffect(() => {
+    if (!editItem) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setEditItem(null);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [editItem]);
 
   const allGroups: GroupDef[] = useMemo(
     () => [
@@ -262,6 +299,12 @@ function Archive() {
     haptic(4);
   };
 
+  useEffect(() => {
+    const jump = consumeRevivalJumpTarget();
+    if (jump) jumpToMemory(jump);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   const toggleExpand = (id: string) => {
     setExpandedId((prev) => {
       const next = prev === id ? null : id;
@@ -310,6 +353,7 @@ function Archive() {
   // ---- Drag & drop reassignment ----
   const [dragId, setDragId] = useState<string | null>(null);
   const [dragOver, setDragOver] = useState<string | null>(null);
+  const [finePointer, setFinePointer] = useState(false);
   const moveToGroup = (id: string, key: string) => {
     const it = items.find((x) => x.id === id);
     if (!it) return;
@@ -492,7 +536,7 @@ function Archive() {
           ref={(el) => {
             cardRefs.current[it.id] = el;
           }}
-          draggable={!selecting}
+          draggable={!selecting && finePointer}
           onDragStart={(e) => {
             if (selecting) return;
             e.dataTransfer.setData("text/plain", it.id);
@@ -724,11 +768,11 @@ function Archive() {
               </section>
             ) : (
               <>
-            {revival && !isSearching && (
+            {revival && !isSearching && revival.sourceKind === "archive" && (
               <MemoryRevivalHint
-                count={revival.relatedIds.length}
-                onView={() => {
-                  jumpToMemory(revival.newId);
+                hint={revival}
+                onRevisit={(id) => {
+                  jumpToMemory(id);
                   clearRevivalHint();
                   setRevival(null);
                 }}
@@ -736,6 +780,22 @@ function Archive() {
                   clearRevivalHint();
                   setRevival(null);
                 }}
+              />
+            )}
+
+            {!isSearching && (
+              <ThinkingInsightsSection
+                insights={insightsForArchive}
+                onRevisit={jumpToMemory}
+              />
+            )}
+
+            {!isSearching && (
+              <MemoryJourneySection
+                chapters={journeyChapters}
+                thoughts={journeyThoughts}
+                archiveItems={items}
+                onOpenMemory={jumpToMemory}
               />
             )}
 
@@ -793,22 +853,37 @@ function Archive() {
               return (
                 <section
                   key={g.key}
-                  onDragOver={(e) => {
-                    e.preventDefault();
-                    if (dragOver !== g.key) setDragOver(g.key);
-                  }}
-                  onDragLeave={() => {
-                    if (dragOver === g.key) setDragOver(null);
-                  }}
-                  onDrop={(e) => {
-                    e.preventDefault();
-                    const id = e.dataTransfer.getData("text/plain") || dragId;
-                    if (id) moveToGroup(id, g.key);
-                    setDragOver(null);
-                    setDragId(null);
-                  }}
+                  onDragOver={
+                    finePointer
+                      ? (e) => {
+                          e.preventDefault();
+                          if (dragOver !== g.key) setDragOver(g.key);
+                        }
+                      : undefined
+                  }
+                  onDragLeave={
+                    finePointer
+                      ? () => {
+                          if (dragOver === g.key) setDragOver(null);
+                        }
+                      : undefined
+                  }
+                  onDrop={
+                    finePointer
+                      ? (e) => {
+                          e.preventDefault();
+                          const id =
+                            e.dataTransfer.getData("text/plain") || dragId;
+                          if (id) moveToGroup(id, g.key);
+                          setDragOver(null);
+                          setDragId(null);
+                        }
+                      : undefined
+                  }
                   className={`rounded-[24px] transition-colors duration-200 ${
-                    isDropTarget ? "bg-primary/8 ring-2 ring-primary/40" : ""
+                    isDropTarget && finePointer
+                      ? "bg-primary/8 ring-2 ring-primary/40"
+                      : ""
                   }`}
                 >
                   <button
@@ -1008,6 +1083,9 @@ function Archive() {
       {editItem && (
         <div
           className="absolute inset-0 z-50 flex flex-col"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="archive-edit-title"
           onClick={() => setEditItem(null)}
         >
           <div className="flex-1 animate-fade-in bg-ink/30 backdrop-blur-sm" />
@@ -1015,7 +1093,7 @@ function Archive() {
             className="animate-slide-up rounded-t-[28px] bg-background px-5 pb-[calc(env(safe-area-inset-bottom)+1rem)] pt-3"
             onClick={(e) => e.stopPropagation()}
           >
-            <h3 className="text-[17px] font-bold text-ink">
+            <h3 id="archive-edit-title" className="text-[17px] font-bold text-ink">
               {t("제목 편집", "Edit title")}
             </h3>
             <input

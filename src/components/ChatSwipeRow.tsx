@@ -304,10 +304,10 @@ export function ChatSwipeRow({
           style={{
             opacity: Math.max(archiveReveal, pending === "left" ? 1 : 0),
           }}
-          aria-label={t("기억함", "Keep here")}
+          aria-label={t("기억함", "Saved")}
         >
           <Archive size={20} strokeWidth={2.2} />
-          {t("기억함", "Keep here")}
+          {t("기억함", "Saved")}
         </button>
       </div>
 

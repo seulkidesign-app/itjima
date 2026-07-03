@@ -126,7 +126,7 @@ export function InstallPrompt() {
           </div>
           <button
             onClick={install}
-            className="rounded-full bg-ink px-3 py-1.5 text-xs font-semibold text-white"
+            className="touch-target shrink-0 rounded-full bg-ink px-4 py-2.5 text-xs font-semibold text-white"
           >
             {t("추가", "Add")}
           </button>
@@ -136,6 +136,8 @@ export function InstallPrompt() {
       {iosHint && (
         <div
           className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 px-4 pb-6"
+          role="dialog"
+          aria-modal="true"
           onClick={dismiss}
         >
           <div

@@ -80,7 +80,7 @@ export function TopNav() {
           </button>
         </div>
         <Link
-          to="/about"
+          to="/"
           className="font-display text-[22px] uppercase leading-none tracking-wide text-ink"
         >
           ITJIMA

@@ -44,7 +44,7 @@ export function SideNav() {
     { to: "/", label: t("생각", "Inbox"), Icon: Inbox },
     { to: "/schedule", label: t("그때", "When"), Icon: Calendar },
     { to: "/archive", label: t("기억함", "Saved"), Icon: Archive },
-    { to: "/about", label: "About", Icon: Info },
+    { to: "/about", label: t("소개", "About"), Icon: Info },
   ] as const;
 
   return (

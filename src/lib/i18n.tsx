@@ -89,7 +89,7 @@ export function useT() {
 }
 
 export function LanguageToggle({ className = "" }: { className?: string }) {
-  const { lang, setLang } = useLang();
+  const { lang, setLang, t } = useLang();
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement | null>(null);
 
@@ -108,7 +108,7 @@ export function LanguageToggle({ className = "" }: { className?: string }) {
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
-        aria-label="Select language"
+        aria-label={t("언어 선택", "Select language")}
         aria-haspopup="listbox"
         aria-expanded={open}
         className="touch-target gap-1 rounded-full glass px-3 text-[11px] font-bold text-ink-soft"

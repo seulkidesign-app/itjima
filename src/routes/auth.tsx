@@ -162,8 +162,14 @@ function AuthPage() {
 
   if (!ready) {
     return (
-      <div className="flex h-full items-center justify-center">
+      <div
+        className="flex h-full flex-col items-center justify-center gap-3"
+        role="status"
+      >
         <div className="h-8 w-8 animate-spin rounded-full border-2 border-ink/20 border-t-ink" />
+        <span className="text-[13px] text-ink-soft">
+          {t("확인 중...", "Checking session...")}
+        </span>
       </div>
     );
   }
