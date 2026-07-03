@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import { MoreHorizontal } from "lucide-react";
 import { useT, useLang } from "@/lib/i18n";
+import { thoughtFirstLine } from "@/lib/brainMirror";
 import type { InboxItem } from "@/lib/store";
 
 export function ChatBubble({
@@ -19,6 +20,8 @@ export function ChatBubble({
   const t = useT();
   const { lang } = useLang();
   const locale = lang === "en" ? "en-US" : "ko-KR";
+  const firstLine = thoughtFirstLine(item.text);
+  const hasMoreLines = item.text.includes("\n");
 
   return (
     <div
@@ -41,7 +44,10 @@ export function ChatBubble({
           </div>
         )}
         <p className="whitespace-pre-wrap text-[15px] leading-[1.65] text-ink">
-          {item.text || t("(이미지만)", "(image only)")}
+          {firstLine || t("(이미지만)", "(image only)")}
+          {hasMoreLines && (
+            <span className="text-ink-soft/60"> …</span>
+          )}
         </p>
         <div className="mt-1.5 flex items-center justify-end gap-1.5 text-[10px] text-ink-soft/80">
           <span>

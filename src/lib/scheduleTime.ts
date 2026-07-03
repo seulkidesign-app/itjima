@@ -70,6 +70,51 @@ export function formatRemainingCompact(
   return lang === "en" ? `${r.seconds}s` : `${r.seconds}초`;
 }
 
+export type ScheduleDotStatus = "urgent" | "today" | "later";
+
+/** Red = within 10 min or past; yellow = today; gray = later. */
+export function scheduleDotStatus(
+  start: Date,
+  now = new Date(),
+): ScheduleDotStatus {
+  const r = remainingUntil(start, now);
+  if (r.past || (r.ms > 0 && r.ms < 10 * 60_000)) return "urgent";
+  if (start.toDateString() === now.toDateString()) return "today";
+  return "later";
+}
+
+/** Loose schedule time — no second/minute countdown strings. */
+export function formatScheduleTimeLoose(
+  target: Date,
+  lang: "ko" | "en",
+  now = new Date(),
+): string {
+  const locale = lang === "en" ? "en-US" : "ko-KR";
+  const r = remainingUntil(target, now);
+  const sameDay = target.toDateString() === now.toDateString();
+  const tomorrow = new Date(now);
+  tomorrow.setDate(tomorrow.getDate() + 1);
+  const isTomorrow = target.toDateString() === tomorrow.toDateString();
+
+  if (sameDay) {
+    const time = target.toLocaleTimeString(locale, {
+      hour: "2-digit",
+      minute: "2-digit",
+      hour12: false,
+    });
+    return lang === "en" ? `Today ${time}` : `오늘 ${time}`;
+  }
+  if (isTomorrow) return lang === "en" ? "Tomorrow" : "내일";
+  if (r.ms > 0 && r.ms < 24 * 3600_000 && r.hours >= 2) {
+    return lang === "en" ? `${r.hours}h later` : `${r.hours}시간 후`;
+  }
+  if (r.past) return lang === "en" ? "Started" : "시작됨";
+  return target.toLocaleDateString(locale, {
+    month: "short",
+    day: "numeric",
+  });
+}
+
 export function formatRemainingLong(
   target: Date,
   lang: "ko" | "en",

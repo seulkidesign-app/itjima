@@ -30,6 +30,7 @@ export function ChatSwipeRow({
   onSwipeLeft,
   onSwipeDown,
   onLongPress,
+  onTap,
   disabled,
 }: {
   children: ReactNode;
@@ -40,6 +41,7 @@ export function ChatSwipeRow({
   onSwipeLeft: () => void;
   onSwipeDown?: () => void;
   onLongPress?: () => void;
+  onTap?: () => void;
   disabled?: boolean;
 }) {
   const t = useT();
@@ -244,6 +246,7 @@ export function ChatSwipeRow({
       openSide(x > 0 ? "right" : "left");
       return;
     }
+    if (!moved.current && onTap) onTap();
     springTo({ x: 0, y: 0 });
   };
 

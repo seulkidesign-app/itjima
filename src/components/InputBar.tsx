@@ -52,6 +52,10 @@ export function InputBar({
   onAddRef.current = onAdd;
 
   useEffect(() => {
+    textareaRef.current?.focus();
+  }, []);
+
+  useEffect(() => {
     if (!restoreText) return;
     setText(restoreText);
     textRef.current = restoreText;
@@ -385,6 +389,12 @@ export function InputBar({
         onClose={() => setScribbleOpen(false)}
         onDone={(dataUrl) => void addImage(dataUrl)}
       />
+      <p className="pb-3 text-center text-[11px] text-ink-soft/80">
+        {t(
+          "잊어도 괜찮아요. ItJima가 기억할게요.",
+          "It's okay to forget. ItJima will remember.",
+        )}
+      </p>
     </form>
   );
 }

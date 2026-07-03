@@ -12,6 +12,7 @@ import { usePhoneScrollCompress } from "@/hooks/useScrollVelocity";
 import { ChatSwipeRow } from "@/components/ChatSwipeRow";
 import { FocusSortMode } from "@/components/FocusSortMode";
 import { ScheduleSheet } from "@/components/ScheduleSheet";
+import { FocusScheduleSheet } from "@/components/FocusScheduleSheet";
 import { ScheduleQuickSheet } from "@/components/ScheduleQuickSheet";
 import { LoginSheet } from "@/components/LoginSheet";
 import { CleanupReviewSheet } from "@/components/CleanupReviewSheet";
@@ -59,6 +60,11 @@ function Inbox() {
   const [loginOpen, setLoginOpen] = useState(false);
 
   const [focusSortOpen, setFocusSortOpen] = useState(false);
+  const [focusStartId, setFocusStartId] = useState<string | null>(null);
+  const [focusScheduleSheet, setFocusScheduleSheet] = useState<{
+    open: boolean;
+    item?: InboxItem;
+  }>({ open: false });
   const [scheduleQuick, setScheduleQuick] = useState<{
     open: boolean;
     item?: InboxItem;
@@ -66,8 +72,10 @@ function Inbox() {
   const [focusPendingScheduleId, setFocusPendingScheduleId] = useState<
     string | null
   >(null);
+  const [scheduleCommittedId, setScheduleCommittedId] = useState<
+    string | null
+  >(null);
   const [cleanupReviewOpen, setCleanupReviewOpen] = useState(false);
-  const [showSwipeHint, setShowSwipeHint] = useState(false);
   const [menuFor, setMenuFor] = useState<string | null>(null);
   const [pasteSheet, setPasteSheet] = useState<{
     chunks: string[];
@@ -116,19 +124,6 @@ function Inbox() {
   const prevCountRef = useRef(items.length);
 
   useEffect(() => {
-    if (items.length === 0) return;
-    if (typeof window === "undefined") return;
-    if (!localStorage.getItem("itjima.chatSwipeHintSeen")) {
-      setShowSwipeHint(true);
-    }
-  }, [items.length]);
-
-  const dismissSwipeHint = () => {
-    localStorage.setItem("itjima.chatSwipeHintSeen", "1");
-    setShowSwipeHint(false);
-  };
-
-  useEffect(() => {
     if (items.length > prevCountRef.current) {
       requestAnimationFrame(() => {
         listEndRef.current?.scrollIntoView({
@@ -159,8 +154,13 @@ function Inbox() {
           </button>
         </div>
       ),
-      { duration: 8000 },
+      { duration: 10000 },
     );
+  };
+
+  const openFocusSort = (fromId?: string) => {
+    setFocusStartId(fromId ?? null);
+    setFocusSortOpen(true);
   };
 
   const moveToScheduleWithDates = async (
@@ -194,8 +194,47 @@ function Inbox() {
     });
   };
 
-  const openScheduleQuick = (it: InboxItem, fromFocus = false) => {
-    if (fromFocus) setFocusPendingScheduleId(it.id);
+  const openScheduleFromFocus = (it: InboxItem) => {
+    setFocusPendingScheduleId(it.id);
+    setFocusScheduleSheet({ open: true, item: it });
+  };
+
+  const saveFocusSchedule = async (
+    text: string,
+    start: Date,
+    end: Date,
+    alarmMinutesBefore: number | null,
+  ) => {
+    const it = focusScheduleSheet.item;
+    if (!it) return;
+    const payload = scheduleFromInbox(it, {
+      text,
+      start_time: start.toISOString(),
+      end_time: end.toISOString(),
+      alarm: alarmMinutesBefore !== null,
+    });
+    await schedules.add({
+      ...payload,
+      ...(alarmMinutesBefore !== null
+        ? {
+            alarm_at: new Date(
+              start.getTime() - alarmMinutesBefore * 60 * 1000,
+            ).toISOString(),
+          }
+        : {}),
+    });
+    await inbox.remove(it.id);
+    track("schedule_created", {
+      source: "focus_sort",
+      text_length: text.length,
+    });
+    setFocusScheduleSheet({ open: false });
+    setFocusPendingScheduleId(null);
+    setScheduleCommittedId(it.id);
+    toast.success(t("일정으로 추가했어요!", "Added to schedule!"));
+  };
+
+  const openScheduleQuick = (it: InboxItem) => {
     setScheduleQuick({ open: true, item: it });
   };
 
@@ -364,42 +403,17 @@ function Inbox() {
               </h1>
             </>
           ) : (
-            <div className="flex flex-col gap-2">
-              <div className="flex items-center justify-between gap-3">
-                <div>
-                  <h1 className="text-[15px] font-bold text-ink">
-                    {t("나와의 대화", "Chat with myself")}
-                  </h1>
-                  <p className="mt-0.5 text-[11px] text-ink-soft">
-                    {t(
-                      "← 보관 · → 일정 · ↓ 삭제",
-                      "← Archive · → Schedule · ↓ Delete",
-                    )}
-                  </p>
-                </div>
+            <div className="flex items-center justify-end gap-3">
                 {items.length >= 1 && (
                   <button
                     type="button"
-                    onClick={() => setFocusSortOpen(true)}
+                    onClick={() => openFocusSort()}
                     className="pill-yellow shrink-0 px-4 py-2.5 text-[12px]"
                   >
-                    {t("정리하기", "Sort now")}
+                    {t("집중 모드 시작", "Focus mode")}
                   </button>
                 )}
               </div>
-              {showSwipeHint && (
-                <button
-                  type="button"
-                  onClick={dismissSwipeHint}
-                  className="chat-swipe-hint rounded-[16px] bg-primary/25 px-3 py-2 text-left text-[12px] text-ink"
-                >
-                  {t(
-                    "💡 → 일정 · ← 보관 · ↓ 삭제. 밀었다 놓으면 버튼을 눌러도 돼요.",
-                    "💡 → Schedule · ← Archive · ↓ Delete. Partial swipe, then tap the action.",
-                  )}
-                </button>
-              )}
-            </div>
           )}
         </div>
       </div>
@@ -421,10 +435,11 @@ function Inbox() {
                   rowId={it.id}
                   openRowId={swipeOpenId}
                   onOpenRowChange={setSwipeOpenId}
-                  onSwipeRight={() => openScheduleQuick(it)}
+                  onSwipeRight={() => openFocusSort(it.id)}
                   onSwipeLeft={() => moveToArchive(it)}
                   onSwipeDown={() => moveToDelete(it)}
                   onLongPress={() => setMenuFor(it.id)}
+                  onTap={() => openFocusSort(it.id)}
                 >
                   <ChatBubble item={it} isNewest={isNewest}>
                     {it.text.trim().length >= 2 && (
@@ -628,10 +643,32 @@ function Inbox() {
 
       <FocusSortMode
         open={focusSortOpen}
-        items={items.filter((i) => i.id !== focusPendingScheduleId)}
-        onClose={() => setFocusSortOpen(false)}
-        onScheduleRequest={(it) => openScheduleQuick(it, true)}
+        startItemId={focusStartId}
+        items={items}
+        pendingScheduleId={focusPendingScheduleId}
+        scheduleCommittedId={scheduleCommittedId}
+        onScheduleCommitHandled={() => setScheduleCommittedId(null)}
+        onClose={() => {
+          setFocusSortOpen(false);
+          setFocusStartId(null);
+          setFocusPendingScheduleId(null);
+          setFocusScheduleSheet({ open: false });
+        }}
+        onScheduleRequest={openScheduleFromFocus}
         onArchive={(it) => moveToArchive(it)}
+        onSoftDelete={(it) => moveToDelete(it)}
+      />
+
+      <FocusScheduleSheet
+        item={focusScheduleSheet.item ?? null}
+        open={focusScheduleSheet.open}
+        onClose={() => {
+          setFocusScheduleSheet({ open: false });
+          setFocusPendingScheduleId(null);
+        }}
+        onConfirm={(text, start, end, alarmMin) => {
+          void saveFocusSchedule(text, start, end, alarmMin);
+        }}
       />
 
       <CleanupReviewSheet

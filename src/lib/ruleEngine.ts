@@ -135,5 +135,10 @@ export function analyzeThought(text: string): ThoughtAnalysis {
 
 /** Whether Brain Mirror (Small AI) should run for this thought. */
 export function shouldCallBrainMirror(text: string): boolean {
-  return analyzeThought(text).needsBrainMirror;
+  const trimmed = text.trim();
+  if (trimmed.length < 2) return false;
+  const newlineCount = (trimmed.match(/\n/g) || []).length;
+  if (newlineCount >= 2) return true;
+  const meaningful = trimmed.replace(/[\s\p{P}\p{S}]/gu, "");
+  return meaningful.length >= 50;
 }

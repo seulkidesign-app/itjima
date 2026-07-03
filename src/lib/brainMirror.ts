@@ -23,8 +23,13 @@ export function suggestedActionForDate(dateText: string): string {
   return `${dateText}와 관련된 생각 같아요.`;
 }
 
+/** 50+ chars or 2+ line breaks — Brain Mirror display / AI trigger. */
 export function isBrainMirrorCandidate(text: string): boolean {
   return shouldCallBrainMirror(text);
+}
+
+export function thoughtFirstLine(text: string): string {
+  return text.split("\n")[0]?.trim() || text.trim();
 }
 
 /** Stamp version/isCurrent when persisting a new mirror snapshot. */

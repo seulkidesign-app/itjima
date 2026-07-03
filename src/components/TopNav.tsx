@@ -2,7 +2,7 @@ import { Link, useRouterState } from "@tanstack/react-router";
 import { Info, MessageSquarePlus } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useT, LanguageToggle } from "@/lib/i18n";
-import { useUserId } from "@/lib/store";
+import { useInbox, useSchedules, useArchive, useUserId } from "@/lib/store";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { tap } from "@/lib/haptics";
@@ -13,6 +13,18 @@ export function TopNav() {
   const t = useT();
   const path = useRouterState({ select: (s) => s.location.pathname });
   const userId = useUserId();
+  const inbox = useInbox();
+  const schedules = useSchedules();
+  const archive = useArchive();
+  const thoughtCount = inbox.items.length;
+  const scheduleCount = schedules.items.filter((s) => s.status !== "done")
+    .length;
+  const archiveCount = archive.items.length;
+  const tabCounts: Record<string, number> = {
+    "/": thoughtCount,
+    "/schedule": scheduleCount,
+    "/archive": archiveCount,
+  };
   const tabs = [
     { to: "/", label: t("생각", "Inbox") },
     { to: "/schedule", label: t("일정", "Schedule") },
@@ -108,6 +120,11 @@ export function TopNav() {
               }`}
             >
               {label}
+              {tabCounts[to] > 0 && (
+                <span className="ml-1 font-num text-[12px] text-ink-soft">
+                  {tabCounts[to]}
+                </span>
+              )}
               <span
                 className={`absolute inset-x-3 bottom-0 h-[3px] rounded-full transition-all ${
                   active ? "bg-ink" : "bg-transparent"

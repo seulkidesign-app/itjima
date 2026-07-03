@@ -14,7 +14,6 @@ import { ScheduleSheet } from "@/components/ScheduleSheet";
 import { ReminderSheet } from "@/components/ReminderSheet";
 import { ScheduleAlarmSheet } from "@/components/ScheduleAlarmSheet";
 import { ScheduleTimerSheet } from "@/components/ScheduleTimerSheet";
-import { CountdownRing } from "@/components/CountdownRing";
 import {
   CalendarDragLayer,
   CalendarDayCell,
@@ -35,9 +34,8 @@ import {
   type TimerPreset,
 } from "@/lib/scheduleReminders";
 import {
-  countdownRingProgress,
-  formatRemainingLong,
-  remainingUntil,
+  formatScheduleTimeLoose,
+  scheduleDotStatus,
 } from "@/lib/scheduleTime";
 import {
   groupSchedules,
@@ -457,14 +455,12 @@ function ScheduleCard({
   const { lang } = useLang();
   const start = new Date(s.start_time);
   const end = new Date(s.end_time);
-  const rel = formatRemainingLong(start, lang);
+  const rel = formatScheduleTimeLoose(start, lang);
+  const dot = scheduleDotStatus(start);
   const title = scheduleDisplayTitle(s);
   const preview = rawPreview(s);
   const alarmAt = s.alarm ? effectiveAlarmAt(s) : null;
   const timerEnd = getActiveTimerEnd(s.id);
-  const ringProgress = countdownRingProgress(s.start_time, s.created_at);
-  const urgent =
-    remainingUntil(start).ms > 0 && remainingUntil(start).ms < 3600_000;
   const pressTimer = useRef<number | null>(null);
   const longFired = useRef(false);
   const dragging = useRef(false);
@@ -544,8 +540,13 @@ function ScheduleCard({
     });
   };
 
-  const showRing = !done && (emphasize || timer || ringProgress > 0.05);
   const swipeHint = dx > 24;
+  const dotColor =
+    dot === "urgent"
+      ? "bg-red-500"
+      : dot === "today"
+        ? "bg-primary"
+        : "bg-ink/25";
 
   return (
     <div className="relative">
@@ -574,33 +575,29 @@ function ScheduleCard({
         onPointerCancel={onUp}
       >
         <div className="flex items-start gap-3">
-          {showRing ? (
-            <CountdownRing
-              progress={ringProgress}
-              target={start}
-              lang={lang}
-              size={emphasize || timer ? 64 : 56}
-              urgent={urgent || !!missed}
-              className="mt-0.5"
-            />
-          ) : (
-            <button
-              type="button"
-              onClick={(e) => {
-                e.stopPropagation();
-                if (done) onMoveToArchive?.();
-                else onComplete();
-              }}
-              className={`mt-1 flex h-6 w-6 shrink-0 items-center justify-center rounded-full border-2 ${
-                done
-                  ? "border-primary bg-primary text-ink"
-                  : "border-ink/20 hover:border-primary"
-              }`}
-              aria-label={t("완료", "Done")}
-            >
-              {done && <Check size={14} strokeWidth={3} />}
-            </button>
-          )}
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              if (done) onMoveToArchive?.();
+              else onComplete();
+            }}
+            className={`mt-1 flex h-6 w-6 shrink-0 items-center justify-center rounded-full border-2 ${
+              done
+                ? "border-primary bg-primary text-ink"
+                : "border-ink/20 hover:border-primary"
+            }`}
+            aria-label={t("완료", "Done")}
+          >
+            {done ? (
+              <Check size={14} strokeWidth={3} />
+            ) : (
+              <span
+                className={`h-2.5 w-2.5 rounded-full ${dotColor}`}
+                aria-hidden
+              />
+            )}
+          </button>
           <div className="min-w-0 flex-1">
             <div className="flex flex-wrap items-center gap-2">
               {pinned && (
