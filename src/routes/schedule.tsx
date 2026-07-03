@@ -33,10 +33,7 @@ import {
   type AlarmPreset,
   type TimerPreset,
 } from "@/lib/scheduleReminders";
-import {
-  formatScheduleTimeLoose,
-  scheduleDotStatus,
-} from "@/lib/scheduleTime";
+import { formatScheduleTimeLoose, scheduleDotStatus } from "@/lib/scheduleTime";
 import {
   groupSchedules,
   isMissed,

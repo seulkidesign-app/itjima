@@ -1,5 +1,4 @@
 import type { ReactNode } from "react";
-import { MoreHorizontal } from "lucide-react";
 import { useT, useLang } from "@/lib/i18n";
 import { thoughtFirstLine } from "@/lib/brainMirror";
 import type { InboxItem } from "@/lib/store";
@@ -8,8 +7,6 @@ export function ChatBubble({
   item,
   isNewest,
   children,
-  onLongPressStart,
-  onLongPressEnd,
 }: {
   item: InboxItem;
   isNewest?: boolean;
@@ -25,42 +22,32 @@ export function ChatBubble({
 
   return (
     <div
-      className={`flex flex-col items-end ${isNewest ? "animate-pop" : "animate-fade-in"}`}
-      onPointerDown={() => onLongPressStart?.(item.id)}
-      onPointerUp={onLongPressEnd}
-      onPointerLeave={onLongPressEnd}
+      className={`w-full px-4 py-4 ${isNewest ? "animate-pop" : "animate-fade-in"}`}
     >
-      <div className="chat-bubble max-w-[92%]">
-        {item.images?.length > 0 && (
-          <div className="mb-2 flex flex-wrap justify-end gap-2">
-            {item.images.map((src, i) => (
-              <img
-                key={i}
-                src={src}
-                alt=""
-                className={`rounded-[20px] object-cover ${isNewest ? "h-28 w-28" : "h-20 w-20"}`}
-              />
-            ))}
-          </div>
-        )}
-        <p className="whitespace-pre-wrap text-[15px] leading-[1.65] text-ink">
-          {firstLine || t("(이미지만)", "(image only)")}
-          {hasMoreLines && (
-            <span className="text-ink-soft/60"> …</span>
-          )}
-        </p>
-        <div className="mt-1.5 flex items-center justify-end gap-1.5 text-[10px] text-ink-soft/80">
-          <span>
-            {new Date(item.created_at).toLocaleString(locale, {
-              month: "numeric",
-              day: "numeric",
-              hour: "2-digit",
-              minute: "2-digit",
-            })}
-          </span>
-          <MoreHorizontal size={12} className="opacity-60" />
+      {item.images?.length > 0 && (
+        <div className="mb-3 flex gap-2 overflow-x-auto">
+          {item.images.map((src, i) => (
+            <img
+              key={i}
+              src={src}
+              alt=""
+              className={`rounded-[20px] object-cover ${isNewest ? "h-28 w-28" : "h-20 w-20"}`}
+            />
+          ))}
         </div>
-      </div>
+      )}
+      <p className="whitespace-pre-wrap text-[16px] font-semibold leading-[1.6] text-ink">
+        {firstLine || t("(이미지만)", "(image only)")}
+        {hasMoreLines && <span className="text-ink-soft/60"> …</span>}
+      </p>
+      <p className="mt-2 text-[11px] text-ink-soft/70">
+        {new Date(item.created_at).toLocaleString(locale, {
+          month: "numeric",
+          day: "numeric",
+          hour: "2-digit",
+          minute: "2-digit",
+        })}
+      </p>
       {children}
     </div>
   );

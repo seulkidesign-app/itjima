@@ -87,13 +87,7 @@ function DeckCard({ item }: { item: InboxItem }) {
   );
 }
 
-function ProgressDots({
-  total,
-  current,
-}: {
-  total: number;
-  current: number;
-}) {
+function ProgressDots({ total, current }: { total: number; current: number }) {
   const max = Math.min(total, 12);
   if (total <= 0) return null;
   return (
@@ -544,7 +538,9 @@ export function FocusSortMode({
                 }}
               >
                 <Archive size={22} strokeWidth={2.2} />
-                <span className="text-[11px] font-bold">{t("보관", "Archive")}</span>
+                <span className="text-[11px] font-bold">
+                  {t("보관", "Archive")}
+                </span>
               </button>
               <button
                 type="button"
@@ -559,7 +555,9 @@ export function FocusSortMode({
                 }}
               >
                 <Calendar size={22} strokeWidth={2.2} />
-                <span className="text-[11px] font-bold">{t("일정", "Schedule")}</span>
+                <span className="text-[11px] font-bold">
+                  {t("일정", "Schedule")}
+                </span>
               </button>
               <button
                 type="button"
@@ -574,7 +572,9 @@ export function FocusSortMode({
                 }}
               >
                 <Trash2 size={20} strokeWidth={2.2} />
-                <span className="text-[11px] font-bold">{t("삭제", "Delete")}</span>
+                <span className="text-[11px] font-bold">
+                  {t("삭제", "Delete")}
+                </span>
               </button>
             </div>
           </>

@@ -17,8 +17,9 @@ export function TopNav() {
   const schedules = useSchedules();
   const archive = useArchive();
   const thoughtCount = inbox.items.length;
-  const scheduleCount = schedules.items.filter((s) => s.status !== "done")
-    .length;
+  const scheduleCount = schedules.items.filter(
+    (s) => s.status !== "done",
+  ).length;
   const archiveCount = archive.items.length;
   const tabCounts: Record<string, number> = {
     "/": thoughtCount,

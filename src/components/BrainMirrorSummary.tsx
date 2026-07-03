@@ -40,7 +40,10 @@ function BrainMirrorQuietView({
         {result.items.length > 1 && (
           <ul className="mt-1 space-y-0.5">
             {result.items.slice(0, 4).map((line) => (
-              <li key={line} className="text-[12px] leading-relaxed text-ink/70">
+              <li
+                key={line}
+                className="text-[12px] leading-relaxed text-ink/70"
+              >
                 · {line}
               </li>
             ))}
@@ -126,12 +129,11 @@ export function BrainMirrorPanel({
 
     const abortController = new AbortController();
     let finished = false;
-    let delayTimer: number | undefined;
 
     const cleanup = () => {
       finished = true;
       abortController.abort();
-      if (delayTimer) window.clearTimeout(delayTimer);
+      window.clearTimeout(delayTimer);
     };
 
     const hideSilently = (offerDateFallback = false) => {
@@ -154,7 +156,7 @@ export function BrainMirrorPanel({
       haptic([4, 10, 6]);
     };
 
-    delayTimer = window.setTimeout(() => {
+    const delayTimer = window.setTimeout(() => {
       void (async () => {
         if (finished || fetchGen.current !== gen) return;
         try {
@@ -218,9 +220,7 @@ export function BrainMirrorPanel({
 
   if (phase !== "ready" || !result?.items.length) return null;
 
-  return (
-    <BrainMirrorQuietView result={result} inline={variant === "inline"} />
-  );
+  return <BrainMirrorQuietView result={result} inline={variant === "inline"} />;
 }
 
 function shouldAutoAct(result: BrainMirrorResult): boolean {

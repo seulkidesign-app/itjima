@@ -72,9 +72,9 @@ function Inbox() {
   const [focusPendingScheduleId, setFocusPendingScheduleId] = useState<
     string | null
   >(null);
-  const [scheduleCommittedId, setScheduleCommittedId] = useState<
-    string | null
-  >(null);
+  const [scheduleCommittedId, setScheduleCommittedId] = useState<string | null>(
+    null,
+  );
   const [cleanupReviewOpen, setCleanupReviewOpen] = useState(false);
   const [menuFor, setMenuFor] = useState<string | null>(null);
   const [pasteSheet, setPasteSheet] = useState<{
@@ -199,7 +199,11 @@ function Inbox() {
     setFocusScheduleSheet({ open: true, item: it });
   };
 
-  const saveFocusSchedule = async (
+  const openHomeSchedule = (it: InboxItem) => {
+    setFocusScheduleSheet({ open: true, item: it });
+  };
+
+  const saveHomeSchedule = async (
     text: string,
     start: Date,
     end: Date,
@@ -225,12 +229,15 @@ function Inbox() {
     });
     await inbox.remove(it.id);
     track("schedule_created", {
-      source: "focus_sort",
+      source:
+        focusSortOpen && focusPendingScheduleId === it.id
+          ? "focus_sort"
+          : "inbox_swipe",
       text_length: text.length,
     });
     setFocusScheduleSheet({ open: false });
     setFocusPendingScheduleId(null);
-    setScheduleCommittedId(it.id);
+    if (focusSortOpen) setScheduleCommittedId(it.id);
     toast.success(t("일정으로 추가했어요!", "Added to schedule!"));
   };
 
@@ -403,17 +410,26 @@ function Inbox() {
               </h1>
             </>
           ) : (
-            <div className="flex items-center justify-end gap-3">
-                {items.length >= 1 && (
+            <div className="flex items-center justify-end gap-2">
+              {items.length >= 1 && (
+                <>
+                  <button
+                    type="button"
+                    onClick={() => setCleanupReviewOpen(true)}
+                    className="shrink-0 rounded-full bg-ink/[0.06] px-4 py-2.5 text-[12px] font-bold text-ink"
+                  >
+                    {t("정리 모드", "Clean up")}
+                  </button>
                   <button
                     type="button"
                     onClick={() => openFocusSort()}
                     className="pill-yellow shrink-0 px-4 py-2.5 text-[12px]"
                   >
-                    {t("집중 모드 시작", "Focus mode")}
+                    {t("집중 모드", "Focus")}
                   </button>
-                )}
-              </div>
+                </>
+              )}
+            </div>
           )}
         </div>
       </div>
@@ -435,7 +451,7 @@ function Inbox() {
                   rowId={it.id}
                   openRowId={swipeOpenId}
                   onOpenRowChange={setSwipeOpenId}
-                  onSwipeRight={() => openFocusSort(it.id)}
+                  onSwipeRight={() => openHomeSchedule(it)}
                   onSwipeLeft={() => moveToArchive(it)}
                   onSwipeDown={() => moveToDelete(it)}
                   onLongPress={() => setMenuFor(it.id)}
@@ -667,7 +683,7 @@ function Inbox() {
           setFocusPendingScheduleId(null);
         }}
         onConfirm={(text, start, end, alarmMin) => {
-          void saveFocusSchedule(text, start, end, alarmMin);
+          void saveHomeSchedule(text, start, end, alarmMin);
         }}
       />
 

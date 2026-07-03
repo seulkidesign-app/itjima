@@ -125,8 +125,7 @@ export function FocusScheduleSheet({ item, open, onClose, onConfirm }: Props) {
     confirmHaptic();
     const s = buildStart();
     const e = new Date(s.getTime() + 60 * 60 * 1000);
-    const alarmMin =
-      alarm === "off" ? null : alarm === "1h" ? 60 : 30;
+    const alarmMin = alarm === "off" ? null : alarm === "1h" ? 60 : 30;
     onConfirm(title.trim() || thoughtFirstLine(item.text), s, e, alarmMin);
   };
 
