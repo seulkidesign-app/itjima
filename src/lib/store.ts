@@ -1,4 +1,5 @@
 import { supabase } from "@/integrations/supabase/client";
+import { mergeCloudRow, shouldPreferLocalInboxStatus } from "@/lib/cloudMerge";
 import {
   parseBrainMirrorResult,
   finalizeBrainMirror,
@@ -407,21 +408,42 @@ function useLocalList<T extends { id: string; created_at: string }>(
 
       const mergedMap = new Map<string, T>();
       const localById = new Map(localAll.map((item) => [item.id, item]));
+      const statusPatches: Array<{ id: string; patch: Partial<T> }> = [];
+
       for (const row of cloud) {
-        const local = localById.get(row.id) as
-          | (T & { brain_mirror?: BrainMirrorResult | null })
-          | undefined;
-        mergedMap.set(
-          row.id,
-          local?.brain_mirror && !(row as InboxItem).brain_mirror
-            ? ({ ...row, brain_mirror: local.brain_mirror } as T)
-            : row,
-        );
+        const local = localById.get(row.id);
+        const merged = mergeCloudRow(row, local, table);
+        mergedMap.set(row.id, merged);
+
+        if (local && table === "inbox") {
+          const ls = (local as InboxItem).status;
+          const cs = (row as InboxItem).status;
+          if (shouldPreferLocalInboxStatus(ls, cs)) {
+            statusPatches.push({
+              id: row.id,
+              patch: { status: ls } as Partial<T>,
+            });
+          }
+        }
+        if (local && table === "schedules") {
+          const ls = (local as ScheduleItem).status;
+          const cs = (row as ScheduleItem).status;
+          if (ls === "done" && cs !== "done") {
+            statusPatches.push({
+              id: row.id,
+              patch: { status: ls } as Partial<T>,
+            });
+          }
+        }
       }
       for (const row of toUpload) mergedMap.set(row.id, row);
 
       const merged = sortByCreated([...mergedMap.values()]);
       writeLS(key, merged);
+
+      for (const { id, patch } of statusPatches) {
+        await cloudMutate("update", table, userId, patch as Record<string, unknown>, id);
+      }
 
       if (guestItems.length) {
         writeLS(guestKey, []);
