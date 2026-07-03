@@ -308,10 +308,23 @@ async function cloudUpsertMany<T extends { id: string }>(
   }
 }
 
+const E2E_USER_LS_KEY = "itjima.__e2e_user_id__";
+
+function readE2eUserId(): string | null {
+  if (import.meta.env.VITE_E2E !== "true") return null;
+  if (typeof window === "undefined") return null;
+  return localStorage.getItem(E2E_USER_LS_KEY);
+}
+
 /** Hook returning current auth user id (or null) and reacting to changes. */
 export function useUserId() {
-  const [id, setId] = useState<string | null>(null);
+  const [id, setId] = useState<string | null>(() => readE2eUserId());
   useEffect(() => {
+    const e2eUserId = readE2eUserId();
+    if (e2eUserId) {
+      setId(e2eUserId);
+      return;
+    }
     supabase.auth.getUser().then(({ data }) => setId(data.user?.id ?? null));
     const { data: sub } = supabase.auth.onAuthStateChange((_e, session) => {
       setId(session?.user?.id ?? null);
@@ -331,6 +344,7 @@ function useLocalList<T extends { id: string; created_at: string }>(
     "idle" | "syncing" | "ready" | "error"
   >("idle");
   const syncingRef = useRef(false);
+  const writeErrorRef = useRef(false);
   const [syncRetry, setSyncRetry] = useState(0);
   const key = storageKey(kind, userId);
 
@@ -338,8 +352,18 @@ function useLocalList<T extends { id: string; created_at: string }>(
     setItems(readLS<T>(key, table));
   }, [key, table]);
 
+  const markWriteError = useCallback(() => {
+    writeErrorRef.current = true;
+    setSyncState("error");
+  }, []);
+
+  const clearWriteError = useCallback(() => {
+    writeErrorRef.current = false;
+  }, []);
+
   const retrySync = useCallback(() => {
     syncingRef.current = false;
+    writeErrorRef.current = false;
     setSyncRetry((n) => n + 1);
   }, []);
 
@@ -450,7 +474,7 @@ function useLocalList<T extends { id: string; created_at: string }>(
       }
 
       if (!cancelled) {
-        setSyncState("ready");
+        setSyncState(writeErrorRef.current ? "error" : "ready");
         syncingRef.current = false;
       }
     })();
@@ -482,7 +506,7 @@ function useLocalList<T extends { id: string; created_at: string }>(
           userId,
           item as Record<string, unknown>,
         );
-        if (!cloudSynced) setSyncState("error");
+        if (!cloudSynced) markWriteError();
       }
 
       if (table === "inbox") {
@@ -509,10 +533,11 @@ function useLocalList<T extends { id: string; created_at: string }>(
         patch as Record<string, unknown>,
         id,
       );
-      if (!ok) setSyncState("error");
+      if (!ok) markWriteError();
+      else clearWriteError();
       return ok;
     },
-    [key, userId, table],
+    [key, userId, table, markWriteError, clearWriteError],
   );
 
   const remove = useCallback(
@@ -527,12 +552,13 @@ function useLocalList<T extends { id: string; created_at: string }>(
         .eq("user_id", userId);
       if (error) {
         console.error(`[sync] delete ${table}`, error.message);
-        setSyncState("error");
+        markWriteError();
         return false;
       }
+      clearWriteError();
       return true;
     },
-    [key, userId, table],
+    [key, userId, table, markWriteError, clearWriteError],
   );
 
   return { items, add, update, remove, syncState, retrySync };

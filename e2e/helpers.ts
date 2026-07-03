@@ -18,35 +18,11 @@ export function getSupabaseProjectId(): string | null {
 }
 
 export async function injectSignedInUser(page: Page) {
-  const projectId = getSupabaseProjectId();
-  if (!projectId) throw new Error("VITE_SUPABASE_PROJECT_ID missing in .env");
-
   await page.evaluate(
-    ({ projectId, userId }) => {
-      const expiresAt = Math.floor(Date.now() / 1000) + 3600;
-      localStorage.setItem(
-        `sb-${projectId}-auth-token`,
-        JSON.stringify({
-          access_token: "e2e-test-access-token",
-          refresh_token: "e2e-test-refresh-token",
-          expires_at: expiresAt,
-          expires_in: 3600,
-          token_type: "bearer",
-          user: {
-            id: userId,
-            aud: "authenticated",
-            role: "authenticated",
-            email: "e2e@test.local",
-            email_confirmed_at: new Date().toISOString(),
-            app_metadata: {},
-            user_metadata: {},
-            created_at: new Date().toISOString(),
-            updated_at: new Date().toISOString(),
-          },
-        }),
-      );
+    ({ userId }) => {
+      localStorage.setItem("itjima.__e2e_user_id__", userId);
     },
-    { projectId, userId: TEST_USER_ID },
+    { userId: TEST_USER_ID },
   );
   await page.reload();
   await phone(page).getByRole("link", { name: /^Inbox/ }).waitFor({

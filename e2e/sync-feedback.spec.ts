@@ -7,7 +7,6 @@ import {
   phone,
   injectSignedInUser,
   blockCloudMutations,
-  getSupabaseProjectId,
 } from "./helpers";
 
 test.describe("sync feedback", () => {
@@ -32,17 +31,20 @@ test.describe("sync feedback", () => {
     await expect(phone(page).getByRole("alert")).toHaveCount(0);
   });
 
-  test("signed-in cloud delete failure shows sync error not success toast", async ({
+  test("signed-in cloud write failure shows sync error not success toast", async ({
     page,
   }) => {
-    test.skip(!getSupabaseProjectId(), "Requires .env with VITE_SUPABASE_PROJECT_ID");
-
     await resetAppState(page);
     await blockCloudMutations(page);
     await injectSignedInUser(page);
 
-    const text = `Cloud delete ${Date.now()}`;
+    const text = `Cloud write ${Date.now()}`;
     await addThought(page, text);
+
+    await phone(page)
+      .getByRole("alert")
+      .getByText("Saving paused for a moment")
+      .waitFor({ state: "visible" });
 
     await openContextMenu(page, text);
     await phone(page)
@@ -51,9 +53,5 @@ test.describe("sync feedback", () => {
       .click();
 
     await expect(page.getByText("Removed")).toHaveCount(0);
-    await phone(page)
-      .getByRole("alert")
-      .getByText("Saving paused for a moment")
-      .waitFor({ state: "visible" });
   });
 });
