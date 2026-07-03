@@ -95,6 +95,23 @@ test.describe("Navigation and modals", () => {
     await expect(phone(page).getByRole("tabpanel")).toHaveCount(1);
   });
 
+  test("feedback from about replaces about sheet and closes fully", async ({
+    page,
+  }) => {
+    await openAbout(page);
+    await page.getByRole("button", { name: "Send feedback" }).click();
+    await page
+      .getByRole("dialog", { name: /Contact · Feedback/ })
+      .waitFor({ state: "visible" });
+    await expect(page.getByText("A vault for forgotten thoughts")).toHaveCount(
+      0,
+    );
+    await expect(page.getByRole("dialog")).toHaveCount(1);
+
+    await page.keyboard.press("Escape");
+    await expect(page.getByRole("dialog")).toHaveCount(0);
+  });
+
   test("context menu blocks tab navigation until dismissed", async ({
     page,
   }) => {
