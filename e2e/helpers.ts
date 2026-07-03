@@ -1,8 +1,73 @@
 import type { Page, Locator } from "@playwright/test";
+import { readFileSync } from "fs";
+import { resolve } from "path";
 
 export const GUEST_INBOX_KEY = "itjima.guest.inbox";
 export const GUEST_ARCHIVE_KEY = "itjima.guest.archive";
 export const GUEST_SCHEDULE_KEY = "itjima.guest.schedules";
+export const TEST_USER_ID = "11111111-1111-4111-8111-111111111111";
+
+export function getSupabaseProjectId(): string | null {
+  try {
+    const env = readFileSync(resolve(process.cwd(), ".env"), "utf8");
+    const m = env.match(/^VITE_SUPABASE_PROJECT_ID=(.+)$/m);
+    return m?.[1]?.trim().replace(/^["']|["']$/g, "") ?? null;
+  } catch {
+    return null;
+  }
+}
+
+export async function injectSignedInUser(page: Page) {
+  const projectId = getSupabaseProjectId();
+  if (!projectId) throw new Error("VITE_SUPABASE_PROJECT_ID missing in .env");
+
+  await page.evaluate(
+    ({ projectId, userId }) => {
+      const expiresAt = Math.floor(Date.now() / 1000) + 3600;
+      localStorage.setItem(
+        `sb-${projectId}-auth-token`,
+        JSON.stringify({
+          access_token: "e2e-test-access-token",
+          refresh_token: "e2e-test-refresh-token",
+          expires_at: expiresAt,
+          expires_in: 3600,
+          token_type: "bearer",
+          user: {
+            id: userId,
+            aud: "authenticated",
+            role: "authenticated",
+            email: "e2e@test.local",
+            email_confirmed_at: new Date().toISOString(),
+            app_metadata: {},
+            user_metadata: {},
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString(),
+          },
+        }),
+      );
+    },
+    { projectId, userId: TEST_USER_ID },
+  );
+  await page.reload();
+  await phone(page).getByRole("link", { name: /^Inbox/ }).waitFor({
+    state: "visible",
+  });
+}
+
+export async function blockCloudMutations(page: Page) {
+  await page.route("**/rest/v1/**", async (route) => {
+    const method = route.request().method();
+    if (method === "DELETE" || method === "PATCH" || method === "POST") {
+      await route.fulfill({
+        status: 500,
+        contentType: "application/json",
+        body: JSON.stringify({ message: "e2e simulated cloud failure", code: "500" }),
+      });
+      return;
+    }
+    await route.continue();
+  });
+}
 
 export function phone(page: Page): Locator {
   return page.locator(".phone-frame");

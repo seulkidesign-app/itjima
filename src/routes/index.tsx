@@ -43,6 +43,7 @@ import { detectDate } from "@/lib/dateDetect";
 import { useT } from "@/lib/i18n";
 import { track } from "@/lib/analytics";
 import { haptic } from "@/lib/haptics";
+import { allCloudSynced } from "@/lib/syncFeedback";
 
 export const Route = createFileRoute("/")({
   component: Inbox,
@@ -212,7 +213,7 @@ function Inbox() {
         end_time: end.toISOString(),
         alarm: alarmMinutesBefore !== null,
       });
-      await schedules.add({
+      const { item: created, cloudSynced: scheduleSynced } = await schedules.add({
         ...payload,
         ...(alarmMinutesBefore !== null
           ? {
@@ -222,7 +223,7 @@ function Inbox() {
             }
           : {}),
       });
-      await inbox.remove(it.id);
+      const inboxSynced = await inbox.remove(it.id);
       track("schedule_created", {
         source:
           focusSortOpen && focusPendingScheduleId === it.id
@@ -233,7 +234,9 @@ function Inbox() {
       setFocusScheduleSheet({ open: false });
       setFocusPendingScheduleId(null);
       if (focusSortOpen) setScheduleCommittedId(it.id);
-      toast.success(t("그때 다시 떠올릴게요", "I'll remember this for then"));
+      if (allCloudSynced(scheduleSynced, inboxSynced)) {
+        toast.success(t("그때 다시 떠올릴게요", "I'll remember this for then"));
+      }
     } catch {
       toast.error(t("일정을 저장하지 못했어요", "Couldn't save schedule"));
     }
@@ -243,8 +246,8 @@ function Inbox() {
     try {
       const payload = archiveFromInbox(it);
       const existing = archive.items;
-      const { item: created } = await archive.add(payload);
-      await inbox.remove(it.id);
+      const { item: created, cloudSynced: archiveSynced } = await archive.add(payload);
+      const inboxSynced = await inbox.remove(it.id);
       track("thought_swiped_archive", { text_length: it.text.length });
 
       const related = buildRevivalHint(created, existing, "archive");
@@ -253,15 +256,17 @@ function Inbox() {
       }
       if (inboxRevival?.sourceId === it.id) setInboxRevival(null);
 
-      showUndoToast(t("기억함에 저장했어요", "Saved"), async () => {
-        await archive.remove(created.id);
-        const { item: restored } = await inbox.add({
-          text: payload.text,
-          images: payload.images,
-          brain_mirror: payload.brain_mirror,
+      if (allCloudSynced(archiveSynced, inboxSynced)) {
+        showUndoToast(t("기억함에 저장했어요", "Saved"), async () => {
+          await archive.remove(created.id);
+          const { item: restored } = await inbox.add({
+            text: payload.text,
+            images: payload.images,
+            brain_mirror: payload.brain_mirror,
+          });
+          markBmEligible(restored.id);
         });
-        markBmEligible(restored.id);
-      });
+      }
     } catch {
       toast.error(t("남기지 못했어요", "Couldn't save it here"));
     }
@@ -269,12 +274,14 @@ function Inbox() {
 
   const moveToDelete = async (it: InboxItem) => {
     try {
-      await inbox.softDelete(it.id);
+      const deleted = await inbox.softDelete(it.id);
       track("thought_swiped_delete", { text_length: it.text.length });
-      showUndoToast(t("지웠어요", "Removed"), async () => {
-        await inbox.update(it.id, { status: "active" } as Partial<InboxItem>);
-        if (isBrainMirrorCandidate(it.text)) markBmEligible(it.id);
-      });
+      if (deleted) {
+        showUndoToast(t("지웠어요", "Removed"), async () => {
+          await inbox.update(it.id, { status: "active" } as Partial<InboxItem>);
+          if (isBrainMirrorCandidate(it.text)) markBmEligible(it.id);
+        });
+      }
     } catch {
       toast.error(t("삭제하지 못했어요", "Couldn't delete"));
     }
@@ -298,44 +305,46 @@ function Inbox() {
       brain_mirror: item.brain_mirror ?? result,
     };
 
-    const { item: created } = await schedules.add(
+    const { item: created, cloudSynced: scheduleSynced } = await schedules.add(
       scheduleFromInbox(item, {
         text,
         start_time: start.toISOString(),
         end_time: end.toISOString(),
       }),
     );
-    await inbox.remove(item.id);
+    const inboxSynced = await inbox.remove(item.id);
     track("schedule_created", {
       source: "brain_mirror",
       text_length: text.length,
     });
 
-    toast.custom(
-      (toastId) => (
-        <div className="flex items-center gap-3 rounded-[24px] bg-ink px-4 py-3 text-white shadow-float">
-          <div className="text-sm">
-            📅 {t("그때를 기억함에 옮겼어요", "Moved to when you'll remember")}
+    if (allCloudSynced(scheduleSynced, inboxSynced)) {
+      toast.custom(
+        (toastId) => (
+          <div className="flex items-center gap-3 rounded-[24px] bg-ink px-4 py-3 text-white shadow-float">
+            <div className="text-sm">
+              📅 {t("그때를 기억함에 옮겼어요", "Moved to when you'll remember")}
+            </div>
+            <button
+              onClick={async () => {
+                await schedules.remove(created.id);
+                const { item: restored } = await inbox.add({
+                  text: snapshot.text,
+                  images: snapshot.images,
+                  brain_mirror: snapshot.brain_mirror,
+                });
+                markBmEligible(restored.id);
+                toast.dismiss(toastId);
+              }}
+              className={toastBtn}
+            >
+              {t("되돌리기", "Undo")}
+            </button>
           </div>
-          <button
-            onClick={async () => {
-              await schedules.remove(created.id);
-              const { item: restored } = await inbox.add({
-                text: snapshot.text,
-                images: snapshot.images,
-                brain_mirror: snapshot.brain_mirror,
-              });
-              markBmEligible(restored.id);
-              toast.dismiss(toastId);
-            }}
-            className={toastBtn}
-          >
-            {t("되돌리기", "Undo")}
-          </button>
-        </div>
-      ),
-      { duration: 8000 },
-    );
+        ),
+        { duration: 8000 },
+      );
+    }
 
     return created.id;
   };
@@ -346,8 +355,10 @@ function Inbox() {
 
   const confirmCleanupDelete = async (ids: string[]) => {
     try {
-      for (const id of ids) await inbox.softDelete(id);
-      toast.success(t("가벼워졌어요", "Feels lighter now"));
+      const results = await Promise.all(ids.map((id) => inbox.softDelete(id)));
+      if (allCloudSynced(...results)) {
+        toast.success(t("가벼워졌어요", "Feels lighter now"));
+      }
     } catch {
       toast.error(t("비우지 못했어요", "Couldn't lighten up"));
     }

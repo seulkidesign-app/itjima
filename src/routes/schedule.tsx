@@ -20,6 +20,7 @@ import {
 } from "@/components/CalendarDragLayer";
 import { EmptyState } from "@/components/EmptyState";
 import { SyncIndicator } from "@/components/SyncIndicator";
+import { allCloudSynced } from "@/lib/syncFeedback";
 import {
   bindInAppReminders,
   clearReminderOffset,
@@ -223,12 +224,12 @@ function Schedule() {
       const dur = e.getTime() - s.getTime();
       const ns = new Date(year, month, day, s.getHours(), s.getMinutes());
       const ne = new Date(ns.getTime() + dur);
-      await update(id, {
+      const moved = await update(id, {
         start_time: ns.toISOString(),
         end_time: ne.toISOString(),
       });
       hapticConfirm();
-      toast.success(t("날짜가 옮겨졌어요", "Date moved"));
+      if (moved) toast.success(t("날짜가 옮겨졌어요", "Date moved"));
     } catch {
       toast.error(t("날짜를 옮기지 못했어요", "Couldn't move date"));
     }
@@ -236,10 +237,10 @@ function Schedule() {
 
   const markDone = async (s: ScheduleItem) => {
     try {
-      await update(s.id, { status: "done" });
+      const done = await update(s.id, { status: "done" });
       hapticConfirm();
       track("schedule_completed", { text_length: s.text.length });
-      toast.success(t("다녀온 기억이에요", "You can let this go"));
+      if (done) toast.success(t("다녀온 기억이에요", "You can let this go"));
     } catch {
       toast.error(t("완료하지 못했어요", "Couldn't mark done"));
     }
@@ -247,16 +248,18 @@ function Schedule() {
 
   const moveDoneToArchive = async (s: ScheduleItem) => {
     try {
-      await archive.add({
+      const { cloudSynced: archiveSynced } = await archive.add({
         text: s.raw_text ?? s.text,
         images: [],
         source_id: s.source_id ?? s.id,
         raw_text: s.raw_text ?? s.text,
         brain_mirror: s.brain_mirror ?? null,
       });
-      await remove(s.id);
+      const scheduleSynced = await remove(s.id);
       if (pins.has(s.id)) togglePin(s.id);
-      toast.success(t("기억함으로 옮겼어요", "Moved to Saved"));
+      if (allCloudSynced(archiveSynced, scheduleSynced)) {
+        toast.success(t("기억함으로 옮겼어요", "Moved to Saved"));
+      }
     } catch {
       toast.error(t("옮기지 못했어요", "Couldn't move"));
     }
@@ -279,9 +282,9 @@ function Schedule() {
     onDisarm: () => disarmReminder(s),
     onDelete: async () => {
       try {
-        await remove(s.id);
+        const deleted = await remove(s.id);
         if (pins.has(s.id)) togglePin(s.id);
-        toast(t("삭제됨", "Deleted"));
+        if (deleted) toast(t("삭제됨", "Deleted"));
       } catch {
         toast.error(t("삭제하지 못했어요", "Couldn't delete"));
       }

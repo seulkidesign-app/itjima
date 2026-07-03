@@ -17,6 +17,7 @@ import { haptic } from "@/lib/haptics";
 import { ArchiveOrganizeSheet } from "@/components/ArchiveOrganizeSheet";
 import { ArchiveMemoryCard } from "@/components/ArchiveMemoryCard";
 import { ArchiveMoveSheet } from "@/components/ArchiveMoveSheet";
+import { allCloudSynced } from "@/lib/syncFeedback";
 import {
   archiveDisplayTitle,
   readArchivePins,
@@ -424,8 +425,9 @@ function Archive() {
   const removeWithUndo = async (it: ArchiveItem) => {
     const snapshot = { ...it };
     try {
-      await remove(it.id);
+      const deleted = await remove(it.id);
       track("archive_deleted", { text_length: it.text.length });
+      if (!deleted) return;
       toast.custom(
         (toastId) => (
           <div className="flex items-center gap-3 rounded-[24px] bg-ink px-4 py-3 text-white shadow-float">
@@ -477,7 +479,7 @@ function Archive() {
               ).toISOString(),
             }
           : { alarm: false };
-      await schedules.add({
+      const { cloudSynced: scheduleSynced } = await schedules.add({
         text,
         start_time: start.toISOString(),
         end_time: end.toISOString(),
@@ -490,10 +492,12 @@ function Archive() {
         brain_mirror: it.brain_mirror ?? null,
         status: "active",
       });
-      await remove(it.id);
+      const archiveSynced = await remove(it.id);
       track("archive_swiped_schedule", { text_length: it.text.length });
       haptic([6, 18, 8]);
-      toast.success(t("그때를 기억해 둘게요", "I'll remember this for then"));
+      if (allCloudSynced(scheduleSynced, archiveSynced)) {
+        toast.success(t("그때를 기억해 둘게요", "I'll remember this for then"));
+      }
       setScheduleItem(null);
     } catch {
       toast.error(t("남기지 못했어요", "Couldn't save it"));

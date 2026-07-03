@@ -482,6 +482,7 @@ function useLocalList<T extends { id: string; created_at: string }>(
           userId,
           item as Record<string, unknown>,
         );
+        if (!cloudSynced) setSyncState("error");
       }
 
       if (table === "inbox") {
@@ -500,15 +501,16 @@ function useLocalList<T extends { id: string; created_at: string }>(
         it.id === id ? { ...it, ...patch } : it,
       );
       writeLS(key, next);
-      if (userId) {
-        await cloudMutate(
-          "update",
-          table,
-          userId,
-          patch as Record<string, unknown>,
-          id,
-        );
-      }
+      if (!userId) return true;
+      const ok = await cloudMutate(
+        "update",
+        table,
+        userId,
+        patch as Record<string, unknown>,
+        id,
+      );
+      if (!ok) setSyncState("error");
+      return ok;
     },
     [key, userId, table],
   );
@@ -517,14 +519,18 @@ function useLocalList<T extends { id: string; created_at: string }>(
     async (id: string) => {
       const next = readLS<T>(key, table).filter((it) => it.id !== id);
       writeLS(key, next);
-      if (userId) {
-        const { error } = await supabase
-          .from(table)
-          .delete()
-          .eq("id", id)
-          .eq("user_id", userId);
-        if (error) console.error(`[sync] delete ${table}`, error.message);
+      if (!userId) return true;
+      const { error } = await supabase
+        .from(table)
+        .delete()
+        .eq("id", id)
+        .eq("user_id", userId);
+      if (error) {
+        console.error(`[sync] delete ${table}`, error.message);
+        setSyncState("error");
+        return false;
       }
+      return true;
     },
     [key, userId, table],
   );
@@ -537,7 +543,7 @@ function useInboxList() {
   const items = list.items.filter((it) => !it.status || it.status === "active");
   const softDelete = useCallback(
     async (id: string) => {
-      await list.update(id, { status: "deleted" } as Partial<InboxItem>);
+      return list.update(id, { status: "deleted" } as Partial<InboxItem>);
     },
     [list],
   );
