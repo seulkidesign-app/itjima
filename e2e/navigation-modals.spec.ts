@@ -94,4 +94,47 @@ test.describe("Navigation and modals", () => {
     await phone(page).getByRole("tab", { name: "List" }).click();
     await expect(phone(page).getByRole("tabpanel")).toHaveCount(1);
   });
+
+  test("context menu blocks tab navigation until dismissed", async ({
+    page,
+  }) => {
+    const text = `Menu overlay ${Date.now()}`;
+    await addThought(page, text);
+    await openContextMenu(page, text);
+
+    await expect(phone(page).getByRole("dialog")).toBeVisible();
+    await expect(page).toHaveURL(/\/$/);
+
+    await phone(page).getByRole("dialog").click({ position: { x: 20, y: 20 } });
+    await expect(phone(page).getByRole("dialog")).toHaveCount(0);
+
+    await phone(page).getByRole("link", { name: /^When/ }).click();
+    await phone(page).getByRole("heading", { name: "When" }).waitFor();
+  });
+
+  test("context menu closes when thought is removed", async ({ page }) => {
+    const text = `Ghost menu ${Date.now()}`;
+    await addThought(page, text);
+    await openContextMenu(page, text);
+
+    await page.evaluate(
+      ({ key, thoughtText }) => {
+        const items = JSON.parse(localStorage.getItem(key) || "[]") as {
+          text: string;
+        }[];
+        localStorage.setItem(
+          key,
+          JSON.stringify(items.filter((i) => i.text !== thoughtText)),
+        );
+        window.dispatchEvent(
+          new CustomEvent("itjima:update", { detail: key }),
+        );
+      },
+      { key: "itjima.guest.inbox", thoughtText: text },
+    );
+
+    await expect(phone(page).getByRole("dialog")).toHaveCount(0);
+    await phone(page).getByRole("link", { name: /^When/ }).click();
+    await phone(page).getByRole("heading", { name: "When" }).waitFor();
+  });
 });

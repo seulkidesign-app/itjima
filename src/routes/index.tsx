@@ -114,6 +114,9 @@ function Inbox() {
   };
 
   const items = inbox.items;
+  const menuItem = menuFor
+    ? items.find((x) => x.id === menuFor)
+    : undefined;
   const syncing = inbox.syncState === "syncing";
   // KakaoTalk-style: oldest at top, newest at bottom
   const itemsAsc = useMemo(() => [...items].slice().reverse(), [items]);
@@ -137,6 +140,19 @@ function Inbox() {
     }
     prevCountRef.current = items.length;
   }, [items.length]);
+
+  useEffect(() => {
+    if (!menuItem && !pasteSheet) return;
+    const scroll = document.getElementById("phone-scroll");
+    const prevOverflow = scroll?.style.overflow ?? "";
+    const prevBody = document.body.style.overflow;
+    if (scroll) scroll.style.overflow = "hidden";
+    document.body.style.overflow = "hidden";
+    return () => {
+      if (scroll) scroll.style.overflow = prevOverflow;
+      document.body.style.overflow = prevBody;
+    };
+  }, [menuItem, pasteSheet]);
 
   const revisitArchiveMemory = (memoryId: string) => {
     setRevivalJumpTarget(memoryId);
@@ -556,9 +572,9 @@ function Inbox() {
       )}
 
       {/* Context menu */}
-      {menuFor && (
+      {menuItem && (
         <div
-          className="absolute inset-0 z-50 flex flex-col"
+          className="fixed inset-0 z-50 flex flex-col"
           role="dialog"
           aria-modal="true"
           onClick={() => setMenuFor(null)}
@@ -568,56 +584,48 @@ function Inbox() {
             className="glass-strong animate-slide-up mx-5 mb-[100px] rounded-[24px] p-2 shadow-float"
             onClick={(e) => e.stopPropagation()}
           >
-            {(() => {
-              const it = items.find((x) => x.id === menuFor);
-              if (!it) return null;
-              return (
-                <>
-                  <MenuItem
-                    icon={<Wind size={18} />}
-                    label={t("가볍게 비우기", "Lighten up")}
-                    onClick={() => {
-                      setMenuFor(null);
-                      if (detectJunk(items).length === 0) {
-                        toast.message(
-                          t(
-                            "지금은 비울 게 없어요",
-                            "Nothing to lighten right now",
-                          ),
-                        );
-                        return;
-                      }
-                      setCleanupReviewOpen(true);
-                    }}
-                  />
-                  <MenuItem
-                    icon={<Calendar size={18} />}
-                    label={t("그때 기억하기", "Remember for then")}
-                    onClick={() => {
-                      setMenuFor(null);
-                      openHomeSchedule(it);
-                    }}
-                  />
-                  <MenuItem
-                    icon={<ArchiveIcon size={18} />}
-                    label={t("기억함에 저장", "Save")}
-                    onClick={() => {
-                      setMenuFor(null);
-                      moveToArchive(it);
-                    }}
-                  />
-                  <MenuItem
-                    icon={<Trash2 size={18} />}
-                    label={t("삭제", "Delete")}
-                    danger
-                    onClick={() => {
-                      setMenuFor(null);
-                      void moveToDelete(it);
-                    }}
-                  />
-                </>
-              );
-            })()}
+            <MenuItem
+              icon={<Wind size={18} />}
+              label={t("가볍게 비우기", "Lighten up")}
+              onClick={() => {
+                setMenuFor(null);
+                if (detectJunk(items).length === 0) {
+                  toast.message(
+                    t(
+                      "지금은 비울 게 없어요",
+                      "Nothing to lighten right now",
+                    ),
+                  );
+                  return;
+                }
+                setCleanupReviewOpen(true);
+              }}
+            />
+            <MenuItem
+              icon={<Calendar size={18} />}
+              label={t("그때 기억하기", "Remember for then")}
+              onClick={() => {
+                setMenuFor(null);
+                openHomeSchedule(menuItem);
+              }}
+            />
+            <MenuItem
+              icon={<ArchiveIcon size={18} />}
+              label={t("기억함에 저장", "Save")}
+              onClick={() => {
+                setMenuFor(null);
+                moveToArchive(menuItem);
+              }}
+            />
+            <MenuItem
+              icon={<Trash2 size={18} />}
+              label={t("삭제", "Delete")}
+              danger
+              onClick={() => {
+                setMenuFor(null);
+                void moveToDelete(menuItem);
+              }}
+            />
           </div>
         </div>
       )}
@@ -625,7 +633,7 @@ function Inbox() {
       {/* Paste sheet */}
       {pasteSheet && (
         <div
-          className="absolute inset-0 z-50 flex flex-col"
+          className="fixed inset-0 z-50 flex flex-col"
           role="dialog"
           aria-modal="true"
           onClick={() => {

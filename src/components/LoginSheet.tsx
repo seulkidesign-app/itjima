@@ -34,7 +34,7 @@ export function LoginSheet({
 
   return (
     <div
-      className="absolute inset-0 z-50 flex flex-col"
+      className="fixed inset-0 z-50 flex flex-col"
       role="dialog"
       aria-modal="true"
       onClick={() => {
