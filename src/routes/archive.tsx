@@ -110,7 +110,7 @@ function Archive() {
   );
   const cardRefs = useRef<Record<string, HTMLDivElement | null>>({});
 
-  const { lenses, ready: lensesReady } = useMemoryLenses(items);
+  const { lenses } = useMemoryLenses(items);
 
   useEffect(() => {
     const h = () => {
@@ -203,8 +203,11 @@ function Archive() {
   }, [searchMeta.hits]);
 
   const filtered = useMemo(() => {
-    let list = q.trim() ? searchMeta.hits.map((h) => h.item) : [...items];
-    if (!q.trim() && groupFilter !== "all") {
+    if (q.trim()) {
+      return searchMeta.hits.map((h) => h.item);
+    }
+    let list = [...items];
+    if (groupFilter !== "all") {
       list = list.filter((it) => groupOf(it.id, it.text) === groupFilter);
     }
     list = [...list].sort((a, b) => {
@@ -509,9 +512,11 @@ function Archive() {
             selecting={selecting}
             pinned={pins.has(it.id)}
             isDragging={isDragging}
-            showSemanticHint={
-              !!q.trim() &&
-              (!!hitById.get(it.id)?.semantic || !!hitById.get(it.id)?.connected)
+            showRecalledHint={
+              !!q.trim() && !!hitById.get(it.id)?.semantic
+            }
+            showLinkedHint={
+              !!q.trim() && !!hitById.get(it.id)?.connected
             }
             allItems={items}
             onToggleExpand={() => toggleExpand(it.id)}
@@ -738,7 +743,6 @@ function Archive() {
               <ArchiveDiscoverySection
                 lenses={lenses}
                 items={items}
-                loading={!lensesReady}
                 onOpenMemory={jumpToMemory}
               />
             )}

@@ -14,7 +14,8 @@ type Props = {
   selecting: boolean;
   pinned: boolean;
   isDragging?: boolean;
-  showSemanticHint?: boolean;
+  showRecalledHint?: boolean;
+  showLinkedHint?: boolean;
   allItems: ArchiveItem[];
   onToggleExpand: () => void;
   onToggleSelect?: () => void;
@@ -32,7 +33,8 @@ export function ArchiveMemoryCard({
   selecting,
   pinned,
   isDragging,
-  showSemanticHint,
+  showRecalledHint,
+  showLinkedHint,
   allItems,
   onToggleExpand,
   onToggleSelect,
@@ -147,7 +149,12 @@ export function ArchiveMemoryCard({
 
             <div className="mt-2 flex items-center gap-2 text-[11px] font-medium text-ink-soft/75">
               <span>{dateLabel}</span>
-              {showSemanticHint && (
+              {showLinkedHint && (
+                <span className="rounded-full bg-ink/[0.06] px-2 py-0.5 text-[10px] text-ink-soft">
+                  {t("연결됨", "linked")}
+                </span>
+              )}
+              {showRecalledHint && !showLinkedHint && (
                 <span className="rounded-full bg-primary/15 px-2 py-0.5 text-[10px] text-ink/80">
                   {t("떠올린 것", "recalled")}
                 </span>

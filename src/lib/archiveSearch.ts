@@ -82,8 +82,9 @@ function cosineTfIdf(
 }
 
 const SEMANTIC_MIN = 0.12;
+const SEMANTIC_STRONG = 0.2;
 /** Expand search only through memories already linked to a direct hit. */
-const CONNECTED_EXPAND_MIN = 0.26;
+const CONNECTED_EXPAND_MIN = 0.28;
 
 export function memorySimilarity(
   a: ArchiveItem,
@@ -149,7 +150,11 @@ export function searchArchiveItems(
   semanticHits.sort((a, b) => b.score - a.score);
 
   const connectedHits = new Map<string, ArchiveSearchHit>();
-  for (const hit of keywordHits.values()) {
+  const expandFrom = [
+    ...keywordHits.values(),
+    ...semanticHits.filter((h) => h.score >= SEMANTIC_STRONG),
+  ];
+  for (const hit of expandFrom) {
     const related = findRelatedArchiveItems(
       hit.item,
       items,
@@ -157,7 +162,10 @@ export function searchArchiveItems(
       CONNECTED_EXPAND_MIN,
     );
     for (const r of related) {
-      if (keywordHits.has(r.item.id) || semanticHits.some((s) => s.item.id === r.item.id)) {
+      if (
+        keywordHits.has(r.item.id) ||
+        semanticHits.some((s) => s.item.id === r.item.id)
+      ) {
         continue;
       }
       const prev = connectedHits.get(r.item.id);
@@ -172,9 +180,15 @@ export function searchArchiveItems(
 
   const hits = [
     ...keywordHits.values(),
-    ...semanticHits,
     ...connectedHits.values(),
-  ];
+    ...semanticHits.filter((h) => !connectedHits.has(h.item.id)),
+  ].sort((a, b) => {
+    const rank = (h: ArchiveSearchHit) =>
+      h.keyword ? 0 : h.connected ? 1 : 2;
+    const dr = rank(a) - rank(b);
+    if (dr !== 0) return dr;
+    return b.score - a.score;
+  });
   return {
     hits,
     usedSemantic: semanticHits.length > 0,

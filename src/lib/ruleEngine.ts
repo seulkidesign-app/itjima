@@ -39,7 +39,7 @@ function hasMultipleIntentions(text: string): boolean {
   );
 }
 
-/** Rule Engine — first gate before any AI call (see PRODUCT_ROADMAP.md). */
+/** Rule Engine — first gate before reflection (see PRODUCT_ROADMAP.md). */
 export function analyzeThought(text: string): ThoughtAnalysis {
   const trimmed = text.trim();
   const meaningful = trimmed.replace(/[\s\p{P}\p{S}]/gu, "");
@@ -133,12 +133,18 @@ export function analyzeThought(text: string): ThoughtAnalysis {
   };
 }
 
-/** Whether Brain Mirror (Small AI) should run for this thought. */
+/** Whether Brain Mirror should run for this thought. */
 export function shouldCallBrainMirror(text: string): boolean {
   const trimmed = text.trim();
   if (trimmed.length < 2) return false;
+
+  const analysis = analyzeThought(trimmed);
+  if (analysis.isJunk) return false;
+  if (analysis.needsBrainMirror) return true;
+
   const newlineCount = (trimmed.match(/\n/g) || []).length;
-  if (newlineCount >= 2) return true;
   const meaningful = trimmed.replace(/[\s\p{P}\p{S}]/gu, "");
-  return meaningful.length >= 50;
+  if (newlineCount >= 2 && meaningful.length >= 24) return true;
+
+  return false;
 }

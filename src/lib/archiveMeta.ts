@@ -4,11 +4,9 @@ const TITLE_KEY = "itjima.archive.titles";
 const VISIT_KEY = "itjima.archive.visits";
 const REVIVAL_KEY = "itjima.archive.revival";
 
-export type RevivalHint = {
-  newId: string;
-  relatedIds: string[];
-  at: number;
-};
+import type { RevivalHint } from "@/lib/memoryRevival";
+
+export type { RevivalHint };
 
 function readJSON<T>(key: string, fallback: T): T {
   if (typeof window === "undefined") return fallback;

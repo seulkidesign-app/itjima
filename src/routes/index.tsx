@@ -1,4 +1,4 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useRef, useState, useMemo } from "react";
 import { toast } from "sonner";
 import {
@@ -25,7 +25,12 @@ import {
 } from "@/lib/brainMirror";
 import { archiveFromInbox, scheduleFromInbox } from "@/lib/thoughtProvenance";
 import { setRevivalHint } from "@/lib/archiveMeta";
-import { findStronglyRelatedMemories } from "@/lib/memoryDiscovery";
+import {
+  buildRevivalHint,
+  setRevivalJumpTarget,
+  type RevivalHint,
+} from "@/lib/memoryRevival";
+import { MemoryRevivalHint } from "@/components/MemoryRevivalHint";
 import {
   useInbox,
   useSchedules,
@@ -46,6 +51,7 @@ export const Route = createFileRoute("/")({
 
 function Inbox() {
   const t = useT();
+  const navigate = useNavigate();
   const inbox = useInbox();
   const schedules = useSchedules();
   const archive = useArchive();
@@ -72,6 +78,7 @@ function Inbox() {
   } | null>(null);
   const [restorePasteText, setRestorePasteText] = useState<string | null>(null);
   const [swipeOpenId, setSwipeOpenId] = useState<string | null>(null);
+  const [inboxRevival, setInboxRevival] = useState<RevivalHint | null>(null);
   const [bmEligibleIds, setBmEligibleIds] = useState<Set<string>>(
     () => new Set(),
   );
@@ -129,8 +136,11 @@ function Inbox() {
     prevCountRef.current = items.length;
   }, [items.length]);
 
-  const toastBtn =
-    "touch-target shrink-0 rounded-full bg-primary px-4 text-xs font-bold text-ink";
+  const revisitArchiveMemory = (memoryId: string) => {
+    setRevivalJumpTarget(memoryId);
+    haptic(4);
+    void navigate({ to: "/archive" });
+  };
 
   const showUndoToast = (
     message: string,
@@ -219,13 +229,9 @@ function Inbox() {
       await inbox.remove(it.id);
       track("thought_swiped_archive", { text_length: it.text.length });
 
-      const related = findStronglyRelatedMemories(created, existing);
-      if (related.length > 0) {
-        setRevivalHint({
-          newId: created.id,
-          relatedIds: related.map((r) => r.item.id),
-          at: Date.now(),
-        });
+      const related = buildRevivalHint(created, existing, "archive");
+      if (related) {
+        setRevivalHint(related);
       }
 
       showUndoToast(t("기억함에 남겨뒀어요", "Safely kept here"), async () => {
@@ -339,6 +345,14 @@ function Inbox() {
       if (isBrainMirrorCandidate(text)) {
         markBmEligible(created.id);
       }
+
+      const revivalPool = [
+        ...archive.items,
+        ...inbox.items.filter((i) => i.id !== created.id),
+      ];
+      const revival = buildRevivalHint(created, revivalPool, "inbox");
+      if (revival) setInboxRevival(revival);
+
       track("thought_created", {
         text_length: text.length,
         has_images: images.length > 0,
@@ -503,7 +517,8 @@ function Inbox() {
                           inbox={inbox}
                           eligible={
                             bmEligibleIds.has(it.id) &&
-                            isBrainMirrorCandidate(it.text)
+                            isBrainMirrorCandidate(it.text) &&
+                            (Boolean(it.brain_mirror) || it.id === newestId)
                           }
                           onAutoAct={autoScheduleFromMirror}
                           onCancelAct={cancelMirrorSchedule}

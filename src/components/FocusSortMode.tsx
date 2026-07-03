@@ -27,6 +27,7 @@ import {
   swipeRotation,
   swipeOpacity,
 } from "@/lib/swipePhysics";
+import { BrainMirrorReflectionBody } from "@/components/BrainMirrorReflection";
 
 type Props = {
   open: boolean;
@@ -55,7 +56,6 @@ function sortOldestFirst(list: InboxItem[]) {
 function DeckCard({ item }: { item: InboxItem }) {
   const t = useT();
   const bm = item.brain_mirror;
-  const interpretive = bm?.suggestedAction?.trim();
 
   return (
     <>
@@ -74,23 +74,17 @@ function DeckCard({ item }: { item: InboxItem }) {
       <p className="whitespace-pre-wrap text-[20px] font-semibold leading-[1.72] tracking-[-0.025em] text-ink">
         {item.text || t("(이미지만)", "(image only)")}
       </p>
-      {bm?.title && (
-        <div className="mt-6 border-t border-dashed border-ink/12 pt-4">
-          <p className="text-[15px] font-semibold text-ink/80">{bm.title}</p>
-          {bm.items.length > 1 && (
-            <ul className="mt-2 space-y-1.5">
-              {bm.items.slice(0, 4).map((line) => (
-                <li key={line} className="text-[14px] leading-relaxed text-ink/65">
-                  · {line}
-                </li>
-              ))}
-            </ul>
-          )}
-          {interpretive && (
-            <p className="mt-3 text-[13px] leading-relaxed text-ink-soft">
-              {interpretive}
-            </p>
-          )}
+      {bm?.title && bm.items.length > 0 && (
+        <div
+          className="mt-6 border-t border-ink/[0.07] pt-4"
+          role="complementary"
+          aria-label="Reflection"
+        >
+          <BrainMirrorReflectionBody
+            result={bm}
+            showDateHint={Boolean(bm.suggestedDateText?.trim())}
+            dateLabel={bm.suggestedDateText?.trim() || null}
+          />
         </div>
       )}
     </>

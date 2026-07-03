@@ -1,4 +1,4 @@
-/** Brain Mirror v0.1 — AI가 먼저 이해하고 보여주는 카드 */
+/** Brain Mirror — quiet reflection of messy thoughts into readable form. */
 import { shouldCallBrainMirror } from "@/lib/ruleEngine";
 
 export type BrainMirrorCore = {
@@ -18,12 +18,12 @@ export type BrainMirrorResult = BrainMirrorCore & {
 
 export function suggestedActionForDate(dateText: string): string {
   if (!dateText) return "";
-  if (dateText === "내일") return "내일과 관련된 생각 같아요.";
-  if (dateText === "오늘") return "오늘과 관련된 생각 같아요.";
-  return `${dateText}와 관련된 생각 같아요.`;
+  if (dateText === "내일") return "내일이에요.";
+  if (dateText === "오늘") return "오늘이에요.";
+  return `${dateText}이에요.`;
 }
 
-/** 50+ chars or 2+ line breaks — Brain Mirror display / AI trigger. */
+/** Multi-intent or structured thoughts worth reflecting. */
 export function isBrainMirrorCandidate(text: string): boolean {
   return shouldCallBrainMirror(text);
 }
@@ -124,9 +124,7 @@ export function mockBrainMirror(text: string): BrainMirrorResult | null {
       title: hasBirthday ? "엄마 생일 준비 🎂" : "챙길 것들",
       items,
       suggestedDateText: dateText,
-      suggestedAction: dateText
-        ? suggestedActionForDate(dateText)
-        : "이렇게 기억해둘게요.",
+      suggestedAction: dateText ? suggestedActionForDate(dateText) : "",
       confidence: 0.88,
     });
   }
@@ -143,17 +141,15 @@ export function mockBrainMirror(text: string): BrainMirrorResult | null {
   const title =
     text.length > 24
       ? `${text.slice(0, 22).trim()}…`
-      : text.trim() || "이해한 내용";
+      : text.trim();
+
+  if (items.length === 0) return null;
 
   return mockSnapshot({
     title,
     items,
     suggestedDateText: dateText,
-    suggestedAction: dateText
-      ? suggestedActionForDate(dateText)
-      : items.length > 0
-        ? "이렇게 기억해둘게요."
-        : "잊지 않게 제가 기억할게요.",
-    confidence: 0.7,
+    suggestedAction: dateText ? suggestedActionForDate(dateText) : "",
+    confidence: items.length >= 2 ? 0.78 : 0.68,
   });
 }

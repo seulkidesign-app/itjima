@@ -1,178 +1,25 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { motion } from "framer-motion";
 import type { BrainMirrorResult } from "@/lib/brainMirror";
 import { isBrainMirrorCandidate } from "@/lib/brainMirror";
 import { fetchBrainMirror } from "@/lib/brainMirrorApi";
 import { setInboxBrainMirror, useInbox, type InboxItem } from "@/lib/store";
 import { haptic, tap } from "@/lib/haptics";
-import { SPRING_DEFAULT } from "@/lib/motion";
-import { useT } from "@/lib/i18n";
+import {
+  BrainMirrorReflectionActions,
+  BrainMirrorReflectionBody,
+  BrainMirrorReflectionShell,
+  BrainMirrorRestoreLink,
+} from "@/components/BrainMirrorReflection";
 
-const APPEAR_DELAY_MS = 1500;
+const APPEAR_DELAY_MS = 1100;
+const MIN_CONFIDENCE = 0.62;
+const FETCH_TIMEOUT_MS = 14_000;
 
 const SK = {
   attempted: (id: string) => `itjima.bm.attempted.${id}`,
   dismissed: (id: string) => `itjima.bm.dismissed.${id}`,
   schedule: (id: string) => `itjima.bm.schedule.${id}`,
 };
-
-function BrainMirrorQuietView({
-  result,
-  inline,
-  showDateOffer,
-  dateLabel,
-  acting,
-  onAcceptDate,
-  onKeepHere,
-  onDismiss,
-}: {
-  result: BrainMirrorResult;
-  inline?: boolean;
-  showDateOffer?: boolean;
-  dateLabel?: string | null;
-  acting?: boolean;
-  onAcceptDate?: () => void;
-  onKeepHere?: () => void;
-  onDismiss?: () => void;
-}) {
-  const t = useT();
-  const interpretive =
-    result.suggestedAction?.trim() ||
-    (result.items.length === 1
-      ? t(`${result.items[0]} 같아요.`, `Sounds like ${result.items[0]}.`)
-      : null);
-
-  const actions = (
-    <div className="mt-2.5 flex flex-col gap-1.5">
-      {showDateOffer && (
-        <>
-          {dateLabel && (
-            <p className="text-[11px] font-medium text-ink-soft">
-              📅 {dateLabel}
-            </p>
-          )}
-          <button
-            type="button"
-            disabled={acting}
-            onClick={() => {
-              tap();
-              onAcceptDate?.();
-            }}
-            className="touch-press w-full rounded-full bg-ink py-2.5 text-[12px] font-semibold text-white disabled:opacity-50"
-          >
-            {t("그때 기억하기", "Remember for then")}
-          </button>
-          <button
-            type="button"
-            disabled={acting}
-            onClick={() => {
-              tap();
-              onKeepHere?.();
-            }}
-            className="touch-press w-full rounded-full bg-ink/[0.06] py-2.5 text-[12px] font-semibold text-ink disabled:opacity-50"
-          >
-            {t("여기에 둘게요", "Keep it here")}
-          </button>
-        </>
-      )}
-      <button
-        type="button"
-        onClick={() => {
-          tap();
-          onDismiss?.();
-        }}
-        className="touch-press py-1 text-[11px] font-medium text-ink-soft/80"
-      >
-        {t("숨기기", "Hide")}
-      </button>
-    </div>
-  );
-
-  if (inline) {
-    return (
-      <motion.div
-        className="mt-2 border-t border-dashed border-ink/15 pt-2"
-        initial={{ opacity: 0, y: 4 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ ...SPRING_DEFAULT, duration: 0.2 }}
-      >
-        <p className="text-[13px] font-semibold leading-snug text-ink/85">
-          {result.title}
-        </p>
-        {result.items.length > 1 && (
-          <ul className="mt-1 space-y-0.5">
-            {result.items.slice(0, 4).map((line) => (
-              <li
-                key={line}
-                className="text-[12px] leading-relaxed text-ink/70"
-              >
-                · {line}
-              </li>
-            ))}
-          </ul>
-        )}
-        {interpretive && (
-          <p className="mt-1.5 text-[12px] leading-relaxed text-ink-soft">
-            {interpretive}
-          </p>
-        )}
-        {actions}
-      </motion.div>
-    );
-  }
-
-  return (
-    <motion.div
-      className="mt-3 rounded-[24px] bg-ink px-[22px] py-5 text-white shadow-card"
-      initial={{ opacity: 0, scale: 0.96 }}
-      animate={{ opacity: 1, scale: 1 }}
-      transition={{ ...SPRING_DEFAULT, duration: 0.15 }}
-    >
-      <div className="border-b border-dashed border-white/15 pb-3" />
-      <p className="mt-3 text-[16px] font-semibold leading-[1.7] text-white">
-        {result.title}
-      </p>
-      {result.items.length > 1 && (
-        <ul className="mt-3 space-y-2">
-          {result.items.map((line) => (
-            <li key={line} className="text-[15px] leading-[1.8] text-white/85">
-              {line}
-            </li>
-          ))}
-        </ul>
-      )}
-      {interpretive && (
-        <p className="mt-4 text-[14px] leading-[1.7] text-white/65">
-          {interpretive}
-        </p>
-      )}
-      {actions}
-    </motion.div>
-  );
-}
-
-function BrainMirrorThinking({ inline }: { inline?: boolean }) {
-  const t = useT();
-  if (inline) {
-    return (
-      <div
-        className="mt-2 border-t border-dashed border-ink/15 pt-2"
-        role="status"
-        aria-live="polite"
-      >
-        <div className="skeleton-shimmer h-3 w-2/3 rounded-full" />
-        <div className="skeleton-shimmer mt-1.5 h-3 w-1/2 rounded-full" />
-      </div>
-    );
-  }
-  return (
-    <div className="mt-3 rounded-[24px] bg-ink/5 px-4 py-3" role="status">
-      <p className="text-[12px] text-ink-soft">
-        {t("잠깐만요…", "Just a moment…")}
-      </p>
-    </div>
-  );
-}
 
 type InboxHandle = Pick<ReturnType<typeof useInbox>, "update">;
 
@@ -196,7 +43,9 @@ export function BrainMirrorPanel({
   onMirrorMissed?: (item: InboxItem) => void;
   variant?: "inline" | "card";
 }) {
-  const [phase, setPhase] = useState<"idle" | "thinking" | "ready" | "hidden">(
+  const compact = variant === "inline";
+
+  const [phase, setPhase] = useState<"idle" | "pending" | "ready" | "hidden">(
     () => {
       if (sessionStorage.getItem(SK.dismissed(item.id))) return "hidden";
       if (
@@ -208,30 +57,49 @@ export function BrainMirrorPanel({
       return "idle";
     },
   );
+  const [visible, setVisible] = useState(() => {
+    if (sessionStorage.getItem(SK.dismissed(item.id))) return false;
+    return Boolean(
+      item.brain_mirror && normalizeStored(item.brain_mirror).items.length,
+    );
+  });
   const [result, setResult] = useState<BrainMirrorResult | null>(() =>
     item.brain_mirror ? normalizeStored(item.brain_mirror) : null,
   );
   const [acting, setActing] = useState(false);
   const fetchGen = useRef(0);
+  const createdAt = useRef(+new Date(item.created_at));
 
   const dismiss = useCallback(() => {
     sessionStorage.setItem(SK.dismissed(item.id), "1");
-    setPhase("hidden");
+    setVisible(false);
+    window.setTimeout(() => setPhase("hidden"), 180);
+  }, [item.id]);
+
+  const restore = useCallback(() => {
+    sessionStorage.removeItem(SK.dismissed(item.id));
+    setPhase("ready");
+    setVisible(true);
+    tap();
   }, [item.id]);
 
   const runAnalysis = useCallback(() => {
     if (!item.text.trim()) return;
     const gen = ++fetchGen.current;
     sessionStorage.setItem(SK.attempted(item.id), "1");
-    setPhase("thinking");
+    setPhase("pending");
 
     const abortController = new AbortController();
+    const timeoutId = window.setTimeout(
+      () => abortController.abort(),
+      FETCH_TIMEOUT_MS,
+    );
     let finished = false;
 
     const cleanup = () => {
       finished = true;
       abortController.abort();
-      window.clearTimeout(delayTimer);
+      window.clearTimeout(timeoutId);
     };
 
     const hideSilently = (offerDateFallback = false) => {
@@ -241,56 +109,59 @@ export function BrainMirrorPanel({
       if (offerDateFallback) onMirrorMissed?.(item);
     };
 
-    const showResult = (mirror: BrainMirrorResult) => {
+    const reveal = (mirror: BrainMirrorResult) => {
       if (finished || fetchGen.current !== gen) return;
-      if (!mirror.items.length) {
-        hideSilently(true);
-        return;
-      }
       cleanup();
       setResult(mirror);
       setPhase("ready");
+      const elapsed = Date.now() - createdAt.current;
+      const wait = Math.max(0, APPEAR_DELAY_MS - elapsed);
+      window.setTimeout(() => {
+        if (fetchGen.current !== gen) return;
+        setVisible(true);
+        haptic([3, 8, 4]);
+      }, wait);
       void setInboxBrainMirror(inbox, item.id, mirror);
-      haptic([4, 10, 6]);
     };
 
-    const delayTimer = window.setTimeout(() => {
-      void (async () => {
+    void (async () => {
+      try {
+        const mirror = await fetchBrainMirror(item.text, abortController.signal);
         if (finished || fetchGen.current !== gen) return;
-        try {
-          const mirror = await fetchBrainMirror(
-            item.text,
-            abortController.signal,
-          );
-          if (finished || fetchGen.current !== gen) return;
-          if (!mirror) {
-            hideSilently(true);
-            return;
-          }
-          showResult(mirror);
-        } catch {
-          if (!finished && fetchGen.current === gen) hideSilently(true);
+        if (!mirror?.items.length || mirror.confidence < MIN_CONFIDENCE) {
+          hideSilently(true);
+          return;
         }
-      })();
-    }, APPEAR_DELAY_MS);
+        reveal(mirror);
+      } catch {
+        if (!finished && fetchGen.current === gen) hideSilently(true);
+      }
+    })();
 
     return cleanup;
   }, [inbox, item, onMirrorMissed]);
 
   useEffect(() => {
+    createdAt.current = +new Date(item.created_at);
+  }, [item.id, item.created_at]);
+
+  useEffect(() => {
     if (sessionStorage.getItem(SK.dismissed(item.id))) {
       setPhase("hidden");
+      setVisible(false);
       return;
     }
 
     if (item.brain_mirror) {
       const stored = normalizeStored(item.brain_mirror);
-      if (!stored.items.length) {
+      if (!stored.items.length || stored.confidence < MIN_CONFIDENCE) {
         setPhase("hidden");
+        setVisible(false);
         return;
       }
       setResult(stored);
       setPhase("ready");
+      setVisible(true);
       return;
     }
 
@@ -310,15 +181,15 @@ export function BrainMirrorPanel({
       if (scheduleId) {
         sessionStorage.setItem(SK.schedule(item.id), scheduleId);
         haptic([4, 10, 6]);
-        setPhase("hidden");
+        dismiss();
       }
     } finally {
       setActing(false);
     }
   };
 
-  if (phase === "thinking") {
-    return <BrainMirrorThinking inline={variant === "inline"} />;
+  if (phase === "hidden" && result?.items.length) {
+    return <BrainMirrorRestoreLink onRestore={restore} />;
   }
 
   if (phase !== "ready" || !result?.items.length) return null;
@@ -328,16 +199,28 @@ export function BrainMirrorPanel({
     shouldOfferDate(result) && !alreadyScheduled;
 
   return (
-    <BrainMirrorQuietView
-      result={result}
-      inline={variant === "inline"}
-      showDateOffer={showDateOffer}
-      dateLabel={result.suggestedDateText?.trim() || null}
-      acting={acting}
-      onAcceptDate={() => void acceptDate()}
-      onKeepHere={dismiss}
-      onDismiss={dismiss}
-    />
+    <BrainMirrorReflectionShell visible={visible} compact={compact}>
+      <BrainMirrorReflectionBody
+        result={result}
+        compact={compact}
+        showDateHint={showDateOffer}
+        dateLabel={result.suggestedDateText?.trim() || null}
+      />
+      <BrainMirrorReflectionActions
+        compact={compact}
+        showDateOffer={showDateOffer}
+        acting={acting}
+        onAcceptDate={() => {
+          tap();
+          void acceptDate();
+        }}
+        onKeepHere={dismiss}
+        onDismiss={() => {
+          tap();
+          dismiss();
+        }}
+      />
+    </BrainMirrorReflectionShell>
   );
 }
 

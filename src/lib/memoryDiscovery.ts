@@ -13,6 +13,25 @@ const RECURRING_MIN_DOCS = 3;
 const RECENT_DAYS = 14;
 const GROWING_WINDOW_MS = 30 * 24 * 60 * 60 * 1000;
 
+const STOP_TOKENS = new Set([
+  "the",
+  "and",
+  "for",
+  "that",
+  "this",
+  "with",
+  "have",
+  "from",
+  "will",
+  "내일",
+  "오늘",
+  "그리고",
+  "하고",
+  "해서",
+  "하기",
+  "하는",
+]);
+
 export type MemoryLensKind =
   | "revisited"
   | "connected"
@@ -26,17 +45,15 @@ export type MemoryLens = {
   labelKo: string;
   labelEn: string;
   memoryIds: string[];
+  confidence: number;
 };
 
-const KIND_LABEL: Record<
-  MemoryLensKind,
-  { ko: string; en: string }
-> = {
+const KIND_WHISPER: Record<MemoryLensKind, { ko: string; en: string }> = {
   revisited: { ko: "자주 떠올리는", en: "Often revisited" },
   connected: { ko: "최근 이어진", en: "Recently connected" },
   similar: { ko: "닮은 생각", en: "Similar threads" },
-  recurring: { ko: "반복되는 주제", en: "Recurring themes" },
-  growing: { ko: "자라는 관심", en: "Growing interests" },
+  recurring: { ko: "반복되는", en: "Recurring" },
+  growing: { ko: "요즘 늘 떠오르는", en: "Growing lately" },
 };
 
 function sharedThemeLabel(
@@ -48,7 +65,7 @@ function sharedThemeLabel(
   for (const it of members) {
     const seen = new Set<string>();
     for (const t of tokenize(archiveDocument(it))) {
-      if (t.length < 2 || seen.has(t)) continue;
+      if (t.length < 2 || seen.has(t) || STOP_TOKENS.has(t)) continue;
       seen.add(t);
       docFreq.set(t, (docFreq.get(t) ?? 0) + 1);
     }
@@ -69,11 +86,9 @@ function lensLabel(
   members: ArchiveItem[],
 ): { labelKo: string; labelEn: string } {
   const theme = sharedThemeLabel(members);
-  const base = KIND_LABEL[kind];
-  if (theme) {
-    return { labelKo: theme.ko, labelEn: theme.en };
-  }
-  return { labelKo: base.ko, labelEn: base.en };
+  if (theme) return theme;
+  const whisper = KIND_WHISPER[kind];
+  return { labelKo: whisper.ko, labelEn: whisper.en };
 }
 
 function idsKey(ids: string[]) {
@@ -97,6 +112,68 @@ function clusterAvgSim(members: ArchiveItem[], corpus: ArchiveItem[]): number {
   return n ? sum / n : 0;
 }
 
+function membersFromIds(ids: string[], items: ArchiveItem[]) {
+  return ids
+    .map((id) => items.find((x) => x.id === id))
+    .filter(Boolean) as ArchiveItem[];
+}
+
+function growCluster(
+  seedIds: string[],
+  items: ArchiveItem[],
+  minSim: number,
+  maxSize = 6,
+): string[] {
+  const cluster = new Set(seedIds);
+
+  for (let round = 0; round < maxSize && cluster.size < maxSize; round++) {
+    let best: { id: string; score: number } | null = null;
+    for (const it of items) {
+      if (cluster.has(it.id)) continue;
+      let linkSum = 0;
+      let links = 0;
+      for (const cid of cluster) {
+        const other = items.find((x) => x.id === cid);
+        if (!other) continue;
+        const sim = memorySimilarity(it, other, items);
+        if (sim >= minSim) {
+          linkSum += sim;
+          links++;
+        }
+      }
+      const need = cluster.size >= 2 ? 2 : 1;
+      if (links >= need) {
+        const avg = linkSum / links;
+        if (!best || avg > best.score) best = { id: it.id, score: avg };
+      }
+    }
+    if (!best || best.score < minSim) break;
+    cluster.add(best.id);
+  }
+
+  return [...cluster].slice(0, maxSize);
+}
+
+function makeLens(
+  kind: MemoryLensKind,
+  ids: string[],
+  items: ArchiveItem[],
+  confidence: number,
+): MemoryLens | null {
+  if (ids.length < 2) return null;
+  const members = membersFromIds(ids, items);
+  if (members.length < 2) return null;
+  const { labelKo, labelEn } = lensLabel(kind, members);
+  return {
+    id: `${kind}-${idsKey(ids)}`,
+    kind,
+    labelKo,
+    labelEn,
+    memoryIds: ids,
+    confidence,
+  };
+}
+
 function buildRevisitedLens(
   items: ArchiveItem[],
   visits: Record<string, number>,
@@ -107,26 +184,17 @@ function buildRevisitedLens(
   if (!ranked.length) return null;
 
   const seed = ranked[0];
-  const related = findRelatedArchiveItems(seed, items, 8).filter(
-    (h) => h.score >= STRONG_LINK,
+  const related = findRelatedArchiveItems(seed, items, 8, STRONG_LINK);
+  const ids = growCluster(
+    [seed.id, ...related.map((h) => h.item.id).filter((id) => id !== seed.id)],
+    items,
+    STRONG_LINK,
+    5,
   );
-  const ids = [
-    seed.id,
-    ...related.map((h) => h.item.id).filter((id) => id !== seed.id),
-  ].slice(0, 5);
-  if (ids.length < 2) return null;
-
-  const members = ids
-    .map((id) => items.find((x) => x.id === id))
-    .filter(Boolean) as ArchiveItem[];
-  const { labelKo, labelEn } = lensLabel("revisited", members);
-  return {
-    id: `revisited-${idsKey(ids)}`,
-    kind: "revisited",
-    labelKo,
-    labelEn,
-    memoryIds: ids,
-  };
+  const members = membersFromIds(ids, items);
+  const conf = clusterAvgSim(members, items);
+  if (conf < STRONG_LINK * 0.9) return null;
+  return makeLens("revisited", ids, items, conf);
 }
 
 function buildConnectedLens(items: ArchiveItem[]): MemoryLens | null {
@@ -146,46 +214,39 @@ function buildConnectedLens(items: ArchiveItem[]): MemoryLens | null {
   }
   if (!bestPair) return null;
 
-  const ids = bestPair.map((it) => it.id);
-  const { labelKo, labelEn } = lensLabel("connected", bestPair);
-  return {
-    id: `connected-${idsKey(ids)}`,
-    kind: "connected",
-    labelKo,
-    labelEn,
-    memoryIds: ids,
-  };
+  const ids = growCluster(
+    bestPair.map((it) => it.id),
+    items,
+    STRONG_LINK,
+    5,
+  );
+  return makeLens("connected", ids, items, bestScore);
 }
 
 function buildSimilarLens(items: ArchiveItem[]): MemoryLens | null {
-  const pairs: { ids: string[]; score: number; members: ArchiveItem[] }[] =
-    [];
   const cap = Math.min(items.length, 80);
   const slice = items.slice(0, cap);
 
+  let bestPair: [ArchiveItem, ArchiveItem] | null = null;
+  let bestScore = 0;
   for (let i = 0; i < slice.length; i++) {
     for (let j = i + 1; j < slice.length; j++) {
       const score = memorySimilarity(slice[i], slice[j], items);
-      if (score >= VERY_STRONG_LINK) {
-        pairs.push({
-          ids: [slice[i].id, slice[j].id],
-          score,
-          members: [slice[i], slice[j]],
-        });
+      if (score >= VERY_STRONG_LINK && score > bestScore) {
+        bestScore = score;
+        bestPair = [slice[i], slice[j]];
       }
     }
   }
-  if (!pairs.length) return null;
-  pairs.sort((a, b) => b.score - a.score);
-  const top = pairs[0];
-  const { labelKo, labelEn } = lensLabel("similar", top.members);
-  return {
-    id: `similar-${idsKey(top.ids)}`,
-    kind: "similar",
-    labelKo,
-    labelEn,
-    memoryIds: top.ids,
-  };
+  if (!bestPair) return null;
+
+  const ids = growCluster(
+    bestPair.map((it) => it.id),
+    items,
+    VERY_STRONG_LINK * 0.92,
+    6,
+  );
+  return makeLens("similar", ids, items, bestScore);
 }
 
 function buildRecurringLens(items: ArchiveItem[]): MemoryLens | null {
@@ -193,7 +254,7 @@ function buildRecurringLens(items: ArchiveItem[]): MemoryLens | null {
   for (const it of items) {
     const seen = new Set<string>();
     for (const t of tokenize(archiveDocument(it))) {
-      if (t.length < 2 || seen.has(t)) continue;
+      if (t.length < 2 || seen.has(t) || STOP_TOKENS.has(t)) continue;
       seen.add(t);
       if (!tokenDocs.has(t)) tokenDocs.set(t, new Set());
       tokenDocs.get(t)!.add(it.id);
@@ -205,20 +266,12 @@ function buildRecurringLens(items: ArchiveItem[]): MemoryLens | null {
     .sort((a, b) => b[1].size - a[1].size);
 
   for (const [, idSet] of candidates) {
-    const members = [...idSet]
-      .map((id) => items.find((x) => x.id === id))
-      .filter(Boolean) as ArchiveItem[];
+    const members = membersFromIds([...idSet], items);
     if (members.length < RECURRING_MIN_DOCS) continue;
-    if (clusterAvgSim(members, items) < STRONG_LINK * 0.85) continue;
+    const conf = clusterAvgSim(members, items);
+    if (conf < STRONG_LINK * 0.85) continue;
     const ids = members.slice(0, 6).map((m) => m.id);
-    const { labelKo, labelEn } = lensLabel("recurring", members);
-    return {
-      id: `recurring-${idsKey(ids)}`,
-      kind: "recurring",
-      labelKo,
-      labelEn,
-      memoryIds: ids,
-    };
+    return makeLens("recurring", ids, items, conf);
   }
   return null;
 }
@@ -242,7 +295,9 @@ function buildGrowingLens(items: ArchiveItem[]): MemoryLens | null {
   for (const it of recent) {
     const seen = new Set<string>();
     for (const t of tokenize(archiveDocument(it))) {
-      if (t.length < 2 || seen.has(t) || olderTokens.has(t)) continue;
+      if (t.length < 2 || seen.has(t) || olderTokens.has(t) || STOP_TOKENS.has(t)) {
+        continue;
+      }
       seen.add(t);
       recentTokens.set(t, (recentTokens.get(t) ?? 0) + 1);
     }
@@ -258,17 +313,11 @@ function buildGrowingLens(items: ArchiveItem[]): MemoryLens | null {
     tokenize(archiveDocument(it)).includes(token),
   );
   if (members.length < 2) return null;
-  if (clusterAvgSim(members, items) < STRONG_LINK * 0.85) return null;
+  const conf = clusterAvgSim(members, items);
+  if (conf < STRONG_LINK * 0.85) return null;
 
   const ids = members.slice(0, 5).map((m) => m.id);
-  const { labelKo, labelEn } = lensLabel("growing", members);
-  return {
-    id: `growing-${idsKey(ids)}`,
-    kind: "growing",
-    labelKo,
-    labelEn,
-    memoryIds: ids,
-  };
+  return makeLens("growing", ids, items, conf);
 }
 
 /** Ephemeral discovery lenses — references only, never duplicates memories. */
@@ -286,23 +335,19 @@ export function discoverMemoryLenses(
     () => buildGrowingLens(items),
   ];
 
-  const seen = new Set<string>();
+  const seenSets = new Set<string>();
   const lenses: MemoryLens[] = [];
-  const usedKinds = new Set<MemoryLensKind>();
 
   for (const build of builders) {
     const lens = build();
     if (!lens || lens.memoryIds.length < 2) continue;
     const key = idsKey(lens.memoryIds);
-    if (seen.has(key)) continue;
-    if (usedKinds.has(lens.kind)) continue;
-    seen.add(key);
-    usedKinds.add(lens.kind);
+    if (seenSets.has(key)) continue;
+    seenSets.add(key);
     lenses.push(lens);
-    if (lenses.length >= 4) break;
   }
 
-  return lenses;
+  return lenses.sort((a, b) => b.confidence - a.confidence).slice(0, 5);
 }
 
 /** High-confidence related memories for revival hints (min 1, strict threshold). */
