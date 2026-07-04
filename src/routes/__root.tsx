@@ -10,6 +10,7 @@ import { InstallPrompt } from "@/components/InstallPrompt";
 import { SideNav } from "@/components/SideNav";
 import { TopNav } from "@/components/TopNav";
 import { LanguageProvider } from "@/lib/i18n";
+import { useArchiveMetaSync } from "@/hooks/useArchiveMetaSync";
 
 const calmToastOptions = {
   style: {
@@ -33,6 +34,8 @@ function RootLayout() {
   const isFullPage = pathname.startsWith("/about");
   const isAdmin = pathname.startsWith("/admin");
   const isAuth = pathname.startsWith("/auth");
+
+  useArchiveMetaSync();
 
   useEffect(() => {
     maybeRouteOAuthCallback();

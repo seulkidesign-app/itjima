@@ -55,34 +55,20 @@ export const Route = createFileRoute("/schedule")({
   component: Schedule,
 });
 
-// Pinned IDs live locally (avoids cloud schema change)
-const PIN_KEY = "itjima.schedule.pinned";
-function readPins(): Set<string> {
-  if (typeof window === "undefined") return new Set();
-  try {
-    return new Set(JSON.parse(localStorage.getItem(PIN_KEY) || "[]"));
-  } catch {
-    return new Set();
-  }
-}
-function writePins(ids: Set<string>) {
-  localStorage.setItem(PIN_KEY, JSON.stringify([...ids]));
-  window.dispatchEvent(new CustomEvent("itjima:pins"));
-}
+import { readSchedulePins, writeSchedulePins } from "@/lib/archiveMeta";
 
 function usePins() {
-  const [pins, setPins] = useState<Set<string>>(new Set());
+  const [pins, setPins] = useState<Set<string>>(() => readSchedulePins());
   useEffect(() => {
-    setPins(readPins());
-    const h = () => setPins(readPins());
-    window.addEventListener("itjima:pins", h);
-    return () => window.removeEventListener("itjima:pins", h);
+    const refresh = () => setPins(readSchedulePins());
+    window.addEventListener("itjima:archive-meta", refresh);
+    return () => window.removeEventListener("itjima:archive-meta", refresh);
   }, []);
   const toggle = (id: string) => {
     const next = new Set(pins);
     if (next.has(id)) next.delete(id);
     else next.add(id);
-    writePins(next);
+    writeSchedulePins(next);
   };
   return { pins, toggle };
 }

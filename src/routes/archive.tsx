@@ -27,7 +27,14 @@ import {
   recordArchiveVisit,
   readRevivalHint,
   clearRevivalHint,
+  readGroupOverrides,
+  writeGroupOverrides,
+  readCustomGroups,
+  writeCustomGroups,
+  readCollapsedGroups,
+  writeCollapsedGroups,
   type RevivalHint,
+  type ArchiveGroupDef,
 } from "@/lib/archiveMeta";
 import { recentArchiveItems, searchArchiveItems } from "@/lib/archiveSearch";
 import { useMemoryLenses } from "@/hooks/useMemoryLenses";
@@ -50,13 +57,7 @@ export const Route = createFileRoute("/archive")({
   component: Archive,
 });
 
-type GroupDef = {
-  key: string;
-  ko: string;
-  en: string;
-  emoji: string;
-  custom?: boolean;
-};
+type GroupDef = ArchiveGroupDef;
 
 const BUILTIN_GROUPS: GroupDef[] = [
   { key: "todo", ko: "나중에", en: "For later", emoji: "✅" },
@@ -66,23 +67,6 @@ const BUILTIN_GROUPS: GroupDef[] = [
   { key: "etc", ko: "기타", en: "Other", emoji: "🗂" },
 ];
 
-const OVERRIDE_KEY = "itjima.archive_group_overrides";
-const CUSTOM_KEY = "itjima.archive_custom_groups";
-const COLLAPSED_KEY = "itjima.archive_collapsed";
-
-function readJSON<T>(key: string, fallback: T): T {
-  if (typeof window === "undefined") return fallback;
-  try {
-    return JSON.parse(localStorage.getItem(key) || "") ?? fallback;
-  } catch {
-    return fallback;
-  }
-}
-function writeJSON(key: string, val: unknown) {
-  if (typeof window === "undefined") return;
-  localStorage.setItem(key, JSON.stringify(val));
-}
-
 function Archive() {
   const t = useT();
   const { lang } = useLang();
@@ -91,9 +75,15 @@ function Archive() {
   const [q, setQ] = useState("");
   const [groupFilter, setGroupFilter] = useState<string>("all");
   const [sortOrder, setSortOrder] = useState<"newest" | "oldest">("newest");
-  const [overrides, setOverrides] = useState<Record<string, string>>({});
-  const [customGroups, setCustomGroups] = useState<GroupDef[]>([]);
-  const [collapsed, setCollapsed] = useState<Set<string>>(new Set());
+  const [overrides, setOverrides] = useState<Record<string, string>>(() =>
+    readGroupOverrides(),
+  );
+  const [customGroups, setCustomGroups] = useState<GroupDef[]>(() =>
+    readCustomGroups(),
+  );
+  const [collapsed, setCollapsed] = useState<Set<string>>(() =>
+    readCollapsedGroups(),
+  );
 
   // Selection mode (long-press)
   const [selecting, setSelecting] = useState(false);
@@ -141,15 +131,12 @@ function Archive() {
     const h = () => {
       setPins(readArchivePins());
       setRevival(readRevivalHint());
+      setOverrides(readGroupOverrides());
+      setCustomGroups(readCustomGroups());
+      setCollapsed(readCollapsedGroups());
     };
     window.addEventListener("itjima:archive-meta", h);
     return () => window.removeEventListener("itjima:archive-meta", h);
-  }, []);
-
-  useEffect(() => {
-    setOverrides(readJSON<Record<string, string>>(OVERRIDE_KEY, {}));
-    setCustomGroups(readJSON<GroupDef[]>(CUSTOM_KEY, []));
-    setCollapsed(new Set(readJSON<string[]>(COLLAPSED_KEY, [])));
   }, []);
 
   useEffect(() => {
@@ -212,18 +199,18 @@ function Archive() {
 
   const persistOverrides = (next: Record<string, string>) => {
     setOverrides(next);
-    writeJSON(OVERRIDE_KEY, next);
+    writeGroupOverrides(next);
   };
   const persistCustom = (next: GroupDef[]) => {
     setCustomGroups(next);
-    writeJSON(CUSTOM_KEY, next);
+    writeCustomGroups(next);
   };
   const toggleCollapse = (k: string) => {
     const next = new Set(collapsed);
     if (next.has(k)) next.delete(k);
     else next.add(k);
     setCollapsed(next);
-    writeJSON(COLLAPSED_KEY, [...next]);
+    writeCollapsedGroups([...next]);
     haptic(4);
   };
 
@@ -324,7 +311,7 @@ function Archive() {
         const next = new Set(collapsed);
         next.delete(gKey);
         setCollapsed(next);
-        writeJSON(COLLAPSED_KEY, [...next]);
+        writeCollapsedGroups([...next]);
       }
     }
     setExpandedId(id);
