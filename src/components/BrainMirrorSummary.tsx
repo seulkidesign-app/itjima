@@ -1,8 +1,11 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import { toast } from "sonner";
 import type { BrainMirrorResult } from "@/lib/brainMirror";
 import { isBrainMirrorCandidate } from "@/lib/brainMirror";
 import { fetchBrainMirror } from "@/lib/brainMirrorApi";
 import { setInboxBrainMirror, useInbox, type InboxItem } from "@/lib/store";
+import { detectDate } from "@/lib/dateDetect";
+import { useT } from "@/lib/i18n";
 import { haptic, tap } from "@/lib/haptics";
 import {
   BrainMirrorReflectionActions,
@@ -43,6 +46,7 @@ export function BrainMirrorPanel({
   onMirrorMissed?: (item: InboxItem) => void;
   variant?: "inline" | "card";
 }) {
+  const t = useT();
   const compact = variant === "inline";
 
   const [phase, setPhase] = useState<"idle" | "pending" | "ready" | "hidden">(
@@ -102,11 +106,23 @@ export function BrainMirrorPanel({
       window.clearTimeout(timeoutId);
     };
 
-    const hideSilently = (offerDateFallback = false) => {
+    const hideSilently = (offerDateFallback = false, apiUnavailable = false) => {
       if (finished || fetchGen.current !== gen) return;
       cleanup();
       setPhase("hidden");
-      if (offerDateFallback) onMirrorMissed?.(item);
+      if (offerDateFallback) {
+        const hadDate = Boolean(detectDate(item.text));
+        onMirrorMissed?.(item);
+        if (apiUnavailable && !hadDate) {
+          toast.message(
+            t(
+              "지금은 정리 제안을 불러오지 못했어요",
+              "Couldn't load a reflection right now",
+            ),
+            { duration: 2800 },
+          );
+        }
+      }
     };
 
     const reveal = (mirror: BrainMirrorResult) => {
@@ -126,20 +142,32 @@ export function BrainMirrorPanel({
 
     void (async () => {
       try {
-        const mirror = await fetchBrainMirror(item.text, abortController.signal);
+        const outcome = await fetchBrainMirror(
+          item.text,
+          abortController.signal,
+        );
         if (finished || fetchGen.current !== gen) return;
-        if (!mirror?.items.length || mirror.confidence < MIN_CONFIDENCE) {
+        if (outcome.status === "unavailable") {
+          hideSilently(true, true);
+          return;
+        }
+        if (outcome.status !== "ok") {
+          hideSilently(true);
+          return;
+        }
+        const mirror = outcome.result;
+        if (!mirror.items.length || mirror.confidence < MIN_CONFIDENCE) {
           hideSilently(true);
           return;
         }
         reveal(mirror);
       } catch {
-        if (!finished && fetchGen.current === gen) hideSilently(true);
+        if (!finished && fetchGen.current === gen) hideSilently(true, true);
       }
     })();
 
     return cleanup;
-  }, [inbox, item, onMirrorMissed]);
+  }, [inbox, item, onMirrorMissed, t]);
 
   useEffect(() => {
     createdAt.current = +new Date(item.created_at);
