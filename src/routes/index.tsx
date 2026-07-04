@@ -697,14 +697,19 @@ function Inbox() {
             </button>
             <button
               onClick={async () => {
-                const { item } = await inbox.add({
-                  text: pasteSheet.original,
-                  images: [],
-                });
-                if (isBrainMirrorCandidate(pasteSheet.original)) {
-                  markBmEligible(item.id);
+                const original = pasteSheet.original;
+                try {
+                  const { item } = await inbox.add({
+                    text: original,
+                    images: [],
+                  });
+                  if (isBrainMirrorCandidate(original)) {
+                    markBmEligible(item.id);
+                  }
+                  setPasteSheet(null);
+                } catch {
+                  toast.error(t("저장하지 못했어요", "Couldn't save"));
                 }
-                setPasteSheet(null);
               }}
               className="mt-2 w-full rounded-full bg-white/70 py-3.5 text-[15px] font-semibold text-ink"
             >
