@@ -338,7 +338,7 @@ function Archive() {
   const locale = lang === "en" ? "en-US" : "ko-KR";
 
   // ---- 키워드 기반 자동 정리 (사용자 지정 그룹은 유지) ----
-  const runAIOrganize = () => {
+  const openOrganizeSheet = () => {
     if (items.length === 0) return;
     haptic([6, 18, 10]);
     setOrganizeOpen(true);
@@ -347,7 +347,7 @@ function Archive() {
   const applyOrganize = (next: Record<string, string>) => {
     persistOverrides(next);
     haptic([6, 20, 8]);
-    toast.success(t("비슷하게 모았어요", "Grouped gently"));
+    toast.success(t("키워드로 모았어요", "Grouped by keywords"));
   };
 
   // ---- Selection ----
@@ -637,10 +637,10 @@ function Archive() {
           <div className="px-5 pb-2">
             <button
               type="button"
-              onClick={runAIOrganize}
+              onClick={openOrganizeSheet}
               className="touch-press text-[12px] font-medium text-ink-soft/80 underline-offset-2 hover:text-ink-soft active:underline"
             >
-              {t("비슷한 기억끼리 정리하기", "Gently group similar memories")}
+              {t("키워드로 묶어보기", "Group by keywords")}
             </button>
           </div>
         )}

@@ -80,12 +80,12 @@ export function ArchiveOrganizeSheet({
       >
         <div className="mx-auto mb-4 h-1.5 w-10 rounded-full bg-ink/15" />
         <h2 className="text-[17px] font-bold text-ink">
-          {t("비슷한 기억끼리", "Similar memories together")}
+          {t("키워드로 묶기", "Group by keywords")}
         </h2>
         <p className="mt-1.5 text-sm leading-relaxed text-ink-soft">
           {t(
-            "닮은 기억끼리 모아볼게요. 직접 만든 묶음은 그대로 둡니다.",
-            "We'll gently group similar memories. Your custom groups stay as they are.",
+            "글 속 키워드를 기준으로 묶어볼게요. 직접 만든 묶음은 그대로 둡니다.",
+            "We'll group by keywords in your text. Your custom groups stay as they are.",
           )}
         </p>
         {moves.length === 0 ? (
