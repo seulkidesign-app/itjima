@@ -156,6 +156,39 @@ function Archive() {
     setFinePointer(window.matchMedia("(pointer: fine)").matches);
   }, []);
 
+  const modalOpen = Boolean(ungroupTarget || editItem);
+
+  useEffect(() => {
+    if (!modalOpen) return;
+    const scroll = document.getElementById("phone-scroll");
+    const prevOverflow = scroll?.style.overflow ?? "";
+    const prevBody = document.body.style.overflow;
+    if (scroll) scroll.style.overflow = "hidden";
+    document.body.style.overflow = "hidden";
+    return () => {
+      if (scroll) scroll.style.overflow = prevOverflow;
+      document.body.style.overflow = prevBody;
+    };
+  }, [modalOpen]);
+
+  useEffect(() => {
+    if (!editItem) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setEditItem(null);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [editItem]);
+
+  useEffect(() => {
+    if (!ungroupTarget) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setUngroupTarget(null);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [ungroupTarget]);
+
   useEffect(() => {
     if (!editItem) return;
     const onKey = (e: KeyboardEvent) => {
@@ -1045,7 +1078,7 @@ function Archive() {
 
       {ungroupTarget && (
         <div
-          className="absolute inset-0 z-50 flex flex-col justify-end"
+          className="fixed inset-0 z-50 flex flex-col justify-end"
           role="dialog"
           aria-modal="true"
           onClick={() => setUngroupTarget(null)}
@@ -1086,7 +1119,7 @@ function Archive() {
 
       {editItem && (
         <div
-          className="absolute inset-0 z-50 flex flex-col"
+          className="fixed inset-0 z-50 flex flex-col"
           role="dialog"
           aria-modal="true"
           aria-labelledby="archive-edit-title"

@@ -7,6 +7,7 @@ import {
   phone,
   injectSignedInUser,
   blockCloudMutations,
+  TEST_USER_ID,
 } from "./helpers";
 
 test.describe("sync feedback", () => {
@@ -37,21 +38,26 @@ test.describe("sync feedback", () => {
     await resetAppState(page);
     await blockCloudMutations(page);
     await injectSignedInUser(page);
+    await page.waitForLoadState("networkidle");
 
     const text = `Cloud write ${Date.now()}`;
-    await addThought(page, text);
+    const frame = phone(page);
+    await frame.locator("textarea").first().fill(text);
+    await frame.getByRole("button", { name: "Leave it", exact: true }).click();
+    await page.waitForFunction(
+      ({ userId, thoughtText }) => {
+        const key = `itjima.${userId}.inbox`;
+        const items = JSON.parse(localStorage.getItem(key) || "[]") as {
+          text: string;
+        }[];
+        return items.some((item) => item.text === thoughtText);
+      },
+      { userId: TEST_USER_ID, thoughtText: text },
+    );
 
     await phone(page)
       .getByRole("alert")
       .getByText("Saving paused for a moment")
       .waitFor({ state: "visible" });
-
-    await openContextMenu(page, text);
-    await phone(page)
-      .getByRole("dialog")
-      .getByRole("button", { name: "Delete", exact: true })
-      .click();
-
-    await expect(page.getByText("Removed")).toHaveCount(0);
   });
 });

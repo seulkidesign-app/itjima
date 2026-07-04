@@ -228,6 +228,19 @@ export function FocusSortMode({
 
   useEffect(() => {
     if (!open) return;
+    const scroll = document.getElementById("phone-scroll");
+    const prevOverflow = scroll?.style.overflow ?? "";
+    const prevBody = document.body.style.overflow;
+    if (scroll) scroll.style.overflow = "hidden";
+    document.body.style.overflow = "hidden";
+    return () => {
+      if (scroll) scroll.style.overflow = prevOverflow;
+      document.body.style.overflow = prevBody;
+    };
+  }, [open]);
+
+  useEffect(() => {
+    if (!open) return;
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "Escape" && !dragging) onClose();
     };
@@ -543,7 +556,7 @@ export function FocusSortMode({
     <AnimatePresence>
       {open && (
         <motion.div
-          className="absolute inset-0 z-[60] flex flex-col bg-white/78 backdrop-blur-[28px] backdrop-saturate-[1.4]"
+          className="fixed inset-0 z-[60] flex flex-col bg-white/78 backdrop-blur-[28px] backdrop-saturate-[1.4]"
           role="dialog"
           aria-modal="true"
           aria-label={t("하나씩", "One by one")}

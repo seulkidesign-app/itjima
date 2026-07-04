@@ -112,6 +112,47 @@ test.describe("Navigation and modals", () => {
     await expect(page.getByRole("dialog")).toHaveCount(0);
   });
 
+  test("focus sort blocks tab navigation until closed", async ({ page }) => {
+    await addThought(page, "First thought for sort");
+    await addThought(page, "Second thought for sort");
+
+    await phone(page).getByRole("button", { name: "One by one" }).click();
+    await phone(page)
+      .getByRole("dialog", { name: "One by one" })
+      .waitFor({ state: "visible" });
+    await expect(page).toHaveURL(/\/$/);
+
+    await phone(page).getByRole("button", { name: "Close", exact: true }).click();
+    await expect(phone(page).getByRole("dialog")).toHaveCount(0);
+  });
+
+  test("archive edit dialog blocks tab navigation until dismissed", async ({
+    page,
+  }) => {
+    const text = `Edit overlay ${Date.now()}`;
+    await addThought(page, text);
+    await openContextMenu(page, text);
+    await phone(page)
+      .getByRole("dialog")
+      .getByRole("button", { name: "Save", exact: true })
+      .click();
+
+    await phone(page).getByRole("link", { name: /^Saved/ }).click();
+    await phone(page)
+      .getByRole("button")
+      .filter({ hasText: text })
+      .first()
+      .click();
+    await phone(page).getByRole("button", { name: "Title", exact: true }).click();
+    await expect(page).toHaveURL(/\/archive/);
+    await phone(page).getByRole("dialog").waitFor({ state: "visible" });
+
+    await phone(page).getByRole("dialog").click({ position: { x: 20, y: 20 } });
+    await expect(phone(page).getByRole("dialog")).toHaveCount(0);
+    await phone(page).getByRole("link", { name: /^Inbox/ }).click();
+    await phone(page).getByText("Leave it here").waitFor();
+  });
+
   test("context menu blocks tab navigation until dismissed", async ({
     page,
   }) => {
