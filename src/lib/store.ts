@@ -310,10 +310,14 @@ async function cloudUpsertMany<T extends { id: string }>(
 
 const E2E_USER_LS_KEY = "itjima.__e2e_user_id__";
 
-function readE2eUserId(): string | null {
+export function getE2eUserId(): string | null {
   if (import.meta.env.VITE_E2E !== "true") return null;
   if (typeof window === "undefined") return null;
   return localStorage.getItem(E2E_USER_LS_KEY);
+}
+
+function readE2eUserId(): string | null {
+  return getE2eUserId();
 }
 
 /** Hook returning current auth user id (or null) and reacting to changes. */

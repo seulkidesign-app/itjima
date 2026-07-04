@@ -10,9 +10,10 @@ import {
   MessageSquarePlus,
 } from "lucide-react";
 import { toast } from "sonner";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useT, LanguageToggle } from "@/lib/i18n";
 import { useUserId } from "@/lib/store";
+import { useIsAdmin } from "@/hooks/useIsAdmin";
 import { supabase } from "@/integrations/supabase/client";
 import { AboutSheet } from "@/components/AboutSheet";
 import { FeedbackSheet } from "@/components/FeedbackSheet";
@@ -22,29 +23,9 @@ export function SideNav() {
   const t = useT();
   const path = useRouterState({ select: (s) => s.location.pathname });
   const userId = useUserId();
-  const [isAdmin, setIsAdmin] = useState(false);
+  const isAdmin = useIsAdmin();
   const [aboutOpen, setAboutOpen] = useState(false);
   const [feedbackOpen, setFeedbackOpen] = useState(false);
-
-  useEffect(() => {
-    if (!userId) {
-      setIsAdmin(false);
-      return;
-    }
-    let alive = true;
-    supabase
-      .from("user_roles")
-      .select("role")
-      .eq("user_id", userId)
-      .eq("role", "admin")
-      .maybeSingle()
-      .then(({ data }) => {
-        if (alive) setIsAdmin(!!data);
-      });
-    return () => {
-      alive = false;
-    };
-  }, [userId]);
 
   const items = [
     { to: "/", label: t("생각", "Inbox"), Icon: Inbox },

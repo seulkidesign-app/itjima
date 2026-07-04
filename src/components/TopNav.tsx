@@ -1,10 +1,11 @@
 import { Link, useRouterState } from "@tanstack/react-router";
-import { Info, MessageSquarePlus } from "lucide-react";
+import { Info, MessageSquarePlus, Shield } from "lucide-react";
 import { useEffect, useState } from "react";
 import { motion, LayoutGroup } from "framer-motion";
 import { useT, LanguageToggle } from "@/lib/i18n";
 import { SPRING_TAB } from "@/lib/motion";
 import { useInbox, useSchedules, useArchive, useUserId } from "@/lib/store";
+import { useIsAdmin } from "@/hooks/useIsAdmin";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { tap } from "@/lib/haptics";
@@ -15,6 +16,7 @@ export function TopNav() {
   const t = useT();
   const path = useRouterState({ select: (s) => s.location.pathname });
   const userId = useUserId();
+  const isAdmin = useIsAdmin();
   const inbox = useInbox();
   const schedules = useSchedules();
   const archive = useArchive();
@@ -78,6 +80,20 @@ export function TopNav() {
           >
             <MessageSquarePlus size={20} strokeWidth={2.25} />
           </button>
+          {isAdmin && (
+            <Link
+              to="/admin"
+              onClick={tap}
+              aria-label={t("관리자", "Admin")}
+              className={`touch-target rounded-full transition ${
+                path.startsWith("/admin")
+                  ? "bg-ink text-white"
+                  : "text-ink-soft active:bg-ink/5 active:text-ink"
+              }`}
+            >
+              <Shield size={20} strokeWidth={2.25} />
+            </Link>
+          )}
         </div>
         <Link
           to="/"

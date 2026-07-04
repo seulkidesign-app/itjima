@@ -127,3 +127,26 @@ export async function openFeedback(page: Page) {
   }
   await phone(page).getByRole("button", { name: "Contact · Feedback", exact: true }).click();
 }
+
+/** Stub Supabase admin role checks for signed-in E2E. */
+export async function mockAdminRole(page: Page) {
+  await page.route("**/rest/v1/user_roles**", async (route) => {
+    if (route.request().method() !== "GET") {
+      await route.continue();
+      return;
+    }
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      headers: { "content-range": "0-0/1" },
+      body: JSON.stringify([{ role: "admin", user_id: TEST_USER_ID }]),
+    });
+  });
+  await page.route("**/rest/v1/rpc/has_role**", async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: "true",
+    });
+  });
+}

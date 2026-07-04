@@ -1,7 +1,10 @@
 import { z } from "zod";
 import { supabase } from "@/integrations/supabase/client";
+import { getE2eUserId } from "@/lib/store";
 
 async function requireAuth() {
+  const e2eUserId = getE2eUserId();
+  if (e2eUserId) return { userId: e2eUserId, supabase };
   const {
     data: { session },
   } = await supabase.auth.getSession();

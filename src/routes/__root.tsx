@@ -64,11 +64,19 @@ function RootLayout() {
           <Toaster position="top-center" richColors closeButton />
         </>
       ) : isAdmin ? (
-        <div className="flex min-h-dvh w-full">
+        <div className="md:flex min-h-dvh w-full md:items-start">
           <SideNav />
-          <main className="min-w-0 flex-1 overflow-x-hidden">
-            <Outlet />
-          </main>
+          <div className="flex min-w-0 flex-1 flex-col">
+            <div className="md:hidden">
+              <TopNav />
+            </div>
+            <main
+              id="phone-scroll"
+              className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden md:min-h-dvh"
+            >
+              <Outlet />
+            </main>
+          </div>
           <Toaster position="top-center" richColors closeButton />
         </div>
       ) : (
