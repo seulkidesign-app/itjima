@@ -513,8 +513,8 @@ function Inbox() {
         </>
       ) : (
         <>
-          <div className="min-h-0 flex-1 overflow-y-auto overflow-x-visible pl-3 pr-[3.75rem] pb-2">
-            <div className="chat-scroll flex flex-col items-stretch gap-2 pb-4">
+          <div className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden px-4 pb-2">
+            <div className="chat-scroll flex w-full flex-col gap-2 pb-4">
               {itemsAsc.map((it) => {
                 const isNewest = it.id === newestId;
                 return (
@@ -530,7 +530,6 @@ function Inbox() {
                         onSwipeRight={() => openHomeSchedule(it)}
                         onSwipeLeft={() => moveToArchive(it)}
                         onLongPress={() => setMenuFor(it.id)}
-                        onTap={() => openFocusSort(it.id)}
                       >
                         {bubble}
                       </ChatSwipeRow>

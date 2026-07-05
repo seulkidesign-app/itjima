@@ -22,9 +22,7 @@ export function ChatBubble({
 
   return (
     <motion.div
-      className={`flex w-full max-w-[min(340px,88vw)] flex-col items-end ${
-        isNewest ? "" : ""
-      }`}
+      className="flex w-full flex-col items-end"
       initial={isNewest ? { opacity: 0, y: 14, scale: 0.96 } : { opacity: 0, y: 8 }}
       animate={{ opacity: 1, y: 0, scale: 1 }}
       transition={SPRING_DEFAULT}
@@ -45,7 +43,7 @@ export function ChatBubble({
       )}
       {wrapBubble ? (
         wrapBubble(
-          <div className="chat-bubble w-fit max-w-full text-left">
+          <div className="chat-bubble w-fit max-w-[min(340px,calc(100vw-2rem))] text-left">
             <p className="whitespace-pre-wrap text-[16px] font-medium leading-[1.65] tracking-[-0.015em] text-ink">
               {item.text.trim() || t("(이미지만)", "(image only)")}
             </p>

@@ -231,7 +231,7 @@ export function ChatSwipeRow({
       className="swipe-row relative flex w-full justify-end py-0.5"
       style={{ touchAction: dragging ? "none" : "pan-y" }}
     >
-      <div className="relative w-fit max-w-[min(340px,calc(100vw-4.5rem))]">
+      <div className="relative ml-auto w-fit max-w-[min(340px,calc(100%-0.5rem))]">
         {showSchedule && (
           <div
             className="pointer-events-none absolute inset-y-0 left-0 z-[1] flex items-center"
