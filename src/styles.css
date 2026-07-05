@@ -265,6 +265,30 @@
   background: transparent;
 }
 
+.swipe-pill-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 48px;
+  height: 48px;
+  border-radius: 9999px;
+  flex-shrink: 0;
+  box-shadow: var(--shadow-card);
+  transition:
+    opacity 0.1s linear,
+    transform 0.12s ease;
+}
+
+.swipe-pill-schedule {
+  background: var(--brand-yellow);
+  color: var(--ink);
+}
+
+.swipe-pill-archive {
+  background: var(--ink);
+  color: white;
+}
+
 .swipe-action {
   display: flex;
   flex-direction: column;

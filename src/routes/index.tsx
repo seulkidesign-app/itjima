@@ -532,7 +532,6 @@ function Inbox() {
                     onOpenRowChange={setSwipeOpenId}
                     onSwipeRight={() => openHomeSchedule(it)}
                     onSwipeLeft={() => moveToArchive(it)}
-                    onSwipeDown={() => moveToDelete(it)}
                     onLongPress={() => setMenuFor(it.id)}
                     onTap={() => openFocusSort(it.id)}
                   >

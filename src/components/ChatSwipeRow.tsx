@@ -6,18 +6,19 @@ import {
   type PointerEvent,
   type ReactNode,
 } from "react";
-import { Archive, Calendar, Trash2 } from "lucide-react";
+import { Archive, Calendar } from "lucide-react";
 import { animate } from "framer-motion";
 import { useT } from "@/lib/i18n";
 import { tickDebounced, confirm as confirmHaptic } from "@/lib/haptics";
 import { SPRING_ROW, SPRING_SNAP_BACK } from "@/lib/motion";
 
-type Side = "left" | "right" | "down";
+type Side = "left" | "right";
 
-const ACTION_W = 92;
-const DELETE_H = 52;
-const OPEN_AT = 40;
-const MAX_DRAG_X = 128;
+const BTN = 48;
+const GAP = 10;
+const SLOT = BTN + GAP;
+const OPEN_AT = 28;
+const MAX_DRAG = 96;
 
 function rubber(value: number, limit: number) {
   const abs = Math.abs(value);
@@ -36,7 +37,6 @@ export function ChatSwipeRow({
   onOpenRowChange,
   onSwipeRight,
   onSwipeLeft,
-  onSwipeDown,
   onLongPress,
   onTap,
   disabled,
@@ -47,74 +47,53 @@ export function ChatSwipeRow({
   onOpenRowChange?: (id: string | null) => void;
   onSwipeRight: () => void;
   onSwipeLeft: () => void;
-  onSwipeDown?: () => void;
   onLongPress?: () => void;
   onTap?: () => void;
   disabled?: boolean;
 }) {
   const t = useT();
   const rowRef = useRef<HTMLDivElement>(null);
-  const [offset, setOffset] = useState({ x: 0, y: 0 });
-  const [pending, setPending] = useState<Side | null>(null);
+  const [offsetX, setOffsetX] = useState(0);
+  const [openSide, setOpenSide] = useState<Side | null>(null);
   const [acting, setActing] = useState(false);
   const draggingRef = useRef(false);
-  const offsetRef = useRef({ x: 0, y: 0 });
-  const start = useRef({ x: 0, y: 0 });
+  const offsetRef = useRef(0);
+  const startX = useRef(0);
   const longTimer = useRef<number | null>(null);
   const longFired = useRef(false);
   const moved = useRef(false);
-  const axisLock = useRef<"x" | "y" | null>(null);
 
-  offsetRef.current = offset;
+  offsetRef.current = offsetX;
 
-  const springTo = useCallback(
-    (to: { x: number; y: number }, onDone?: () => void) => {
-      const from = offsetRef.current;
-      let done = 0;
-      const check = () => {
-        done += 1;
-        if (done >= 2) onDone?.();
-      };
-      animate(from.x, to.x, {
-        ...(pending ? SPRING_ROW : SPRING_SNAP_BACK),
+  const springX = useCallback(
+    (to: number, onDone?: () => void) => {
+      animate(offsetRef.current, to, {
+        ...(openSide ? SPRING_ROW : SPRING_SNAP_BACK),
         onUpdate: (v) => {
-          offsetRef.current = { ...offsetRef.current, x: v };
-          setOffset((o) => ({ ...o, x: v }));
+          offsetRef.current = v;
+          setOffsetX(v);
         },
-        onComplete: check,
-      });
-      animate(from.y, to.y, {
-        ...(pending ? SPRING_ROW : SPRING_SNAP_BACK),
-        onUpdate: (v) => {
-          offsetRef.current = { ...offsetRef.current, y: v };
-          setOffset((o) => ({ ...o, y: v }));
-        },
-        onComplete: check,
+        onComplete: onDone,
       });
     },
-    [pending],
+    [openSide],
   );
 
   const dismiss = useCallback(() => {
-    setPending(null);
+    setOpenSide(null);
     if (rowId && onOpenRowChange) onOpenRowChange(null);
-    springTo({ x: 0, y: 0 });
-  }, [rowId, onOpenRowChange, springTo]);
+    springX(0);
+  }, [rowId, onOpenRowChange, springX]);
 
   const snapOpen = useCallback(
     (side: Side) => {
-      setPending(side);
+      setOpenSide(side);
       if (rowId && onOpenRowChange) onOpenRowChange(rowId);
-      const target =
-        side === "right"
-          ? { x: ACTION_W, y: 0 }
-          : side === "left"
-            ? { x: -ACTION_W, y: 0 }
-            : { x: 0, y: DELETE_H };
-      springTo(target);
+      offsetRef.current = 0;
+      setOffsetX(0);
       tickDebounced();
     },
-    [rowId, onOpenRowChange, springTo],
+    [rowId, onOpenRowChange],
   );
 
   const commit = useCallback(
@@ -122,41 +101,24 @@ export function ChatSwipeRow({
       if (acting) return;
       setActing(true);
       confirmHaptic();
-      const out =
-        side === "right"
-          ? { x: ACTION_W + 56, y: 0 }
-          : side === "left"
-            ? { x: -ACTION_W - 56, y: 0 }
-            : { x: 0, y: DELETE_H + 32 };
-      springTo(out, () => {
-        if (side === "right") onSwipeRight();
-        else if (side === "left") onSwipeLeft();
-        else onSwipeDown?.();
-        setPending(null);
-        setActing(false);
-        offsetRef.current = { x: 0, y: 0 };
-        setOffset({ x: 0, y: 0 });
-        if (rowId && onOpenRowChange) onOpenRowChange(null);
-      });
+      if (side === "right") onSwipeRight();
+      else onSwipeLeft();
+      setOpenSide(null);
+      setActing(false);
+      offsetRef.current = 0;
+      setOffsetX(0);
+      if (rowId && onOpenRowChange) onOpenRowChange(null);
     },
-    [
-      acting,
-      onSwipeDown,
-      onSwipeLeft,
-      onSwipeRight,
-      rowId,
-      onOpenRowChange,
-      springTo,
-    ],
+    [acting, onSwipeLeft, onSwipeRight, rowId, onOpenRowChange],
   );
 
   useEffect(() => {
     if (!rowId || openRowId === undefined) return;
-    if (openRowId !== rowId && pending) dismiss();
-  }, [openRowId, rowId, pending, dismiss]);
+    if (openRowId !== rowId && openSide) dismiss();
+  }, [openRowId, rowId, openSide, dismiss]);
 
   useEffect(() => {
-    if (!pending) return;
+    if (!openSide) return;
     const onDocDown = (e: Event) => {
       const target = e.target as Node;
       if (rowRef.current?.contains(target)) return;
@@ -171,7 +133,7 @@ export function ChatSwipeRow({
       window.removeEventListener("pointerdown", onDocDown, true);
       window.removeEventListener("keydown", onKey);
     };
-  }, [pending, dismiss]);
+  }, [openSide, dismiss]);
 
   const clearLongPress = () => {
     if (longTimer.current) {
@@ -183,10 +145,9 @@ export function ChatSwipeRow({
   const onDown = (e: PointerEvent<HTMLDivElement>) => {
     if (disabled || acting) return;
     draggingRef.current = true;
-    axisLock.current = null;
     longFired.current = false;
     moved.current = false;
-    start.current = { x: e.clientX, y: e.clientY };
+    startX.current = e.clientX;
     clearLongPress();
     if (onLongPress) {
       longTimer.current = window.setTimeout(() => {
@@ -202,145 +163,121 @@ export function ChatSwipeRow({
 
   const onMove = (e: PointerEvent<HTMLDivElement>) => {
     if (!draggingRef.current || acting) return;
-    let x = e.clientX - start.current.x;
-    let y = e.clientY - start.current.y;
+    let x = e.clientX - startX.current;
 
-    if (!axisLock.current && (Math.abs(x) > 8 || Math.abs(y) > 8)) {
-      axisLock.current = Math.abs(y) > Math.abs(x) ? "y" : "x";
+    if (Math.abs(x) > 8) {
       moved.current = true;
       clearLongPress();
     }
 
-    if (pending === "right" && x < 0) x = 0;
-    if (pending === "left" && x > 0) x = 0;
-    if (pending === "down" && y < 0) y = 0;
+    if (openSide === "right" && x < 0) x = 0;
+    if (openSide === "left" && x > 0) x = 0;
 
-    if (axisLock.current === "y" && onSwipeDown && !pending) {
-      x = 0;
-      y = Math.max(0, rubber(y, DELETE_H + 16));
-    } else {
-      y = 0;
-      x = rubber(x, MAX_DRAG_X);
-    }
-
-    offsetRef.current = { x, y };
-    setOffset({ x, y });
-    if (Math.abs(x) > 14 || y > 14) tickDebounced();
+    x = rubber(x, MAX_DRAG);
+    offsetRef.current = x;
+    setOffsetX(x);
+    if (Math.abs(x) > 14) tickDebounced();
   };
 
   const onUp = () => {
     if (!draggingRef.current) return;
     draggingRef.current = false;
-    axisLock.current = null;
     clearLongPress();
     if (longFired.current) return;
 
-    const { x, y } = offsetRef.current;
-    const absX = Math.abs(x);
-    const absY = y;
+    const x = offsetRef.current;
 
-    if (pending) {
-      const hold =
-        pending === "down" ? absY >= OPEN_AT * 0.5 : absX >= OPEN_AT * 0.5;
-      if (hold) {
-        commit(pending);
-      } else {
-        dismiss();
-      }
+    if (openSide) {
+      if (Math.abs(x) < OPEN_AT * 0.35) dismiss();
+      else springX(0);
       return;
     }
 
-    if (onSwipeDown && absY > absX && absY >= OPEN_AT) {
-      commit("down");
-      return;
-    }
     if (x >= OPEN_AT) {
-      commit("right");
+      snapOpen("right");
       return;
     }
     if (x <= -OPEN_AT) {
-      commit("left");
+      snapOpen("left");
       return;
     }
     if (!moved.current && onTap) onTap();
-    springTo({ x: 0, y: 0 });
+    springX(0);
   };
 
-  const scheduleReveal = clamp01(offset.x / ACTION_W);
-  const archiveReveal = clamp01(-offset.x / ACTION_W);
-  const deleteReveal = clamp01(offset.y / DELETE_H);
+  const scheduleOpacity =
+    openSide === "right" ? 1 : clamp01(offsetX / SLOT);
+  const archiveOpacity = openSide === "left" ? 1 : clamp01(-offsetX / SLOT);
+  const showSchedule = openSide === "right" || offsetX > 2;
+  const showArchive = openSide === "left" || offsetX < -2;
+  const dragX = openSide ? 0 : offsetX;
 
   return (
     <div
       ref={rowRef}
-      className="swipe-row relative w-full overflow-hidden py-0.5"
+      className="swipe-row relative w-full py-0.5"
+      style={{ touchAction: "pan-y" }}
     >
-      <div className="absolute inset-y-0 left-0 z-0 flex w-[92px]">
-        <button
-          type="button"
-          onClick={(e) => {
-            e.stopPropagation();
-            commit("right");
-          }}
-          className="swipe-action swipe-action-schedule h-full w-full"
+      <div className="flex w-full items-center justify-end">
+        <div
+          className="flex shrink-0 items-center justify-end overflow-hidden transition-[width,margin] duration-150 ease-out"
           style={{
-            opacity: Math.max(scheduleReveal, pending === "right" ? 1 : 0),
+            width: showSchedule ? SLOT : 0,
+            marginRight: showSchedule ? 0 : 0,
           }}
-          aria-label={t("그때", "When")}
         >
-          <Calendar size={20} strokeWidth={2.2} />
-          {t("그때", "When")}
-        </button>
-      </div>
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              commit("right");
+            }}
+            className="swipe-pill-btn swipe-pill-schedule"
+            style={{
+              opacity: scheduleOpacity,
+              pointerEvents: scheduleOpacity > 0.55 ? "auto" : "none",
+              transform: `scale(${0.88 + scheduleOpacity * 0.12})`,
+            }}
+            aria-label={t("그때", "When")}
+          >
+            <Calendar size={20} strokeWidth={2.25} />
+          </button>
+        </div>
 
-      <div className="absolute inset-y-0 right-0 z-0 flex w-[92px]">
-        <button
-          type="button"
-          onClick={(e) => {
-            e.stopPropagation();
-            commit("left");
-          }}
-          className="swipe-action swipe-action-archive h-full w-full"
+        <div
+          onPointerDown={onDown}
+          onPointerMove={onMove}
+          onPointerUp={onUp}
+          onPointerCancel={onUp}
+          className="relative z-[1] shrink-0 touch-none select-none will-change-transform"
           style={{
-            opacity: Math.max(archiveReveal, pending === "left" ? 1 : 0),
+            transform: `translate3d(${dragX}px, 0, 0)`,
           }}
-          aria-label={t("기억함", "Saved")}
         >
-          <Archive size={20} strokeWidth={2.2} />
-          {t("기억함", "Saved")}
-        </button>
-      </div>
+          {children}
+        </div>
 
-      {onSwipeDown && (
-        <button
-          type="button"
-          onClick={(e) => {
-            e.stopPropagation();
-            commit("down");
-          }}
-          className="swipe-action swipe-action-delete absolute bottom-0 left-0 right-0 z-0 h-[52px] flex-row gap-2"
-          style={{
-            opacity: Math.max(deleteReveal, pending === "down" ? 1 : 0),
-          }}
-          aria-label={t("삭제", "Delete")}
+        <div
+          className="flex shrink-0 items-center overflow-hidden transition-[width,margin] duration-150 ease-out"
+          style={{ width: showArchive ? SLOT : 0 }}
         >
-          <Trash2 size={18} strokeWidth={2.4} />
-          {t("삭제", "Delete")}
-        </button>
-      )}
-
-      <div
-        onPointerDown={onDown}
-        onPointerMove={onMove}
-        onPointerUp={onUp}
-        onPointerCancel={onUp}
-        className="relative z-[1] flex w-full touch-none select-none justify-end px-2 will-change-transform"
-        style={{
-          transform: `translate3d(${offset.x}px, ${offset.y}px, 0)`,
-          transition: draggingRef.current || acting ? "none" : undefined,
-        }}
-      >
-        {children}
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              commit("left");
+            }}
+            className="swipe-pill-btn swipe-pill-archive"
+            style={{
+              opacity: archiveOpacity,
+              pointerEvents: archiveOpacity > 0.55 ? "auto" : "none",
+              transform: `scale(${0.88 + archiveOpacity * 0.12})`,
+            }}
+            aria-label={t("기억함", "Saved")}
+          >
+            <Archive size={20} strokeWidth={2.25} />
+          </button>
+        </div>
       </div>
     </div>
   );
