@@ -93,6 +93,8 @@ test.describe("CRUD flows (guest / offline)", () => {
       .click();
 
     await phone(page).getByRole("dialog").last().waitFor({ state: "visible" });
+    await phone(page).getByRole("button", { name: "Next", exact: true }).click();
+    await phone(page).getByRole("button", { name: "Next", exact: true }).click();
     await phone(page).getByRole("button", { name: /Keep it/ }).click();
 
     await expect(phone(page).getByText(text, { exact: true })).toHaveCount(0);

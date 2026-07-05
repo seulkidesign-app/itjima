@@ -9,7 +9,7 @@ export type WhenKey =
 
 export type TimeKey = "morning" | "afternoon" | "evening" | "custom";
 
-export type ReminderKey = "30m" | "1h" | "off";
+export type ReminderKey = "at" | "5m" | "10m" | "30m" | "1h" | "1d" | "off";
 
 const TIME_HOURS: Record<Exclude<TimeKey, "custom">, number> = {
   morning: 9,
@@ -66,9 +66,22 @@ export function applyTimeToDate(
 }
 
 export function reminderToMinutes(key: ReminderKey): number | null {
-  if (key === "off") return null;
-  if (key === "1h") return 60;
-  return 30;
+  switch (key) {
+    case "off":
+      return null;
+    case "at":
+      return 0;
+    case "5m":
+      return 5;
+    case "10m":
+      return 10;
+    case "30m":
+      return 30;
+    case "1h":
+      return 60;
+    case "1d":
+      return 24 * 60;
+  }
 }
 
 export function inferWhenFromDate(d: Date, now = new Date()): WhenKey {

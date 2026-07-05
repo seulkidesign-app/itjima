@@ -446,14 +446,14 @@ function Inbox() {
   };
 
   return (
-    <div className="flex h-full min-h-full flex-col bg-white">
+    <div className="flex h-full min-h-0 flex-col bg-white">
       <SyncIndicator
         syncing={syncing}
         error={inbox.syncState === "error"}
         onRetry={inbox.retrySync}
       />
       {items.length > 0 && (
-        <div className="sticky top-0 z-10 shrink-0 bg-white/95 backdrop-blur-sm">
+        <div className="z-20 shrink-0 border-b border-ink/[0.06] bg-white/95 backdrop-blur-md">
           <div className="flex gap-2 px-5 pb-2 pt-3">
             <button
               type="button"
@@ -520,7 +520,7 @@ function Inbox() {
         </>
       ) : (
         <>
-          <div className="flex-1 pl-3 pr-[3.75rem] pb-2">
+          <div className="min-h-0 flex-1 overflow-y-auto overflow-x-visible pl-3 pr-[3.75rem] pb-2">
             <div className="chat-scroll flex flex-col items-stretch gap-2 pb-4">
               {itemsAsc.map((it) => {
                 const isNewest = it.id === newestId;
@@ -568,7 +568,7 @@ function Inbox() {
             </div>
           </div>
 
-          <div className="sticky bottom-0 z-20 shrink-0 pb-[env(safe-area-inset-bottom)]">
+          <div className="z-20 shrink-0 border-t border-ink/[0.06] bg-white/95 pb-[env(safe-area-inset-bottom)] backdrop-blur-md">
             <InputBar
               onAdd={handleAdd}
               onPasteMulti={(chunks, original) =>

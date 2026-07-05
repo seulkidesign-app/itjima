@@ -14,7 +14,7 @@ import { SPRING_SNAP_BACK } from "@/lib/motion";
 
 type Side = "left" | "right";
 
-const GAP = 10;
+const GAP = 16;
 const OPEN_AT = 32;
 const MAX_DRAG = 120;
 

@@ -314,18 +314,22 @@ export function ScheduleChoiceFlow({
               {t("몇 시", "What time")}
             </button>
             <StepLabel>{t("알림", "Reminder")}</StepLabel>
-            <div className="flex gap-2">
+            <div className="flex flex-wrap gap-2">
               {(
                 [
-                  ["30m", t("30분 전", "30 min before")],
-                  ["1h", t("1시간 전", "1 hr before")],
+                  ["at", t("정각", "At time")],
+                  ["5m", t("5분 전", "5 min")],
+                  ["10m", t("10분 전", "10 min")],
+                  ["30m", t("30분 전", "30 min")],
+                  ["1h", t("1시간 전", "1 hr")],
+                  ["1d", t("하루 전", "1 day")],
                   ["off", t("없음", "Off")],
                 ] as const
               ).map(([key, label]) => (
                 <Chip
                   key={key}
                   active={reminder === key}
-                  onClick={() => setReminder(key)}
+                  onClick={() => setReminder(key as ReminderKey)}
                 >
                   {label}
                 </Chip>

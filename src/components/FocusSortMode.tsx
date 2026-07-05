@@ -8,10 +8,14 @@ import {
 import { Archive, Calendar, X } from "lucide-react";
 import { animate, motion, AnimatePresence } from "framer-motion";
 import { useT } from "@/lib/i18n";
-import { confirm as confirmHaptic, tickDebounced, haptic } from "@/lib/haptics";
+import {
+  confirm as confirmHaptic,
+  tap as tapHaptic,
+  tickDebounced,
+  haptic,
+} from "@/lib/haptics";
 import type { InboxItem } from "@/lib/store";
 import {
-  SWIPE_COMMIT,
   SWIPE_PREVIEW,
   dragProgress,
   cardShadowBlur,
@@ -35,14 +39,21 @@ type Props = {
 
 type ExitDir = "left" | "right";
 
-const MAX_DRAG_X = 420;
-const MAX_DRAG_Y = 160;
-const NAV_DRAG = 72;
+const MAX_DRAG_X = 340;
+const MAX_DRAG_Y = 140;
+const NAV_DRAG = 64;
+/** Easier commit than generic SwipeCard (~28% of card width). */
+const COMMIT_RATIO = 0.28;
+const COMMIT_PX = 88;
 
 function sortNewestFirst(list: InboxItem[]) {
   return [...list].sort(
     (a, b) => +new Date(b.created_at) - +new Date(a.created_at),
   );
+}
+
+function isInteractiveTarget(node: EventTarget | null) {
+  return (node as HTMLElement | null)?.closest?.("button,a,input,textarea");
 }
 
 function ProgressDots({ total, current }: { total: number; current: number }) {
@@ -122,19 +133,20 @@ function SwipeStamp({
   progress,
   label,
 }: {
-  side: "left" | "right";
+  side: "schedule" | "archive";
   progress: number;
   label: string;
 }) {
-  if (progress < 0.12) return null;
+  if (progress < 0.15) return null;
+  const opacity = Math.min(1, (progress - 0.15) * 2.2);
   return (
     <div
-      className={`pointer-events-none absolute top-7 z-[2] rounded-xl border-[3px] px-3 py-1.5 text-[15px] font-extrabold uppercase tracking-[0.14em] ${
-        side === "left"
-          ? "right-6 rotate-[-14deg] border-primary text-primary"
-          : "left-6 rotate-[14deg] border-ink text-ink"
+      className={`pointer-events-none absolute top-8 z-[2] rounded-xl border-[3px] px-3 py-1.5 text-[14px] font-extrabold uppercase tracking-[0.12em] ${
+        side === "schedule"
+          ? "left-5 -rotate-12 border-primary bg-primary/10 text-primary"
+          : "right-5 rotate-12 border-ink bg-ink/[0.06] text-ink"
       }`}
-      style={{ opacity: Math.min(1, progress * 1.4) }}
+      style={{ opacity }}
     >
       {label}
     </div>
@@ -156,6 +168,7 @@ export function FocusSortMode({
   const initialTotal = useRef(0);
   const wasOpen = useRef(false);
   const cardRef = useRef<HTMLDivElement>(null);
+  const actingRef = useRef(false);
   const thresholdFired = useRef<ExitDir | null>(null);
   const previewFired = useRef<ExitDir | null>(null);
   const velocity = useRef({ x: 0, y: 0 });
@@ -176,6 +189,7 @@ export function FocusSortMode({
   const progress = current
     ? initialTotal.current - deck.length + cursor + 1
     : initialTotal.current;
+  const locked = exiting || actingRef.current || !!pendingScheduleId;
 
   useEffect(() => {
     if (!open) return;
@@ -217,6 +231,7 @@ export function FocusSortMode({
       setOffset({ x: 0, y: 0 });
       setCardOpacity(1);
       setExiting(false);
+      actingRef.current = false;
       thresholdFired.current = null;
     }
     wasOpen.current = open;
@@ -226,6 +241,7 @@ export function FocusSortMode({
       setCursor(0);
       setOffset({ x: 0, y: 0 });
       setExiting(false);
+      actingRef.current = false;
     }
   }, [open, items, startItemId]);
 
@@ -246,6 +262,11 @@ export function FocusSortMode({
   }, [deck.length, cursor]);
 
   const cardW = useCallback(() => cardRef.current?.offsetWidth ?? 320, []);
+
+  const commitThreshold = useCallback(
+    () => Math.min(COMMIT_PX, cardW() * COMMIT_RATIO),
+    [cardW],
+  );
 
   const springBack = useCallback(() => {
     thresholdFired.current = null;
@@ -271,25 +292,30 @@ export function FocusSortMode({
   }, [cursor]);
 
   const openSchedule = useCallback(async () => {
-    if (!current || exiting) return;
+    if (!current || actingRef.current) return;
+    actingRef.current = true;
     setExiting(true);
+    confirmHaptic();
     const w = cardW();
     const from = offsetRef.current;
-    await animate(from.x, -w * 0.55, {
+    await animate(from.x, -w * 0.45, {
       ...MOTION_SCHEDULE,
       velocity: velocity.current.x * 0.3,
       onUpdate: (v) => setOffset((o) => ({ ...o, x: v })),
     }).finished;
     onScheduleRequest(current);
     setExiting(false);
-  }, [cardW, current, exiting, onScheduleRequest]);
+    actingRef.current = false;
+  }, [cardW, current, onScheduleRequest]);
 
   const flyAwayCommit = useCallback(async () => {
-    if (exiting) return;
+    if (actingRef.current) return;
+    actingRef.current = true;
     setExiting(true);
+    confirmHaptic();
     const w = cardW();
     const from = offsetRef.current;
-    await animate(from.x, -w * 1.8, {
+    await animate(from.x, -w * 1.6, {
       ...MOTION_SCHEDULE,
       velocity: velocity.current.x * 0.4,
       onUpdate: (v) => {
@@ -297,24 +323,26 @@ export function FocusSortMode({
         setCardOpacity(swipeOpacity(Math.abs(v), MAX_DRAG_X));
       },
     }).finished;
-    setCardOpacity(0);
     removeAtCursor();
     setOffset({ x: 0, y: 0 });
     setCardOpacity(1);
     setExiting(false);
-  }, [cardW, exiting, removeAtCursor]);
+    actingRef.current = false;
+  }, [cardW, removeAtCursor]);
 
   const flyAway = useCallback(
     async (dir: ExitDir) => {
-      if (!current || exiting) return;
+      if (!current || actingRef.current) return;
       if (dir === "left") {
         await openSchedule();
         return;
       }
+      actingRef.current = true;
       setExiting(true);
+      confirmHaptic();
       const w = cardW();
       const from = offsetRef.current;
-      await animate(from.x, w * 1.8, {
+      await animate(from.x, w * 1.6, {
         ...MOTION_ARCHIVE,
         velocity: velocity.current.x * 0.45,
         onUpdate: (v) => {
@@ -329,16 +357,18 @@ export function FocusSortMode({
       setOffset({ x: 0, y: 0 });
       setCardOpacity(1);
       setExiting(false);
+      actingRef.current = false;
     },
-    [cardW, current, exiting, onArchive, openSchedule, removeAtCursor],
+    [cardW, current, onArchive, openSchedule, removeAtCursor],
   );
 
   const goNext = useCallback(() => {
     if (cursor >= deck.length - 1) {
+      haptic([4, 8]);
       springBack();
       return;
     }
-    haptic(4);
+    haptic([6, 14, 6]);
     setCursor((c) => c + 1);
     setOffset({ x: 0, y: 0 });
     setCardOpacity(1);
@@ -346,14 +376,27 @@ export function FocusSortMode({
 
   const goPrev = useCallback(() => {
     if (cursor <= 0) {
+      haptic([4, 8]);
       springBack();
       return;
     }
-    haptic(4);
+    haptic([6, 14, 6]);
     setCursor((c) => c - 1);
     setOffset({ x: 0, y: 0 });
     setCardOpacity(1);
   }, [cursor, springBack]);
+
+  const handleScheduleTap = useCallback(() => {
+    if (locked) return;
+    tapHaptic();
+    void flyAway("left");
+  }, [flyAway, locked]);
+
+  const handleArchiveTap = useCallback(() => {
+    if (locked) return;
+    tapHaptic();
+    void flyAway("right");
+  }, [flyAway, locked]);
 
   const prevPending = useRef<string | null>(null);
   useEffect(() => {
@@ -389,8 +432,9 @@ export function FocusSortMode({
     onScheduleCommitHandled,
   ]);
 
-  const onDown = (e: PointerEvent) => {
-    if (exiting || !current || pendingScheduleId) return;
+  const onDown = (e: PointerEvent<HTMLDivElement>) => {
+    if (locked || !current) return;
+    if (isInteractiveTarget(e.target)) return;
     setDragging(true);
     thresholdFired.current = null;
     previewFired.current = null;
@@ -406,7 +450,7 @@ export function FocusSortMode({
   };
 
   const onMove = (e: PointerEvent) => {
-    if (!dragging || exiting) return;
+    if (!dragging || locked) return;
     const now = performance.now();
     const dt = Math.max(1, now - lastMove.current.t);
     velocity.current = {
@@ -420,7 +464,6 @@ export function FocusSortMode({
     const x = rubberBand(rawX, MAX_DRAG_X);
     const y = rubberBand(rawY, MAX_DRAG_Y);
     setOffset({ x, y });
-    setCardOpacity(swipeOpacity(Math.abs(x), MAX_DRAG_X));
 
     const w = cardW();
     const dir = horizontalDir(x, y);
@@ -430,23 +473,23 @@ export function FocusSortMode({
       return;
     }
 
-    const mag = dragProgress(dir === "left" ? -x : x, w);
+    const mag = dragProgress(dir === "left" ? -x : x, w * COMMIT_RATIO * 2.2);
     if (mag >= SWIPE_PREVIEW && previewFired.current !== dir) {
       previewFired.current = dir;
-      tickDebounced();
+      tickDebounced(48);
     }
-    if (mag >= SWIPE_COMMIT && thresholdFired.current !== dir) {
+    if (mag >= 0.85 && thresholdFired.current !== dir) {
       thresholdFired.current = dir;
-      haptic([8, 16, 8]);
+      haptic([10, 18, 10]);
     }
     if (mag < SWIPE_PREVIEW) previewFired.current = null;
-    if (mag < SWIPE_COMMIT) thresholdFired.current = null;
+    if (mag < 0.85) thresholdFired.current = null;
   };
 
   const onUp = () => {
     if (!dragging) return;
     setDragging(false);
-    const w = cardW();
+    const threshold = commitThreshold();
     const { x, y } = offsetRef.current;
     const absX = Math.abs(x);
     const absY = Math.abs(y);
@@ -454,22 +497,20 @@ export function FocusSortMode({
     const vy = velocity.current.y;
 
     if (absX > absY) {
-      if (x < 0 && (absX > w * SWIPE_COMMIT || vx < -600)) {
-        confirmHaptic();
+      if (x < 0 && (absX > threshold || vx < -450)) {
         void flyAway("left");
         return;
       }
-      if (x > 0 && (absX > w * SWIPE_COMMIT || vx > 600)) {
-        confirmHaptic();
+      if (x > 0 && (absX > threshold || vx > 450)) {
         void flyAway("right");
         return;
       }
     } else {
-      if (y > NAV_DRAG || vy > 500) {
+      if (y > NAV_DRAG || vy > 420) {
         goNext();
         return;
       }
-      if (y < -NAV_DRAG || vy < -500) {
+      if (y < -NAV_DRAG || vy < -420) {
         goPrev();
         return;
       }
@@ -477,27 +518,27 @@ export function FocusSortMode({
     springBack();
   };
 
-  const scheduleProgress = offset.x < 0 ? dragProgress(-offset.x, cardW()) : 0;
-  const archiveProgress = offset.x > 0 ? dragProgress(offset.x, cardW()) : 0;
+  const scheduleProgress =
+    offset.x < 0 ? Math.min(1, -offset.x / commitThreshold()) : 0;
+  const archiveProgress =
+    offset.x > 0 ? Math.min(1, offset.x / commitThreshold()) : 0;
   const progressMag = Math.max(scheduleProgress, archiveProgress);
-  const rotate = swipeRotation(offset.x, cardW());
-  const scale = dragging || exiting ? 1 + progressMag * 0.03 : 1;
+  const rotate = dragging ? swipeRotation(offset.x, cardW()) * 0.65 : 0;
   const shadow = cardShadowBlur(progressMag);
-
   const stackPeek = deck.slice(cursor + 1, cursor + 3);
 
   return (
     <AnimatePresence>
       {open && (
         <motion.div
-          className="fixed inset-0 z-[60] flex flex-col bg-[#faf9f6]/88 backdrop-blur-[24px]"
+          className="fixed inset-0 z-[60] flex flex-col bg-[#faf9f6]/92 backdrop-blur-[20px]"
           role="dialog"
           aria-modal="true"
           aria-label={t("하나씩", "One by one")}
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
-          transition={{ duration: 0.28, ease: [0.32, 0.72, 0, 1] }}
+          transition={{ duration: 0.24 }}
           onClick={(e) => {
             if (e.target === e.currentTarget && !dragging) onClose();
           }}
@@ -505,8 +546,11 @@ export function FocusSortMode({
           <div className="flex items-center justify-end px-5 pb-2 pt-[max(1rem,env(safe-area-inset-top))]">
             <button
               type="button"
-              onClick={onClose}
-              className="touch-target rounded-full bg-white/80 text-ink-soft shadow-card active:bg-white active:text-ink"
+              onClick={() => {
+                tapHaptic();
+                onClose();
+              }}
+              className="touch-target rounded-full bg-white/90 text-ink-soft shadow-card active:scale-95 active:text-ink transition-transform"
               aria-label={t("닫기", "Close")}
             >
               <X size={20} strokeWidth={2.25} />
@@ -520,7 +564,10 @@ export function FocusSortMode({
           <div className="relative flex flex-1 flex-col items-center justify-center px-6 pb-[max(1.5rem,env(safe-area-inset-bottom))]">
             {!finished && current ? (
               <>
-                <div className="relative w-full max-w-[340px] flex-1 max-h-[min(520px,58vh)]">
+                <div
+                  ref={cardRef}
+                  className="relative w-full max-w-[340px] flex-1 max-h-[min(520px,58vh)]"
+                >
                   {stackPeek
                     .slice()
                     .reverse()
@@ -540,86 +587,84 @@ export function FocusSortMode({
                       </div>
                     ))}
 
-                  <motion.div
+                  <div
                     key={current.id}
-                    ref={cardRef}
-                    onPointerDown={onDown}
-                    onPointerMove={onMove}
-                    onPointerUp={onUp}
-                    onPointerCancel={onUp}
-                    className={`focus-sort-card absolute inset-x-0 top-0 z-[3] mx-auto flex min-h-[280px] w-full touch-none select-none flex-col px-7 py-8 will-change-transform ${
+                    className={`focus-sort-card absolute inset-x-0 top-0 z-[3] mx-auto flex w-full flex-col overflow-hidden ${
                       pendingScheduleId === current.id
-                        ? "ring-2 ring-primary/40 ring-offset-2"
+                        ? "ring-2 ring-primary/45 ring-offset-2"
                         : ""
                     }`}
-                    style={{
-                      transform: `translate(${offset.x}px, ${offset.y}px) rotate(${rotate}deg) scale(${scale})`,
-                      opacity: cardOpacity,
-                      boxShadow: `0 ${shadow}px ${shadow * 1.6}px -${shadow * 0.3}px rgba(0,0,0,${0.08 + progressMag * 0.1})`,
-                      transition: dragging || exiting ? "none" : undefined,
-                    }}
-                    initial={{ opacity: 0, scale: 0.96, y: 12 }}
-                    animate={{ opacity: 1, scale: 1, y: 0 }}
-                    transition={{ type: "spring", stiffness: 340, damping: 30 }}
                   >
-                    <SwipeStamp
-                      side="left"
-                      progress={scheduleProgress}
-                      label={t("그때", "When")}
-                    />
-                    <SwipeStamp
-                      side="right"
-                      progress={archiveProgress}
-                      label={t("기억함", "Saved")}
-                    />
-
-                    <div className="flex-1">
-                      <DeckCardBody item={current} />
+                    <div
+                      onPointerDown={onDown}
+                      onPointerMove={onMove}
+                      onPointerUp={onUp}
+                      onPointerCancel={onUp}
+                      className="relative flex min-h-[240px] flex-1 touch-none select-none flex-col px-7 pb-4 pt-8 will-change-transform"
+                      style={{
+                        transform: `translate3d(${offset.x}px, ${offset.y}px, 0) rotate(${rotate}deg)`,
+                        opacity: cardOpacity,
+                        boxShadow: `0 ${shadow}px ${shadow * 1.6}px -${shadow * 0.3}px rgba(0,0,0,${0.08 + progressMag * 0.1})`,
+                      }}
+                    >
+                      <SwipeStamp
+                        side="schedule"
+                        progress={scheduleProgress}
+                        label={t("그때", "When")}
+                      />
+                      <SwipeStamp
+                        side="archive"
+                        progress={archiveProgress}
+                        label={t("기억함", "Saved")}
+                      />
+                      <div className="flex-1">
+                        <DeckCardBody item={current} />
+                      </div>
                     </div>
 
-                    <div className="mt-6 flex gap-2.5 pt-2">
+                    <div className="flex gap-2.5 border-t border-ink/[0.06] bg-white/60 px-5 py-4">
                       <button
                         type="button"
-                        disabled={exiting || !!pendingScheduleId}
-                        onClick={() => void flyAway("left")}
-                        className="touch-press flex-1 rounded-full bg-primary py-3.5 text-[15px] font-bold text-ink shadow-card disabled:opacity-40"
+                        disabled={locked}
+                        onClick={handleScheduleTap}
+                        className="touch-press flex-1 rounded-full bg-primary py-3.5 text-[15px] font-bold text-ink shadow-card transition-transform active:scale-[0.97] disabled:opacity-40"
                       >
                         {t("일정", "When")}
                       </button>
                       <button
                         type="button"
-                        disabled={exiting || !!pendingScheduleId}
-                        onClick={() => void flyAway("right")}
-                        className="touch-press flex-1 rounded-full bg-ink py-3.5 text-[15px] font-bold text-white shadow-card disabled:opacity-40"
+                        disabled={locked}
+                        onClick={handleArchiveTap}
+                        className="touch-press flex-1 rounded-full bg-ink py-3.5 text-[15px] font-bold text-white shadow-card transition-transform active:scale-[0.97] disabled:opacity-40"
                       >
                         {t("보관", "Save")}
                       </button>
                     </div>
-                  </motion.div>
+                  </div>
                 </div>
 
-                <div className="mt-8 flex items-center justify-center gap-10">
+                <div className="mt-7 flex items-center justify-center gap-10">
                   <button
                     type="button"
-                    disabled={exiting || !!pendingScheduleId}
-                    onClick={() => void flyAway("left")}
-                    className="swipe-pill-btn swipe-pill-schedule h-14 w-14 disabled:opacity-40"
+                    disabled={locked}
+                    onClick={handleScheduleTap}
+                    className="swipe-pill-btn swipe-pill-schedule h-14 w-14 transition-transform active:scale-90 disabled:opacity-40"
                     aria-label={t("일정", "When")}
                   >
                     <Calendar size={22} strokeWidth={2.25} />
                   </button>
                   <button
                     type="button"
-                    disabled={exiting || !!pendingScheduleId}
-                    onClick={() => void flyAway("right")}
-                    className="swipe-pill-btn swipe-pill-archive h-14 w-14 disabled:opacity-40"
+                    disabled={locked}
+                    onClick={handleArchiveTap}
+                    className="swipe-pill-btn swipe-pill-archive h-14 w-14 transition-transform active:scale-90 disabled:opacity-40"
                     aria-label={t("기억함", "Saved")}
                   >
                     <Archive size={22} strokeWidth={2.25} />
                   </button>
                 </div>
 
-                <p className="mt-5 text-center text-[11px] font-medium text-ink-soft/70">
+                <p className="mt-4 text-center text-[11px] font-medium text-ink-soft/70">
                   {t(
                     "← 일정 · → 보관 · ↓ 다음 · ↑ 이전",
                     "← When · → Save · ↓ next · ↑ previous",
