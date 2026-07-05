@@ -476,12 +476,14 @@ function Schedule() {
         onClose={() => setSheet({ open: false })}
         onSave={async (text, start, end, opts) => {
           try {
+            const reminderMin =
+              opts?.reminderMinutes ?? opts?.alarmMinutesBefore ?? null;
             const alarmPayload =
-              opts?.alarmMinutesBefore != null
+              reminderMin != null
                 ? {
                     alarm: true,
                     alarm_at: new Date(
-                      start.getTime() - opts.alarmMinutesBefore * 60 * 1000,
+                      start.getTime() - reminderMin * 60 * 1000,
                     ).toISOString(),
                   }
                 : { alarm: false };

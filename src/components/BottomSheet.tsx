@@ -102,7 +102,7 @@ export function BottomSheet({
             animate={{ y: 0 }}
             exit={{ y: "100%" }}
             transition={SPRING_SHEET}
-            className="sheet-chrome relative w-full shrink-0 max-h-[var(--sheet-max-h)] overflow-hidden bg-white/98 shadow-[0_-20px_60px_-10px_rgba(0,0,0,0.22)] backdrop-blur-2xl"
+            className="sheet-chrome relative flex w-full max-h-[var(--sheet-max-h)] shrink-0 flex-col overflow-hidden bg-white/98 shadow-[0_-20px_60px_-10px_rgba(0,0,0,0.22)] backdrop-blur-2xl"
             style={
               {
                 "--sheet-max-h": maxHeight,
@@ -116,13 +116,15 @@ export function BottomSheet({
               </span>
             )}
             <div
-              className="flex cursor-grab justify-center py-3 active:cursor-grabbing"
+              className="flex shrink-0 cursor-grab justify-center py-3 active:cursor-grabbing"
               onPointerDown={(e) => dragControls.start(e)}
               aria-hidden
             >
               <div className="h-1 w-9 rounded-full bg-ink/12" />
             </div>
-            <div className="pb-[env(safe-area-inset-bottom)]">{children}</div>
+            <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
+              {children}
+            </div>
           </motion.div>
         </div>
       )}

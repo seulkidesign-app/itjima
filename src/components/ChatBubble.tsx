@@ -8,10 +8,13 @@ export function ChatBubble({
   item,
   isNewest,
   children,
+  wrapBubble,
 }: {
   item: InboxItem;
   isNewest?: boolean;
   children?: ReactNode;
+  /** Wrap only the bubble card (e.g. swipe row) — keeps actions aligned to bubble height. */
+  wrapBubble?: (bubble: ReactNode) => ReactNode;
 }) {
   const t = useT();
   const { lang } = useLang();
@@ -40,12 +43,23 @@ export function ChatBubble({
           ))}
         </div>
       )}
-      <div className="chat-bubble w-fit max-w-full text-left">
-        <p className="whitespace-pre-wrap text-[16px] font-medium leading-[1.65] tracking-[-0.015em] text-ink">
-          {item.text.trim() || t("(이미지만)", "(image only)")}
-        </p>
-        {children}
-      </div>
+      {wrapBubble ? (
+        wrapBubble(
+          <div className="chat-bubble w-fit max-w-full text-left">
+            <p className="whitespace-pre-wrap text-[16px] font-medium leading-[1.65] tracking-[-0.015em] text-ink">
+              {item.text.trim() || t("(이미지만)", "(image only)")}
+            </p>
+            {children}
+          </div>,
+        )
+      ) : (
+        <div className="chat-bubble w-fit max-w-full text-left">
+          <p className="whitespace-pre-wrap text-[16px] font-medium leading-[1.65] tracking-[-0.015em] text-ink">
+            {item.text.trim() || t("(이미지만)", "(image only)")}
+          </p>
+          {children}
+        </div>
+      )}
       {isNewest && (
         <p className="mt-1 pr-0.5 text-[10px] font-medium tabular-nums text-ink-soft/55">
           {new Date(item.created_at).toLocaleString(locale, {

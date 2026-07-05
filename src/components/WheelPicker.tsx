@@ -19,10 +19,6 @@ export function WheelPicker({
       onTouchStart={(e) => e.stopPropagation()}
       onClick={(e) => e.stopPropagation()}
     >
-      <div
-        className="pointer-events-none absolute left-2 right-2 top-1/2 z-0 -translate-y-1/2 rounded-[24px] bg-primary/15"
-        style={{ height: ROW_H }}
-      />
       {columns.map((c, ci) => (
         <Column
           key={ci}
@@ -98,28 +94,34 @@ function Column({
 
   return (
     <div className="min-w-0 flex-1 text-center">
-      <div className="mb-1 text-[11px] font-semibold uppercase tracking-wider text-ink-soft/70">
+      <div className="mb-1.5 text-[11px] font-semibold uppercase tracking-wider text-ink-soft/70">
         {col.label}
       </div>
-      <div ref={ref} onScroll={onScroll} className="wheel-col relative">
-        <div style={{ height: padTop }} aria-hidden />
-        {col.values.map((v) => {
-          const isActive = v === internal;
-          return (
-            <div
-              key={v}
-              className={`flex items-center justify-center font-num tabular-nums transition-all duration-150 ${
-                isActive
-                  ? "text-ink text-[32px] font-bold"
-                  : "text-ink-soft/40 text-[22px]"
-              }`}
-              style={{ height: ROW_H, scrollSnapAlign: "center" }}
-            >
-              {String(v).padStart(col.pad ?? 0, "0")}
-            </div>
-          );
-        })}
-        <div style={{ height: padTop }} aria-hidden />
+      <div className="relative">
+        <div
+          className="pointer-events-none absolute inset-x-0 top-1/2 z-0 -translate-y-1/2 rounded-[20px] bg-primary/15"
+          style={{ height: ROW_H }}
+        />
+        <div ref={ref} onScroll={onScroll} className="wheel-col relative z-[1]">
+          <div style={{ height: padTop }} aria-hidden />
+          {col.values.map((v) => {
+            const isActive = v === internal;
+            return (
+              <div
+                key={v}
+                className={`flex items-center justify-center font-num tabular-nums transition-all duration-150 ${
+                  isActive
+                    ? "text-ink text-[32px] font-bold"
+                    : "text-ink-soft/40 text-[22px]"
+                }`}
+                style={{ height: ROW_H, scrollSnapAlign: "center" }}
+              >
+                {String(v).padStart(col.pad ?? 0, "0")}
+              </div>
+            );
+          })}
+          <div style={{ height: padTop }} aria-hidden />
+        </div>
       </div>
     </div>
   );

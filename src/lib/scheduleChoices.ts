@@ -1,4 +1,5 @@
 import { nextWeekendMorning } from "@/lib/scheduleTime";
+import type { RepeatRule } from "@/lib/store";
 
 export type WhenKey =
   | "today"
@@ -11,11 +12,64 @@ export type TimeKey = "morning" | "afternoon" | "evening" | "custom";
 
 export type ReminderKey = "at" | "5m" | "10m" | "30m" | "1h" | "1d" | "off";
 
+export type RepeatKey = "none" | RepeatRule;
+
+export const MINUTE_STEPS = [0, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55] as const;
+
 const TIME_HOURS: Record<Exclude<TimeKey, "custom">, number> = {
   morning: 9,
   afternoon: 13,
   evening: 18,
 };
+
+export function snapMinute(m: number): number {
+  let best = MINUTE_STEPS[0];
+  let diff = Math.abs(m - best);
+  for (const step of MINUTE_STEPS) {
+    const d = Math.abs(m - step);
+    if (d < diff) {
+      best = step;
+      diff = d;
+    }
+  }
+  return best;
+}
+
+export function endOfDay(d: Date): Date {
+  const x = new Date(d);
+  x.setHours(23, 59, 59, 999);
+  return x;
+}
+
+export function defaultEndFromStart(start: Date, minutes = 60): Date {
+  return new Date(start.getTime() + minutes * 60 * 1000);
+}
+
+export function repeatKeyToRule(key: RepeatKey): RepeatRule | null {
+  return key === "none" ? null : key;
+}
+
+export function repeatRuleToKey(rule: RepeatRule | null | undefined): RepeatKey {
+  return rule ?? "none";
+}
+
+export function repeatLabel(
+  key: RepeatKey,
+  t: (ko: string, en: string) => string,
+): string {
+  switch (key) {
+    case "none":
+      return t("없음", "Never");
+    case "daily":
+      return t("매일", "Daily");
+    case "weekly":
+      return t("매주", "Weekly");
+    case "monthly":
+      return t("매월", "Monthly");
+    case "yearly":
+      return t("매년", "Yearly");
+  }
+}
 
 export function startOfDay(d: Date) {
   const x = new Date(d);

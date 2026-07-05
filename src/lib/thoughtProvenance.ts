@@ -1,5 +1,5 @@
 import type { BrainMirrorResult } from "@/lib/brainMirror";
-import type { InboxItem } from "@/lib/store";
+import type { InboxItem, RepeatRule } from "@/lib/store";
 
 /** Strip accidental `undefined`/`null` prefixes from legacy `${optional}${text}` saves. */
 function sanitizeProvenanceText(value: unknown): string {
@@ -27,8 +27,7 @@ export function scheduleFromInbox(
     end_time: string;
     alarm?: boolean;
     all_day?: boolean;
-    repeat?: null;
-    all_day?: boolean;
+    repeat?: RepeatRule | null;
   },
 ) {
   const snap = inboxSnapshot(item);

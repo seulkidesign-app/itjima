@@ -233,45 +233,53 @@ export function ChatSwipeRow({
     >
       <div className="relative w-fit max-w-[min(340px,calc(100vw-4.5rem))]">
         {showSchedule && (
-          <button
-            type="button"
-            onClick={(e) => {
-              e.stopPropagation();
-              tapHaptic();
-              commit("right");
-            }}
-            className="swipe-pill-btn swipe-pill-schedule absolute top-1/2 z-[1] -translate-y-1/2"
-            style={{
-              left: GAP,
-              opacity: scheduleOpacity,
-              pointerEvents: scheduleOpacity > 0.5 ? "auto" : "none",
-              transform: `translateY(-50%) scale(${0.88 + scheduleOpacity * 0.12})`,
-            }}
-            aria-label={t("그때", "When")}
+          <div
+            className="pointer-events-none absolute inset-y-0 left-0 z-[1] flex items-center"
+            style={{ width: OPEN_SLOT, paddingLeft: GAP }}
           >
-            <Calendar size={20} strokeWidth={2.25} />
-          </button>
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                tapHaptic();
+                commit("right");
+              }}
+              className="swipe-pill-btn swipe-pill-schedule pointer-events-auto"
+              style={{
+                opacity: scheduleOpacity,
+                pointerEvents: scheduleOpacity > 0.5 ? "auto" : "none",
+                transform: `scale(${0.88 + scheduleOpacity * 0.12})`,
+              }}
+              aria-label={t("그때", "When")}
+            >
+              <Calendar size={20} strokeWidth={2.25} />
+            </button>
+          </div>
         )}
 
         {showArchive && (
-          <button
-            type="button"
-            onClick={(e) => {
-              e.stopPropagation();
-              tapHaptic();
-              commit("left");
-            }}
-            className="swipe-pill-btn swipe-pill-archive absolute top-1/2 z-[1] -translate-y-1/2"
-            style={{
-              right: GAP,
-              opacity: archiveOpacity,
-              pointerEvents: archiveOpacity > 0.5 ? "auto" : "none",
-              transform: `translateY(-50%) scale(${0.88 + archiveOpacity * 0.12})`,
-            }}
-            aria-label={t("기억함", "Saved")}
+          <div
+            className="pointer-events-none absolute inset-y-0 right-0 z-[1] flex items-center justify-end"
+            style={{ width: OPEN_SLOT, paddingRight: GAP }}
           >
-            <Archive size={20} strokeWidth={2.25} />
-          </button>
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                tapHaptic();
+                commit("left");
+              }}
+              className="swipe-pill-btn swipe-pill-archive pointer-events-auto"
+              style={{
+                opacity: archiveOpacity,
+                pointerEvents: archiveOpacity > 0.5 ? "auto" : "none",
+                transform: `scale(${0.88 + archiveOpacity * 0.12})`,
+              }}
+              aria-label={t("기억함", "Saved")}
+            >
+              <Archive size={20} strokeWidth={2.25} />
+            </button>
+          </div>
         )}
 
         <div

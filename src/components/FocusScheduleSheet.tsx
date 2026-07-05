@@ -1,6 +1,9 @@
 import { useEffect, useMemo, useState } from "react";
 import { BottomSheet } from "./BottomSheet";
-import { ScheduleChoiceFlow } from "./ScheduleChoiceFlow";
+import {
+  ScheduleChoiceFlow,
+  type ScheduleConfirmOptions,
+} from "./ScheduleChoiceFlow";
 import type { InboxItem } from "@/lib/store";
 import { thoughtFirstLine } from "@/lib/brainMirror";
 import { detectDate } from "@/lib/dateDetect";
@@ -13,7 +16,7 @@ type Props = {
     text: string,
     start: Date,
     end: Date,
-    alarmMinutesBefore: number | null,
+    options: ScheduleConfirmOptions,
   ) => void;
 };
 
@@ -50,18 +53,18 @@ export function FocusScheduleSheet({ item, open, onClose, onConfirm }: Props) {
   if (!item) return null;
 
   return (
-    <BottomSheet open={open} onClose={onClose} maxHeight="78vh">
+    <BottomSheet open={open} onClose={onClose} maxHeight="88vh">
       <ScheduleChoiceFlow
         open={open}
         title={title}
         onTitleChange={setTitle}
         initialStart={initialStart}
-        onConfirm={(start, end, reminderMinutes) => {
+        onConfirm={(start, end, options) => {
           onConfirm(
             title.trim() || thoughtFirstLine(item.text),
             start,
             end,
-            reminderMinutes,
+            options,
           );
         }}
       />

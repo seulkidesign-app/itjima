@@ -8,6 +8,8 @@ import type { RepeatRule } from "@/lib/store";
 export type ScheduleSaveOptions = {
   allDay?: boolean;
   repeat?: RepeatRule | null;
+  reminderMinutes?: number | null;
+  /** @deprecated use reminderMinutes */
   alarmMinutesBefore?: number | null;
 };
 
@@ -15,6 +17,7 @@ export function ScheduleSheet({
   open,
   initialText = "",
   initialStart,
+  initialEnd,
   initialAllDay,
   initialRepeat,
   saveLabel,
@@ -48,10 +51,10 @@ export function ScheduleSheet({
     <BottomSheet
       open={open}
       onClose={onClose}
-      maxHeight="85vh"
+      maxHeight="88vh"
       title={saveLabel ? t("그때 수정", "Edit when") : t("그때 남기기", "Remember for then")}
     >
-      <div className="flex max-h-[85vh] flex-col">
+      <div className="flex min-h-0 flex-1 flex-col">
         <div className="flex shrink-0 items-center justify-end px-5 pb-1">
           <button
             type="button"
@@ -62,22 +65,19 @@ export function ScheduleSheet({
             <X size={20} strokeWidth={2.25} />
           </button>
         </div>
-        <div className="min-h-0 flex-1 overflow-y-auto">
-          <ScheduleChoiceFlow
-            open={open}
-            title={text}
-            onTitleChange={setText}
-            initialStart={initialStart}
-            editMode={!!saveLabel}
-            onConfirm={(start, end, reminderMinutes) => {
-              onSave(text.trim() || t("그때", "When"), start, end, {
-                allDay: initialAllDay ?? false,
-                repeat: initialRepeat ?? null,
-                alarmMinutesBefore: reminderMinutes,
-              });
-            }}
-          />
-        </div>
+        <ScheduleChoiceFlow
+          open={open}
+          title={text}
+          onTitleChange={setText}
+          initialStart={initialStart}
+          initialEnd={initialEnd}
+          initialAllDay={initialAllDay}
+          initialRepeat={initialRepeat}
+          editMode={!!saveLabel}
+          onConfirm={(start, end, opts) => {
+            onSave(text.trim() || t("그때", "When"), start, end, opts);
+          }}
+        />
       </div>
     </BottomSheet>
   );

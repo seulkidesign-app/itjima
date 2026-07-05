@@ -49,7 +49,7 @@ import { ArchiveGridSkeleton } from "@/components/Skeleton";
 import { EmptyState } from "@/components/EmptyState";
 import { SyncIndicator } from "@/components/SyncIndicator";
 import { SwipeCard } from "@/components/SwipeCard";
-import { ScheduleSheet } from "@/components/ScheduleSheet";
+import { ScheduleSheet, type ScheduleSaveOptions } from "@/components/ScheduleSheet";
 import { track } from "@/lib/analytics";
 import { SPRING_DEFAULT } from "@/lib/motion";
 
@@ -485,17 +485,19 @@ function Archive() {
     text: string,
     start: Date,
     end: Date,
-    alarmMinutes: number | null,
+    opts?: ScheduleSaveOptions,
   ) => {
     if (!scheduleItem) return;
     const it = scheduleItem;
+    const reminderMin =
+      opts?.reminderMinutes ?? opts?.alarmMinutesBefore ?? null;
     try {
       const alarmPayload =
-        alarmMinutes != null
+        reminderMin != null
           ? {
               alarm: true,
               alarm_at: new Date(
-                start.getTime() - alarmMinutes * 60 * 1000,
+                start.getTime() - reminderMin * 60 * 1000,
               ).toISOString(),
             }
           : { alarm: false };
@@ -503,6 +505,8 @@ function Archive() {
         text,
         start_time: start.toISOString(),
         end_time: end.toISOString(),
+        all_day: opts?.allDay ?? false,
+        repeat: opts?.repeat ?? null,
         alarm: alarmPayload.alarm ?? false,
         alarm_at: alarmPayload.alarm
           ? (alarmPayload as { alarm_at: string }).alarm_at
@@ -1154,12 +1158,7 @@ function Archive() {
         }
         onClose={() => setScheduleItem(null)}
         onSave={(text, start, end, opts) => {
-          void confirmScheduleFromArchive(
-            text,
-            start,
-            end,
-            opts?.alarmMinutesBefore ?? null,
-          );
+          void confirmScheduleFromArchive(text, start, end, opts);
         }}
       />
     </div>

@@ -10,6 +10,7 @@ import {
 import { ChatSwipeRow } from "@/components/ChatSwipeRow";
 import { FocusSortMode } from "@/components/FocusSortMode";
 import { FocusScheduleSheet } from "@/components/FocusScheduleSheet";
+import type { ScheduleConfirmOptions } from "@/components/ScheduleChoiceFlow";
 import { LoginSheet } from "@/components/LoginSheet";
 import { CleanupReviewSheet } from "@/components/CleanupReviewSheet";
 import { detectJunk } from "@/lib/junkDetect";
@@ -202,7 +203,7 @@ function Inbox() {
     text: string,
     start: Date,
     end: Date,
-    alarmMinutesBefore: number | null,
+    options: ScheduleConfirmOptions,
   ) => {
     const it = focusScheduleSheet.item;
     if (!it) return;
@@ -211,14 +212,16 @@ function Inbox() {
         text,
         start_time: start.toISOString(),
         end_time: end.toISOString(),
-        alarm: alarmMinutesBefore !== null,
+        alarm: options.reminderMinutes !== null,
+        all_day: options.allDay,
+        repeat: options.repeat,
       });
       const { item: created, cloudSynced: scheduleSynced } = await schedules.add({
         ...payload,
-        ...(alarmMinutesBefore !== null
+        ...(options.reminderMinutes !== null
           ? {
               alarm_at: new Date(
-                start.getTime() - alarmMinutesBefore * 60 * 1000,
+                start.getTime() - options.reminderMinutes * 60 * 1000,
               ).toISOString(),
             }
           : {}),
@@ -525,43 +528,49 @@ function Inbox() {
               {itemsAsc.map((it) => {
                 const isNewest = it.id === newestId;
                 return (
-                  <ChatSwipeRow
+                  <ChatBubble
                     key={it.id}
-                    rowId={it.id}
-                    openRowId={swipeOpenId}
-                    onOpenRowChange={setSwipeOpenId}
-                    onSwipeRight={() => openHomeSchedule(it)}
-                    onSwipeLeft={() => moveToArchive(it)}
-                    onLongPress={() => setMenuFor(it.id)}
-                    onTap={() => openFocusSort(it.id)}
+                    item={it}
+                    isNewest={isNewest}
+                    wrapBubble={(bubble) => (
+                      <ChatSwipeRow
+                        rowId={it.id}
+                        openRowId={swipeOpenId}
+                        onOpenRowChange={setSwipeOpenId}
+                        onSwipeRight={() => openHomeSchedule(it)}
+                        onSwipeLeft={() => moveToArchive(it)}
+                        onLongPress={() => setMenuFor(it.id)}
+                        onTap={() => openFocusSort(it.id)}
+                      >
+                        {bubble}
+                      </ChatSwipeRow>
+                    )}
                   >
-                    <ChatBubble item={it} isNewest={isNewest}>
-                      {inboxRevival?.sourceId === it.id && (
-                        <MemoryRevivalHint
-                          hint={inboxRevival}
-                          compact
-                          delayMs={900}
-                          onRevisit={revisitArchiveMemory}
-                          onDismiss={() => setInboxRevival(null)}
-                        />
-                      )}
-                      {it.text.trim().length >= 2 && (
-                        <BrainMirrorPanel
-                          item={it}
-                          inbox={inbox}
-                          eligible={
-                            bmEligibleIds.has(it.id) &&
-                            isBrainMirrorCandidate(it.text) &&
-                            (Boolean(it.brain_mirror) || it.id === newestId)
-                          }
-                          onAutoAct={autoScheduleFromMirror}
-                          onCancelAct={cancelMirrorSchedule}
-                          onMirrorMissed={offerDateSchedule}
-                          variant="inline"
-                        />
-                      )}
-                    </ChatBubble>
-                  </ChatSwipeRow>
+                    {inboxRevival?.sourceId === it.id && (
+                      <MemoryRevivalHint
+                        hint={inboxRevival}
+                        compact
+                        delayMs={900}
+                        onRevisit={revisitArchiveMemory}
+                        onDismiss={() => setInboxRevival(null)}
+                      />
+                    )}
+                    {it.text.trim().length >= 2 && (
+                      <BrainMirrorPanel
+                        item={it}
+                        inbox={inbox}
+                        eligible={
+                          bmEligibleIds.has(it.id) &&
+                          isBrainMirrorCandidate(it.text) &&
+                          (Boolean(it.brain_mirror) || it.id === newestId)
+                        }
+                        onAutoAct={autoScheduleFromMirror}
+                        onCancelAct={cancelMirrorSchedule}
+                        onMirrorMissed={offerDateSchedule}
+                        variant="inline"
+                      />
+                    )}
+                  </ChatBubble>
                 );
               })}
               <div ref={listEndRef} />
@@ -742,8 +751,8 @@ function Inbox() {
           setFocusScheduleSheet({ open: false });
           setFocusPendingScheduleId(null);
         }}
-        onConfirm={(text, start, end, alarmMin) => {
-          void saveHomeSchedule(text, start, end, alarmMin);
+        onConfirm={(text, start, end, options) => {
+          void saveHomeSchedule(text, start, end, options);
         }}
       />
 
