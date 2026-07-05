@@ -520,7 +520,7 @@ function Inbox() {
         </>
       ) : (
         <>
-          <div className="flex-1 px-3 pb-2">
+          <div className="flex-1 pl-3 pr-[3.75rem] pb-2">
             <div className="chat-scroll flex flex-col items-stretch gap-2 pb-4">
               {itemsAsc.map((it) => {
                 const isNewest = it.id === newestId;
@@ -733,7 +733,6 @@ function Inbox() {
         }}
         onScheduleRequest={openScheduleFromFocus}
         onArchive={(it) => moveToArchive(it)}
-        onSoftDelete={(it) => moveToDelete(it)}
       />
 
       <FocusScheduleSheet

@@ -10,20 +10,18 @@ import { Archive, Calendar } from "lucide-react";
 import { animate } from "framer-motion";
 import { useT } from "@/lib/i18n";
 import { tickDebounced, confirm as confirmHaptic } from "@/lib/haptics";
-import { SPRING_ROW, SPRING_SNAP_BACK } from "@/lib/motion";
+import { SPRING_SNAP_BACK } from "@/lib/motion";
 
 type Side = "left" | "right";
 
-const BTN = 48;
 const GAP = 10;
-const SLOT = BTN + GAP;
-const OPEN_AT = 28;
-const MAX_DRAG = 96;
+const OPEN_AT = 32;
+const MAX_DRAG = 120;
 
 function rubber(value: number, limit: number) {
   const abs = Math.abs(value);
   if (abs <= limit) return value;
-  return Math.sign(value) * (limit + (abs - limit) * 0.18);
+  return Math.sign(value) * (limit + (abs - limit) * 0.15);
 }
 
 function clamp01(v: number) {
@@ -53,44 +51,41 @@ export function ChatSwipeRow({
 }) {
   const t = useT();
   const rowRef = useRef<HTMLDivElement>(null);
-  const [offsetX, setOffsetX] = useState(0);
+  const [dragX, setDragX] = useState(0);
   const [openSide, setOpenSide] = useState<Side | null>(null);
   const [acting, setActing] = useState(false);
   const draggingRef = useRef(false);
-  const offsetRef = useRef(0);
+  const dragRef = useRef(0);
   const startX = useRef(0);
   const longTimer = useRef<number | null>(null);
   const longFired = useRef(false);
   const moved = useRef(false);
 
-  offsetRef.current = offsetX;
+  dragRef.current = dragX;
 
-  const springX = useCallback(
-    (to: number, onDone?: () => void) => {
-      animate(offsetRef.current, to, {
-        ...(openSide ? SPRING_ROW : SPRING_SNAP_BACK),
-        onUpdate: (v) => {
-          offsetRef.current = v;
-          setOffsetX(v);
-        },
-        onComplete: onDone,
-      });
-    },
-    [openSide],
-  );
+  const springDrag = useCallback((to: number, onDone?: () => void) => {
+    animate(dragRef.current, to, {
+      ...SPRING_SNAP_BACK,
+      onUpdate: (v) => {
+        dragRef.current = v;
+        setDragX(v);
+      },
+      onComplete: onDone,
+    });
+  }, []);
 
   const dismiss = useCallback(() => {
     setOpenSide(null);
     if (rowId && onOpenRowChange) onOpenRowChange(null);
-    springX(0);
-  }, [rowId, onOpenRowChange, springX]);
+    springDrag(0);
+  }, [rowId, onOpenRowChange, springDrag]);
 
   const snapOpen = useCallback(
     (side: Side) => {
       setOpenSide(side);
       if (rowId && onOpenRowChange) onOpenRowChange(rowId);
-      offsetRef.current = 0;
-      setOffsetX(0);
+      dragRef.current = 0;
+      setDragX(0);
       tickDebounced();
     },
     [rowId, onOpenRowChange],
@@ -105,8 +100,8 @@ export function ChatSwipeRow({
       else onSwipeLeft();
       setOpenSide(null);
       setActing(false);
-      offsetRef.current = 0;
-      setOffsetX(0);
+      dragRef.current = 0;
+      setDragX(0);
       if (rowId && onOpenRowChange) onOpenRowChange(null);
     },
     [acting, onSwipeLeft, onSwipeRight, rowId, onOpenRowChange],
@@ -174,8 +169,8 @@ export function ChatSwipeRow({
     if (openSide === "left" && x > 0) x = 0;
 
     x = rubber(x, MAX_DRAG);
-    offsetRef.current = x;
-    setOffsetX(x);
+    dragRef.current = x;
+    setDragX(x);
     if (Math.abs(x) > 14) tickDebounced();
   };
 
@@ -185,11 +180,11 @@ export function ChatSwipeRow({
     clearLongPress();
     if (longFired.current) return;
 
-    const x = offsetRef.current;
+    const x = dragRef.current;
 
     if (openSide) {
       if (Math.abs(x) < OPEN_AT * 0.35) dismiss();
-      else springX(0);
+      else springDrag(0);
       return;
     }
 
@@ -202,82 +197,73 @@ export function ChatSwipeRow({
       return;
     }
     if (!moved.current && onTap) onTap();
-    springX(0);
+    springDrag(0);
   };
 
   const scheduleOpacity =
-    openSide === "right" ? 1 : clamp01(offsetX / SLOT);
-  const archiveOpacity = openSide === "left" ? 1 : clamp01(-offsetX / SLOT);
-  const showSchedule = openSide === "right" || offsetX > 2;
-  const showArchive = openSide === "left" || offsetX < -2;
-  const dragX = openSide ? 0 : offsetX;
+    openSide === "right" ? 1 : clamp01(dragX / OPEN_AT);
+  const archiveOpacity = openSide === "left" ? 1 : clamp01(-dragX / OPEN_AT);
+  const showSchedule =
+    openSide === "right" || (dragX > 6 && openSide !== "left");
+  const showArchive =
+    openSide === "left" || (dragX < -6 && openSide !== "right");
+
+  const pillStyle = (opacity: number) => ({
+    opacity,
+    pointerEvents: (opacity > 0.55 ? "auto" : "none") as "auto" | "none",
+    transform: `translateY(-50%) scale(${0.86 + opacity * 0.14})`,
+  });
 
   return (
     <div
       ref={rowRef}
-      className="swipe-row relative w-full py-0.5"
+      className="swipe-row relative flex w-full justify-end py-0.5"
       style={{ touchAction: "pan-y" }}
     >
-      <div className="flex w-full items-center justify-end">
-        <div
-          className="flex shrink-0 items-center justify-end overflow-hidden transition-[width,margin] duration-150 ease-out"
-          style={{
-            width: showSchedule ? SLOT : 0,
-            marginRight: showSchedule ? 0 : 0,
-          }}
-        >
+      <div
+        onPointerDown={onDown}
+        onPointerMove={onMove}
+        onPointerUp={onUp}
+        onPointerCancel={onUp}
+        className="relative shrink-0 touch-none select-none"
+      >
+        {showSchedule && (
           <button
             type="button"
             onClick={(e) => {
               e.stopPropagation();
               commit("right");
             }}
-            className="swipe-pill-btn swipe-pill-schedule"
+            className="swipe-pill-btn swipe-pill-schedule absolute top-1/2 z-[2]"
             style={{
-              opacity: scheduleOpacity,
-              pointerEvents: scheduleOpacity > 0.55 ? "auto" : "none",
-              transform: `scale(${0.88 + scheduleOpacity * 0.12})`,
+              right: `calc(100% + ${GAP}px)`,
+              ...pillStyle(scheduleOpacity),
             }}
             aria-label={t("그때", "When")}
           >
             <Calendar size={20} strokeWidth={2.25} />
           </button>
-        </div>
+        )}
 
-        <div
-          onPointerDown={onDown}
-          onPointerMove={onMove}
-          onPointerUp={onUp}
-          onPointerCancel={onUp}
-          className="relative z-[1] shrink-0 touch-none select-none will-change-transform"
-          style={{
-            transform: `translate3d(${dragX}px, 0, 0)`,
-          }}
-        >
-          {children}
-        </div>
-
-        <div
-          className="flex shrink-0 items-center overflow-hidden transition-[width,margin] duration-150 ease-out"
-          style={{ width: showArchive ? SLOT : 0 }}
-        >
+        {showArchive && (
           <button
             type="button"
             onClick={(e) => {
               e.stopPropagation();
               commit("left");
             }}
-            className="swipe-pill-btn swipe-pill-archive"
+            className="swipe-pill-btn swipe-pill-archive absolute top-1/2 z-[2]"
             style={{
-              opacity: archiveOpacity,
-              pointerEvents: archiveOpacity > 0.55 ? "auto" : "none",
-              transform: `scale(${0.88 + archiveOpacity * 0.12})`,
+              left: `calc(100% + ${GAP}px)`,
+              ...pillStyle(archiveOpacity),
             }}
             aria-label={t("기억함", "Saved")}
           >
             <Archive size={20} strokeWidth={2.25} />
           </button>
-        </div>
+        )}
+
+        {children}
       </div>
     </div>
   );
