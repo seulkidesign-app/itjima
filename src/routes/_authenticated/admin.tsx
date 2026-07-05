@@ -52,7 +52,10 @@ function AdminPage() {
 
   const isAdmin = !!adminCheck.data?.isAdmin;
   const myUserId = adminCheck.data?.userId;
-  const noAdminsYet = !isAdmin && (adminCount.data?.count ?? -1) === 0;
+  const adminCountKnown = adminCount.isSuccess;
+  const noAdminsYet = adminCountKnown && (adminCount.data?.count ?? 0) === 0;
+  const gateLoading =
+    !isAdmin && (adminCheck.isLoading || adminCount.isLoading);
 
   const bootstrap = useMutation({
     mutationFn: async () => {
@@ -62,6 +65,7 @@ function AdminPage() {
     onSuccess: () => {
       toast.success(t("관리자로 등록됐어요", "You are now an admin"));
       qc.invalidateQueries({ queryKey: ["isAdmin"] });
+      qc.invalidateQueries({ queryKey: ["adminCount"] });
     },
     onError: (e: Error) => {
       const msg = e.message;
@@ -73,6 +77,15 @@ function AdminPage() {
           t(
             "DB 함수가 아직 없어요. Supabase SQL Editor에서 bootstrap_admin 마이그레이션을 실행해 주세요.",
             "DB function missing. Run the bootstrap_admin migration in Supabase SQL Editor.",
+          ),
+        );
+        return;
+      }
+      if (msg.includes("Admin already exists")) {
+        toast.error(
+          t(
+            "이미 다른 관리자가 있어요. Supabase에서 user_roles에 본인 UID를 admin으로 추가해 주세요.",
+            "Another admin already exists. Add your UID as admin in Supabase user_roles.",
           ),
         );
         return;
@@ -90,7 +103,7 @@ function AdminPage() {
     },
   });
 
-  if (adminCheck.isLoading) {
+  if (adminCheck.isLoading || gateLoading) {
     return (
       <Shell>
         <div className="p-8 text-ink-soft">
@@ -108,27 +121,34 @@ function AdminPage() {
           <div className="text-lg font-bold text-ink">
             {t("관리자 전용", "Admins only")}
           </div>
-          {noAdminsYet ? (
-            <>
-              <p className="max-w-sm text-sm text-ink-soft">
-                {t(
+          <p className="max-w-sm text-sm text-ink-soft">
+            {noAdminsYet
+              ? t(
                   "아직 관리자가 없어요. 첫 관리자가 되시겠어요?",
                   "No admin yet. Become the first admin?",
-                )}
-              </p>
-              <button
-                onClick={() => bootstrap.mutate()}
-                disabled={bootstrap.isPending}
-                className="rounded-full bg-primary px-5 py-2.5 text-sm font-bold text-ink shadow-card disabled:opacity-50"
-              >
-                {bootstrap.isPending
-                  ? t("처리 중...", "Working...")
-                  : t("관리자로 등록", "Make me admin")}
-              </button>
-            </>
-          ) : (
-            <p className="text-sm text-ink-soft">
-              {t("접근 권한이 없어요.", "You don't have access.")}
+                )
+              : adminCountKnown
+                ? t(
+                    "관리자 권한이 없어요. 아래에서 등록을 시도하거나 Supabase에서 권한을 받으세요.",
+                    "You are not an admin. Try registering below or ask for access in Supabase.",
+                  )
+                : t(
+                    "관리자 권한이 없어요. 아래 버튼으로 첫 관리자 등록을 시도해 보세요.",
+                    "You are not an admin. Try becoming the first admin below.",
+                  )}
+          </p>
+          <button
+            onClick={() => bootstrap.mutate()}
+            disabled={bootstrap.isPending}
+            className="rounded-full bg-primary px-5 py-2.5 text-sm font-bold text-ink shadow-card disabled:opacity-50"
+          >
+            {bootstrap.isPending
+              ? t("처리 중...", "Working...")
+              : t("관리자로 등록", "Make me admin")}
+          </button>
+          {myUserId && (
+            <p className="max-w-sm break-all text-[11px] text-ink-soft/80">
+              {t("내 UID", "My UID")}: {myUserId}
             </p>
           )}
           <Link to="/" className="text-xs text-ink-soft underline">
