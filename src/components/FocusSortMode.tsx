@@ -561,27 +561,28 @@ export function FocusSortMode({
             <ProgressDots total={initialTotal.current} current={progress} />
           </div>
 
-          <div className="relative flex flex-1 flex-col items-center justify-center px-6 pb-[max(1.5rem,env(safe-area-inset-bottom))]">
+          <div className="relative flex flex-1 flex-col items-center px-6 pb-[max(1.5rem,env(safe-area-inset-bottom))] pt-2">
             {!finished && current ? (
               <>
                 <div
                   ref={cardRef}
-                  className="relative w-full max-w-[340px] flex-1 max-h-[min(520px,58vh)]"
+                  className="relative w-full max-w-[340px] min-h-[360px] shrink-0"
                 >
                   {stackPeek
                     .slice()
                     .reverse()
-                    .map((item, i, arr) => (
+                    .map((item, i) => (
                       <div
                         key={item.id}
-                        className="focus-sort-card focus-sort-card-stack absolute inset-x-0 top-0 mx-auto px-7 py-8 pointer-events-none"
+                        className="focus-sort-card focus-sort-card-stack pointer-events-none absolute inset-x-0 mx-auto w-full px-7 py-6"
                         style={{
-                          transform: `scale(${0.96 - (arr.length - 1 - i) * 0.025}) translateY(${(arr.length - i) * 12}px)`,
-                          opacity: 0.45 - (arr.length - 1 - i) * 0.12,
-                          zIndex: i,
+                          top: 10 + i * 10,
+                          transform: `scale(${0.97 - i * 0.02})`,
+                          opacity: 0.38 - i * 0.1,
+                          zIndex: 1 + i,
                         }}
                       >
-                        <p className="line-clamp-2 text-[15px] font-medium text-ink/50">
+                        <p className="line-clamp-1 text-[14px] font-medium text-ink/45">
                           {item.text}
                         </p>
                       </div>
@@ -589,40 +590,37 @@ export function FocusSortMode({
 
                   <div
                     key={current.id}
-                    className={`focus-sort-card absolute inset-x-0 top-0 z-[3] mx-auto flex w-full flex-col overflow-hidden ${
+                    onPointerDown={onDown}
+                    onPointerMove={onMove}
+                    onPointerUp={onUp}
+                    onPointerCancel={onUp}
+                    className={`focus-sort-card relative z-10 mx-auto flex min-h-[340px] w-full touch-none select-none flex-col overflow-hidden will-change-transform ${
                       pendingScheduleId === current.id
                         ? "ring-2 ring-primary/45 ring-offset-2"
                         : ""
                     }`}
+                    style={{
+                      transform: `translate3d(${offset.x}px, ${offset.y}px, 0) rotate(${rotate}deg)`,
+                      opacity: cardOpacity,
+                      boxShadow: `0 ${shadow}px ${shadow * 1.6}px -${shadow * 0.3}px rgba(0,0,0,${0.08 + progressMag * 0.1})`,
+                    }}
                   >
-                    <div
-                      onPointerDown={onDown}
-                      onPointerMove={onMove}
-                      onPointerUp={onUp}
-                      onPointerCancel={onUp}
-                      className="relative flex min-h-[240px] flex-1 touch-none select-none flex-col px-7 pb-4 pt-8 will-change-transform"
-                      style={{
-                        transform: `translate3d(${offset.x}px, ${offset.y}px, 0) rotate(${rotate}deg)`,
-                        opacity: cardOpacity,
-                        boxShadow: `0 ${shadow}px ${shadow * 1.6}px -${shadow * 0.3}px rgba(0,0,0,${0.08 + progressMag * 0.1})`,
-                      }}
-                    >
-                      <SwipeStamp
-                        side="schedule"
-                        progress={scheduleProgress}
-                        label={t("그때", "When")}
-                      />
-                      <SwipeStamp
-                        side="archive"
-                        progress={archiveProgress}
-                        label={t("기억함", "Saved")}
-                      />
-                      <div className="flex-1">
-                        <DeckCardBody item={current} />
-                      </div>
+                    <SwipeStamp
+                      side="schedule"
+                      progress={scheduleProgress}
+                      label={t("그때", "When")}
+                    />
+                    <SwipeStamp
+                      side="archive"
+                      progress={archiveProgress}
+                      label={t("기억함", "Saved")}
+                    />
+
+                    <div className="flex-1 px-7 pb-4 pt-8">
+                      <DeckCardBody item={current} />
                     </div>
 
-                    <div className="flex gap-2.5 border-t border-ink/[0.06] bg-white/60 px-5 py-4">
+                    <div className="flex shrink-0 gap-2.5 border-t border-ink/[0.06] bg-white px-5 py-4">
                       <button
                         type="button"
                         disabled={locked}

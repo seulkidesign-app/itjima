@@ -9,14 +9,16 @@ import {
 import { Archive, Calendar } from "lucide-react";
 import { animate } from "framer-motion";
 import { useT } from "@/lib/i18n";
-import { tickDebounced, confirm as confirmHaptic } from "@/lib/haptics";
-import { SPRING_SNAP_BACK } from "@/lib/motion";
+import { tickDebounced, confirm as confirmHaptic, tap as tapHaptic } from "@/lib/haptics";
+import { SPRING_ROW, SPRING_SNAP_BACK } from "@/lib/motion";
 
 type Side = "left" | "right";
 
 const GAP = 16;
-const OPEN_AT = 32;
-const MAX_DRAG = 120;
+const BTN = 48;
+const OPEN_SLOT = BTN + GAP;
+const OPEN_AT = 28;
+const MAX_DRAG = 140;
 
 function rubber(value: number, limit: number) {
   const abs = Math.abs(value);
@@ -51,41 +53,48 @@ export function ChatSwipeRow({
 }) {
   const t = useT();
   const rowRef = useRef<HTMLDivElement>(null);
-  const [dragX, setDragX] = useState(0);
+  const [offsetX, setOffsetX] = useState(0);
   const [openSide, setOpenSide] = useState<Side | null>(null);
   const [acting, setActing] = useState(false);
+  const [dragging, setDragging] = useState(false);
   const draggingRef = useRef(false);
-  const dragRef = useRef(0);
+  const offsetRef = useRef(0);
   const startX = useRef(0);
   const longTimer = useRef<number | null>(null);
   const longFired = useRef(false);
   const moved = useRef(false);
 
-  dragRef.current = dragX;
+  offsetRef.current = offsetX;
 
-  const springDrag = useCallback((to: number, onDone?: () => void) => {
-    animate(dragRef.current, to, {
-      ...SPRING_SNAP_BACK,
-      onUpdate: (v) => {
-        dragRef.current = v;
-        setDragX(v);
-      },
-      onComplete: onDone,
-    });
-  }, []);
+  const openOffset = (side: Side) => (side === "right" ? OPEN_SLOT : -OPEN_SLOT);
+
+  const springX = useCallback(
+    (to: number, onDone?: () => void) => {
+      animate(offsetRef.current, to, {
+        ...(openSide ? SPRING_ROW : SPRING_SNAP_BACK),
+        onUpdate: (v) => {
+          offsetRef.current = v;
+          setOffsetX(v);
+        },
+        onComplete: onDone,
+      });
+    },
+    [openSide],
+  );
 
   const dismiss = useCallback(() => {
     setOpenSide(null);
     if (rowId && onOpenRowChange) onOpenRowChange(null);
-    springDrag(0);
-  }, [rowId, onOpenRowChange, springDrag]);
+    springX(0);
+  }, [rowId, onOpenRowChange, springX]);
 
   const snapOpen = useCallback(
     (side: Side) => {
       setOpenSide(side);
       if (rowId && onOpenRowChange) onOpenRowChange(rowId);
-      dragRef.current = 0;
-      setDragX(0);
+      const target = openOffset(side);
+      offsetRef.current = target;
+      setOffsetX(target);
       tickDebounced();
     },
     [rowId, onOpenRowChange],
@@ -100,8 +109,8 @@ export function ChatSwipeRow({
       else onSwipeLeft();
       setOpenSide(null);
       setActing(false);
-      dragRef.current = 0;
-      setDragX(0);
+      offsetRef.current = 0;
+      setOffsetX(0);
       if (rowId && onOpenRowChange) onOpenRowChange(null);
     },
     [acting, onSwipeLeft, onSwipeRight, rowId, onOpenRowChange],
@@ -140,9 +149,10 @@ export function ChatSwipeRow({
   const onDown = (e: PointerEvent<HTMLDivElement>) => {
     if (disabled || acting) return;
     draggingRef.current = true;
+    setDragging(true);
     longFired.current = false;
     moved.current = false;
-    startX.current = e.clientX;
+    startX.current = e.clientX - offsetRef.current;
     clearLongPress();
     if (onLongPress) {
       longTimer.current = window.setTimeout(() => {
@@ -160,31 +170,37 @@ export function ChatSwipeRow({
     if (!draggingRef.current || acting) return;
     let x = e.clientX - startX.current;
 
-    if (Math.abs(x) > 8) {
+    if (Math.abs(x - offsetRef.current) > 6) {
       moved.current = true;
       clearLongPress();
+      e.preventDefault();
     }
 
-    if (openSide === "right" && x < 0) x = 0;
-    if (openSide === "left" && x > 0) x = 0;
+    if (openSide === "right") x = Math.max(openOffset("right"), x);
+    if (openSide === "left") x = Math.min(openOffset("left"), x);
 
-    x = rubber(x, MAX_DRAG);
-    dragRef.current = x;
-    setDragX(x);
-    if (Math.abs(x) > 14) tickDebounced();
+    if (!openSide) {
+      x = rubber(x, MAX_DRAG);
+    }
+
+    offsetRef.current = x;
+    setOffsetX(x);
+    if (Math.abs(x) > 12) tickDebounced(48);
   };
 
   const onUp = () => {
     if (!draggingRef.current) return;
     draggingRef.current = false;
+    setDragging(false);
     clearLongPress();
     if (longFired.current) return;
 
-    const x = dragRef.current;
+    const x = offsetRef.current;
 
     if (openSide) {
-      if (Math.abs(x) < OPEN_AT * 0.35) dismiss();
-      else springDrag(0);
+      const target = openOffset(openSide);
+      if (Math.abs(x) < OPEN_AT * 0.4) dismiss();
+      else springX(target);
       return;
     }
 
@@ -197,47 +213,39 @@ export function ChatSwipeRow({
       return;
     }
     if (!moved.current && onTap) onTap();
-    springDrag(0);
+    springX(0);
   };
 
   const scheduleOpacity =
-    openSide === "right" ? 1 : clamp01(dragX / OPEN_AT);
-  const archiveOpacity = openSide === "left" ? 1 : clamp01(-dragX / OPEN_AT);
+    openSide === "right" ? 1 : clamp01(offsetX / OPEN_AT);
+  const archiveOpacity =
+    openSide === "left" ? 1 : clamp01(-offsetX / OPEN_AT);
   const showSchedule =
-    openSide === "right" || (dragX > 6 && openSide !== "left");
+    openSide === "right" || (offsetX > 2 && openSide !== "left");
   const showArchive =
-    openSide === "left" || (dragX < -6 && openSide !== "right");
-
-  const pillStyle = (opacity: number) => ({
-    opacity,
-    pointerEvents: (opacity > 0.55 ? "auto" : "none") as "auto" | "none",
-    transform: `translateY(-50%) scale(${0.86 + opacity * 0.14})`,
-  });
+    openSide === "left" || (offsetX < -2 && openSide !== "right");
 
   return (
     <div
       ref={rowRef}
       className="swipe-row relative flex w-full justify-end py-0.5"
-      style={{ touchAction: "pan-y" }}
+      style={{ touchAction: dragging ? "none" : "pan-y" }}
     >
-      <div
-        onPointerDown={onDown}
-        onPointerMove={onMove}
-        onPointerUp={onUp}
-        onPointerCancel={onUp}
-        className="relative shrink-0 touch-none select-none"
-      >
+      <div className="relative w-fit max-w-[min(340px,calc(100vw-4.5rem))]">
         {showSchedule && (
           <button
             type="button"
             onClick={(e) => {
               e.stopPropagation();
+              tapHaptic();
               commit("right");
             }}
-            className="swipe-pill-btn swipe-pill-schedule absolute top-1/2 z-[2]"
+            className="swipe-pill-btn swipe-pill-schedule absolute top-1/2 z-[1] -translate-y-1/2"
             style={{
-              right: `calc(100% + ${GAP}px)`,
-              ...pillStyle(scheduleOpacity),
+              left: GAP,
+              opacity: scheduleOpacity,
+              pointerEvents: scheduleOpacity > 0.5 ? "auto" : "none",
+              transform: `translateY(-50%) scale(${0.88 + scheduleOpacity * 0.12})`,
             }}
             aria-label={t("그때", "When")}
           >
@@ -250,12 +258,15 @@ export function ChatSwipeRow({
             type="button"
             onClick={(e) => {
               e.stopPropagation();
+              tapHaptic();
               commit("left");
             }}
-            className="swipe-pill-btn swipe-pill-archive absolute top-1/2 z-[2]"
+            className="swipe-pill-btn swipe-pill-archive absolute top-1/2 z-[1] -translate-y-1/2"
             style={{
-              left: `calc(100% + ${GAP}px)`,
-              ...pillStyle(archiveOpacity),
+              right: GAP,
+              opacity: archiveOpacity,
+              pointerEvents: archiveOpacity > 0.5 ? "auto" : "none",
+              transform: `translateY(-50%) scale(${0.88 + archiveOpacity * 0.12})`,
             }}
             aria-label={t("기억함", "Saved")}
           >
@@ -263,7 +274,18 @@ export function ChatSwipeRow({
           </button>
         )}
 
-        {children}
+        <div
+          onPointerDown={onDown}
+          onPointerMove={onMove}
+          onPointerUp={onUp}
+          onPointerCancel={onUp}
+          className="relative z-[2] w-fit touch-none select-none will-change-transform"
+          style={{
+            transform: `translate3d(${offsetX}px, 0, 0)`,
+          }}
+        >
+          {children}
+        </div>
       </div>
     </div>
   );
