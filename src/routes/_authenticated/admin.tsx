@@ -63,7 +63,31 @@ function AdminPage() {
       toast.success(t("관리자로 등록됐어요", "You are now an admin"));
       qc.invalidateQueries({ queryKey: ["isAdmin"] });
     },
-    onError: (e: Error) => toast.error(e.message),
+    onError: (e: Error) => {
+      const msg = e.message;
+      if (
+        msg.includes("Could not find the function") ||
+        msg.includes("bootstrap_admin")
+      ) {
+        toast.error(
+          t(
+            "DB 함수가 아직 없어요. Supabase SQL Editor에서 bootstrap_admin 마이그레이션을 실행해 주세요.",
+            "DB function missing. Run the bootstrap_admin migration in Supabase SQL Editor.",
+          ),
+        );
+        return;
+      }
+      if (msg.includes("ON CONFLICT")) {
+        toast.error(
+          t(
+            "앱이 예전 버전이에요. 새로고침(Cmd+Shift+R) 후 다시 시도해 주세요.",
+            "App is outdated. Hard refresh (Cmd+Shift+R) and try again.",
+          ),
+        );
+        return;
+      }
+      toast.error(msg);
+    },
   });
 
   if (adminCheck.isLoading) {

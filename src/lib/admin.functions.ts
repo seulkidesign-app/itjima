@@ -93,23 +93,24 @@ export async function grantAdmin(data: { userId: string }) {
   const parsed = z.object({ userId: z.string().uuid() }).parse(data);
   const { userId } = await requireAuth();
 
-  const { count } = await supabase
-    .from("user_roles")
-    .select("*", { count: "exact", head: true })
-    .eq("role", "admin");
+  if (parsed.userId === userId) {
+    const { error } = await supabase.rpc("bootstrap_admin");
+    if (!error) return { ok: true as const };
 
-  if ((count ?? 0) === 0) {
-    if (parsed.userId !== userId) throw new Error("Bootstrap must target self");
-  } else {
-    await assertAdmin(userId);
+    const { data: alreadyAdmin } = await supabase.rpc("has_role", {
+      _user_id: userId,
+      _role: "admin",
+    });
+    if (alreadyAdmin) return { ok: true as const };
+
+    throw new Error(error.message);
   }
 
-  const { error } = await supabase
-    .from("user_roles")
-    .upsert(
-      { user_id: parsed.userId, role: "admin" },
-      { onConflict: "user_id,role" },
-    );
+  await assertAdmin(userId);
+
+  const { error } = await supabase.rpc("grant_admin_role", {
+    _target_user_id: parsed.userId,
+  });
   if (error) throw new Error(error.message);
   return { ok: true as const };
 }
@@ -149,11 +150,15 @@ export async function checkIsAdmin() {
 
 export async function getAdminCount() {
   const { userId } = await requireAuth();
-  const { count } = await supabase
-    .from("user_roles")
-    .select("*", { count: "exact", head: true })
-    .eq("role", "admin");
-  return { count: count ?? 0, userId };
+  const { data, error } = await supabase.rpc("get_admin_count");
+  if (error) {
+    const { count } = await supabase
+      .from("user_roles")
+      .select("*", { count: "exact", head: true })
+      .eq("role", "admin");
+    return { count: count ?? 0, userId };
+  }
+  return { count: data ?? 0, userId };
 }
 
 export async function listFeedback() {

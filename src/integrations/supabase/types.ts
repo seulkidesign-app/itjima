@@ -182,6 +182,18 @@ export type Database = {
         };
         Returns: boolean;
       };
+      bootstrap_admin: {
+        Args: Record<PropertyKey, never>;
+        Returns: undefined;
+      };
+      grant_admin_role: {
+        Args: { _target_user_id: string };
+        Returns: undefined;
+      };
+      get_admin_count: {
+        Args: Record<PropertyKey, never>;
+        Returns: number;
+      };
     };
     Enums: {
       app_role: "admin" | "user";
