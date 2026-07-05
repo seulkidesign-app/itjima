@@ -60,9 +60,9 @@ export function InstallPrompt() {
     window.addEventListener("appinstalled", onInstalled);
 
     if (isIOS()) {
-      const t = setTimeout(() => setShow(true), 1500);
+      const timer = setTimeout(() => setShow(true), 1500);
       return () => {
-        clearTimeout(t);
+        clearTimeout(timer);
         window.removeEventListener("beforeinstallprompt", onBIP);
         window.removeEventListener("appinstalled", onInstalled);
       };
@@ -104,7 +104,7 @@ export function InstallPrompt() {
 
   return (
     <>
-      <div className="fixed left-1/2 bottom-24 z-40 w-[calc(100%-40px)] max-w-sm -translate-x-1/2 rounded-[24px] bg-white px-4 py-3 shadow-float">
+      <div className="relative shrink-0 border-t border-ink/[0.06] bg-white/98 px-4 py-3 backdrop-blur-md">
         <button
           onClick={dismiss}
           aria-label={t("닫기", "Close")}

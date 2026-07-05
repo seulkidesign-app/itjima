@@ -13,9 +13,9 @@ import { FocusScheduleSheet } from "@/components/FocusScheduleSheet";
 import type { ScheduleConfirmOptions } from "@/components/ScheduleChoiceFlow";
 import { LoginSheet } from "@/components/LoginSheet";
 import { CleanupReviewSheet } from "@/components/CleanupReviewSheet";
-import { detectJunk } from "@/lib/junkDetect";
 import { ChatBubble } from "@/components/ChatBubble";
 import { InputBar } from "@/components/InputBar";
+import { InstallPrompt } from "@/components/InstallPrompt";
 import { SyncIndicator } from "@/components/SyncIndicator";
 import { EmptyState } from "@/components/EmptyState";
 import { BrainMirrorPanel } from "@/components/BrainMirrorSummary";
@@ -460,18 +460,7 @@ function Inbox() {
           <div className="flex gap-2 px-5 pb-2 pt-3">
             <button
               type="button"
-              onClick={() => {
-                if (detectJunk(items).length === 0) {
-                  toast.message(
-                    t(
-                      "지금은 비울 게 없어요",
-                      "Nothing to lighten right now",
-                    ),
-                  );
-                  return;
-                }
-                setCleanupReviewOpen(true);
-              }}
+              onClick={() => setCleanupReviewOpen(true)}
               className="touch-press flex-1 rounded-full border border-ink/8 bg-white py-2.5 text-[12px] font-semibold text-ink shadow-[0_1px_4px_oklch(0_0_0/0.04)]"
             >
               {t("가볍게", "Lighten")}
@@ -520,6 +509,7 @@ function Inbox() {
               />
             )}
           </div>
+          <InstallPrompt />
         </>
       ) : (
         <>
@@ -577,6 +567,7 @@ function Inbox() {
             </div>
           </div>
 
+          <InstallPrompt />
           <div className="z-20 shrink-0 border-t border-ink/[0.06] bg-white/95 pb-[env(safe-area-inset-bottom)] backdrop-blur-md">
             <InputBar
               onAdd={handleAdd}
@@ -608,15 +599,6 @@ function Inbox() {
               label={t("가볍게 비우기", "Lighten up")}
               onClick={() => {
                 setMenuFor(null);
-                if (detectJunk(items).length === 0) {
-                  toast.message(
-                    t(
-                      "지금은 비울 게 없어요",
-                      "Nothing to lighten right now",
-                    ),
-                  );
-                  return;
-                }
                 setCleanupReviewOpen(true);
               }}
             />

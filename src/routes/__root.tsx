@@ -6,7 +6,6 @@ import {
 import { useEffect } from "react";
 import { Toaster } from "sonner";
 import { maybeRouteOAuthCallback } from "@/lib/oauth";
-import { InstallPrompt } from "@/components/InstallPrompt";
 import { SideNav } from "@/components/SideNav";
 import { TopNav } from "@/components/TopNav";
 import { LanguageProvider } from "@/lib/i18n";
@@ -90,7 +89,6 @@ function RootLayout() {
             >
               <Outlet />
             </div>
-            <InstallPrompt />
           </div>
           <Toaster
             position="top-center"
