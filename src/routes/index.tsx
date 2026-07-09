@@ -1,5 +1,5 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { useEffect, useRef, useState, useMemo } from "react";
+import { useEffect, useRef, useState, useMemo, useCallback } from "react";
 import { toast } from "sonner";
 import {
   Wind,
@@ -84,6 +84,8 @@ function Inbox() {
   const [releasePendingScheduleId, setReleasePendingScheduleId] = useState<
     string | null
   >(null);
+  const releaseItemRef = useRef<InboxItem | null>(null);
+  releaseItemRef.current = releaseItem;
 
   const items = inbox.items;
   const menuItem = menuFor
@@ -130,11 +132,49 @@ function Inbox() {
     };
   }, [releaseItem]);
 
-  const completeRelease = () => {
+  const completeRelease = useCallback(() => {
+    const releasingId = releaseItemRef.current?.id;
     setReleaseItem(null);
     setReleasePendingScheduleId(null);
+    setFocusPendingScheduleId(null);
+    if (releasingId) {
+      setFocusScheduleSheet((prev) =>
+        prev.item?.id === releasingId ? { open: false } : prev,
+      );
+    }
     maybeNudgeLogin();
-  };
+  }, []);
+
+  const cancelReleaseSchedule = useCallback(() => {
+    setReleasePendingScheduleId(null);
+    setFocusScheduleSheet({ open: false });
+    setFocusPendingScheduleId(null);
+  }, []);
+
+  const beginReleaseSchedule = useCallback((it: InboxItem) => {
+    setReleasePendingScheduleId(it.id);
+    setFocusScheduleSheet({ open: true, item: it });
+  }, []);
+
+  useEffect(() => {
+    if (!releaseItem) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== "Escape") return;
+      if (releasePendingScheduleId || focusScheduleSheet.open) {
+        cancelReleaseSchedule();
+        return;
+      }
+      completeRelease();
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [
+    releaseItem,
+    releasePendingScheduleId,
+    focusScheduleSheet.open,
+    cancelReleaseSchedule,
+    completeRelease,
+  ]);
 
   useEffect(() => {
     if (!menuItem && !pasteSheet) return;
@@ -229,13 +269,14 @@ function Inbox() {
       });
       setFocusScheduleSheet({ open: false });
       setFocusPendingScheduleId(null);
-      if (releaseItem?.id === it.id) completeRelease();
+      if (releaseItemRef.current?.id === it.id) completeRelease();
       if (focusSortOpen) setScheduleCommittedId(it.id);
       if (allCloudSynced(scheduleSynced, inboxSynced)) {
         toast.success(t("그때 다시 떠올릴게요", "I'll remember this for then"));
       }
     } catch {
       toast.error(t("일정을 남기지 못했어요", "Couldn't anchor it in time"));
+      if (releaseItemRef.current?.id === it.id) cancelReleaseSchedule();
     }
   };
 
@@ -409,10 +450,7 @@ function Inbox() {
               variant="hero"
               pendingSchedule={releasePendingScheduleId === releaseItem.id}
               onArchive={(it) => moveToArchive(it)}
-              onSchedule={(it) => {
-                setReleasePendingScheduleId(it.id);
-                openHomeSchedule(it);
-              }}
+              onSchedule={beginReleaseSchedule}
               onLetGo={(it) => moveToDelete(it)}
               onComplete={completeRelease}
             />
@@ -490,10 +528,7 @@ function Inbox() {
               variant="overlay"
               pendingSchedule={releasePendingScheduleId === releaseItem.id}
               onArchive={(it) => moveToArchive(it)}
-              onSchedule={(it) => {
-                setReleasePendingScheduleId(it.id);
-                openHomeSchedule(it);
-              }}
+              onSchedule={beginReleaseSchedule}
               onLetGo={(it) => moveToDelete(it)}
               onComplete={completeRelease}
             />
@@ -679,6 +714,13 @@ function Inbox() {
         item={focusScheduleSheet.item ?? null}
         open={focusScheduleSheet.open}
         onClose={() => {
+          if (
+            releaseItemRef.current &&
+            focusScheduleSheet.item?.id === releaseItemRef.current.id
+          ) {
+            cancelReleaseSchedule();
+            return;
+          }
           setFocusScheduleSheet({ open: false });
           setFocusPendingScheduleId(null);
           setReleasePendingScheduleId(null);

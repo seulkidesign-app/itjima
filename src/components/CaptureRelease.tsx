@@ -60,6 +60,16 @@ const MAX_DRAG_X = 320;
 const MAX_DRAG_Y = 160;
 const COMMIT_PX = 88;
 const UNDERSTAND_MS = 1000;
+const MIRROR_TIMEOUT_MS = 8000;
+const PHASE_SAFETY_MS = 3500;
+
+function advancePhase(current: Phase, next: Phase): Phase {
+  if (current === "exit") return current;
+  const order: Phase[] = ["emerge", "understand", "mirror", "interactive", "exit"];
+  if (next === "exit") return "exit";
+  if (order.indexOf(next) < order.indexOf(current)) return current;
+  return next;
+}
 
 function SwipeStamp({
   dir,
@@ -99,8 +109,11 @@ export function CaptureRelease({
   const t = useT();
   const { lang } = useLang();
   const inbox = useInbox();
+  const inboxRef = useRef(inbox);
+  inboxRef.current = inbox;
   const cardRef = useRef<HTMLDivElement>(null);
   const actingRef = useRef(false);
+  const completingRef = useRef(false);
   const thresholdFired = useRef<ExitDir | null>(null);
   const previewFired = useRef<ExitDir | null>(null);
   const velocity = useRef({ x: 0, y: 0 });
@@ -156,13 +169,36 @@ export function CaptureRelease({
     if (!pendingSchedule) springBack();
   }, [pendingSchedule, springBack]);
 
+  const finishRelease = useCallback(() => {
+    if (completingRef.current) return;
+    completingRef.current = true;
+    onComplete();
+  }, [onComplete]);
+
   useEffect(() => {
     abortRef.current?.abort();
     const ac = new AbortController();
     abortRef.current = ac;
+    let cancelled = false;
+    const timers: number[] = [];
     const t0 = performance.now();
 
-    const emergeTimer = window.setTimeout(() => setPhase("understand"), 280);
+    const schedule = (fn: () => void, ms: number) => {
+      const id = window.setTimeout(() => {
+        if (!cancelled && !ac.signal.aborted) fn();
+      }, ms);
+      timers.push(id);
+    };
+
+    setPhase("emerge");
+    setInterpretation(null);
+    setOffset({ x: 0, y: 0 });
+    setCardOpacity(1);
+    completingRef.current = false;
+    actingRef.current = false;
+    setExiting(false);
+
+    schedule(() => setPhase((p) => advancePhase(p, "understand")), 280);
 
     void (async () => {
       let mirror: BrainMirrorResult | null = null;
@@ -172,44 +208,64 @@ export function CaptureRelease({
       );
 
       if (item.text.trim().length >= 2 && isBrainMirrorCandidate(item.text)) {
-        const outcome = await fetchBrainMirror(item.text, { signal: ac.signal });
-        if (outcome.status === "ok") {
-          mirror = outcome.result;
-          sentence = buildCalmInterpretation(
-            item.text,
-            lang === "en" ? "en" : "ko",
-            mirror,
-          );
-          try {
-            await setInboxBrainMirror(inbox, item.id, {
-              ...mirror,
-              title: sentence,
-              items: [sentence],
-              suggestedAction: sentence,
-            });
-          } catch {
-            /* quiet */
+        try {
+          const outcome = await Promise.race([
+            fetchBrainMirror(item.text, { signal: ac.signal }),
+            new Promise<{ status: "skipped" }>((resolve) => {
+              const id = window.setTimeout(
+                () => resolve({ status: "skipped" }),
+                MIRROR_TIMEOUT_MS,
+              );
+              timers.push(id);
+            }),
+          ]);
+          if (outcome.status === "ok") {
+            mirror = outcome.result;
+            sentence = buildCalmInterpretation(
+              item.text,
+              lang === "en" ? "en" : "ko",
+              mirror,
+            );
+            try {
+              await setInboxBrainMirror(inboxRef.current, item.id, {
+                ...mirror,
+                title: sentence,
+                items: [sentence],
+                suggestedAction: sentence,
+              });
+            } catch {
+              /* quiet */
+            }
           }
+        } catch {
+          /* quiet — local sentence still shown */
         }
       }
 
       const elapsed = performance.now() - t0;
       const wait = Math.max(0, UNDERSTAND_MS - elapsed);
-      window.setTimeout(() => {
-        if (ac.signal.aborted) return;
+      schedule(() => {
         setInterpretation(sentence);
-        setPhase("mirror");
-        window.setTimeout(() => {
-          if (!ac.signal.aborted) setPhase("interactive");
-        }, 420);
+        setPhase((p) => advancePhase(p, "mirror"));
+        schedule(() => setPhase((p) => advancePhase(p, "interactive")), 420);
       }, wait);
     })();
 
+    schedule(() => {
+      setInterpretation(
+        (prev) =>
+          prev ??
+          buildCalmInterpretation(item.text, lang === "en" ? "en" : "ko"),
+      );
+      setPhase((p) => advancePhase(p, "interactive"));
+    }, PHASE_SAFETY_MS);
+
     return () => {
-      window.clearTimeout(emergeTimer);
+      cancelled = true;
       ac.abort();
+      timers.forEach((id) => window.clearTimeout(id));
     };
-  }, [item.id, item.text, lang, inbox]);
+  }, [item.id, item.text, lang]);
 
   const openScheduleSwipe = useCallback(async () => {
     if (actingRef.current) return;
@@ -217,16 +273,19 @@ export function CaptureRelease({
     setExiting(true);
     setDragging(false);
     confirmHaptic();
-    const w = cardW();
-    const from = offsetRef.current;
-    await animate(from.x, w * 0.42, {
-      ...MOTION_SCHEDULE,
-      velocity: velocity.current.x * 0.3,
-      onUpdate: (v) => setOffset((o) => ({ ...o, x: v })),
-    }).finished;
-    onSchedule(item);
-    setExiting(false);
-    actingRef.current = false;
+    try {
+      const w = cardW();
+      const from = offsetRef.current;
+      await animate(from.x, w * 0.42, {
+        ...MOTION_SCHEDULE,
+        velocity: velocity.current.x * 0.3,
+        onUpdate: (v) => setOffset((o) => ({ ...o, x: v })),
+      }).finished;
+      onSchedule(item);
+    } finally {
+      setExiting(false);
+      actingRef.current = false;
+    }
   }, [cardW, item, onSchedule]);
 
   const flyAway = useCallback(
@@ -241,38 +300,41 @@ export function CaptureRelease({
       setExiting(true);
       setDragging(false);
       confirmHaptic();
+      setPhase("exit");
 
       const { x, y } = offsetRef.current;
       const spring = dir === "left" ? MOTION_ARCHIVE : MOTION_DELETE;
       const target =
         dir === "left"
-          ? { x: x - 420, y: y - 40, opacity: 0, rotate: -14 }
-          : { x, y: y - 480, opacity: 0, rotate: 0 };
+          ? { x: x - 420, y: y - 40 }
+          : { x, y: y - 480 };
 
-      await Promise.all([
-        animate(x, target.x, {
-          ...spring,
-          onUpdate: (v) => setOffset((o) => ({ ...o, x: v })),
-        }),
-        animate(y, target.y, {
-          ...spring,
-          onUpdate: (v) => setOffset((o) => ({ ...o, y: v })),
-        }),
-        animate(cardOpacity, 0, {
-          ...spring,
-          onUpdate: (v) => setCardOpacity(v),
-        }),
-      ]);
-
-      setPhase("exit");
       try {
+        await Promise.all([
+          animate(x, target.x, {
+            ...spring,
+            onUpdate: (v) => setOffset((o) => ({ ...o, x: v })),
+          }).finished,
+          animate(y, target.y, {
+            ...spring,
+            onUpdate: (v) => setOffset((o) => ({ ...o, y: v })),
+          }).finished,
+          animate(cardOpacity, 0, {
+            ...spring,
+            onUpdate: (v) => setCardOpacity(v),
+          }).finished,
+        ]);
         if (dir === "left") await onArchive(item);
         else await onLetGo(item);
+      } catch {
+        /* still exit release overlay */
       } finally {
-        onComplete();
+        actingRef.current = false;
+        setExiting(false);
+        finishRelease();
       }
     },
-    [cardOpacity, item, onArchive, onComplete, onLetGo, openScheduleSwipe],
+    [cardOpacity, finishRelease, item, onArchive, onLetGo, openScheduleSwipe],
   );
 
   const onDown = (e: PointerEvent<HTMLDivElement>) => {
