@@ -73,8 +73,8 @@ export function CleanupReviewSheet({
   const confirmDeleteAll = () => {
     const ok = window.confirm(
       t(
-        `생각 ${items.length}개를 모두 비울까요? 되돌릴 수 없어요.`,
-        `Delete all ${items.length} thoughts? This can't be undone.`,
+        `생각 ${items.length}개를 모두 비울까요?`,
+        `Let go of all ${items.length} thoughts?`,
       ),
     );
     if (!ok) return;
@@ -97,8 +97,8 @@ export function CleanupReviewSheet({
                   "These look safe to let go. Uncheck anything you want to keep.",
                 )
               : t(
-                  "남길 것만 체크 해제하세요. 전체 삭제는 아래 버튼을 사용하세요.",
-                  "Uncheck what you want to keep. Use delete all below to clear everything.",
+                  "남길 것만 체크 해제하세요. 모두 비우려면 아래를 눌러 주세요.",
+                  "Uncheck what you want to keep. Use below to let go of everything.",
                 )}
           </p>
 
@@ -142,8 +142,8 @@ export function CleanupReviewSheet({
                 className="text-[13px] font-semibold text-ink-soft touch-press"
               >
                 {allSelected
-                  ? t("선택 해제", "Deselect all")
-                  : t("전체 선택", "Select all")}
+                  ? t("모두 해제", "Clear picks")
+                  : t("모두 고르기", "Pick all")}
               </button>
               <span className="text-[12px] tabular-nums text-ink-soft">
                 {selected.size}/{listItems.length}
@@ -199,7 +199,7 @@ export function CleanupReviewSheet({
               onClick={confirmDeleteAll}
               className="w-full py-2 text-[13px] font-semibold text-red-600 touch-press"
             >
-              {t(`전체 삭제 (${items.length})`, `Delete all (${items.length})`)}
+              {t(`모두 비우기 (${items.length})`, `Let go of all (${items.length})`)}
             </button>
           )}
         </div>

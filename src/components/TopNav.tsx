@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { motion, LayoutGroup } from "framer-motion";
 import { useT, LanguageToggle } from "@/lib/i18n";
 import { SPRING_TAB } from "@/lib/motion";
-import { useInbox, useSchedules, useArchive, useUserId } from "@/lib/store";
+import { useUserId } from "@/lib/store";
 import { useIsAdmin } from "@/hooks/useIsAdmin";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -17,23 +17,10 @@ export function TopNav() {
   const path = useRouterState({ select: (s) => s.location.pathname });
   const userId = useUserId();
   const isAdmin = useIsAdmin();
-  const inbox = useInbox();
-  const schedules = useSchedules();
-  const archive = useArchive();
-  const thoughtCount = inbox.items.length;
-  const scheduleCount = schedules.items.filter(
-    (s) => s.status !== "done",
-  ).length;
-  const archiveCount = archive.items.length;
-  const tabCounts: Record<string, number> = {
-    "/": thoughtCount,
-    "/schedule": scheduleCount,
-    "/archive": archiveCount,
-  };
   const tabs = [
-    { to: "/", label: t("생각", "Inbox") },
+    { to: "/", label: t("생각", "Thoughts") },
     { to: "/schedule", label: t("그때", "When") },
-    { to: "/archive", label: t("기억함", "Saved") },
+    { to: "/archive", label: t("기억함", "Kept") },
   ] as const;
 
   // Subtle scroll shadow once scrolled past 4px
@@ -141,11 +128,6 @@ export function TopNav() {
                 }`}
               >
                 {label}
-                {tabCounts[to] > 0 && (
-                  <span className="ml-1 font-num text-[12px] text-ink-soft">
-                    {tabCounts[to] > 99 ? "99+" : tabCounts[to]}
-                  </span>
-                )}
                 {active && (
                   <motion.span
                     layoutId="topnav-tab-underline"

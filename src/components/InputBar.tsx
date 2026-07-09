@@ -374,8 +374,8 @@ export function InputBar({
             }}
             rows={hero ? 4 : 3}
             placeholder={t(
-              "머릿속에 떠오른 걸 적어보세요",
-              "Write what came to mind",
+              "더 이상 기억하지 않아도 돼요",
+              "You don't have to remember this",
             )}
             className={`block w-full resize-none bg-transparent leading-relaxed text-ink placeholder:text-ink-soft/55 placeholder:transition-opacity focus:outline-none max-h-40 ${
               hero ? "min-h-[96px] text-[17px]" : "min-h-[72px] text-[16px]"

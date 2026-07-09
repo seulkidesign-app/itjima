@@ -16,7 +16,7 @@ export function SyncIndicator({ syncing, error, onRetry }: Props) {
         role="alert"
       >
         <span className="text-[12px] font-medium text-ink-soft">
-          {t("저장이 잠깐 멈췄어요", "Saving paused for a moment")}
+          {t("저장이 잠깐 멈췄어요", "Keeping safe paused for a moment")}
         </span>
         {onRetry && (
           <button
@@ -38,7 +38,7 @@ export function SyncIndicator({ syncing, error, onRetry }: Props) {
       className="relative h-0.5 w-full overflow-hidden bg-ink/[0.04]"
       role="status"
       aria-live="polite"
-      aria-label={t("안전하게 저장하는 중", "Saving safely")}
+      aria-label={t("안전하게 지키는 중", "Keeping it safe")}
     >
       <div className="skeleton-shimmer absolute inset-y-0 left-0 w-1/3 rounded-full bg-primary/80" />
     </div>

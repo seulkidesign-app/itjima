@@ -644,7 +644,7 @@ function Archive() {
               onClick={openOrganizeSheet}
               className="touch-press text-[12px] font-medium text-ink-soft/80 underline-offset-2 hover:text-ink-soft active:underline"
             >
-              {t("키워드로 묶어보기", "Group by keywords")}
+              {t("키워드로 모아보기", "Gather by theme")}
             </button>
           </div>
         )}
@@ -708,7 +708,7 @@ function Archive() {
                       : "bg-ink/[0.06] text-ink-soft"
                   }`}
                 >
-                  {t("전체", "All")}
+                  {t("모두", "Everything")}
                 </button>
                 {groupsWithItems.map((g) => (
                   <button
@@ -730,10 +730,10 @@ function Archive() {
                     setSortOrder(e.target.value as "newest" | "oldest")
                   }
                   className="ml-auto rounded-full bg-ink/[0.06] px-3 py-1.5 text-[12px] font-medium text-ink-soft focus:outline-none"
-                  aria-label={t("정렬", "Sort")}
+                  aria-label={t("순서", "Order")}
                 >
-                  <option value="newest">{t("최신순", "Newest")}</option>
-                  <option value="oldest">{t("오래된순", "Oldest")}</option>
+                  <option value="newest">{t("가까운 순", "Recent first")}</option>
+                  <option value="oldest">{t("먼 순", "Oldest first")}</option>
                 </select>
               </div>
             )}
@@ -745,10 +745,10 @@ function Archive() {
                     setSortOrder(e.target.value as "newest" | "oldest")
                   }
                   className="rounded-full bg-ink/[0.06] px-3 py-1.5 text-[12px] font-medium text-ink-soft focus:outline-none"
-                  aria-label={t("정렬", "Sort")}
+                  aria-label={t("순서", "Order")}
                 >
-                  <option value="newest">{t("최신순", "Newest")}</option>
-                  <option value="oldest">{t("오래된순", "Oldest")}</option>
+                  <option value="newest">{t("가까운 순", "Recent first")}</option>
+                  <option value="oldest">{t("먼 순", "Oldest first")}</option>
                 </select>
               </div>
             )}
@@ -979,7 +979,7 @@ function Archive() {
             </button>
             <div className="flex-1 px-1 text-[13px] font-semibold text-ink">
               {selected.size}
-              {t("개 선택됨", " selected")}
+              {t("개 골랐어요", " picked")}
             </div>
             <button
               onClick={() => setMoveSheetOpen(true)}
@@ -994,7 +994,7 @@ function Archive() {
               disabled={selected.size === 0}
               className="pill-yellow inline-flex items-center gap-1 disabled:opacity-50"
             >
-              <FolderPlus size={14} /> {t("그룹 만들기", "New group")}
+              <FolderPlus size={14} /> {t("모아두기", "Gather")}
             </button>
           </div>
         </div>
@@ -1009,11 +1009,11 @@ function Archive() {
           />
           <div className="relative w-full max-w-sm rounded-[24px] bg-white/95 p-6 shadow-float backdrop-blur-xl animate-scale-in">
             <div className="text-[17px] font-extrabold text-ink">
-              {t("새 그룹 만들기", "New group")}
+              {t("새로 모아두기", "New gathering")}
             </div>
             <div className="mt-1 text-xs text-ink-soft">
               {selected.size}
-              {t("개 메모를 이 그룹으로 묶어요.", " notes will be grouped.")}
+              {t("개 생각을 여기에 모아요.", " thoughts will gather here.")}
             </div>
             <div className="mt-4 flex items-center gap-2">
               <input
@@ -1025,7 +1025,7 @@ function Archive() {
               <input
                 value={newName}
                 onChange={(e) => setNewName(e.target.value)}
-                placeholder={t("그룹 이름", "Group name")}
+                placeholder={t("이름", "Name")}
                 autoFocus
                 className="h-12 flex-1 rounded-full bg-white/80 px-4 text-[15px] font-medium text-ink placeholder:text-ink-soft/70 input-focus-ring"
               />
@@ -1086,7 +1086,7 @@ function Archive() {
               )}
             </p>
             <p className="mt-1 text-[13px] text-ink-soft">
-              {t("메모는 그대로 남아요.", "Your notes stay.")}
+              {t("생각은 그대로 남아요.", "Your thoughts stay.")}
             </p>
             <div className="mt-4 flex gap-2">
               <button
@@ -1122,7 +1122,7 @@ function Archive() {
             onClick={(e) => e.stopPropagation()}
           >
             <h3 id="archive-edit-title" className="text-[17px] font-bold text-ink">
-              {t("제목 편집", "Edit title")}
+              {t("이름 다듬기", "Refine name")}
             </h3>
             <input
               value={editTitle}
@@ -1134,11 +1134,11 @@ function Archive() {
               onClick={() => {
                 setArchiveTitle(editItem.id, editTitle);
                 setEditItem(null);
-                toast.success(t("저장됐어요", "Saved"));
+                toast.success(t("다듬었어요", "Refined"));
               }}
               className="mt-4 w-full rounded-full bg-primary py-3.5 text-[15px] font-bold text-ink"
             >
-              {t("저장", "Save")}
+              {t("다듬기", "Refine")}
             </button>
           </div>
         </div>

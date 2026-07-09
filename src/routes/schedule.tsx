@@ -321,9 +321,9 @@ function Schedule() {
         alarm: false,
         status: "active",
       });
-      toast.success(t("복제됐어요", "Duplicated"));
+      toast.success(t("복사됐어요", "Copied here"));
     } catch {
-      toast.error(t("복제하지 못했어요", "Couldn't duplicate"));
+      toast.error(t("복사하지 못했어요", "Couldn't copy"));
     }
   };
 
@@ -380,9 +380,9 @@ function Schedule() {
       try {
         const deleted = await remove(s.id);
         if (pins.has(s.id)) togglePin(s.id);
-        if (deleted) toast(t("삭제됨", "Deleted"));
+        if (deleted) toast(t("내려놨어요", "Let go"));
       } catch {
-        toast.error(t("삭제하지 못했어요", "Couldn't delete"));
+        toast.error(t("내려놓지 못했어요", "Couldn't let go"));
       }
     },
   });
@@ -403,7 +403,7 @@ function Schedule() {
                   `${activeItems.length}가지를 기억하고 있어요`,
                   `${activeItems.length} moments to remember`,
                 )
-              : t("아직 날짜를 붙인 게 없어요", "Nothing dated yet")}
+              : t("아직 그때가 정해진 게 없어요", "Nothing anchored to time yet")}
           </p>
         </div>
         <div className="px-5 pb-3">
@@ -411,9 +411,9 @@ function Schedule() {
             <div className="inline-flex border-b border-ink/10" role="tablist">
               {(
                 [
-                  ["list", t("목록", "List"), "schedule-panel-list"],
+                  ["list", t("흐름", "Flow"), "schedule-panel-list"],
                   ["today", t("오늘", "Today"), "schedule-panel-today"],
-                  ["cal", t("캘린더", "Calendar"), "schedule-panel-cal"],
+                  ["cal", t("달", "Month"), "schedule-panel-cal"],
                 ] as const
               ).map(([k, label, panelId]) => (
                 <button
@@ -519,9 +519,9 @@ function Schedule() {
               try {
                 const deleted = await remove(s.id);
                 if (pins.has(s.id)) togglePin(s.id);
-                if (deleted) toast(t("삭제됨", "Deleted"));
+                if (deleted) toast(t("내려놨어요", "Let go"));
               } catch {
-                toast.error(t("삭제하지 못했어요", "Couldn't delete"));
+                toast.error(t("내려놓지 못했어요", "Couldn't let go"));
               }
             }}
             onDuplicate={duplicateSchedule}
@@ -599,7 +599,7 @@ function Schedule() {
         initialEnd={sheet.edit ? new Date(sheet.edit.end_time) : undefined}
         initialAllDay={sheet.edit?.all_day}
         initialRepeat={sheet.edit?.repeat}
-        saveLabel={sheet.edit ? t("저장", "Save") : undefined}
+        saveLabel={sheet.edit ? t("다듬기", "Refine") : undefined}
         onClose={() => setSheet({ open: false })}
         onSave={async (text, start, end, opts) => {
           try {
@@ -624,7 +624,7 @@ function Schedule() {
                 repeat: opts?.repeat ?? null,
                 ...alarmPayload,
               });
-              toast.success(t("수정됐어요", "Updated"));
+              toast.success(t("다듬었어요", "Refined"));
             } else {
               await add({
                 text,
@@ -642,7 +642,7 @@ function Schedule() {
             }
             setSheet({ open: false });
           } catch {
-            toast.error(t("저장하지 못했어요", "Couldn't save"));
+            toast.error(t("남기지 못했어요", "Couldn't keep it"));
           }
         }}
       />
@@ -724,7 +724,7 @@ function ScheduleFeelRow({
       className="relative flex touch-none select-none items-center gap-3 rounded-[14px] px-1 py-3 active:bg-ink/[0.03]"
       role="button"
       tabIndex={0}
-      aria-label={`${title}. ${t("밀어 다녀옴, 탭하여 고치기", "Swipe when done, tap to edit")}`}
+      aria-label={`${title}. ${t("밀면 다녀온 기억, 탭하면 다듬기", "Swipe to let go, tap to refine")}`}
       style={{
         transform: `translateX(${dx}px)`,
         transition: dragging.current || acting ? "none" : undefined,
@@ -768,7 +768,7 @@ function ScheduleFeelHint() {
   const t = useT();
   return (
     <p className="mt-2 px-1 text-[11px] text-ink-soft/70">
-      {t("→ 밀어 다녀옴 · 탭하여 고치기", "→ Swipe when done · Tap to edit")}
+      {t("→ 밀면 다녀온 기억 · 탭하면 다듬기", "→ Swipe to let go · Tap to refine")}
     </p>
   );
 }
@@ -1073,9 +1073,9 @@ function DoneSection({
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
-        className="mb-2 w-full px-1 text-left text-[11px] font-extrabold uppercase tracking-[0.18em] text-ink-soft touch-press"
+        className="mb-2 w-full px-1 text-left text-[11px] font-semibold tracking-[-0.01em] text-ink-soft/80 touch-press"
       >
-        {t("다녀온 기억", "Let go")} · {items.length}{" "}
+        {t("다녀온 기억", "Memories you let go")} · {items.length}{" "}
         <motion.span
           animate={{ rotate: open ? 0 : -90 }}
           transition={{ duration: 0.2 }}
@@ -1392,7 +1392,7 @@ function CalendarGrid({
                 className="flex w-full items-center justify-center gap-2 rounded-[16px] bg-primary/25 py-3 text-[14px] font-bold text-ink touch-press"
               >
                 <Plus size={16} strokeWidth={2.5} />
-                {t("일정 추가", "Add Schedule")}
+                {t("그때 남기기", "Remember for then")}
               </motion.button>
 
               <div className="rounded-[16px] px-1">
@@ -1422,8 +1422,8 @@ function CalendarGrid({
                       }`}
                     >
                       {selectMode
-                        ? t("취소", "Cancel")
-                        : t("선택", "Select")}
+                        ? t("닫기", "Close")
+                        : t("고르기", "Pick")}
                     </button>
                   )}
                 </div>
@@ -1434,8 +1434,8 @@ function CalendarGrid({
                     className="mb-2 text-[11px] font-semibold text-primary"
                   >
                     {t(
-                      `${picked.size}개 선택 · 끌어서 함께 옮기기`,
-                      `${picked.size} selected · drag to move together`,
+                      `${picked.size}개 · 끌어서 함께 옮기기`,
+                      `${picked.size} picked · drag to move together`,
                     )}
                   </motion.p>
                 )}
@@ -1534,17 +1534,17 @@ function ScheduleEventMenu({
   if (!item) return null;
 
   const actions = [
-    { key: "edit", label: t("고치기", "Edit"), icon: Pencil, onClick: onEdit },
+    { key: "edit", label: t("다듬기", "Refine"), icon: Pencil, onClick: onEdit },
     { key: "move", label: t("옮기기", "Move"), icon: Move, onClick: onMove },
     {
       key: "multi",
-      label: t("여러 개 선택", "Multi Select"),
+      label: t("여러 개 고르기", "Pick several"),
       icon: CheckSquare,
       onClick: onMultiSelect,
     },
     {
       key: "dup",
-      label: t("복제", "Duplicate"),
+      label: t("복사", "Copy"),
       icon: Copy,
       onClick: onDuplicate,
     },
@@ -1556,7 +1556,7 @@ function ScheduleEventMenu({
     },
     {
       key: "del",
-      label: t("삭제", "Delete"),
+      label: t("내려놓기", "Let go"),
       icon: Trash2,
       onClick: onDelete,
       danger: true,
@@ -1718,11 +1718,11 @@ function DayEventChip({
 function Empty() {
   return (
     <EmptyState
-      emoji="🗓"
+      emoji="🌙"
       titleKo="아직 그때가 없어요"
-      titleEn="Nothing dated yet"
-      hintKo="생각을 오른쪽으로 밀거나 + 로 날짜를 붙여 보세요"
-      hintEn="Swipe a thought right, or tap + when a day comes to mind"
+      titleEn="Nothing anchored yet"
+      hintKo="생각을 오른쪽으로 밀거나, 마음에 드는 날에 남겨 보세요"
+      hintEn="Swipe a thought right, or leave it on a day that feels right"
     />
   );
 }

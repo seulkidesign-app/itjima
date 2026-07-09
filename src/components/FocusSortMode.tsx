@@ -613,7 +613,7 @@ export function FocusSortMode({
                     <SwipeStamp
                       side="archive"
                       progress={archiveProgress}
-                      label={t("기억함", "Saved")}
+                      label={t("기억함", "Kept")}
                     />
 
                     <div className="flex-1 px-7 pb-4 pt-8">
@@ -627,7 +627,7 @@ export function FocusSortMode({
                         onClick={handleScheduleTap}
                         className="touch-press flex-1 rounded-full bg-primary py-3.5 text-[15px] font-bold text-ink shadow-card transition-transform active:scale-[0.97] disabled:opacity-40"
                       >
-                        {t("일정", "When")}
+                        {t("그때", "When")}
                       </button>
                       <button
                         type="button"
@@ -635,7 +635,7 @@ export function FocusSortMode({
                         onClick={handleArchiveTap}
                         className="touch-press flex-1 rounded-full bg-ink py-3.5 text-[15px] font-bold text-white shadow-card transition-transform active:scale-[0.97] disabled:opacity-40"
                       >
-                        {t("보관", "Save")}
+                        {t("기억함", "Kept")}
                       </button>
                     </div>
                   </div>
@@ -664,8 +664,8 @@ export function FocusSortMode({
 
                 <p className="mt-4 text-center text-[11px] font-medium text-ink-soft/70">
                   {t(
-                    "← 일정 · → 보관 · ↓ 다음 · ↑ 이전",
-                    "← When · → Save · ↓ next · ↑ previous",
+                    "← 그때 · → 기억함 · ↓ 다음 · ↑ 이전",
+                    "← When · → Kept · ↓ next · ↑ previous",
                   )}
                 </p>
               </>

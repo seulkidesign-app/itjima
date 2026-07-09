@@ -306,7 +306,7 @@ export function BrainMirrorPanel({
           onClick={() => void runOrganize()}
           className="touch-press rounded-full bg-ink/[0.05] px-3 py-1.5 text-[12px] font-semibold text-ink-soft active:bg-ink/[0.08]"
         >
-          {t("정리해 볼까요?", "Organize this?")}
+          {t("정리해 볼까요?", "Reflect on this?")}
         </button>
       </div>
     );

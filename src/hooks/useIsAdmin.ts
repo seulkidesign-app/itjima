@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useUserId } from "@/lib/store";
-import { supabase } from "@/integrations/supabase/client";
+import { checkIsAdmin } from "@/lib/admin.functions";
 
 export function useIsAdmin() {
   const userId = useUserId();
@@ -12,14 +12,12 @@ export function useIsAdmin() {
       return;
     }
     let alive = true;
-    supabase
-      .from("user_roles")
-      .select("role")
-      .eq("user_id", userId)
-      .eq("role", "admin")
-      .maybeSingle()
-      .then(({ data }) => {
-        if (alive) setIsAdmin(!!data);
+    checkIsAdmin()
+      .then(({ isAdmin: ok }) => {
+        if (alive) setIsAdmin(ok);
+      })
+      .catch(() => {
+        if (alive) setIsAdmin(false);
       });
     return () => {
       alive = false;

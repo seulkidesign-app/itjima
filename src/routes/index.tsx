@@ -242,7 +242,7 @@ function Inbox() {
         toast.success(t("그때 다시 떠올릴게요", "I'll remember this for then"));
       }
     } catch {
-      toast.error(t("일정을 저장하지 못했어요", "Couldn't save schedule"));
+      toast.error(t("일정을 남기지 못했어요", "Couldn't anchor it in time"));
     }
   };
 
@@ -261,7 +261,7 @@ function Inbox() {
       if (inboxRevival?.sourceId === it.id) setInboxRevival(null);
 
       if (allCloudSynced(archiveSynced, inboxSynced)) {
-        showUndoToast(t("기억함에 저장했어요", "Saved"), async () => {
+        showUndoToast(t("기억함에 뒀어요", "Kept safe"), async () => {
           await archive.remove(created.id);
           const { item: restored } = await inbox.add({
             text: payload.text,
@@ -272,7 +272,7 @@ function Inbox() {
         });
       }
     } catch {
-      toast.error(t("남기지 못했어요", "Couldn't save it here"));
+      toast.error(t("남기지 못했어요", "Couldn't keep it here"));
     }
   };
 
@@ -400,7 +400,7 @@ function Inbox() {
       }
       maybeNudgeLogin();
     } catch {
-      toast.error(t("저장하지 못했어요", "Couldn't save"));
+      toast.error(t("남기지 못했어요", "Couldn't keep it"));
     }
   };
 
@@ -505,8 +505,8 @@ function Inbox() {
                 emoji="✍️"
                 titleKo="여기에 남겨두세요"
                 titleEn="Leave it here"
-                hintKo="적고 Enter — 이제 잊어도 돼요"
-                hintEn="Type and Enter — you don't have to hold it anymore"
+                hintKo="적고 Enter — 이제 기억하지 않아도 돼요"
+                hintEn="Type and Enter — you don't have to remember anymore"
               />
             )}
           </div>
@@ -604,7 +604,7 @@ function Inbox() {
             />
             <MenuItem
               icon={<Sparkles size={18} />}
-              label={t("정리해 볼까요?", "Organize this?")}
+              label={t("되비침", "Reflect")}
               onClick={() => {
                 const target = menuItem;
                 setMenuFor(null);
@@ -633,7 +633,7 @@ function Inbox() {
             />
             <MenuItem
               icon={<ArchiveIcon size={18} />}
-              label={t("기억함에 저장", "Save")}
+              label={t("기억함에 둘게요", "Keep it safe")}
               onClick={() => {
                 setMenuFor(null);
                 moveToArchive(menuItem);
@@ -641,7 +641,7 @@ function Inbox() {
             />
             <MenuItem
               icon={<Trash2 size={18} />}
-              label={t("삭제", "Delete")}
+              label={t("내려놓기", "Let go")}
               danger
               onClick={() => {
                 setMenuFor(null);
@@ -699,7 +699,7 @@ function Inbox() {
                     ),
                   );
                 } catch {
-                  toast.error(t("저장하지 못했어요", "Couldn't save"));
+                  toast.error(t("남기지 못했어요", "Couldn't keep it"));
                 }
               }}
               className="mt-4 w-full rounded-full bg-primary py-3.5 text-[15px] font-bold text-ink"
@@ -719,7 +719,7 @@ function Inbox() {
                   }
                   setPasteSheet(null);
                 } catch {
-                  toast.error(t("저장하지 못했어요", "Couldn't save"));
+                  toast.error(t("남기지 못했어요", "Couldn't keep it"));
                 }
               }}
               className="mt-2 w-full rounded-full bg-white/70 py-3.5 text-[15px] font-semibold text-ink"

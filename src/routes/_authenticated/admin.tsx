@@ -17,7 +17,7 @@ import {
   grantAdmin,
   revokeAdmin,
   adminDeleteInbox,
-  checkIsAdmin,
+  getMyAdminStatus,
   getAdminCount,
   listFeedback,
   updateFeedbackStatus,
@@ -39,7 +39,7 @@ function AdminPage() {
 
   const adminCheck = useQuery({
     queryKey: ["isAdmin"],
-    queryFn: () => checkIsAdmin(),
+    queryFn: () => getMyAdminStatus(),
     retry: false,
   });
 
@@ -52,8 +52,11 @@ function AdminPage() {
 
   const isAdmin = !!adminCheck.data?.isAdmin;
   const myUserId = adminCheck.data?.userId;
-  const adminCountKnown = adminCount.isSuccess;
-  const noAdminsYet = adminCountKnown && (adminCount.data?.count ?? 0) === 0;
+  const myEmail = adminCheck.data?.email;
+  const adminCountValue =
+    adminCheck.data?.adminCount ?? adminCount.data?.count ?? null;
+  const adminCountKnown = adminCountValue !== null;
+  const noAdminsYet = adminCountKnown && adminCountValue === 0;
   const gateLoading =
     !isAdmin && (adminCheck.isLoading || adminCount.isLoading);
 
@@ -84,8 +87,8 @@ function AdminPage() {
       if (msg.includes("Admin already exists")) {
         toast.error(
           t(
-            "이미 다른 관리자가 있어요. Supabase에서 user_roles에 본인 UID를 admin으로 추가해 주세요.",
-            "Another admin already exists. Add your UID as admin in Supabase user_roles.",
+            `다른 관리자 계정이 ${adminCountValue ?? 1}개 있어요. Supabase SQL Editor에서 아래 UID를 admin으로 추가해 주세요.`,
+            `Another admin account exists (${adminCountValue ?? 1}). Add your UID as admin in Supabase SQL Editor.`,
           ),
         );
         return;
@@ -129,27 +132,67 @@ function AdminPage() {
                 )
               : adminCountKnown
                 ? t(
-                    "관리자 권한이 없어요. 아래에서 등록을 시도하거나 Supabase에서 권한을 받으세요.",
-                    "You are not an admin. Try registering below or ask for access in Supabase.",
+                    `관리자 ${adminCountValue}명이 등록되어 있어요. 본인 계정에 권한이 없으면 Supabase에서 UID를 추가해 주세요.`,
+                    `${adminCountValue} admin(s) registered. If you lack access, add your UID in Supabase.`,
                   )
                 : t(
                     "관리자 권한이 없어요. 아래 버튼으로 첫 관리자 등록을 시도해 보세요.",
                     "You are not an admin. Try becoming the first admin below.",
                   )}
           </p>
-          <button
-            onClick={() => bootstrap.mutate()}
-            disabled={bootstrap.isPending}
-            className="rounded-full bg-primary px-5 py-2.5 text-sm font-bold text-ink shadow-card disabled:opacity-50"
-          >
-            {bootstrap.isPending
-              ? t("처리 중...", "Working...")
-              : t("관리자로 등록", "Make me admin")}
-          </button>
-          {myUserId && (
-            <p className="max-w-sm break-all text-[11px] text-ink-soft/80">
-              {t("내 UID", "My UID")}: {myUserId}
-            </p>
+          <div className="flex flex-wrap items-center justify-center gap-2">
+            <button
+              onClick={() => bootstrap.mutate()}
+              disabled={bootstrap.isPending}
+              className="rounded-full bg-primary px-5 py-2.5 text-sm font-bold text-ink shadow-card disabled:opacity-50"
+            >
+              {bootstrap.isPending
+                ? t("처리 중...", "Working...")
+                : noAdminsYet
+                  ? t("첫 관리자 되기", "Become first admin")
+                  : t("권한 다시 확인", "Recheck access")}
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                void qc.invalidateQueries({ queryKey: ["isAdmin"] });
+                void qc.invalidateQueries({ queryKey: ["adminCount"] });
+              }}
+              className="rounded-full bg-ink/[0.06] px-4 py-2.5 text-sm font-semibold text-ink-soft"
+            >
+              {t("새로고침", "Refresh")}
+            </button>
+          </div>
+          {(myEmail || myUserId) && (
+            <div className="max-w-sm space-y-1 text-[11px] text-ink-soft/80">
+              {myEmail && (
+                <p>
+                  {t("로그인", "Signed in")}: {myEmail}
+                </p>
+              )}
+              {myUserId && (
+                <p className="break-all">
+                  {t("내 UID", "My UID")}: {myUserId}
+                </p>
+              )}
+              {adminCountKnown && (
+                <p>
+                  {t("등록된 관리자", "Admins registered")}: {adminCountValue}
+                </p>
+              )}
+            </div>
+          )}
+          {myUserId && !noAdminsYet && (
+            <div className="max-w-sm rounded-2xl bg-ink/[0.04] px-3 py-2 text-left">
+              <p className="text-[10px] font-semibold text-ink-soft">
+                Supabase SQL Editor
+              </p>
+              <pre className="mt-1 overflow-x-auto whitespace-pre-wrap break-all text-[10px] text-ink/80">
+                {`INSERT INTO public.user_roles (user_id, role)
+VALUES ('${myUserId}', 'admin')
+ON CONFLICT (user_id, role) DO NOTHING;`}
+              </pre>
+            </div>
           )}
           <Link to="/" className="text-xs text-ink-soft underline">
             {t("홈으로", "Back home")}

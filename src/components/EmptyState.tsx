@@ -38,8 +38,16 @@ export function EmptyState({
         }
         aria-hidden
         initial={{ scale: variant === "success" ? 0.9 : 0.94, opacity: 0 }}
-        animate={{ scale: 1, opacity: 1 }}
-        transition={{ ...spring, delay: 0.05 }}
+        animate={
+          variant === "success"
+            ? { scale: 1, opacity: 1 }
+            : { scale: 1, opacity: 1, y: [0, -5, 0] }
+        }
+        transition={
+          variant === "success"
+            ? { ...spring, delay: 0.05 }
+            : { duration: 4.2, repeat: Infinity, ease: "easeInOut", delay: 0.05 }
+        }
       >
         <span className={variant === "success" ? "text-[1.65rem]" : ""}>
           {emoji}

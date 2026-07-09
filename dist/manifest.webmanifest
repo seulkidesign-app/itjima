@@ -1,7 +1,7 @@
 {
-  "name": "ItJima — Mental Inbox",
+  "name": "ItJima — AI Memory",
   "short_name": "ItJima",
-  "description": "An inbox for your brain. Throw thoughts, swipe to sort.",
+  "description": "Leave it here. You don't have to remember anymore.",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",

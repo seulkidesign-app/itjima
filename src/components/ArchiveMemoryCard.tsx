@@ -185,7 +185,7 @@ export function ArchiveMemoryCard({
                   className="touch-press inline-flex items-center gap-1.5 rounded-full bg-ink/[0.05] px-3 py-2 text-[12px] font-semibold text-ink-soft"
                 >
                   <Pencil size={13} />
-                  {t("제목", "Title")}
+                  {t("이름", "Name")}
                 </button>
                 <button
                   type="button"
