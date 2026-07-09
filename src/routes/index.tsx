@@ -16,14 +16,11 @@ import { LoginSheet } from "@/components/LoginSheet";
 import { CleanupReviewSheet } from "@/components/CleanupReviewSheet";
 import { ChatBubble } from "@/components/ChatBubble";
 import { InputBar } from "@/components/InputBar";
+import { CaptureRelease } from "@/components/CaptureRelease";
 import { InstallPrompt } from "@/components/InstallPrompt";
 import { SyncIndicator } from "@/components/SyncIndicator";
 import { EmptyState } from "@/components/EmptyState";
-import { BrainMirrorPanel, runUserOrganize } from "@/components/BrainMirrorSummary";
-import {
-  isBrainMirrorCandidate,
-  type BrainMirrorResult,
-} from "@/lib/brainMirror";
+import { runUserOrganize } from "@/components/BrainMirrorSummary";
 import { archiveFromInbox, scheduleFromInbox } from "@/lib/thoughtProvenance";
 import { setRevivalHint } from "@/lib/archiveMeta";
 import {
@@ -41,9 +38,8 @@ import {
   isLoginDismissed,
   type InboxItem,
 } from "@/lib/store";
-import { detectDate } from "@/lib/dateDetect";
-import { useT } from "@/lib/i18n";
 import { track } from "@/lib/analytics";
+import { useT } from "@/lib/i18n";
 import { haptic } from "@/lib/haptics";
 import { allCloudSynced } from "@/lib/syncFeedback";
 
@@ -84,37 +80,10 @@ function Inbox() {
   const [restorePasteText, setRestorePasteText] = useState<string | null>(null);
   const [swipeOpenId, setSwipeOpenId] = useState<string | null>(null);
   const [inboxRevival, setInboxRevival] = useState<RevivalHint | null>(null);
-  const [bmEligibleIds, setBmEligibleIds] = useState<Set<string>>(
-    () => new Set(),
-  );
-
-  const markBmEligible = (id: string) => {
-    setBmEligibleIds((prev) => new Set(prev).add(id));
-  };
-
-  const offerDateSchedule = (item: InboxItem) => {
-    const det = detectDate(item.text);
-    if (!det) return;
-    toast.custom(
-      (toastId) => (
-        <div className="flex items-center gap-3 rounded-[24px] bg-ink px-4 py-3 text-white shadow-float">
-          <div className="text-sm">
-            📅 {det.label} — {t("그때 다시 떠올릴까요?", "Remember this for then?")}
-          </div>
-          <button
-            onClick={() => {
-              openHomeSchedule(item);
-              toast.dismiss(toastId);
-            }}
-            className={toastBtn}
-          >
-            {t("남겨둘게요", "Keep it")}
-          </button>
-        </div>
-      ),
-      { duration: 6000 },
-    );
-  };
+  const [releaseItem, setReleaseItem] = useState<InboxItem | null>(null);
+  const [releasePendingScheduleId, setReleasePendingScheduleId] = useState<
+    string | null
+  >(null);
 
   const items = inbox.items;
   const menuItem = menuFor
@@ -122,7 +91,11 @@ function Inbox() {
     : undefined;
   const syncing = inbox.syncState === "syncing";
   // KakaoTalk-style: oldest at top, newest at bottom
-  const itemsAsc = useMemo(() => [...items].slice().reverse(), [items]);
+  const itemsAsc = useMemo(() => {
+    const asc = [...items].slice().reverse();
+    if (!releaseItem) return asc;
+    return asc.filter((it) => it.id !== releaseItem.id);
+  }, [items, releaseItem]);
   const newestId = items[0]?.id;
   const listEndRef = useRef<HTMLDivElement | null>(null);
   const prevCountRef = useRef(items.length);
@@ -133,7 +106,7 @@ function Inbox() {
       setInboxJustCleared(true);
     }
     if (items.length > 0) setInboxJustCleared(false);
-    if (items.length > prevCountRef.current) {
+    if (items.length > prevCountRef.current && !releaseItem) {
       requestAnimationFrame(() => {
         listEndRef.current?.scrollIntoView({
           behavior: "smooth",
@@ -142,7 +115,26 @@ function Inbox() {
       });
     }
     prevCountRef.current = items.length;
-  }, [items.length]);
+  }, [items.length, releaseItem]);
+
+  useEffect(() => {
+    if (!releaseItem) return;
+    const scroll = document.getElementById("phone-scroll");
+    const prevOverflow = scroll?.style.overflow ?? "";
+    const prevBody = document.body.style.overflow;
+    if (scroll) scroll.style.overflow = "hidden";
+    document.body.style.overflow = "hidden";
+    return () => {
+      if (scroll) scroll.style.overflow = prevOverflow;
+      document.body.style.overflow = prevBody;
+    };
+  }, [releaseItem]);
+
+  const completeRelease = () => {
+    setReleaseItem(null);
+    setReleasePendingScheduleId(null);
+    maybeNudgeLogin();
+  };
 
   useEffect(() => {
     if (!menuItem && !pasteSheet) return;
@@ -237,6 +229,7 @@ function Inbox() {
       });
       setFocusScheduleSheet({ open: false });
       setFocusPendingScheduleId(null);
+      if (releaseItem?.id === it.id) completeRelease();
       if (focusSortOpen) setScheduleCommittedId(it.id);
       if (allCloudSynced(scheduleSynced, inboxSynced)) {
         toast.success(t("그때 다시 떠올릴게요", "I'll remember this for then"));
@@ -268,7 +261,6 @@ function Inbox() {
             images: payload.images,
             brain_mirror: payload.brain_mirror,
           });
-          markBmEligible(restored.id);
         });
       }
     } catch {
@@ -283,78 +275,11 @@ function Inbox() {
       if (deleted) {
         showUndoToast(t("지웠어요", "Removed"), async () => {
           await inbox.update(it.id, { status: "active" } as Partial<InboxItem>);
-          if (isBrainMirrorCandidate(it.text)) markBmEligible(it.id);
         });
       }
     } catch {
       toast.error(t("삭제하지 못했어요", "Couldn't delete"));
     }
-  };
-
-  const autoScheduleFromMirror = async (
-    item: InboxItem,
-    result: BrainMirrorResult,
-  ): Promise<string | null> => {
-    const det =
-      detectDate(item.text) ??
-      (result.suggestedDateText ? detectDate(result.suggestedDateText) : null);
-    if (!det) return null;
-
-    const start = det.start;
-    const end = det.end;
-    const text = formatMirrorScheduleText(item.text, result);
-    const snapshot = {
-      text: item.text,
-      images: item.images ?? [],
-      brain_mirror: item.brain_mirror ?? result,
-    };
-
-    const { item: created, cloudSynced: scheduleSynced } = await schedules.add(
-      scheduleFromInbox(item, {
-        text,
-        start_time: start.toISOString(),
-        end_time: end.toISOString(),
-      }),
-    );
-    const inboxSynced = await inbox.remove(item.id);
-    track("schedule_created", {
-      source: "brain_mirror",
-      text_length: text.length,
-    });
-
-    if (allCloudSynced(scheduleSynced, inboxSynced)) {
-      toast.custom(
-        (toastId) => (
-          <div className="flex items-center gap-3 rounded-[24px] bg-ink px-4 py-3 text-white shadow-float">
-            <div className="text-sm">
-              📅 {t("그때를 기억함에 옮겼어요", "Moved to when you'll remember")}
-            </div>
-            <button
-              onClick={async () => {
-                await schedules.remove(created.id);
-                const { item: restored } = await inbox.add({
-                  text: snapshot.text,
-                  images: snapshot.images,
-                  brain_mirror: snapshot.brain_mirror,
-                });
-                markBmEligible(restored.id);
-                toast.dismiss(toastId);
-              }}
-              className={toastBtn}
-            >
-              {t("되돌리기", "Undo")}
-            </button>
-          </div>
-        ),
-        { duration: 8000 },
-      );
-    }
-
-    return created.id;
-  };
-
-  const cancelMirrorSchedule = async (scheduleId: string) => {
-    await schedules.remove(scheduleId);
   };
 
   const confirmCleanupDelete = async (ids: string[]) => {
@@ -372,33 +297,20 @@ function Inbox() {
     if (!text && !images.length) return;
     haptic([6, 16, 10]);
     try {
-      const { item: created, cloudSynced } = await inbox.add({
+      const { item: created } = await inbox.add({
         text,
         images,
       });
-      if (isBrainMirrorCandidate(text)) {
-        markBmEligible(created.id);
-      }
-
-      const revival = buildRevivalHint(created, archive.items, "inbox");
-      if (revival) setInboxRevival(revival);
-
       track("thought_created", {
         text_length: text.length,
         has_images: images.length > 0,
         image_count: images.length,
       });
-      if (cloudSynced) return;
-      if (!revival) {
-        toast.success(
-          t("여기에 안전하게 남았어요", "Safely kept on this device"),
-          { duration: 2500 },
-        );
-        if (!isBrainMirrorCandidate(text)) {
-          offerDateSchedule(created);
-        }
-      }
-      maybeNudgeLogin();
+
+      setReleaseItem(created);
+
+      const revival = buildRevivalHint(created, archive.items, "inbox");
+      if (revival) setInboxRevival(revival);
     } catch {
       toast.error(t("남기지 못했어요", "Couldn't keep it"));
     }
@@ -482,6 +394,7 @@ function Inbox() {
           <div className="shrink-0">
             <InputBar
               hero
+              releasing={!!releaseItem}
               onAdd={handleAdd}
               onPasteMulti={(chunks, original) =>
                 setPasteSheet({ chunks, original })
@@ -490,31 +403,50 @@ function Inbox() {
               onRestoreConsumed={() => setRestorePasteText(null)}
             />
           </div>
-          <div className="flex flex-1 flex-col justify-end pb-8">
-            {inboxJustCleared ? (
-              <EmptyState
-                variant="success"
-                emoji="✨"
-                titleKo="머리가 가벼워졌어요"
-                titleEn="Your mind feels lighter"
-                hintKo="오늘은 더 남길 게 없네요"
-                hintEn="Nothing left to leave here for now"
-              />
-            ) : (
-              <EmptyState
-                emoji="✍️"
-                titleKo="여기에 남겨두세요"
-                titleEn="Leave it here"
-                hintKo="적고 Enter — 이제 기억하지 않아도 돼요"
-                hintEn="Type and Enter — you don't have to remember anymore"
-              />
-            )}
-          </div>
+          {releaseItem ? (
+            <CaptureRelease
+              item={releaseItem}
+              variant="hero"
+              pendingSchedule={releasePendingScheduleId === releaseItem.id}
+              onArchive={(it) => moveToArchive(it)}
+              onSchedule={(it) => {
+                setReleasePendingScheduleId(it.id);
+                openHomeSchedule(it);
+              }}
+              onLetGo={(it) => moveToDelete(it)}
+              onComplete={completeRelease}
+            />
+          ) : (
+            <div className="flex flex-1 flex-col justify-end pb-8">
+              {inboxJustCleared ? (
+                <EmptyState
+                  variant="success"
+                  emoji="✨"
+                  titleKo="머리가 가벼워졌어요"
+                  titleEn="Your mind feels lighter"
+                  hintKo="오늘은 더 남길 게 없네요"
+                  hintEn="Nothing left to leave here for now"
+                />
+              ) : (
+                <EmptyState
+                  emoji="✍️"
+                  titleKo="여기에 남겨두세요"
+                  titleEn="Leave it here"
+                  hintKo="적고 Enter — 이제 기억하지 않아도 돼요"
+                  hintEn="Type and Enter — you don't have to remember anymore"
+                />
+              )}
+            </div>
+          )}
           <InstallPrompt />
         </>
       ) : (
         <>
-          <div className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden px-4 pb-2">
+          <div
+            className={`min-h-0 flex-1 overflow-y-auto overflow-x-hidden px-4 pb-2 transition-opacity duration-500 ${
+              releaseItem ? "opacity-[0.22] pointer-events-none" : ""
+            }`}
+          >
             <div className="chat-scroll flex w-full flex-col gap-2 pb-4">
               {itemsAsc.map((it) => {
                 const isNewest = it.id === newestId;
@@ -545,21 +477,6 @@ function Inbox() {
                         onDismiss={() => setInboxRevival(null)}
                       />
                     )}
-                    {it.text.trim().length >= 2 && (
-                      <BrainMirrorPanel
-                        item={it}
-                        inbox={inbox}
-                        eligible={
-                          bmEligibleIds.has(it.id) &&
-                          isBrainMirrorCandidate(it.text) &&
-                          (Boolean(it.brain_mirror) || it.id === newestId)
-                        }
-                        onAutoAct={autoScheduleFromMirror}
-                        onCancelAct={cancelMirrorSchedule}
-                        onMirrorMissed={offerDateSchedule}
-                        variant="inline"
-                      />
-                    )}
                   </ChatBubble>
                 );
               })}
@@ -567,9 +484,25 @@ function Inbox() {
             </div>
           </div>
 
+          {releaseItem && (
+            <CaptureRelease
+              item={releaseItem}
+              variant="overlay"
+              pendingSchedule={releasePendingScheduleId === releaseItem.id}
+              onArchive={(it) => moveToArchive(it)}
+              onSchedule={(it) => {
+                setReleasePendingScheduleId(it.id);
+                openHomeSchedule(it);
+              }}
+              onLetGo={(it) => moveToDelete(it)}
+              onComplete={completeRelease}
+            />
+          )}
+
           <InstallPrompt />
           <div className="z-20 shrink-0 border-t border-ink/[0.06] bg-white/95 pb-[env(safe-area-inset-bottom)] backdrop-blur-md">
             <InputBar
+              releasing={!!releaseItem}
               onAdd={handleAdd}
               onPasteMulti={(chunks, original) =>
                 setPasteSheet({ chunks, original })
@@ -612,7 +545,6 @@ function Inbox() {
                 void (async () => {
                   const mirror = await runUserOrganize(target, inbox);
                   if (mirror) {
-                    markBmEligible(target.id);
                     haptic([4, 8, 5]);
                   } else {
                     toast.message(
@@ -685,11 +617,10 @@ function Inbox() {
               onClick={async () => {
                 try {
                   for (const c of pasteSheet.chunks) {
-                    const { item } = await inbox.add({
+                    await inbox.add({
                       text: c,
                       images: [],
                     });
-                    if (isBrainMirrorCandidate(c)) markBmEligible(item.id);
                   }
                   setPasteSheet(null);
                   toast.success(
@@ -710,13 +641,10 @@ function Inbox() {
               onClick={async () => {
                 const original = pasteSheet.original;
                 try {
-                  const { item } = await inbox.add({
+                  await inbox.add({
                     text: original,
                     images: [],
                   });
-                  if (isBrainMirrorCandidate(original)) {
-                    markBmEligible(item.id);
-                  }
                   setPasteSheet(null);
                 } catch {
                   toast.error(t("남기지 못했어요", "Couldn't keep it"));
@@ -753,6 +681,7 @@ function Inbox() {
         onClose={() => {
           setFocusScheduleSheet({ open: false });
           setFocusPendingScheduleId(null);
+          setReleasePendingScheduleId(null);
         }}
         onConfirm={(text, start, end, options) => {
           void saveHomeSchedule(text, start, end, options);
@@ -769,15 +698,6 @@ function Inbox() {
       <LoginSheet open={loginOpen} onClose={() => setLoginOpen(false)} />
     </div>
   );
-}
-
-function formatMirrorScheduleText(
-  original: string,
-  result: BrainMirrorResult,
-): string {
-  const lines = [result.title, ...result.items.map((line) => `- ${line}`)];
-  const text = lines.join("\n").trim();
-  return text || original;
 }
 
 function MenuItem({

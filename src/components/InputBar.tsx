@@ -27,6 +27,8 @@ type Props = {
   onRestoreConsumed?: () => void;
   /** Larger hero layout when inbox is empty */
   hero?: boolean;
+  /** Input softly fades while a thought is releasing */
+  releasing?: boolean;
 };
 
 export function InputBar({
@@ -35,6 +37,7 @@ export function InputBar({
   restoreText,
   onRestoreConsumed,
   hero = false,
+  releasing = false,
 }: Props) {
   const t = useT();
   const { lang } = useLang();
@@ -268,7 +271,13 @@ export function InputBar({
     <motion.form
       onSubmit={onSubmit}
       initial={false}
-      animate={{ y: 0 }}
+      animate={{
+        y: 0,
+        opacity: releasing ? 0 : 1,
+        scale: releasing ? 0.98 : 1,
+      }}
+      transition={{ duration: 0.42, ease: [0.32, 0.72, 0, 1] }}
+      style={{ pointerEvents: releasing ? "none" : undefined }}
       className={`border-t border-ink/5 bg-white/95 backdrop-blur-xl shadow-[0_-8px_32px_-12px_rgba(0,0,0,0.08)] pb-[env(safe-area-inset-bottom)] ${
         hero ? "border-t-0 shadow-none" : ""
       }`}
