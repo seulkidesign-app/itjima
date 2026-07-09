@@ -6,6 +6,7 @@ import {
   Trash2,
   Calendar,
   Archive as ArchiveIcon,
+  Sparkles,
 } from "lucide-react";
 import { ChatSwipeRow } from "@/components/ChatSwipeRow";
 import { FocusSortMode } from "@/components/FocusSortMode";
@@ -18,7 +19,7 @@ import { InputBar } from "@/components/InputBar";
 import { InstallPrompt } from "@/components/InstallPrompt";
 import { SyncIndicator } from "@/components/SyncIndicator";
 import { EmptyState } from "@/components/EmptyState";
-import { BrainMirrorPanel } from "@/components/BrainMirrorSummary";
+import { BrainMirrorPanel, runUserOrganize } from "@/components/BrainMirrorSummary";
 import {
   isBrainMirrorCandidate,
   type BrainMirrorResult,
@@ -599,6 +600,27 @@ function Inbox() {
               onClick={() => {
                 setMenuFor(null);
                 setCleanupReviewOpen(true);
+              }}
+            />
+            <MenuItem
+              icon={<Sparkles size={18} />}
+              label={t("정리해 볼까요?", "Organize this?")}
+              onClick={() => {
+                const target = menuItem;
+                setMenuFor(null);
+                if (!target) return;
+                void (async () => {
+                  const mirror = await runUserOrganize(target, inbox);
+                  if (mirror) {
+                    markBmEligible(target.id);
+                    haptic([4, 8, 5]);
+                  } else {
+                    toast.message(
+                      t("지금은 정리하지 못했어요", "Couldn't organize right now"),
+                      { duration: 2800 },
+                    );
+                  }
+                })();
               }}
             />
             <MenuItem

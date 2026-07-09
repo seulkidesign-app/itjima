@@ -17,7 +17,7 @@ test.describe("Brain Mirror API failures", () => {
     page,
   }) => {
     const text =
-      "Draft slides and rehearse talk and send invites to the team";
+      "Quarterly planning merge roadmap hiring budget office move vendor contracts without clear next steps or dates anywhere in sight";
     await addThought(page, text);
 
     await page
