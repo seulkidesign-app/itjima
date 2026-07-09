@@ -3,11 +3,11 @@ import type { BrainMirrorCore } from "@/lib/brainMirror";
 const CACHE_KEY = "itjima.ai.cache";
 const MAX_ENTRIES = 200;
 
-export type AiCacheSource = "local" | "classify" | "organize";
+export type AiCacheSource = "local" | "classify" | "organize" | "skip";
 
 type CacheEntry = {
   hash: string;
-  result: BrainMirrorCore;
+  result: BrainMirrorCore | null;
   source: AiCacheSource;
   at: string;
 };
@@ -55,10 +55,18 @@ function writeStore(store: CacheStore) {
   localStorage.setItem(CACHE_KEY, JSON.stringify(store));
 }
 
+/** True if this exact text was already analyzed (including skip). */
+export function hasBeenAnalyzed(text: string): boolean {
+  const hash = hashText(text);
+  return Boolean(readStore()[hash]);
+}
+
 export function getCachedAiResult(text: string): BrainMirrorCore | null {
   const hash = hashText(text);
   const entry = readStore()[hash];
-  if (!entry?.result?.title) return null;
+  if (!entry) return null;
+  if (entry.source === "skip" || !entry.result) return null;
+  if (!entry.result.title) return null;
   if (!Array.isArray(entry.result.items)) return null;
   return entry.result;
 }
@@ -66,7 +74,7 @@ export function getCachedAiResult(text: string): BrainMirrorCore | null {
 export function setCachedAiResult(
   text: string,
   result: BrainMirrorCore,
-  source: AiCacheSource,
+  source: Exclude<AiCacheSource, "skip">,
 ) {
   const hash = hashText(text);
   const store = readStore();
@@ -79,6 +87,20 @@ export function setCachedAiResult(
   writeStore(store);
 }
 
+/** Record that text was analyzed with no useful result — prevents repeat API calls. */
+export function setCachedSkip(text: string) {
+  const hash = hashText(text);
+  const store = readStore();
+  store[hash] = {
+    hash,
+    result: null,
+    source: "skip",
+    at: new Date().toISOString(),
+  };
+  writeStore(store);
+}
+
 export function hasCachedAiResult(text: string): boolean {
-  return getCachedAiResult(text) !== null;
+  const cached = getCachedAiResult(text);
+  return cached !== null && cached.items.length > 0;
 }

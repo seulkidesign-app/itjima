@@ -3,25 +3,29 @@ import type { VercelRequest, VercelResponse } from "@vercel/node";
 /** Haiku 4.5 — https://platform.claude.com/docs/en/about-claude/models/overview */
 const ANTHROPIC_MODEL = "claude-haiku-4-5-20251001";
 
-/** Layer 2 — minimal classify prompt (<150 tokens). */
-const CLASSIFY_PROMPT = `JSON only. Schema: {"category":"","title":"","suggestedDate":"","items":[]}
+/** Layer 2 — minimal classify prompt (<150 tokens). JSON only. */
+const CLASSIFY_PROMPT = `JSON only: {"category":"","title":"","suggestedDate":""}
 category: schedule|shopping|reminder|task|list|note
-title: max 20 chars
-items: max 3 phrases from input only, never invent
-suggestedDate: empty or date word from input`;
+title: max 18 chars from input
+suggestedDate: date word from input or ""`;
 
-/** Layer 3 — user-initiated organize (fuller, still compact). */
-const ORGANIZE_PROMPT = `ItJima assistant. User tapped "AI Organize". Return JSON only.
+/** Layer 3 — user-initiated organize (still compact). */
+const ORGANIZE_PROMPT = `User tapped Organize. JSON only:
 {"title":"","items":[],"suggestedDateText":"","suggestedAction":"","confidence":0.0}
-items: max 5, only from input. No invented tasks. confidence 0-1. Korean unless English input.`;
+items: max 5 from input only. confidence 0-1. Korean unless English input.`;
 
-type BrainMirrorPayload = {
+type ClassifyPayload = {
+  category: string;
+  title: string;
+  suggestedDate: string;
+};
+
+type OrganizePayload = {
   title: string;
   items: string[];
   suggestedDateText: string;
   suggestedAction: string;
   confidence: number;
-  category?: string;
 };
 
 function extractJson(text: string): unknown {
@@ -35,35 +39,26 @@ function extractJson(text: string): unknown {
   }
 }
 
-function normalizeClassifyPayload(raw: unknown): BrainMirrorPayload | null {
+function normalizeClassifyPayload(raw: unknown): ClassifyPayload | null {
   if (!raw || typeof raw !== "object") return null;
   const o = raw as Record<string, unknown>;
   const title = typeof o.title === "string" ? o.title.trim().slice(0, 30) : "";
   if (!title) return null;
 
-  const itemsRaw = o.items ?? o.tasks;
-  const items = Array.isArray(itemsRaw)
-    ? itemsRaw.filter((t): t is string => typeof t === "string").slice(0, 3)
-    : [];
+  const category =
+    typeof o.category === "string" ? o.category.trim().slice(0, 16) : "note";
 
-  const suggestedDateText =
-    typeof o.suggestedDateText === "string"
-      ? o.suggestedDateText.trim()
-      : typeof o.suggestedDate === "string"
-        ? o.suggestedDate.trim()
+  const suggestedDate =
+    typeof o.suggestedDate === "string"
+      ? o.suggestedDate.trim().slice(0, 24)
+      : typeof o.suggestedDateText === "string"
+        ? o.suggestedDateText.trim().slice(0, 24)
         : "";
 
-  return {
-    title,
-    items,
-    suggestedDateText,
-    suggestedAction: suggestedDateText ? `${suggestedDateText}이에요.` : "",
-    confidence: 0.72,
-    category: typeof o.category === "string" ? o.category : undefined,
-  };
+  return { category, title, suggestedDate };
 }
 
-function normalizeOrganizePayload(raw: unknown): BrainMirrorPayload | null {
+function normalizeOrganizePayload(raw: unknown): OrganizePayload | null {
   if (!raw || typeof raw !== "object") return null;
   const o = raw as Record<string, unknown>;
   if (typeof o.title !== "string") return null;
@@ -152,7 +147,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return res.status(503).json({ error: "API not configured" });
   }
 
-  const input = text.slice(0, mode === "classify" ? 180 : 1200);
+  const input = text.slice(0, mode === "classify" ? 120 : 1200);
 
   try {
     if (mode === "organize") {
@@ -160,7 +155,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         apiKey,
         ORGANIZE_PROMPT,
         input,
-        400,
+        320,
       );
       const payload = normalizeOrganizePayload(raw);
       if (!payload) {
@@ -169,7 +164,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       return res.status(200).json(payload);
     }
 
-    const raw = await callAnthropicJson(apiKey, CLASSIFY_PROMPT, input, 128);
+    const raw = await callAnthropicJson(apiKey, CLASSIFY_PROMPT, input, 72);
     const payload = normalizeClassifyPayload(raw);
     if (!payload) {
       return res.status(502).json({ error: "invalid model response" });

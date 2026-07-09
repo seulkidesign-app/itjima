@@ -7,9 +7,13 @@ import {
 import {
   finalizeBrainMirror,
   suggestedActionForDate,
+  thoughtFirstLine,
   type BrainMirrorResult,
 } from "@/lib/brainMirror";
-import { getCachedAiResult } from "@/lib/aiCache";
+import {
+  getCachedAiResult,
+  hasBeenAnalyzed,
+} from "@/lib/aiCache";
 
 const URL_RE = /https?:\/\/[^\s]+/i;
 const SHOPPING_RE =
@@ -33,12 +37,15 @@ export type IntelligenceResolution = {
 };
 
 function detectCategory(text: string, hasDate: boolean): ThoughtCategory {
+  const analysis = analyzeThought(text);
+  if (analysis.category) return analysis.category;
+
   if (URL_RE.test(text) && text.replace(URL_RE, "").trim().length < 24) {
     return "link";
   }
   if (SHOPPING_RE.test(text)) return "shopping";
   if (REMINDER_RE.test(text)) return "reminder";
-  if (hasDate) return "schedule";
+  if (hasDate || analysis.hasTime) return "schedule";
   const group = archiveGroup(text).key;
   if (group === "todo") return "task";
   if (group === "idea") return "idea";
@@ -67,18 +74,35 @@ function buildTitle(
   return short.length > 2 ? short : text.slice(0, 22).trim();
 }
 
+function buildMirrorItems(
+  text: string,
+  category: ThoughtCategory,
+  items: string[],
+): string[] {
+  if (items.length > 0) return items.slice(0, 5);
+  if (category === "link") {
+    const url = text.match(URL_RE)?.[0];
+    return [url ?? thoughtFirstLine(text).slice(0, 48)];
+  }
+  const line = thoughtFirstLine(text);
+  return line.length >= 2 ? [line.slice(0, 48)] : [];
+}
+
 function toMirrorResult(
   text: string,
   category: ThoughtCategory,
   items: string[],
   confidence: number,
   dateLabel: string,
-): BrainMirrorResult {
-  const title = buildTitle(text, category, items, dateLabel);
+): BrainMirrorResult | null {
+  const mirrorItems = buildMirrorItems(text, category, items);
+  if (!mirrorItems.length) return null;
+
+  const title = buildTitle(text, category, mirrorItems, dateLabel);
   return finalizeBrainMirror(
     {
       title,
-      items: items.slice(0, 5),
+      items: mirrorItems,
       suggestedDateText: dateLabel,
       suggestedAction: dateLabel ? suggestedActionForDate(dateLabel) : "",
       confidence,
@@ -111,25 +135,22 @@ export function classifyLocally(text: string): IntelligenceResolution | null {
   const category = detectCategory(trimmed, !!dateHit);
 
   if (analysis.ruleConfidence >= 0.85 && !analysis.needsFallbackAi) {
-    const mirrorItems =
-      items.length > 0
-        ? items
-        : category === "link"
-          ? [trimmed.match(URL_RE)?.[0] ?? trimmed.slice(0, 40)]
-          : [trimmed.split("\n")[0]?.trim() || trimmed.slice(0, 40)];
-
+    const result = toMirrorResult(
+      trimmed,
+      category,
+      items,
+      analysis.ruleConfidence,
+      dateLabel,
+    );
+    if (!result) {
+      return { kind: "skip", confidence: analysis.ruleConfidence, reasons: analysis.reasons };
+    }
     return {
       kind: "local",
       category,
       confidence: analysis.ruleConfidence,
       reasons: analysis.reasons,
-      result: toMirrorResult(
-        trimmed,
-        category,
-        mirrorItems,
-        analysis.ruleConfidence,
-        dateLabel,
-      ),
+      result,
     };
   }
 
@@ -139,6 +160,23 @@ export function classifyLocally(text: string): IntelligenceResolution | null {
       category,
       confidence: analysis.ruleConfidence,
       reasons: analysis.reasons,
+    };
+  }
+
+  const result = toMirrorResult(
+    trimmed,
+    category,
+    items,
+    analysis.ruleConfidence,
+    dateLabel,
+  );
+  if (result && analysis.isSimpleCapture) {
+    return {
+      kind: "local",
+      category,
+      confidence: analysis.ruleConfidence,
+      reasons: analysis.reasons,
+      result,
     };
   }
 
@@ -166,6 +204,10 @@ export function resolveIntelligence(text: string): IntelligenceResolution {
     };
   }
 
+  if (hasBeenAnalyzed(trimmed)) {
+    return { kind: "skip", confidence: 1, reasons: ["already_analyzed"] };
+  }
+
   const local = classifyLocally(trimmed);
   return local ?? { kind: "skip", confidence: 0.5, reasons: ["unclassified"] };
 }
@@ -186,4 +228,43 @@ export function shouldCallFallbackAi(text: string): boolean {
 
 export function needsUserInitiatedAi(text: string): boolean {
   return resolveIntelligence(text).kind === "needs_user_ai";
+}
+
+/** Expand minimal Layer-2 API payload into a full mirror result. */
+export function expandClassifyPayload(
+  text: string,
+  raw: Record<string, unknown>,
+): BrainMirrorResult | null {
+  const title =
+    typeof raw.title === "string" ? raw.title.trim().slice(0, 30) : "";
+  if (!title) return null;
+
+  const category =
+    typeof raw.category === "string"
+      ? (raw.category as ThoughtCategory)
+      : detectCategory(text, !!detectDate(text));
+
+  const suggestedDateText =
+    typeof raw.suggestedDateText === "string"
+      ? raw.suggestedDateText.trim()
+      : typeof raw.suggestedDate === "string"
+        ? raw.suggestedDate.trim()
+        : detectDate(text)?.label ?? "";
+
+  const items = extractLocalItems(text);
+  const mirrorItems = buildMirrorItems(text, category, items);
+  if (!mirrorItems.length) return null;
+
+  return finalizeBrainMirror(
+    {
+      title,
+      items: mirrorItems,
+      suggestedDateText,
+      suggestedAction: suggestedDateText
+        ? suggestedActionForDate(suggestedDateText)
+        : "",
+      confidence: 0.72,
+    },
+    null,
+  );
 }

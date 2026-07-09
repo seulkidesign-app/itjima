@@ -19,9 +19,11 @@ export type ThoughtAnalysis = {
   /** Layer 3 — summarize/organize; user must tap "AI Organize" */
   needsUserAi: boolean;
   hasDate: boolean;
+  hasTime: boolean;
   actionCount: number;
   isJunk: boolean;
   isSimpleCapture: boolean;
+  category?: ThoughtCategory;
   reasons: string[];
 };
 
@@ -36,6 +38,24 @@ const ORGANIZE_CUE =
 
 const ORGANIZE_ONLY =
   /(?:정리|분류|묶|그룹|organize|sort|group|category)/i;
+
+const SHOPPING_RE =
+  /(?:구매|장보|마트|쇼핑|장보기|사야|사올|buy|grocery|groceries|pick\s*up|우유|계란|김치|빵|과일)/i;
+
+const REMINDER_RE =
+  /(?:알림|리마인|remind|don't\s+forget|잊지\s*말|꼭\s*(?:해|하)|remember\s+to)/i;
+
+const TASK_RE =
+  /(?:해야|하자|하기|할\s*것|todo|to-do|to\s+do|submit|send|call|email|회의|미팅|appointment|병원|dentist)/i;
+
+const PLACE_RE =
+  /(?:카페|식당|병원|약국|학교|회사|공항|역|근처|near|at\s+the)/i;
+
+const TIME_RE =
+  /(?:\d{1,2}\s*시|\d{1,2}:\d{2}|\d{1,2}\s*(?:am|pm)\b|오전|오후)/i;
+
+const WEEKDAY_RE =
+  /(?:일|월|화|수|목|금|토)요일|\b(?:monday|tuesday|wednesday|thursday|friday|saturday|sunday)\b/i;
 
 export function extractLocalItems(text: string): string[] {
   const parts = text
@@ -78,11 +98,30 @@ function hasMultipleIntentions(text: string): boolean {
   if (actions >= 2) return true;
   return (
     /(그리고|또|및|and|also|plus)/i.test(text) &&
-    text.replace(/[\s\p{P}\p{S}]/gu, "").length >= 12
+    text.replace(/[\s\p{P}\p{S}]/gu, "").length >= 16
   );
 }
 
-/** Rule Engine — Layer 1 gate (see PRODUCT_ROADMAP.md). */
+function inferCategory(
+  text: string,
+  hasDate: boolean,
+  hasTime: boolean,
+  actionCount: number,
+): ThoughtCategory {
+  if (URL_RE.test(text) && text.replace(URL_RE, "").trim().length < 28) {
+    return "link";
+  }
+  if (SHOPPING_RE.test(text)) return "shopping";
+  if (REMINDER_RE.test(text)) return "reminder";
+  if (hasDate || hasTime || WEEKDAY_RE.test(text)) return "schedule";
+  if (PLACE_RE.test(text)) return "place";
+  if (TASK_RE.test(text)) return "task";
+  if (actionCount >= 2) return "list";
+  if (/(?:아이디어|idea|생각)/i.test(text)) return "idea";
+  return "note";
+}
+
+/** Rule Engine — Layer 1 gate. High confidence → never call AI. */
 export function analyzeThought(text: string): ThoughtAnalysis {
   const trimmed = text.trim();
   const meaningful = trimmed.replace(/[\s\p{P}\p{S}]/gu, "");
@@ -94,6 +133,7 @@ export function analyzeThought(text: string): ThoughtAnalysis {
       needsFallbackAi: false,
       needsUserAi: false,
       hasDate: false,
+      hasTime: false,
       actionCount: 0,
       isJunk: true,
       isSimpleCapture: true,
@@ -108,6 +148,7 @@ export function analyzeThought(text: string): ThoughtAnalysis {
       needsFallbackAi: false,
       needsUserAi: false,
       hasDate: false,
+      hasTime: false,
       actionCount: 0,
       isJunk: true,
       isSimpleCapture: true,
@@ -121,6 +162,7 @@ export function analyzeThought(text: string): ThoughtAnalysis {
       needsFallbackAi: false,
       needsUserAi: true,
       hasDate: !!detectDate(trimmed),
+      hasTime: TIME_RE.test(trimmed),
       actionCount: countActions(trimmed),
       isJunk: false,
       isSimpleCapture: false,
@@ -130,22 +172,74 @@ export function analyzeThought(text: string): ThoughtAnalysis {
 
   const dateHit = detectDate(trimmed);
   const hasDate = !!dateHit;
+  const hasTime = TIME_RE.test(trimmed);
   const localItems = extractLocalItems(trimmed);
   const actionCount = localItems.length;
   const multi = hasMultipleIntentions(trimmed);
   const organize = hasOrganizationCue(trimmed);
   const hasUrl = URL_RE.test(trimmed);
+  const category = inferCategory(trimmed, hasDate, hasTime, actionCount);
 
-  if (hasUrl && meaningful.length <= 48) {
+  if (hasUrl && meaningful.length <= 56) {
     reasons.push("url_capture");
+    return {
+      ruleConfidence: 0.94,
+      needsFallbackAi: false,
+      needsUserAi: false,
+      hasDate,
+      hasTime,
+      actionCount,
+      isJunk: false,
+      isSimpleCapture: true,
+      category: "link",
+      reasons,
+    };
+  }
+
+  if (SHOPPING_RE.test(trimmed) && meaningful.length <= 64) {
+    reasons.push("shopping_keyword");
     return {
       ruleConfidence: 0.93,
       needsFallbackAi: false,
       needsUserAi: false,
       hasDate,
-      actionCount,
+      hasTime,
+      actionCount: Math.max(actionCount, 1),
       isJunk: false,
       isSimpleCapture: true,
+      category: "shopping",
+      reasons,
+    };
+  }
+
+  if (REMINDER_RE.test(trimmed) && meaningful.length <= 72) {
+    reasons.push("reminder_keyword");
+    return {
+      ruleConfidence: 0.93,
+      needsFallbackAi: false,
+      needsUserAi: false,
+      hasDate,
+      hasTime,
+      actionCount: Math.max(actionCount, 1),
+      isJunk: false,
+      isSimpleCapture: true,
+      category: "reminder",
+      reasons,
+    };
+  }
+
+  if ((hasDate || hasTime || WEEKDAY_RE.test(trimmed)) && actionCount <= 2) {
+    reasons.push("schedule_signal");
+    return {
+      ruleConfidence: 0.94,
+      needsFallbackAi: false,
+      needsUserAi: false,
+      hasDate,
+      hasTime,
+      actionCount: Math.max(actionCount, 1),
+      isJunk: false,
+      isSimpleCapture: true,
+      category: "schedule",
       reasons,
     };
   }
@@ -153,13 +247,15 @@ export function analyzeThought(text: string): ThoughtAnalysis {
   if (localItems.length >= 2) {
     reasons.push("local_list");
     return {
-      ruleConfidence: 0.9,
+      ruleConfidence: 0.91,
       needsFallbackAi: false,
       needsUserAi: organize,
       hasDate,
+      hasTime,
       actionCount,
       isJunk: false,
       isSimpleCapture: !organize,
+      category: "list",
       reasons: organize ? [...reasons, "organization"] : reasons,
     };
   }
@@ -167,27 +263,51 @@ export function analyzeThought(text: string): ThoughtAnalysis {
   if (hasDate && actionCount <= 1 && !organize) {
     reasons.push("simple_date");
     return {
-      ruleConfidence: 0.92,
+      ruleConfidence: 0.94,
       needsFallbackAi: false,
       needsUserAi: false,
       hasDate: true,
-      actionCount,
+      hasTime,
+      actionCount: Math.max(actionCount, 1),
       isJunk: false,
       isSimpleCapture: true,
+      category: "schedule",
       reasons,
     };
   }
 
-  if (actionCount === 1 && meaningful.length <= 32 && !hasDate && !organize) {
+  if (
+    (TASK_RE.test(trimmed) || PLACE_RE.test(trimmed)) &&
+    meaningful.length <= 48 &&
+    !organize
+  ) {
+    reasons.push("task_or_place");
+    return {
+      ruleConfidence: 0.9,
+      needsFallbackAi: false,
+      needsUserAi: false,
+      hasDate,
+      hasTime,
+      actionCount: Math.max(actionCount, 1),
+      isJunk: false,
+      isSimpleCapture: true,
+      category,
+      reasons,
+    };
+  }
+
+  if (actionCount === 1 && meaningful.length <= 40 && !hasDate && !organize) {
     reasons.push("single_action");
     return {
-      ruleConfidence: 0.91,
+      ruleConfidence: 0.92,
       needsFallbackAi: false,
       needsUserAi: false,
       hasDate: false,
+      hasTime,
       actionCount,
       isJunk: false,
       isSimpleCapture: true,
+      category,
       reasons,
     };
   }
@@ -199,17 +319,19 @@ export function analyzeThought(text: string): ThoughtAnalysis {
       needsFallbackAi: false,
       needsUserAi: true,
       hasDate,
+      hasTime,
       actionCount,
       isJunk: false,
       isSimpleCapture: false,
+      category,
       reasons,
     };
   }
 
   const longAmbiguous =
-    meaningful.length >= 56 && actionCount <= 1 && !hasDate;
+    meaningful.length >= 80 && actionCount <= 1 && !hasDate && !hasTime;
   const messyMulti =
-    multi && actionCount <= 1 && meaningful.length >= 36;
+    multi && actionCount <= 1 && meaningful.length >= 56 && !hasDate;
 
   const needsFallbackAi = longAmbiguous || messyMulti;
 
@@ -220,16 +342,18 @@ export function analyzeThought(text: string): ThoughtAnalysis {
     reasons.push("simple_capture");
   }
 
-  const ruleConfidence = needsFallbackAi ? 0.58 : 0.86;
+  const ruleConfidence = needsFallbackAi ? 0.52 : 0.88;
 
   return {
     ruleConfidence,
     needsFallbackAi,
     needsUserAi: false,
     hasDate,
+    hasTime,
     actionCount,
     isJunk: false,
     isSimpleCapture: !needsFallbackAi,
+    category,
     reasons,
   };
 }

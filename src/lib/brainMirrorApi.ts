@@ -8,15 +8,21 @@ import {
   classifyLocally,
   resolveIntelligence,
   shouldCallFallbackAi,
+  expandClassifyPayload,
 } from "@/lib/localClassifier";
 import {
   getCachedAiResult,
   setCachedAiResult,
-  hasCachedAiResult,
+  setCachedSkip,
+  hasBeenAnalyzed,
 } from "@/lib/aiCache";
 
 export type BrainMirrorFetchOutcome =
-  | { status: "ok"; result: BrainMirrorResult; source: "local" | "cache" | "classify" | "organize" }
+  | {
+      status: "ok";
+      result: BrainMirrorResult;
+      source: "local" | "cache" | "classify" | "organize";
+    }
   | { status: "empty" }
   | { status: "unavailable" }
   | { status: "skipped" };
@@ -25,17 +31,34 @@ export type BrainMirrorFetchOptions = {
   signal?: AbortSignal;
   /** Layer 3 — user tapped "AI Organize" */
   mode?: "classify" | "organize";
-  /** Bypass cache (still writes result to cache) */
+  /** Bypass cache read (still writes result to cache) */
   force?: boolean;
 };
 
-/**
- * Three-layer intelligence:
- * 1. Local rules (free, instant)
- * 2. Fallback classify API (low confidence only)
- * 3. Organize API (user-initiated only)
- */
-export async function fetchBrainMirror(
+const inflight = new Map<string, Promise<BrainMirrorFetchOutcome>>();
+
+function inflightKey(text: string, mode: "classify" | "organize", force: boolean) {
+  return `${mode}:${force ? "1" : "0"}:${text}`;
+}
+
+function parseApiPayload(
+  text: string,
+  data: unknown,
+  mode: "classify" | "organize",
+): BrainMirrorResult | null {
+  if (!data || typeof data !== "object") return null;
+  const raw = data as Record<string, unknown>;
+
+  if (mode === "classify") {
+    const full = parseBrainMirrorResult(data);
+    if (full?.items.length) return full;
+    return expandClassifyPayload(text, raw);
+  }
+
+  return parseBrainMirrorResult(data);
+}
+
+async function fetchBrainMirrorInner(
   text: string,
   options: BrainMirrorFetchOptions = {},
 ): Promise<BrainMirrorFetchOutcome> {
@@ -47,6 +70,9 @@ export async function fetchBrainMirror(
     const resolution = resolveIntelligence(trimmed);
     if (resolution.kind === "local" || resolution.kind === "cache") {
       if (resolution.result?.items.length) {
+        if (resolution.kind === "local") {
+          setCachedAiResult(trimmed, resolution.result, "local");
+        }
         return {
           status: "ok",
           result: resolution.result,
@@ -54,19 +80,38 @@ export async function fetchBrainMirror(
         };
       }
     }
-    if (resolution.kind === "skip" || resolution.kind === "needs_user_ai") {
+    if (
+      resolution.kind === "skip" ||
+      resolution.kind === "needs_user_ai" ||
+      resolution.kind === "cache"
+    ) {
       return { status: "skipped" };
     }
     if (!shouldCallFallbackAi(trimmed)) {
+      setCachedSkip(trimmed);
+      return { status: "skipped" };
+    }
+    if (hasBeenAnalyzed(trimmed)) {
+      const cached = getCachedAiResult(trimmed);
+      if (cached?.items.length) {
+        return {
+          status: "ok",
+          result: finalizeBrainMirror(cached, null),
+          source: "cache",
+        };
+      }
       return { status: "skipped" };
     }
   }
 
-  if (!force && mode === "classify" && hasCachedAiResult(trimmed)) {
-    const cached = getCachedAiResult(trimmed)!;
-    const parsed = finalizeBrainMirror(cached, null);
-    if (parsed.items.length) {
-      return { status: "ok", result: parsed, source: "cache" };
+  if (!force && mode === "classify") {
+    const cached = getCachedAiResult(trimmed);
+    if (cached?.items.length) {
+      return {
+        status: "ok",
+        result: finalizeBrainMirror(cached, null),
+        source: "cache",
+      };
     }
   }
 
@@ -80,8 +125,11 @@ export async function fetchBrainMirror(
 
     if (res.ok) {
       const data = await res.json();
-      if (data === null) return { status: "empty" };
-      const parsed = parseBrainMirrorResult(data);
+      if (data === null) {
+        if (mode === "classify") setCachedSkip(trimmed);
+        return { status: "empty" };
+      }
+      const parsed = parseApiPayload(trimmed, data, mode);
       if (!parsed?.items.length) {
         if (mode === "classify") {
           const local = classifyLocally(trimmed);
@@ -89,10 +137,15 @@ export async function fetchBrainMirror(
             setCachedAiResult(trimmed, local.result, "local");
             return { status: "ok", result: local.result, source: "local" };
           }
+          setCachedSkip(trimmed);
         }
         return { status: "empty" };
       }
-      setCachedAiResult(trimmed, parsed, mode === "organize" ? "organize" : "classify");
+      setCachedAiResult(
+        trimmed,
+        parsed,
+        mode === "organize" ? "organize" : "classify",
+      );
       return {
         status: "ok",
         result: parsed,
@@ -121,12 +174,38 @@ export async function fetchBrainMirror(
     return { status: "ok", result: local.result, source: "local" };
   }
 
-  const mock = mockBrainMirror(trimmed);
-  if (mock?.items.length) {
-    setCachedAiResult(trimmed, mock, "classify");
-    return { status: "ok", result: mock, source: "classify" };
+  if (import.meta.env.DEV) {
+    const mock = mockBrainMirror(trimmed);
+    if (mock?.items.length) {
+      setCachedAiResult(trimmed, mock, "classify");
+      return { status: "ok", result: mock, source: "classify" };
+    }
   }
+
+  setCachedSkip(trimmed);
   return { status: "empty" };
+}
+
+/**
+ * Three-layer intelligence:
+ * 1. Local rules (free, instant) — default
+ * 2. Fallback classify API (low confidence only)
+ * 3. Organize API (user-initiated only)
+ */
+export async function fetchBrainMirror(
+  text: string,
+  options: BrainMirrorFetchOptions = {},
+): Promise<BrainMirrorFetchOutcome> {
+  const trimmed = text.trim();
+  const key = inflightKey(trimmed, options.mode ?? "classify", options.force ?? false);
+  const existing = inflight.get(key);
+  if (existing) return existing;
+
+  const promise = fetchBrainMirrorInner(trimmed, options).finally(() => {
+    inflight.delete(key);
+  });
+  inflight.set(key, promise);
+  return promise;
 }
 
 /** Layer 3 — explicit user-initiated AI organize. */
