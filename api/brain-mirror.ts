@@ -3,29 +3,17 @@ import type { VercelRequest, VercelResponse } from "@vercel/node";
 /** Haiku 4.5 — https://platform.claude.com/docs/en/about-claude/models/overview */
 const ANTHROPIC_MODEL = "claude-haiku-4-5-20251001";
 
-const SYSTEM_PROMPT = `You are ItJima. The user drops a messy thought — you understand it first, quietly.
-Never pressure the user to organize. Never ask questions. Act with gentle confidence.
-Return ONLY valid JSON, no markdown.
+/** Layer 2 — minimal classify prompt (<150 tokens). */
+const CLASSIFY_PROMPT = `JSON only. Schema: {"category":"","title":"","suggestedDate":"","items":[]}
+category: schedule|shopping|reminder|task|list|note
+title: max 20 chars
+items: max 3 phrases from input only, never invent
+suggestedDate: empty or date word from input`;
 
-JSON schema:
-{
-  "title": "핵심 주제 (20자 이내, 필요하면 이모지 1개)",
-  "items": ["항목1", "항목2"],
-  "suggestedDateText": "내일",
-  "suggestedAction": "내일과 관련된 생각 같아요.",
-  "confidence": 0.85
-}
-
-rules:
-- items: max 5, short action phrases (e.g. "꽃 구매", "병원 방문")
-- DO NOT add items that the user did not explicitly mention. Only extract, never invent.
-- items must ONLY contain actions/things explicitly mentioned in the user's raw text. Never invent or suggest items not in the input.
-- If there are no extractable items from the input, return items as empty array []
-- suggestedDateText: empty string if no date inferred
-- suggestedAction: one calm observational sentence (e.g. "내일과 관련된 생각 같아요.")
-- Never imply you already completed an action (no "넣어뒀어요", "등록했어요", "처리했어요")
-- confidence: 0.0-1.0
-- Korean unless input is clearly English`;
+/** Layer 3 — user-initiated organize (fuller, still compact). */
+const ORGANIZE_PROMPT = `ItJima assistant. User tapped "AI Organize". Return JSON only.
+{"title":"","items":[],"suggestedDateText":"","suggestedAction":"","confidence":0.0}
+items: max 5, only from input. No invented tasks. confidence 0-1. Korean unless English input.`;
 
 type BrainMirrorPayload = {
   title: string;
@@ -33,6 +21,7 @@ type BrainMirrorPayload = {
   suggestedDateText: string;
   suggestedAction: string;
   confidence: number;
+  category?: string;
 };
 
 function extractJson(text: string): unknown {
@@ -46,7 +35,35 @@ function extractJson(text: string): unknown {
   }
 }
 
-function normalizePayload(raw: unknown): BrainMirrorPayload | null {
+function normalizeClassifyPayload(raw: unknown): BrainMirrorPayload | null {
+  if (!raw || typeof raw !== "object") return null;
+  const o = raw as Record<string, unknown>;
+  const title = typeof o.title === "string" ? o.title.trim().slice(0, 30) : "";
+  if (!title) return null;
+
+  const itemsRaw = o.items ?? o.tasks;
+  const items = Array.isArray(itemsRaw)
+    ? itemsRaw.filter((t): t is string => typeof t === "string").slice(0, 3)
+    : [];
+
+  const suggestedDateText =
+    typeof o.suggestedDateText === "string"
+      ? o.suggestedDateText.trim()
+      : typeof o.suggestedDate === "string"
+        ? o.suggestedDate.trim()
+        : "";
+
+  return {
+    title,
+    items,
+    suggestedDateText,
+    suggestedAction: suggestedDateText ? `${suggestedDateText}이에요.` : "",
+    confidence: 0.72,
+    category: typeof o.category === "string" ? o.category : undefined,
+  };
+}
+
+function normalizeOrganizePayload(raw: unknown): BrainMirrorPayload | null {
   if (!raw || typeof raw !== "object") return null;
   const o = raw as Record<string, unknown>;
   if (typeof o.title !== "string") return null;
@@ -84,6 +101,7 @@ async function callAnthropicJson(
   apiKey: string,
   system: string,
   userContent: string,
+  maxTokens: number,
 ): Promise<unknown> {
   const upstream = await fetch("https://api.anthropic.com/v1/messages", {
     method: "POST",
@@ -94,7 +112,7 @@ async function callAnthropicJson(
     },
     body: JSON.stringify({
       model: ANTHROPIC_MODEL,
-      max_tokens: 512,
+      max_tokens: maxTokens,
       system,
       messages: [{ role: "user", content: userContent }],
     }),
@@ -112,19 +130,6 @@ async function callAnthropicJson(
   return extractJson(block?.text ?? "");
 }
 
-async function generateBrainMirrorDraft(
-  apiKey: string,
-  rawText: string,
-): Promise<BrainMirrorPayload | null> {
-  try {
-    const raw = await callAnthropicJson(apiKey, SYSTEM_PROMPT, rawText);
-    return normalizePayload(raw);
-  } catch (error) {
-    console.error("[brain-mirror] generation error", error);
-    return null;
-  }
-}
-
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method !== "POST") {
     return res.status(405).json({ error: "Method not allowed" });
@@ -138,16 +143,40 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return res.status(400).json({ error: "text too long" });
   }
 
+  const mode =
+    req.body?.mode === "organize" ? "organize" : ("classify" as const);
+
   const apiKey = process.env.ANTHROPIC_API_KEY;
   if (!apiKey) {
     console.error("[brain-mirror] Missing ANTHROPIC_API_KEY");
     return res.status(503).json({ error: "API not configured" });
   }
 
-  const draft = await generateBrainMirrorDraft(apiKey, text);
-  if (!draft) {
-    return res.status(502).json({ error: "invalid model response" });
-  }
+  const input = text.slice(0, mode === "classify" ? 180 : 1200);
 
-  return res.status(200).json(draft);
+  try {
+    if (mode === "organize") {
+      const raw = await callAnthropicJson(
+        apiKey,
+        ORGANIZE_PROMPT,
+        input,
+        400,
+      );
+      const payload = normalizeOrganizePayload(raw);
+      if (!payload) {
+        return res.status(502).json({ error: "invalid model response" });
+      }
+      return res.status(200).json(payload);
+    }
+
+    const raw = await callAnthropicJson(apiKey, CLASSIFY_PROMPT, input, 128);
+    const payload = normalizeClassifyPayload(raw);
+    if (!payload) {
+      return res.status(502).json({ error: "invalid model response" });
+    }
+    return res.status(200).json(payload);
+  } catch (error) {
+    console.error(`[brain-mirror] ${mode} error`, error);
+    return res.status(502).json({ error: "model error" });
+  }
 }

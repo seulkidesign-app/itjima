@@ -1,9 +1,23 @@
 import { detectDate } from "@/lib/dateDetect";
 
+export type ThoughtCategory =
+  | "schedule"
+  | "shopping"
+  | "reminder"
+  | "link"
+  | "task"
+  | "list"
+  | "idea"
+  | "place"
+  | "note";
+
 export type ThoughtAnalysis = {
   /** 0–1 — high means rule engine handled it; skip AI */
   ruleConfidence: number;
-  needsBrainMirror: boolean;
+  /** Layer 2 — only when local rules are uncertain */
+  needsFallbackAi: boolean;
+  /** Layer 3 — summarize/organize; user must tap "AI Organize" */
+  needsUserAi: boolean;
   hasDate: boolean;
   actionCount: number;
   isJunk: boolean;
@@ -12,22 +26,51 @@ export type ThoughtAnalysis = {
 };
 
 const JUNK = /^(asdf|test|ㅁㄴㅇㄹ|ㅋ+|ㅎ+|ㅠ+|\.+|…+|\?+|!+)$/i;
+const URL_RE = /https?:\/\/[^\s]+/i;
 
-const ACTION_SPLIT = /(?:하고|그리고|,|，|\/|\n|·|•|\d+[.)]\s*)/;
+const ACTION_SPLIT =
+  /(?:하고|그리고|,|，|\/|\n|·|•|\d+[.)]\s*|\band\b|\bthen\b)/i;
 
-function countActions(text: string): number {
+const ORGANIZE_CUE =
+  /(?:정리해|정리\s*해|분류해|묶어|요약해|summarize|organize|rewrite|다시\s*써)/i;
+
+const ORGANIZE_ONLY =
+  /(?:정리|분류|묶|그룹|organize|sort|group|category)/i;
+
+export function extractLocalItems(text: string): string[] {
   const parts = text
     .split(ACTION_SPLIT)
-    .map((s) => s.trim())
+    .map((s) =>
+      s
+        .trim()
+        .replace(/^(?:오늘|내일|모레|today|tomorrow)\s*/i, "")
+        .replace(URL_RE, "")
+        .trim(),
+    )
     .filter((s) => s.replace(/[\s\p{P}\p{S}]/gu, "").length >= 2);
-  return parts.length;
+
+  const seen = new Set<string>();
+  const unique: string[] = [];
+  for (const p of parts) {
+    const key = p.toLowerCase();
+    if (!seen.has(key)) {
+      seen.add(key);
+      unique.push(p);
+    }
+  }
+  return unique.slice(0, 5);
+}
+
+function countActions(text: string): number {
+  return extractLocalItems(text).length;
 }
 
 function hasOrganizationCue(text: string): boolean {
-  return (
-    /정리|분류|묶|그룹|organize|sort|group|category/i.test(text) ||
-    countActions(text) >= 3
-  );
+  return ORGANIZE_ONLY.test(text);
+}
+
+function wantsUserOrganize(text: string): boolean {
+  return ORGANIZE_CUE.test(text);
 }
 
 function hasMultipleIntentions(text: string): boolean {
@@ -39,7 +82,7 @@ function hasMultipleIntentions(text: string): boolean {
   );
 }
 
-/** Rule Engine — first gate before reflection (see PRODUCT_ROADMAP.md). */
+/** Rule Engine — Layer 1 gate (see PRODUCT_ROADMAP.md). */
 export function analyzeThought(text: string): ThoughtAnalysis {
   const trimmed = text.trim();
   const meaningful = trimmed.replace(/[\s\p{P}\p{S}]/gu, "");
@@ -48,7 +91,8 @@ export function analyzeThought(text: string): ThoughtAnalysis {
   if (meaningful.length < 2) {
     return {
       ruleConfidence: 1,
-      needsBrainMirror: false,
+      needsFallbackAi: false,
+      needsUserAi: false,
       hasDate: false,
       actionCount: 0,
       isJunk: true,
@@ -61,7 +105,8 @@ export function analyzeThought(text: string): ThoughtAnalysis {
   if (isJunk) {
     return {
       ruleConfidence: 0.95,
-      needsBrainMirror: false,
+      needsFallbackAi: false,
+      needsUserAi: false,
       hasDate: false,
       actionCount: 0,
       isJunk: true,
@@ -70,18 +115,61 @@ export function analyzeThought(text: string): ThoughtAnalysis {
     };
   }
 
+  if (wantsUserOrganize(trimmed)) {
+    return {
+      ruleConfidence: 0.88,
+      needsFallbackAi: false,
+      needsUserAi: true,
+      hasDate: !!detectDate(trimmed),
+      actionCount: countActions(trimmed),
+      isJunk: false,
+      isSimpleCapture: false,
+      reasons: ["user_organize_cue"],
+    };
+  }
+
   const dateHit = detectDate(trimmed);
   const hasDate = !!dateHit;
-  const actionCount = countActions(trimmed);
+  const localItems = extractLocalItems(trimmed);
+  const actionCount = localItems.length;
   const multi = hasMultipleIntentions(trimmed);
   const organize = hasOrganizationCue(trimmed);
-  const longMessy = meaningful.length >= 48 && actionCount >= 1;
+  const hasUrl = URL_RE.test(trimmed);
+
+  if (hasUrl && meaningful.length <= 48) {
+    reasons.push("url_capture");
+    return {
+      ruleConfidence: 0.93,
+      needsFallbackAi: false,
+      needsUserAi: false,
+      hasDate,
+      actionCount,
+      isJunk: false,
+      isSimpleCapture: true,
+      reasons,
+    };
+  }
+
+  if (localItems.length >= 2) {
+    reasons.push("local_list");
+    return {
+      ruleConfidence: 0.9,
+      needsFallbackAi: false,
+      needsUserAi: organize,
+      hasDate,
+      actionCount,
+      isJunk: false,
+      isSimpleCapture: !organize,
+      reasons: organize ? [...reasons, "organization"] : reasons,
+    };
+  }
 
   if (hasDate && actionCount <= 1 && !organize) {
     reasons.push("simple_date");
     return {
       ruleConfidence: 0.92,
-      needsBrainMirror: false,
+      needsFallbackAi: false,
+      needsUserAi: false,
       hasDate: true,
       actionCount,
       isJunk: false,
@@ -90,11 +178,12 @@ export function analyzeThought(text: string): ThoughtAnalysis {
     };
   }
 
-  if (actionCount === 1 && meaningful.length <= 28 && !hasDate && !organize) {
+  if (actionCount === 1 && meaningful.length <= 32 && !hasDate && !organize) {
     reasons.push("single_action");
     return {
       ruleConfidence: 0.91,
-      needsBrainMirror: false,
+      needsFallbackAi: false,
+      needsUserAi: false,
       hasDate: false,
       actionCount,
       isJunk: false,
@@ -103,48 +192,53 @@ export function analyzeThought(text: string): ThoughtAnalysis {
     };
   }
 
-  const needsBrainMirror =
-    multi ||
-    actionCount >= 3 ||
-    organize ||
-    longMessy ||
-    (hasDate && actionCount >= 2);
+  if (organize) {
+    reasons.push("organization");
+    return {
+      ruleConfidence: 0.87,
+      needsFallbackAi: false,
+      needsUserAi: true,
+      hasDate,
+      actionCount,
+      isJunk: false,
+      isSimpleCapture: false,
+      reasons,
+    };
+  }
 
-  if (needsBrainMirror) {
-    if (multi) reasons.push("multiple_intentions");
-    if (actionCount >= 3) reasons.push("many_actions");
-    if (organize) reasons.push("organization");
-    if (longMessy) reasons.push("long_messy");
-    if (hasDate && actionCount >= 2) reasons.push("date_plus_actions");
+  const longAmbiguous =
+    meaningful.length >= 56 && actionCount <= 1 && !hasDate;
+  const messyMulti =
+    multi && actionCount <= 1 && meaningful.length >= 36;
+
+  const needsFallbackAi = longAmbiguous || messyMulti;
+
+  if (needsFallbackAi) {
+    if (longAmbiguous) reasons.push("long_ambiguous");
+    if (messyMulti) reasons.push("messy_multi");
   } else {
     reasons.push("simple_capture");
   }
 
-  const ruleConfidence = needsBrainMirror ? 0.55 : 0.88;
+  const ruleConfidence = needsFallbackAi ? 0.58 : 0.86;
 
   return {
     ruleConfidence,
-    needsBrainMirror,
+    needsFallbackAi,
+    needsUserAi: false,
     hasDate,
     actionCount,
     isJunk: false,
-    isSimpleCapture: !needsBrainMirror,
+    isSimpleCapture: !needsFallbackAi,
     reasons,
   };
 }
 
-/** Whether Brain Mirror should run for this thought. */
+/** @deprecated Use shouldCallFallbackAi from localClassifier.ts */
 export function shouldCallBrainMirror(text: string): boolean {
   const trimmed = text.trim();
   if (trimmed.length < 2) return false;
-
   const analysis = analyzeThought(trimmed);
   if (analysis.isJunk) return false;
-  if (analysis.needsBrainMirror) return true;
-
-  const newlineCount = (trimmed.match(/\n/g) || []).length;
-  const meaningful = trimmed.replace(/[\s\p{P}\p{S}]/gu, "");
-  if (newlineCount >= 2 && meaningful.length >= 24) return true;
-
-  return false;
+  return analysis.needsFallbackAi;
 }

@@ -1,5 +1,6 @@
 /** Brain Mirror — quiet reflection of messy thoughts into readable form. */
-import { shouldCallBrainMirror } from "@/lib/ruleEngine";
+import { needsReflection } from "@/lib/localClassifier";
+import { extractLocalItems } from "@/lib/ruleEngine";
 
 export type BrainMirrorCore = {
   title: string;
@@ -23,9 +24,9 @@ export function suggestedActionForDate(dateText: string): string {
   return `${dateText}이에요.`;
 }
 
-/** Multi-intent or structured thoughts worth reflecting. */
+/** Thoughts worth reflecting (local, cache, fallback AI, or user AI). */
 export function isBrainMirrorCandidate(text: string): boolean {
-  return shouldCallBrainMirror(text);
+  return needsReflection(text);
 }
 
 export function thoughtFirstLine(text: string): string {
@@ -129,13 +130,10 @@ export function mockBrainMirror(text: string): BrainMirrorResult | null {
     });
   }
 
-  const chunks = text
-    .split(/(?:하고|그리고|,|，)/)
-    .map((s) => s.trim())
-    .filter((s) => s.length > 2);
+  const chunks = extractLocalItems(text);
   const items =
     chunks.length >= 2
-      ? chunks.slice(0, 5).map((c) => c.replace(/^(내일|오늘)\s*/, "").trim())
+      ? chunks
       : [];
 
   const title =
