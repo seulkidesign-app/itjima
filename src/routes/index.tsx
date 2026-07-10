@@ -109,6 +109,7 @@ function Inbox() {
   const listEndRef = useRef<HTMLDivElement | null>(null);
   const prevCountRef = useRef(items.length);
   const [inboxJustCleared, setInboxJustCleared] = useState(false);
+  const [captureTyping, setCaptureTyping] = useState(false);
 
   useEffect(() => {
     if (prevCountRef.current > 0 && items.length === 0) {
@@ -488,6 +489,7 @@ function Inbox() {
             <InputBar
               hero
               releasing={!!releaseItem}
+              onActivityChange={setCaptureTyping}
               onAdd={handleAdd}
               onPasteMulti={(chunks, original) =>
                 setPasteSheet({ chunks, original })
@@ -507,7 +509,11 @@ function Inbox() {
               onComplete={completeRelease}
             />
           ) : (
-            <div className="flex flex-1 flex-col justify-end pb-8">
+            <div
+              className={`flex flex-1 flex-col justify-end pb-8 transition-opacity duration-300 ${
+                captureTyping ? "opacity-[0.35]" : ""
+              }`}
+            >
               {inboxJustCleared ? (
                 <EmptyState
                   variant="success"
@@ -519,10 +525,9 @@ function Inbox() {
                 />
               ) : (
                 <EmptyState
-                  emoji="✍️"
-                  titleKo="여기에 남겨두세요"
+                  titleKo="여기에 맡겨두세요"
                   titleEn="Leave it here"
-                  hintKo="적고 Enter — 이제 기억하지 않아도 돼요"
+                  hintKo="적고 Enter — 더 이상 기억하지 않아도 돼요"
                   hintEn="Type and Enter — you don't have to remember anymore"
                 />
               )}

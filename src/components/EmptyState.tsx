@@ -12,7 +12,7 @@ type Props = {
 };
 
 export function EmptyState({
-  emoji = "✍️",
+  emoji,
   titleKo,
   titleEn,
   hintKo,
@@ -21,6 +21,7 @@ export function EmptyState({
 }: Props) {
   const t = useT();
   const spring = variant === "success" ? MOTION_SUCCESS : MOTION_THINKING;
+  const showEmoji = Boolean(emoji);
 
   return (
     <motion.div
@@ -30,32 +31,34 @@ export function EmptyState({
       animate={{ opacity: 1, y: 0 }}
       transition={spring}
     >
-      <motion.div
-        className={
-          variant === "success"
-            ? "flex h-[4.5rem] w-[4.5rem] items-center justify-center rounded-full bg-primary/12"
-            : "text-[3.25rem] leading-none"
-        }
-        aria-hidden
-        initial={{ scale: variant === "success" ? 0.9 : 0.94, opacity: 0 }}
-        animate={
-          variant === "success"
-            ? { scale: 1, opacity: 1 }
-            : { scale: 1, opacity: 1, y: [0, -5, 0] }
-        }
-        transition={
-          variant === "success"
-            ? { ...spring, delay: 0.05 }
-            : { duration: 4.2, repeat: Infinity, ease: "easeInOut", delay: 0.05 }
-        }
-      >
-        <span className={variant === "success" ? "text-[1.65rem]" : ""}>
-          {emoji}
-        </span>
-      </motion.div>
+      {showEmoji && (
+        <motion.div
+          className={
+            variant === "success"
+              ? "flex h-[4.5rem] w-[4.5rem] items-center justify-center rounded-full bg-primary/12"
+              : "text-[3.25rem] leading-none"
+          }
+          aria-hidden
+          initial={{ scale: variant === "success" ? 0.9 : 0.94, opacity: 0 }}
+          animate={
+            variant === "success"
+              ? { scale: 1, opacity: 1 }
+              : { scale: 1, opacity: 1, y: [0, -5, 0] }
+          }
+          transition={
+            variant === "success"
+              ? { ...spring, delay: 0.05 }
+              : { duration: 4.2, repeat: Infinity, ease: "easeInOut", delay: 0.05 }
+          }
+        >
+          <span className={variant === "success" ? "text-[1.65rem]" : ""}>
+            {emoji}
+          </span>
+        </motion.div>
+      )}
       <motion.p
-        className={`mt-5 font-semibold tracking-[-0.025em] text-ink ${
-          variant === "success" ? "text-[21px]" : "text-[18px]"
+        className={`${showEmoji ? "mt-5" : ""} font-bold tracking-[-0.02em] text-ink ${
+          variant === "success" ? "text-[21px] font-semibold" : "text-[19px]"
         }`}
         initial={{ opacity: 0, y: 6 }}
         animate={{ opacity: 1, y: 0 }}

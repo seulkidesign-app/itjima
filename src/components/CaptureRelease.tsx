@@ -27,7 +27,6 @@ import {
   SWIPE_PREVIEW,
   dragProgress,
   cardShadowBlur,
-  SPRING_SNAP_BACK,
   EASE_OUT_APP,
 } from "@/lib/motion";
 import {
@@ -62,6 +61,11 @@ const COMMIT_PX = 88;
 const UNDERSTAND_MS = 1000;
 const MIRROR_TIMEOUT_MS = 8000;
 const PHASE_SAFETY_MS = 3500;
+const EMERGE_SPRING = {
+  type: "spring" as const,
+  stiffness: 260,
+  damping: 30,
+};
 
 function advancePhase(current: Phase, next: Phase): Phase {
   if (current === "exit") return current;
@@ -121,9 +125,11 @@ export function CaptureRelease({
   const start = useRef({ x: 0, y: 0 });
   const offsetRef = useRef({ x: 0, y: 0 });
   const abortRef = useRef<AbortController | null>(null);
+  const cardZoneRef = useRef<HTMLDivElement>(null);
 
   const [phase, setPhase] = useState<Phase>("emerge");
   const [interpretation, setInterpretation] = useState<string | null>(null);
+  const [emergeY, setEmergeY] = useState(0);
   const [offset, setOffset] = useState({ x: 0, y: 0 });
   const [dragging, setDragging] = useState(false);
   const [exiting, setExiting] = useState(false);
@@ -266,6 +272,21 @@ export function CaptureRelease({
       timers.forEach((id) => window.clearTimeout(id));
     };
   }, [item.id, item.text, lang]);
+
+  useEffect(() => {
+    const measure = () => {
+      const input = document.getElementById("capture-input");
+      const zone = cardZoneRef.current;
+      if (!input || !zone) return;
+      const inputRect = input.getBoundingClientRect();
+      const zoneRect = zone.getBoundingClientRect();
+      const inputCenter = inputRect.top + inputRect.height / 2;
+      const zoneCenter = zoneRect.top + zoneRect.height / 2;
+      setEmergeY(inputCenter - zoneCenter);
+    };
+    measure();
+    requestAnimationFrame(measure);
+  }, [item.id, variant]);
 
   const openScheduleSwipe = useCallback(async () => {
     if (actingRef.current) return;
@@ -433,21 +454,23 @@ export function CaptureRelease({
   const progressMag = Math.max(memoryProgress, scheduleProgress, letGoProgress);
   const rotate = dragging ? swipeRotation(offset.x, cardW()) * 0.55 : 0;
   const shadow = cardShadowBlur(progressMag);
-  const breathe =
-    phase === "understand"
-      ? { scale: [1, 1.018, 1, 1.012, 1], y: [0, -3, 0, -2, 0] }
-      : { scale: 1, y: 0 };
+  const shadowBreathing = phase === "understand" && !dragging;
 
   const shellClass =
     variant === "hero"
       ? "relative z-10 flex flex-1 flex-col items-center justify-center px-6 pb-8"
-      : "pointer-events-auto fixed inset-0 z-[45] flex items-center justify-center px-6 pb-24 pt-16";
+      : "pointer-events-auto fixed inset-0 z-[45] flex items-center justify-center px-6 pb-[116px] pt-16";
+
+  const cardShadowStyle =
+    dragging || exiting
+      ? `0 ${8 + shadow * 0.3}px ${shadow}px oklch(0 0 0 / ${0.08 + progressMag * 0.06})`
+      : undefined;
 
   return (
     <div className={shellClass} aria-live="polite">
       {variant === "overlay" && (
         <motion.div
-          className="pointer-events-auto absolute inset-0 bg-white/55 backdrop-blur-[2px]"
+          className="pointer-events-auto absolute inset-0 bg-white/55 backdrop-blur-[6px]"
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ duration: 0.35 }}
@@ -458,41 +481,34 @@ export function CaptureRelease({
       )}
 
       <motion.div
-        className="pointer-events-auto relative z-[1] w-full max-w-[360px]"
+        ref={cardZoneRef}
+        className="pointer-events-auto relative z-[1] flex w-full max-w-[320px] flex-col items-center"
         onClick={(e) => e.stopPropagation()}
-        initial={{ opacity: 0, y: variant === "hero" ? 28 : 48, scale: 0.94 }}
-        animate={{ opacity: 1, y: 0, scale: 1 }}
-        transition={{ duration: 0.5, ease: EASE_OUT_APP }}
+        initial={{ y: emergeY, scale: 0.96, opacity: 1 }}
+        animate={{ y: 0, scale: 1, opacity: 1 }}
+        transition={EMERGE_SPRING}
       >
         <motion.div
           ref={cardRef}
-          className="relative touch-none select-none rounded-[28px] bg-white px-6 py-7 shadow-float ring-1 ring-ink/[0.06]"
+          className={`relative touch-none select-none rounded-[32px] bg-white px-[26px] py-9 ${
+            shadowBreathing ? "capture-shadow-breathe" : "shadow-float ring-1 ring-ink/[0.05]"
+          }`}
           style={{
-            opacity: swipeOpacity(Math.abs(offset.x) + Math.abs(offset.y) * 0.4, MAX_DRAG_X) * cardOpacity,
-            boxShadow: `0 ${8 + shadow * 0.3}px ${shadow}px oklch(0 0 0 / ${0.08 + progressMag * 0.06})`,
+            opacity:
+              swipeOpacity(
+                Math.abs(offset.x) + Math.abs(offset.y) * 0.4,
+                MAX_DRAG_X,
+              ) * cardOpacity,
+            boxShadow: cardShadowStyle,
             rotate,
             x: offset.x,
             y: offset.y,
           }}
-          animate={breathe}
-          transition={
-            phase === "understand"
-              ? { duration: 2.4, repeat: Infinity, ease: "easeInOut" }
-              : SPRING_SNAP_BACK
-          }
           onPointerDown={onDown}
           onPointerMove={onMove}
           onPointerUp={onUp}
           onPointerCancel={onUp}
         >
-          {phase === "understand" && (
-            <motion.div
-              className="pointer-events-none absolute inset-0 rounded-[28px] bg-primary/[0.03]"
-              animate={{ opacity: [0.2, 0.45, 0.2] }}
-              transition={{ duration: 2.2, repeat: Infinity, ease: "easeInOut" }}
-            />
-          )}
-
           <SwipeStamp
             dir="left"
             progress={memoryProgress}
@@ -522,7 +538,7 @@ export function CaptureRelease({
             </div>
           )}
 
-          <p className="whitespace-pre-wrap text-[22px] font-semibold leading-[1.6] tracking-[-0.025em] text-ink">
+          <p className="whitespace-pre-wrap text-[20px] font-semibold leading-[1.65] tracking-[-0.025em] text-ink">
             {item.text || t("(이미지만)", "(image only)")}
           </p>
 
@@ -532,9 +548,9 @@ export function CaptureRelease({
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.55, ease: EASE_OUT_APP, ...MOTION_THINKING }}
-                className="mt-5 border-t border-ink/[0.07] pt-4"
+                className="mt-7"
               >
-                <p className="text-[15px] font-medium leading-relaxed text-ink-soft/90">
+                <p className="text-[15px] font-medium leading-[1.65] text-[rgba(154,154,144,0.95)]">
                   {interpretation}
                 </p>
               </motion.div>
@@ -549,11 +565,13 @@ export function CaptureRelease({
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0 }}
               transition={{ delay: 0.15, duration: 0.4 }}
-              className="mt-8 flex items-center justify-between px-2 text-[11px] font-semibold tracking-wide text-ink-soft/55"
+              className="mt-[30px] flex w-full items-center justify-between px-[10px] text-[11.5px] font-semibold tracking-[0.03em] text-[rgba(154,154,144,0.55)]"
             >
-              <span>← {t("기억함", "Keep")}</span>
-              <span>↑ {t("내려놓기", "Let go")}</span>
-              <span>{t("그때", "When")} →</span>
+              <span>← {t("기억", "Keep")}</span>
+              <span>↑ {t("놓기", "Let go")}</span>
+              <span className="rounded-full bg-primary px-3 py-[5px] font-bold text-ink">
+                {t("그때 →", "When →")}
+              </span>
             </motion.div>
           )}
         </AnimatePresence>

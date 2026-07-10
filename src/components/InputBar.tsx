@@ -29,6 +29,8 @@ type Props = {
   hero?: boolean;
   /** Input softly fades while a thought is releasing */
   releasing?: boolean;
+  /** Fired when user is typing or input is focused (Capture idle → typing) */
+  onActivityChange?: (active: boolean) => void;
 };
 
 export function InputBar({
@@ -38,6 +40,7 @@ export function InputBar({
   onRestoreConsumed,
   hero = false,
   releasing = false,
+  onActivityChange,
 }: Props) {
   const t = useT();
   const { lang } = useLang();
@@ -62,6 +65,10 @@ export function InputBar({
   onAddRef.current = onAdd;
 
   const hasContent = text.trim().length > 0 || images.length > 0;
+
+  useEffect(() => {
+    onActivityChange?.(focused || hasContent);
+  }, [focused, hasContent, onActivityChange]);
 
   useEffect(() => {
     if (!hero) return;
@@ -274,9 +281,8 @@ export function InputBar({
       animate={{
         y: 0,
         opacity: releasing ? 0 : 1,
-        scale: releasing ? 0.98 : 1,
       }}
-      transition={{ duration: 0.42, ease: [0.32, 0.72, 0, 1] }}
+      transition={{ duration: 0.15, ease: [0.32, 0.72, 0, 1] }}
       style={{ pointerEvents: releasing ? "none" : undefined }}
       className={`border-t border-ink/5 bg-white/95 backdrop-blur-xl shadow-[0_-8px_32px_-12px_rgba(0,0,0,0.08)] pb-[env(safe-area-inset-bottom)] ${
         hero ? "border-t-0 shadow-none" : ""
@@ -383,10 +389,7 @@ export function InputBar({
               }
             }}
             rows={hero ? 4 : 3}
-            placeholder={t(
-              "더 이상 기억하지 않아도 돼요",
-              "You don't have to remember this",
-            )}
+            placeholder={t("생각을 남겨두세요", "Leave your thought here")}
             className={`block w-full resize-none bg-transparent leading-relaxed text-ink placeholder:text-ink-soft/55 placeholder:transition-opacity focus:outline-none max-h-40 ${
               hero ? "min-h-[96px] text-[17px]" : "min-h-[72px] text-[16px]"
             }`}
