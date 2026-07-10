@@ -129,6 +129,26 @@ await page.waitForSelector(".capture-shadow-held, .touch-none.select-none", {
   timeout: 12000,
 });
 await page.waitForTimeout(4000);
+
+await page.evaluate(
+  ({ text, mirror }) => {
+    const key = `none::${text.trim()}`;
+    let h = 5381;
+    const s = key.replace(/\s+/g, " ");
+    for (let i = 0; i < s.length; i++) h = ((h << 5) + h) ^ s.charCodeAt(i);
+    const hash = (h >>> 0).toString(36);
+    const store = JSON.parse(localStorage.getItem("itjima.ai.cache") || "{}");
+    store[hash] = {
+      hash,
+      result: mirror,
+      source: "classify",
+      at: new Date().toISOString(),
+    };
+    localStorage.setItem("itjima.ai.cache", JSON.stringify(store));
+  },
+  { text: TEXT, mirror: timingSeed() },
+);
+
 await swipeSchedule(page);
 const suggested = page.getByText("이 생각, 이때 다시 떠올릴까요?");
 const manual = page.getByText("이 생각은 언제 다시 떠올리면 좋을까요?");
@@ -142,16 +162,27 @@ if (await manual.isVisible()) {
 await shot(page, "01-suggested");
 
 console.log("Frame 2 — MANUAL");
-await page.getByRole("button", { name: "다시 생각할게요" }).click();
-await page.getByText("↺ 제안으로 돌아가기").waitFor({ state: "visible", timeout: 8000 });
+const rejectBtn = page.getByRole("button", { name: "다시 생각할게요" });
+if (await rejectBtn.isVisible()) {
+  await rejectBtn.click();
+  await page.getByText("↺ 제안으로 돌아가기").waitFor({ state: "visible", timeout: 8000 });
+} else {
+  await page.getByText("이 생각은 언제 다시 떠올리면 좋을까요?").waitFor({
+    state: "visible",
+    timeout: 5000,
+  });
+}
 await shot(page, "02-manual");
 
 console.log("Frame 3 — Today tab");
 const now = Date.now();
-const day = 86400000;
-const upcoming = new Date(now + day * 2);
-upcoming.setHours(10, 0, 0, 0);
-const flowedEnd = new Date(now - day * 2);
+const todayMorning = new Date();
+todayMorning.setHours(10, 0, 0, 0);
+if (todayMorning.getTime() <= now) {
+  todayMorning.setDate(todayMorning.getDate() + 1);
+  todayMorning.setHours(10, 0, 0, 0);
+}
+const flowedEnd = new Date(now - 2 * 86400000);
 flowedEnd.setHours(20, 0, 0, 0);
 const flowedStart = new Date(flowedEnd.getTime() - 3600000);
 
@@ -182,7 +213,7 @@ await page.evaluate(
     );
   },
   {
-    upcoming: upcoming.toISOString(),
+    upcoming: todayMorning.toISOString(),
     flowedStart: flowedStart.toISOString(),
     flowedEnd: flowedEnd.toISOString(),
   },

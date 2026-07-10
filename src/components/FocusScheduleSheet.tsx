@@ -50,7 +50,7 @@ export function FocusScheduleSheet({ item, open, onClose, onConfirm }: Props) {
   const { lang } = useLang();
 
   const aiSuggestion = useMemo((): ResolvedTiming | null => {
-    if (!item || !hasScheduleTimeIntent(item.text)) return null;
+    if (!item || !open || !hasScheduleTimeIntent(item.text)) return null;
     const cacheExtra = readCachedTimingExtra(item.text);
     return resolveTimingSuggestion(
       item.text,
@@ -58,7 +58,7 @@ export function FocusScheduleSheet({ item, open, onClose, onConfirm }: Props) {
       cacheExtra,
       lang === "en" ? "en" : "ko",
     );
-  }, [item, lang]);
+  }, [item, lang, open]);
 
   const initialStart = useMemo(() => {
     if (!item) return undefined;
