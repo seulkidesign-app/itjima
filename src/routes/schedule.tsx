@@ -398,11 +398,17 @@ function Schedule() {
         onRetry={retrySync}
       />
       <div className="sticky top-0 z-10 shrink-0 bg-white">
-        <div className="px-5 pb-3 pt-5">
+        <div className={`px-5 ${tab === "today" ? "pb-4 pt-6" : "pb-3 pt-5"}`}>
           <h1 className="page-title">
             {tab === "today" ? t("오늘", "Today") : t("그때", "When")}
           </h1>
-          <p className="mt-1.5 text-[13px] leading-relaxed text-ink-soft">
+          <p
+            className={`leading-relaxed text-ink-soft ${
+              tab === "today"
+                ? "page-eyebrow mt-2.5 max-w-[20rem]"
+                : "mt-1.5 text-[13px]"
+            }`}
+          >
             {tab === "today"
               ? t(
                   "오늘 마음에 두면 좋을 생각이에요",

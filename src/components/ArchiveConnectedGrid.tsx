@@ -4,7 +4,7 @@ import { Pin } from "lucide-react";
 import type { ArchiveItem } from "@/lib/store";
 import { archiveDisplayTitle, readArchiveVisits } from "@/lib/archiveMeta";
 import { useT, useLang } from "@/lib/i18n";
-import { MOTION_THINKING } from "@/lib/motionLanguage";
+import { MOTION_CRAFT } from "@/lib/motionLanguage";
 import {
   ArchiveTimelineStrip,
   filterByMonth,
@@ -43,19 +43,19 @@ export function ArchiveConnectedGrid({
   }, [filtered, pins]);
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-5">
       <ArchiveTimelineStrip
         items={items}
         selectedMonth={selectedMonth}
         onSelectMonth={onSelectMonth}
       />
-      <div className="archive-memory-space relative px-5 pb-6">
+      <div className="archive-memory-space relative px-4 pb-8 pt-1">
         <div
-          className="pointer-events-none absolute inset-0 rounded-[32px] opacity-60"
+          className="pointer-events-none absolute inset-0 rounded-[36px] opacity-70"
           aria-hidden
           style={{
             background:
-              "radial-gradient(ellipse 80% 60% at 50% 20%, oklch(0.92 0.12 95 / 0.18), transparent 70%)",
+              "radial-gradient(ellipse 90% 70% at 50% 8%, oklch(0.94 0.1 95 / 0.22), transparent 72%), radial-gradient(ellipse 60% 50% at 80% 90%, oklch(0.92 0.06 240 / 0.08), transparent 70%)",
           }}
         />
         {clusters.pinned.length > 0 && (
@@ -76,13 +76,13 @@ export function ArchiveConnectedGrid({
             </div>
           </section>
         )}
-        <div className="relative grid grid-cols-2 gap-2.5">
+        <div className="relative grid grid-cols-2 gap-3">
           {clusters.rest.map((it, i) => (
             <motion.div
               key={it.id}
-              initial={{ opacity: 0, y: 6 }}
+              initial={{ opacity: 0, y: 8 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ ...MOTION_THINKING, delay: Math.min(i * 0.04, 0.24) }}
+              transition={{ ...MOTION_CRAFT, delay: Math.min(i * 0.05, 0.3) }}
               className={memoryBubbleSize(it, visits) === "lg" ? "col-span-2" : ""}
             >
               <MemoryBubble
@@ -116,21 +116,25 @@ function MemoryBubble({
     { month: "short", day: "numeric" },
   );
   const pad =
-    size === "lg" ? "px-5 py-5" : size === "md" ? "px-4 py-4" : "px-3.5 py-3.5";
+    size === "lg" ? "px-5 py-6" : size === "md" ? "px-4 py-5" : "px-4 py-4";
   const titleSize =
-    size === "lg" ? "text-[15px]" : size === "md" ? "text-[14px]" : "text-[13px]";
+    size === "lg" ? "text-[16px]" : size === "md" ? "text-[14px]" : "text-[13px]";
 
   return (
     <button
       type="button"
       onClick={onOpen}
-      className={`touch-press w-full text-left rounded-[24px] bg-white/95 shadow-card ring-1 ring-ink/[0.05] transition active:scale-[0.98] ${pad} ${
-        pinned ? "ring-2 ring-primary/45" : ""
+      className={`touch-press w-full text-left rounded-[26px] bg-white/96 shadow-craft ring-1 ring-ink/[0.04] transition active:scale-[0.985] ${pad} ${
+        pinned ? "ring-2 ring-primary/40" : ""
       }`}
     >
-      {pinned && <Pin size={12} className="mb-1 fill-primary text-primary" />}
-      <p className={`font-bold leading-snug text-ink ${titleSize}`}>{title}</p>
-      <p className="mt-1 text-[11px] text-ink-soft/75">{date}</p>
+      {pinned && <Pin size={12} className="mb-1.5 fill-primary text-primary" />}
+      <p className={`font-semibold leading-[1.45] tracking-[-0.015em] text-ink ${titleSize}`}>
+        {title}
+      </p>
+      <p className="mt-1.5 text-[11px] font-medium tracking-[0.01em] text-ink-soft/70">
+        {date}
+      </p>
     </button>
   );
 }

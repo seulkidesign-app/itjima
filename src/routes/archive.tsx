@@ -617,16 +617,16 @@ function Archive() {
         error={syncState === "error"}
         onRetry={retrySync}
       />
-      <div className="sticky top-0 z-10 shrink-0 bg-white pb-1">
-        <div className="px-5 pb-2 pt-6">
-          <p className="text-[13px] font-medium text-ink-soft">
+      <div className="sticky top-0 z-10 shrink-0 bg-white pb-2">
+        <div className="px-5 pb-3 pt-7">
+          <p className="page-eyebrow">
             {t("잊어도 괜찮아요.", "It's okay to forget.")}
           </p>
-          <h1 className="mt-1 text-[28px] font-bold tracking-[-0.02em] text-ink">
+          <h1 className="page-title mt-2">
             {t("여기 맡겨두세요.", "Leave it here.")}
           </h1>
           {items.length > 0 && (
-            <p className="mt-2 text-[13px] text-ink-soft/80">
+            <p className="page-eyebrow mt-3 text-ink-soft/75">
               {t(
                 `${items.length}개의 생각을 맡아두고 있어요`,
                 `${items.length} thoughts you entrusted here`,
@@ -654,7 +654,7 @@ function Archive() {
 
         {items.length > 0 && (
           <div className="px-5 pb-3">
-            <div className="flex items-center gap-2 rounded-[24px] bg-white px-3.5 py-2.5 shadow-card">
+            <div className="flex items-center gap-2 rounded-[26px] border border-ink/[0.04] bg-white px-4 py-3 shadow-card">
               <Search size={16} className="shrink-0 text-ink-soft" />
               <input
                 value={q}

@@ -50,8 +50,8 @@ export function ArchiveMemoryDetail({
             initial={{ y: "100%" }}
             animate={{ y: 0 }}
             exit={{ y: "100%" }}
-            transition={{ type: "spring", stiffness: 380, damping: 36 }}
-            className="max-h-[88vh] shrink-0 overflow-y-auto rounded-t-[28px] bg-white px-5 pb-[calc(env(safe-area-inset-bottom)+1.5rem)] pt-4 shadow-float"
+            transition={{ type: "spring", stiffness: 300, damping: 32, mass: 0.95 }}
+            className="max-h-[88vh] shrink-0 overflow-y-auto rounded-t-[30px] bg-white px-6 pb-[calc(env(safe-area-inset-bottom)+1.75rem)] pt-5 shadow-float"
           >
             <div className="mx-auto mb-3 h-1 w-9 rounded-full bg-ink/12" />
             <div className="flex items-start justify-between gap-3">

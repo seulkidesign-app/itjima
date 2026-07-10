@@ -84,8 +84,13 @@
   --bg-gradient: #ffffff;
 
   /* Shadows — soft diffused (Apple Reminders–like) */
-  --shadow-card: 0 1px 2px oklch(0 0 0 / 0.03), 0 4px 20px -6px oklch(0 0 0 / 0.07);
-  --shadow-float: 0 2px 8px oklch(0 0 0 / 0.04), 0 12px 36px -10px oklch(0 0 0 / 0.1);
+  --shadow-card:
+    0 1px 2px oklch(0 0 0 / 0.018), 0 10px 36px -10px oklch(0 0 0 / 0.05);
+  --shadow-float:
+    0 2px 6px oklch(0 0 0 / 0.025), 0 20px 52px -14px oklch(0 0 0 / 0.075);
+  --shadow-craft:
+    0 1px 0 oklch(1 0 0 / 0.65) inset, 0 2px 8px oklch(0 0 0 / 0.02),
+    0 18px 44px -16px oklch(0 0 0 / 0.06);
   --shadow-yellow:
     0 0 0 2px oklch(0.92 0.14 95 / 0.45),
     0 8px 24px -6px oklch(0.92 0.14 95 / 0.22);
@@ -138,9 +143,45 @@
 @utility page-title {
   font-size: 32px;
   font-weight: 700;
-  line-height: 1.18;
+  line-height: 1.14;
+  letter-spacing: -0.035em;
+  color: var(--ink);
+}
+@utility page-eyebrow {
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 1.5;
+  letter-spacing: 0.01em;
+  color: var(--ink-soft);
+}
+@utility craft-hero {
+  font-size: 26px;
+  font-weight: 700;
+  line-height: 1.32;
   letter-spacing: -0.03em;
   color: var(--ink);
+}
+@utility craft-surface-warm {
+  background: linear-gradient(
+    180deg,
+    oklch(0.995 0.008 95) 0%,
+    oklch(0.99 0.012 90) 100%
+  );
+}
+@utility craft-suggestion {
+  border-radius: 22px;
+  padding: 18px 20px;
+  background: linear-gradient(
+    128deg,
+    oklch(0.985 0.028 95) 0%,
+    oklch(0.975 0.02 240 / 0.22) 48%,
+    oklch(0.99 0.024 95) 100%
+  );
+  box-shadow: var(--shadow-craft);
+  border: 1px solid oklch(0 0 0 / 0.035);
+}
+@utility shadow-craft {
+  box-shadow: var(--shadow-craft);
 }
 @utility card-padding {
   padding: 20px 22px;
@@ -655,6 +696,9 @@
 }
 @utility animate-fade-in {
   animation: fade-in 0.25s ease-out both;
+}
+@utility animate-craft-in {
+  animation: fade-in 0.48s cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 @utility animate-bm-enter {
   animation: bm-enter 0.4s ease-out both;

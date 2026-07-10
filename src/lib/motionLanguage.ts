@@ -10,6 +10,14 @@ export const MOTION_THINKING = {
   mass: 1.15,
 };
 
+/** Calmer reveal for Today / Archive / Rediscovery — not Capture. */
+export const MOTION_CRAFT = {
+  type: "spring" as const,
+  stiffness: 118,
+  damping: 28,
+  mass: 1.28,
+};
+
 export const MOTION_SCHEDULE = {
   type: "spring" as const,
   stiffness: 260,
