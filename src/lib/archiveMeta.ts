@@ -37,6 +37,7 @@ const LEGACY_KEYS: Record<string, string> = {
 
 /** Device-local ephemeral revival hint — not synced. */
 const REVIVAL_KEY = "itjima.archive.revival";
+const REDISCOVERY_DISMISS_KEY = "itjima.rediscovery.dismissed";
 
 let metaUserId: string | null = null;
 
@@ -287,4 +288,12 @@ export function clearRevivalHint() {
   if (typeof window === "undefined") return;
   localStorage.removeItem(REVIVAL_KEY);
   window.dispatchEvent(new CustomEvent("itjima:archive-meta"));
+}
+
+export function readRediscoveryDismissed(): string[] {
+  return readJSON<string[]>(REDISCOVERY_DISMISS_KEY, []);
+}
+
+export function writeRediscoveryDismissed(ids: string[]) {
+  writeJSON(REDISCOVERY_DISMISS_KEY, ids);
 }

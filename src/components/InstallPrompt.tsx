@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { X, Share, Plus, Download } from "lucide-react";
 import { useT } from "@/lib/i18n";
+import { useScrollLock } from "@/hooks/useScrollLock";
 import { track } from "@/lib/analytics";
 
 type BIPEvent = Event & {
@@ -44,6 +45,8 @@ export function InstallPrompt() {
   const [bip, setBip] = useState<BIPEvent | null>(null);
   const [show, setShow] = useState(false);
   const [iosHint, setIosHint] = useState(false);
+
+  useScrollLock(iosHint);
 
   useEffect(() => {
     if (isStandalone() || recentlyDismissed()) return;
@@ -104,7 +107,7 @@ export function InstallPrompt() {
 
   return (
     <>
-      <div className="relative shrink-0 border-t border-ink/[0.06] bg-white/98 px-4 py-3 backdrop-blur-md">
+      <div className="relative shrink-0 border-t border-ink/[0.06] bg-white/98 px-4 py-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] backdrop-blur-md">
         <button
           onClick={dismiss}
           aria-label={t("닫기", "Close")}
@@ -135,7 +138,7 @@ export function InstallPrompt() {
 
       {iosHint && (
         <div
-          className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 px-4 pb-6"
+          className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 px-4 pb-[calc(env(safe-area-inset-bottom)+1.5rem)]"
           role="dialog"
           aria-modal="true"
           onClick={dismiss}
@@ -151,7 +154,7 @@ export function InstallPrompt() {
               <button
                 onClick={dismiss}
                 aria-label={t("닫기", "Close")}
-                className="rounded-full p-1 text-ink-soft"
+                className="touch-target rounded-full text-ink-soft"
               >
                 <X className="h-4 w-4" />
               </button>

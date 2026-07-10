@@ -106,7 +106,7 @@ export function TopNav() {
             <Link
               to="/auth"
               onClick={tap}
-              className="flex h-8 items-center rounded-full bg-ink px-3 text-[10px] font-extrabold uppercase tracking-widest text-white"
+              className="touch-target flex items-center rounded-full bg-ink px-3 text-[10px] font-extrabold uppercase tracking-widest text-white"
             >
               {t("로그인", "Sign in")}
             </Link>

@@ -4,6 +4,7 @@ import { toast } from "sonner";
 import { signInWithGoogle, mapAuthError } from "@/lib/oauth";
 import { dismissLogin } from "@/lib/store";
 import { useLang, useT } from "@/lib/i18n";
+import { useScrollLock } from "@/hooks/useScrollLock";
 
 export function LoginSheet({
   open,
@@ -15,6 +16,8 @@ export function LoginSheet({
   const t = useT();
   const { lang } = useLang();
   const [loading, setLoading] = useState(false);
+
+  useScrollLock(open);
 
   if (!open) return null;
 

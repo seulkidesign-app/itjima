@@ -32,7 +32,10 @@ import {
   useCalendarScrollParent,
 } from "@/components/CalendarDragLayer";
 import { EmptyState } from "@/components/EmptyState";
+import { ScheduleListSkeleton } from "@/components/Skeleton";
 import { SyncIndicator } from "@/components/SyncIndicator";
+import { TodayExperience } from "@/components/TodayExperience";
+import { useScrollLock } from "@/hooks/useScrollLock";
 import { allCloudSynced } from "@/lib/syncFeedback";
 import {
   bindInAppReminders,
@@ -133,7 +136,7 @@ function Schedule() {
   const { lang } = useLang();
   const { items, update, remove, add, syncState, retrySync } = useSchedules();
   const archive = useArchive();
-  const [tab, setTab] = useState<"today" | "list" | "cal">("list");
+  const [tab, setTab] = useState<"today" | "list" | "cal">("today");
   const [sheet, setSheet] = useState<{
     open: boolean;
     edit?: ScheduleItem;
@@ -190,7 +193,7 @@ function Schedule() {
           ),
         );
       } else {
-        toast.success(t("그때를 기억해 둘게요", "I'll remember this for then"));
+        toast.success(t("그때 다시 떠올릴게요", "I'll remember this for then"));
       }
     } catch {
       toast.error(t("알림을 설정하지 못했어요", "Couldn't set reminder"));
@@ -354,7 +357,7 @@ function Schedule() {
       const scheduleSynced = await remove(s.id);
       if (pins.has(s.id)) togglePin(s.id);
       if (allCloudSynced(archiveSynced, scheduleSynced)) {
-        toast.success(t("기억함으로 옮겼어요", "Moved to Saved"));
+        toast.success(t("기억함으로 옮겼어요", "Moved to Kept"));
       }
     } catch {
       toast.error(t("옮기지 못했어요", "Couldn't move"));
@@ -396,14 +399,24 @@ function Schedule() {
       />
       <div className="sticky top-0 z-10 shrink-0 bg-white">
         <div className="px-5 pb-3 pt-5">
-          <h1 className="page-title">{t("그때", "When")}</h1>
+          <h1 className="page-title">
+            {tab === "today" ? t("오늘", "Today") : t("그때", "When")}
+          </h1>
           <p className="mt-1.5 text-[13px] leading-relaxed text-ink-soft">
-            {activeItems.length > 0
+            {tab === "today"
               ? t(
-                  `${activeItems.length}가지를 기억하고 있어요`,
-                  `${activeItems.length} moments to remember`,
+                  "오늘 마음에 두면 좋을 것들이에요",
+                  "What deserves your attention today",
                 )
-              : t("아직 그때가 정해진 게 없어요", "Nothing anchored to time yet")}
+              : activeItems.length > 0
+                ? t(
+                    `${activeItems.length}가지를 기억하고 있어요`,
+                    `${activeItems.length} moments to remember`,
+                  )
+                : t(
+                    "아직 그때가 정해진 게 없어요",
+                    "Nothing anchored to time yet",
+                  )}
           </p>
         </div>
         <div className="px-5 pb-3">
@@ -414,8 +427,8 @@ function Schedule() {
             >
               {(
                 [
-                  ["list", t("흐름", "Flow"), "schedule-panel-list"],
                   ["today", t("오늘", "Today"), "schedule-panel-today"],
+                  ["list", t("흐름", "Flow"), "schedule-panel-list"],
                 ] as const
               ).map(([k, label, panelId]) => (
                 <button
@@ -484,19 +497,21 @@ function Schedule() {
             transition={{ duration: 0.22, ease: [0.32, 0.72, 0, 1] }}
           >
         {syncState === "syncing" && items.length === 0 ? (
-          <Empty />
+          <ScheduleListSkeleton />
         ) : tab === "today" ? (
-          todayTimerItems.length === 0 && doneItems.length === 0 ? (
+          activeItems.length === 0 && doneItems.length === 0 ? (
             <Empty />
           ) : (
-            <div className="flex flex-col gap-3">
-              {todayTimerItems.map((s) => (
-                <ScheduleCard key={s.id} {...cardProps(s)} timer />
-              ))}
-              {doneItems.length > 0 && (
-                <DoneSection items={doneItems} cardProps={cardProps} t={t} />
-              )}
-            </div>
+            <TodayExperience
+              todayItems={todayTimerItems}
+              activeItems={activeItems}
+              archiveItems={archive.items}
+              doneCount={doneItems.length}
+              ScheduleCard={ScheduleCard}
+              cardProps={cardProps}
+              DoneSection={DoneSection}
+              doneItems={doneItems}
+            />
           )
         ) : tab === "list" ? (
           feelSections.length === 0 && doneItems.length === 0 ? (
@@ -1557,6 +1572,7 @@ function ScheduleEventMenu({
   onPin: () => void;
 }) {
   const t = useT();
+  useScrollLock(!!item);
   if (!item) return null;
 
   const actions = [

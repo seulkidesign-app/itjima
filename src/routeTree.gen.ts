@@ -10,6 +10,7 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as ScheduleRouteImport } from './routes/schedule'
+import { Route as RediscoveryRouteImport } from './routes/rediscovery'
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as ArchiveRouteImport } from './routes/archive'
 import { Route as AboutRouteImport } from './routes/about'
@@ -21,6 +22,11 @@ import { Route as AuthenticatedAdminRouteImport } from './routes/_authenticated/
 const ScheduleRoute = ScheduleRouteImport.update({
   id: '/schedule',
   path: '/schedule',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const RediscoveryRoute = RediscoveryRouteImport.update({
+  id: '/rediscovery',
+  path: '/rediscovery',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AuthRoute = AuthRouteImport.update({
@@ -63,6 +69,7 @@ export interface FileRoutesByFullPath {
   '/about': typeof AboutRoute
   '/archive': typeof ArchiveRoute
   '/auth': typeof AuthRouteWithChildren
+  '/rediscovery': typeof RediscoveryRoute
   '/schedule': typeof ScheduleRoute
   '/admin': typeof AuthenticatedAdminRoute
   '/auth/callback': typeof AuthCallbackRoute
@@ -72,6 +79,7 @@ export interface FileRoutesByTo {
   '/about': typeof AboutRoute
   '/archive': typeof ArchiveRoute
   '/auth': typeof AuthRouteWithChildren
+  '/rediscovery': typeof RediscoveryRoute
   '/schedule': typeof ScheduleRoute
   '/admin': typeof AuthenticatedAdminRoute
   '/auth/callback': typeof AuthCallbackRoute
@@ -83,6 +91,7 @@ export interface FileRoutesById {
   '/about': typeof AboutRoute
   '/archive': typeof ArchiveRoute
   '/auth': typeof AuthRouteWithChildren
+  '/rediscovery': typeof RediscoveryRoute
   '/schedule': typeof ScheduleRoute
   '/_authenticated/admin': typeof AuthenticatedAdminRoute
   '/auth/callback': typeof AuthCallbackRoute
@@ -94,6 +103,7 @@ export interface FileRouteTypes {
     | '/about'
     | '/archive'
     | '/auth'
+    | '/rediscovery'
     | '/schedule'
     | '/admin'
     | '/auth/callback'
@@ -103,6 +113,7 @@ export interface FileRouteTypes {
     | '/about'
     | '/archive'
     | '/auth'
+    | '/rediscovery'
     | '/schedule'
     | '/admin'
     | '/auth/callback'
@@ -113,6 +124,7 @@ export interface FileRouteTypes {
     | '/about'
     | '/archive'
     | '/auth'
+    | '/rediscovery'
     | '/schedule'
     | '/_authenticated/admin'
     | '/auth/callback'
@@ -124,6 +136,7 @@ export interface RootRouteChildren {
   AboutRoute: typeof AboutRoute
   ArchiveRoute: typeof ArchiveRoute
   AuthRoute: typeof AuthRouteWithChildren
+  RediscoveryRoute: typeof RediscoveryRoute
   ScheduleRoute: typeof ScheduleRoute
 }
 
@@ -134,6 +147,13 @@ declare module '@tanstack/react-router' {
       path: '/schedule'
       fullPath: '/schedule'
       preLoaderRoute: typeof ScheduleRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/rediscovery': {
+      id: '/rediscovery'
+      path: '/rediscovery'
+      fullPath: '/rediscovery'
+      preLoaderRoute: typeof RediscoveryRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/auth': {
@@ -215,6 +235,7 @@ const rootRouteChildren: RootRouteChildren = {
   AboutRoute: AboutRoute,
   ArchiveRoute: ArchiveRoute,
   AuthRoute: AuthRouteWithChildren,
+  RediscoveryRoute: RediscoveryRoute,
   ScheduleRoute: ScheduleRoute,
 }
 export const routeTree = rootRouteImport

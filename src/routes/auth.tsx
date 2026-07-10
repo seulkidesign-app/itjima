@@ -175,7 +175,7 @@ function AuthPage() {
   }
 
   return (
-    <div className="flex h-full min-h-full flex-col px-6 pb-10 pt-[calc(env(safe-area-inset-top)+1rem)] relative">
+    <div className="flex h-full min-h-full flex-col px-6 pb-[calc(env(safe-area-inset-bottom)+2.5rem)] pt-[calc(env(safe-area-inset-top)+1rem)] relative">
       {googleLoading && (
         <div className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-black/60 backdrop-blur-sm">
           <div className="flex flex-col items-center gap-4">

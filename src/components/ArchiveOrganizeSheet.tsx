@@ -1,4 +1,5 @@
 import { useT, useLang } from "@/lib/i18n";
+import { useScrollLock } from "@/hooks/useScrollLock";
 import type { ArchiveItem } from "@/lib/store";
 import { archiveGroup } from "@/lib/dateDetect";
 
@@ -31,6 +32,8 @@ export function ArchiveOrganizeSheet({
 }: Props) {
   const t = useT();
   const { lang } = useLang();
+
+  useScrollLock(open);
 
   if (!open) return null;
 

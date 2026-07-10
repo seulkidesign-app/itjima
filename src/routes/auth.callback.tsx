@@ -2,7 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { completeAuthCallback } from "@/lib/oauth";
-import { useT } from "@/lib/i18n";
+import { useLang, useT } from "@/lib/i18n";
 
 export const Route = createFileRoute("/auth/callback")({
   component: AuthCallbackPage,
@@ -10,6 +10,7 @@ export const Route = createFileRoute("/auth/callback")({
 
 function AuthCallbackPage() {
   const t = useT();
+  const { lang } = useLang();
   const [message, setMessage] = useState<string | null>(null);
   const started = useRef(false);
 
@@ -22,7 +23,7 @@ function AuthCallbackPage() {
     started.current = true;
 
     (async () => {
-      const result = await completeAuthCallback();
+      const result = await completeAuthCallback(lang);
 
       if (!result.ok) {
         setMessage(result.message);
@@ -36,7 +37,7 @@ function AuthCallbackPage() {
       );
       window.location.replace(result.nextPath || "/");
     })();
-  }, [t]);
+  }, [t, lang]);
 
   return (
     <div className="flex h-full min-h-full flex-col items-center justify-center px-6 text-center">

@@ -1,4 +1,4 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { toast } from "sonner";
@@ -13,10 +13,13 @@ import {
 import { useArchive, useSchedules, type ArchiveItem } from "@/lib/store";
 import { archiveGroup, detectDate } from "@/lib/dateDetect";
 import { useT, useLang } from "@/lib/i18n";
+import { useScrollLock } from "@/hooks/useScrollLock";
 import { haptic } from "@/lib/haptics";
 import { ArchiveOrganizeSheet } from "@/components/ArchiveOrganizeSheet";
 import { ArchiveMemoryCard } from "@/components/ArchiveMemoryCard";
 import { ArchiveMoveSheet } from "@/components/ArchiveMoveSheet";
+import { ArchiveConnectedGrid } from "@/components/ArchiveConnectedGrid";
+import { ArchiveMemoryDetail } from "@/components/ArchiveMemoryDetail";
 import { allCloudSynced } from "@/lib/syncFeedback";
 import {
   archiveDisplayTitle,
@@ -101,6 +104,9 @@ function Archive() {
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [scrollToId, setScrollToId] = useState<string | null>(null);
   const [moveSheetOpen, setMoveSheetOpen] = useState(false);
+  const [layoutMode, setLayoutMode] = useState<"space" | "list">("space");
+  const [timelineMonth, setTimelineMonth] = useState<string | null>(null);
+  const [detailItem, setDetailItem] = useState<ArchiveItem | null>(null);
   const [revival, setRevival] = useState<RevivalHint | null>(() =>
     readRevivalHint(),
   );
@@ -143,20 +149,11 @@ function Archive() {
     setFinePointer(window.matchMedia("(pointer: fine)").matches);
   }, []);
 
-  const modalOpen = Boolean(ungroupTarget || editItem);
+  const modalOpen = Boolean(
+    ungroupTarget || editItem || groupModal || organizeOpen || moveSheetOpen,
+  );
 
-  useEffect(() => {
-    if (!modalOpen) return;
-    const scroll = document.getElementById("phone-scroll");
-    const prevOverflow = scroll?.style.overflow ?? "";
-    const prevBody = document.body.style.overflow;
-    if (scroll) scroll.style.overflow = "hidden";
-    document.body.style.overflow = "hidden";
-    return () => {
-      if (scroll) scroll.style.overflow = prevOverflow;
-      document.body.style.overflow = prevBody;
-    };
-  }, [modalOpen]);
+  useScrollLock(modalOpen);
 
   useEffect(() => {
     if (!editItem) return;
@@ -520,7 +517,7 @@ function Archive() {
       track("archive_swiped_schedule", { text_length: it.text.length });
       haptic([6, 18, 8]);
       if (allCloudSynced(scheduleSynced, archiveSynced)) {
-        toast.success(t("그때를 기억해 둘게요", "I'll remember this for then"));
+        toast.success(t("그때 다시 떠올릴게요", "I'll remember this for then"));
       }
       setScheduleItem(null);
     } catch {
@@ -638,7 +635,7 @@ function Archive() {
           )}
         </div>
         {items.length >= 2 && (
-          <div className="px-5 pb-2">
+          <div className="flex items-center justify-between px-5 pb-2">
             <button
               type="button"
               onClick={openOrganizeSheet}
@@ -646,6 +643,12 @@ function Archive() {
             >
               {t("키워드로 모아보기", "Gather by theme")}
             </button>
+            <Link
+              to="/rediscovery"
+              className="text-[12px] font-medium text-ink-soft/80 touch-press active:underline"
+            >
+              {t("다시 만나기", "Revisit")}
+            </Link>
           </div>
         )}
 
@@ -699,6 +702,30 @@ function Archive() {
             )}
             {!isSearching && (
               <div className="mt-2 flex flex-wrap items-center gap-1.5">
+                <div className="flex rounded-full bg-ink/[0.05] p-0.5">
+                  <button
+                    type="button"
+                    onClick={() => setLayoutMode("space")}
+                    className={`rounded-full px-3 py-1.5 text-[12px] font-semibold ${
+                      layoutMode === "space"
+                        ? "bg-white text-ink shadow-card"
+                        : "text-ink-soft"
+                    }`}
+                  >
+                    {t("공간", "Space")}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setLayoutMode("list")}
+                    className={`rounded-full px-3 py-1.5 text-[12px] font-semibold ${
+                      layoutMode === "list"
+                        ? "bg-white text-ink shadow-card"
+                        : "text-ink-soft"
+                    }`}
+                  >
+                    {t("목록", "List")}
+                  </button>
+                </div>
                 <button
                   type="button"
                   onClick={() => setGroupFilter("all")}
@@ -794,6 +821,35 @@ function Archive() {
                   {filtered.map((it) => renderMemoryCard(it))}
                 </div>
               </section>
+            ) : layoutMode === "space" && groupFilter === "all" ? (
+              <>
+                {revival && revival.sourceKind === "archive" && (
+                  <div className="px-5">
+                    <MemoryRevivalHint
+                      hint={revival}
+                      onRevisit={(id) => {
+                        jumpToMemory(id);
+                        clearRevivalHint();
+                        setRevival(null);
+                      }}
+                      onDismiss={() => {
+                        clearRevivalHint();
+                        setRevival(null);
+                      }}
+                    />
+                  </div>
+                )}
+                <ArchiveConnectedGrid
+                  items={items}
+                  pins={pins}
+                  selectedMonth={timelineMonth}
+                  onSelectMonth={setTimelineMonth}
+                  onOpenDetail={(it) => {
+                    recordArchiveVisit(it.id);
+                    setDetailItem(it);
+                  }}
+                />
+              </>
             ) : (
               <>
             {revival && !isSearching && revival.sourceKind === "archive" && (
@@ -972,7 +1028,7 @@ function Archive() {
           <div className="glass-strong card-radius flex items-center gap-2 p-2 shadow-float">
             <button
               onClick={exitSelection}
-              className="flex h-10 w-10 items-center justify-center rounded-full text-ink-soft hover:bg-white/60"
+              className="touch-target flex items-center justify-center rounded-full text-ink-soft hover:bg-white/60"
               aria-label={t("취소", "Cancel")}
             >
               <X size={18} />
@@ -1002,7 +1058,7 @@ function Archive() {
 
       {/* Create-group modal */}
       {groupModal && (
-        <div className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center p-4 animate-fade-in">
+        <div className="fixed inset-0 z-[100] flex items-end justify-center p-4 pb-[calc(env(safe-area-inset-bottom)+1rem)] sm:items-center animate-fade-in">
           <div
             className="absolute inset-0 bg-ink/40 backdrop-blur-md"
             onClick={() => setGroupModal(false)}
@@ -1143,6 +1199,21 @@ function Archive() {
           </div>
         </div>
       )}
+      <ArchiveMemoryDetail
+        item={detailItem}
+        allItems={items}
+        pinned={detailItem ? pins.has(detailItem.id) : false}
+        onClose={() => setDetailItem(null)}
+        onTogglePin={() => {
+          if (!detailItem) return;
+          toggleArchivePin(detailItem.id);
+          setPins(readArchivePins());
+        }}
+        onOpenRelated={(rel) => {
+          recordArchiveVisit(rel.id);
+          setDetailItem(rel);
+        }}
+      />
       <ScheduleSheet
         open={!!scheduleItem}
         initialText={

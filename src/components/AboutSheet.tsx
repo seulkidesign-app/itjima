@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { MessageSquarePlus } from "lucide-react";
 import { useT } from "@/lib/i18n";
+import { useScrollLock } from "@/hooks/useScrollLock";
 import { FeedbackSheet } from "./FeedbackSheet";
 
 export function AboutSheet({
@@ -12,6 +13,7 @@ export function AboutSheet({
 }) {
   const t = useT();
   const [feedbackOpen, setFeedbackOpen] = useState(false);
+  useScrollLock(open || feedbackOpen);
   if (!open && !feedbackOpen) return null;
 
   const closeFeedback = () => {
@@ -49,7 +51,7 @@ export function AboutSheet({
               {t("→ 오른쪽: 그때를 기억하기", "→ Swipe right: remember for then")}
             </div>
             <div>
-              {t("← 왼쪽: 기억함에 저장", "← Swipe left: save")}
+              {t("← 왼쪽: 기억함에 저장", "← Swipe left: Kept")}
             </div>
             <div>
               {t(

@@ -275,7 +275,7 @@ export function ChatSwipeRow({
                 pointerEvents: archiveOpacity > 0.5 ? "auto" : "none",
                 transform: `scale(${0.88 + archiveOpacity * 0.12})`,
               }}
-              aria-label={t("기억함", "Saved")}
+              aria-label={t("기억함", "Kept")}
             >
               <Archive size={20} strokeWidth={2.25} />
             </button>

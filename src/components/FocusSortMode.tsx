@@ -143,8 +143,8 @@ function SwipeStamp({
     <div
       className={`pointer-events-none absolute top-8 z-[2] rounded-xl border-[3px] px-3 py-1.5 text-[14px] font-extrabold uppercase tracking-[0.12em] ${
         side === "schedule"
-          ? "left-5 -rotate-12 border-primary bg-primary/10 text-primary"
-          : "right-5 rotate-12 border-ink bg-ink/[0.06] text-ink"
+          ? "right-5 rotate-12 border-primary bg-primary/10 text-primary"
+          : "left-5 -rotate-12 border-ink bg-ink/[0.06] text-ink"
       }`}
       style={{ opacity }}
     >
@@ -298,7 +298,7 @@ export function FocusSortMode({
     confirmHaptic();
     const w = cardW();
     const from = offsetRef.current;
-    await animate(from.x, -w * 0.45, {
+    await animate(from.x, w * 0.45, {
       ...MOTION_SCHEDULE,
       velocity: velocity.current.x * 0.3,
       onUpdate: (v) => setOffset((o) => ({ ...o, x: v })),
@@ -315,7 +315,7 @@ export function FocusSortMode({
     confirmHaptic();
     const w = cardW();
     const from = offsetRef.current;
-    await animate(from.x, -w * 1.6, {
+    await animate(from.x, w * 1.6, {
       ...MOTION_SCHEDULE,
       velocity: velocity.current.x * 0.4,
       onUpdate: (v) => {
@@ -333,7 +333,7 @@ export function FocusSortMode({
   const flyAway = useCallback(
     async (dir: ExitDir) => {
       if (!current || actingRef.current) return;
-      if (dir === "left") {
+      if (dir === "right") {
         await openSchedule();
         return;
       }
@@ -342,7 +342,7 @@ export function FocusSortMode({
       confirmHaptic();
       const w = cardW();
       const from = offsetRef.current;
-      await animate(from.x, w * 1.6, {
+      await animate(from.x, -w * 1.6, {
         ...MOTION_ARCHIVE,
         velocity: velocity.current.x * 0.45,
         onUpdate: (v) => {
@@ -389,13 +389,13 @@ export function FocusSortMode({
   const handleScheduleTap = useCallback(() => {
     if (locked) return;
     tapHaptic();
-    void flyAway("left");
+    void flyAway("right");
   }, [flyAway, locked]);
 
   const handleArchiveTap = useCallback(() => {
     if (locked) return;
     tapHaptic();
-    void flyAway("right");
+    void flyAway("left");
   }, [flyAway, locked]);
 
   const prevPending = useRef<string | null>(null);
@@ -519,9 +519,9 @@ export function FocusSortMode({
   };
 
   const scheduleProgress =
-    offset.x < 0 ? Math.min(1, -offset.x / commitThreshold()) : 0;
-  const archiveProgress =
     offset.x > 0 ? Math.min(1, offset.x / commitThreshold()) : 0;
+  const archiveProgress =
+    offset.x < 0 ? Math.min(1, -offset.x / commitThreshold()) : 0;
   const progressMag = Math.max(scheduleProgress, archiveProgress);
   const rotate = dragging ? swipeRotation(offset.x, cardW()) * 0.65 : 0;
   const shadow = cardShadowBlur(progressMag);
@@ -645,27 +645,27 @@ export function FocusSortMode({
                   <button
                     type="button"
                     disabled={locked}
-                    onClick={handleScheduleTap}
-                    className="swipe-pill-btn swipe-pill-schedule h-14 w-14 transition-transform active:scale-90 disabled:opacity-40"
-                    aria-label={t("일정", "When")}
+                    onClick={handleArchiveTap}
+                    className="swipe-pill-btn swipe-pill-archive h-14 w-14 transition-transform active:scale-90 disabled:opacity-40"
+                    aria-label={t("기억함", "Kept")}
                   >
-                    <Calendar size={22} strokeWidth={2.25} />
+                    <Archive size={22} strokeWidth={2.25} />
                   </button>
                   <button
                     type="button"
                     disabled={locked}
-                    onClick={handleArchiveTap}
-                    className="swipe-pill-btn swipe-pill-archive h-14 w-14 transition-transform active:scale-90 disabled:opacity-40"
-                    aria-label={t("기억함", "Saved")}
+                    onClick={handleScheduleTap}
+                    className="swipe-pill-btn swipe-pill-schedule h-14 w-14 transition-transform active:scale-90 disabled:opacity-40"
+                    aria-label={t("그때", "When")}
                   >
-                    <Archive size={22} strokeWidth={2.25} />
+                    <Calendar size={22} strokeWidth={2.25} />
                   </button>
                 </div>
 
                 <p className="mt-4 text-center text-[11px] font-medium text-ink-soft/70">
                   {t(
-                    "← 그때 · → 기억함 · ↓ 다음 · ↑ 이전",
-                    "← When · → Kept · ↓ next · ↑ previous",
+                    "← 기억함 · → 그때 · ↓ 다음 · ↑ 이전",
+                    "← Kept · → When · ↓ next · ↑ previous",
                   )}
                 </p>
               </>

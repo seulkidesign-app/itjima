@@ -1,4 +1,5 @@
 import { useT, useLang } from "@/lib/i18n";
+import { useScrollLock } from "@/hooks/useScrollLock";
 
 type Group = {
   key: string;
@@ -24,6 +25,8 @@ export function ArchiveMoveSheet({
 }: Props) {
   const t = useT();
   const { lang } = useLang();
+
+  useScrollLock(open);
 
   if (!open) return null;
 

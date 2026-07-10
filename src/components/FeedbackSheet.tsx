@@ -5,13 +5,13 @@ import {
   Heart,
   HelpCircle,
   MessageSquare,
-  X,
   Send,
 } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useT } from "@/lib/i18n";
 import { confirm as hapticConfirm } from "@/lib/haptics";
+import { BottomSheet } from "@/components/BottomSheet";
 
 type Category = "question" | "bug" | "suggestion" | "praise" | "other";
 
@@ -43,20 +43,10 @@ export function FeedbackSheet({
 
   useEffect(() => {
     if (!open) return;
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") onClose();
-    };
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [open, onClose]);
-
-  if (!open) return null;
-
-  const reset = () => {
     setCategory("suggestion");
     setMessage("");
     setEmail("");
-  };
+  }, [open]);
 
   const submit = async () => {
     const msg = message.trim();
@@ -95,7 +85,6 @@ export function FeedbackSheet({
       toast.success(
         t("피드백 고마워요! 잘 읽을게요 🙌", "Thanks for the feedback!"),
       );
-      reset();
       onClose();
     } catch (e: unknown) {
       toast.error(
@@ -107,38 +96,25 @@ export function FeedbackSheet({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex flex-col" onClick={onClose}>
-      <div className="flex-1 bg-ink/30 backdrop-blur-sm animate-fade-in" />
-      <div
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="feedback-sheet-title"
-        className="glass-strong animate-slide-up rounded-t-[28px] px-5 pb-[calc(env(safe-area-inset-bottom)+1.25rem)] pt-3"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <div className="mx-auto mb-3 h-1.5 w-10 rounded-full bg-ink/15" />
-        <div className="mb-3 flex items-center justify-between">
-          <div>
-            <div id="feedback-sheet-title" className="text-[18px] font-bold text-ink">
-              {t("문의 · 피드백", "Contact · Feedback")}
-            </div>
-            <div className="text-xs text-ink-soft">
-              {t(
-                "궁금한 점이나 의견을 남겨주세요",
-                "Questions or thoughts — drop them here",
-              )}
-            </div>
+    <BottomSheet
+      open={open}
+      onClose={onClose}
+      maxHeight="88vh"
+      title={t("문의 · 피드백", "Contact · Feedback")}
+    >
+      <div className="sheet-scroll flex min-h-0 flex-1 flex-col overflow-y-auto px-5 pb-4">
+        <div className="mb-3">
+          <div className="text-[18px] font-bold text-ink">
+            {t("문의 · 피드백", "Contact · Feedback")}
           </div>
-          <button
-            onClick={onClose}
-            className="rounded-full p-1.5 text-ink-soft hover:bg-white/60"
-            aria-label={t("닫기", "Close")}
-          >
-            <X size={18} />
-          </button>
+          <div className="text-xs text-ink-soft">
+            {t(
+              "궁금한 점이나 의견을 남겨주세요",
+              "Questions or thoughts — drop them here",
+            )}
+          </div>
         </div>
 
-        {/* Category chips */}
         <div className="mb-3 grid grid-cols-5 gap-2">
           {CATEGORIES.map((c) => {
             const Icon = c.icon;
@@ -147,7 +123,7 @@ export function FeedbackSheet({
               <button
                 key={c.key}
                 onClick={() => setCategory(c.key)}
-                className={`flex flex-col items-center gap-1 rounded-full py-2.5 text-[11px] font-semibold transition ${
+                className={`flex min-h-11 flex-col items-center justify-center gap-1 rounded-full py-2 text-[11px] font-semibold transition ${
                   active
                     ? "bg-primary text-ink shadow-card"
                     : "bg-white/50 text-ink-soft hover:bg-white/70"
@@ -196,6 +172,6 @@ export function FeedbackSheet({
           {submitting ? t("전송 중...", "Sending...") : t("보내기", "Send")}
         </button>
       </div>
-    </div>
+    </BottomSheet>
   );
 }

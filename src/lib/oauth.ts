@@ -316,8 +316,16 @@ function failCallback(
   return { ok: false, message };
 }
 
+function sessionExpiredMessage(lang: "ko" | "en"): string {
+  return lang === "ko"
+    ? "로그인 세션이 만료됐어요. 다시 Google 로그인을 시도해 주세요."
+    : "Sign-in session expired. Please try Google sign-in again.";
+}
+
 /** OAuth/email confirmation callback — call only on /auth/callback */
-export async function completeAuthCallback(): Promise<AuthCallbackResult> {
+export async function completeAuthCallback(
+  lang: "ko" | "en" = "ko",
+): Promise<AuthCallbackResult> {
   const params = new URLSearchParams(window.location.search);
   const hashParams = new URLSearchParams(
     window.location.hash.replace(/^#/, ""),
@@ -327,16 +335,13 @@ export async function completeAuthCallback(): Promise<AuthCallbackResult> {
   const oauthDescription =
     params.get("error_description") || hashParams.get("error_description");
   if (oauthError) {
-    return failCallback(mapAuthError(oauthDescription || oauthError, "ko"));
+    return failCallback(mapAuthError(oauthDescription || oauthError, lang));
   }
 
   const code = params.get("code");
 
   if (code && sessionStorage.getItem(OAUTH_HANDLED_CODE_KEY) === code) {
-    return failCallback(
-      "로그인 세션이 만료됐어요. 다시 Google 로그인을 시도해 주세요.",
-      code,
-    );
+    return failCallback(sessionExpiredMessage(lang), code);
   }
 
   const { data: existing } = await supabase.auth.getSession();
@@ -352,7 +357,7 @@ export async function completeAuthCallback(): Promise<AuthCallbackResult> {
   if (!hasSession && code) {
     const { data, error } = await supabase.auth.exchangeCodeForSession(code);
     if (error) {
-      return failCallback(mapAuthError(error.message, "ko"), code);
+      return failCallback(mapAuthError(error.message, lang), code);
     }
     hasSession = !!data.session;
   } else if (
@@ -366,7 +371,7 @@ export async function completeAuthCallback(): Promise<AuthCallbackResult> {
 
   const { data: sessionCheck } = await supabase.auth.getSession();
   if (!sessionCheck.session) {
-    return failCallback(mapAuthError("Auth session missing!", "ko"), code);
+    return failCallback(mapAuthError("Auth session missing!", lang), code);
   }
 
   purgeOAuthFromUrl();

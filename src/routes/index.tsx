@@ -657,7 +657,7 @@ function Inbox() {
             />
             <MenuItem
               icon={<ArchiveIcon size={18} />}
-              label={t("기억함에 둘게요", "Keep it safe")}
+              label={t("기억함에 둘게요", "Move to Kept")}
               onClick={() => {
                 setMenuFor(null);
                 moveToArchive(menuItem);
