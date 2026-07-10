@@ -6,7 +6,8 @@ import {
 } from "./ScheduleChoiceFlow";
 import type { InboxItem } from "@/lib/store";
 import { thoughtFirstLine } from "@/lib/brainMirror";
-import { detectDate } from "@/lib/dateDetect";
+import { calmSuggestionReason, detectDate } from "@/lib/dateDetect";
+import { useLang } from "@/lib/i18n";
 
 type Props = {
   item: InboxItem | null;
@@ -39,11 +40,23 @@ function defaultStart(item: InboxItem): Date {
 
 export function FocusScheduleSheet({ item, open, onClose, onConfirm }: Props) {
   const [title, setTitle] = useState("");
+  const { lang } = useLang();
 
   const initialStart = useMemo(
     () => (item ? defaultStart(item) : undefined),
     [item],
   );
+
+  const suggestionReason = useMemo(() => {
+    if (!item) return null;
+    const fromText = calmSuggestionReason(item.text, lang === "en" ? "en" : "ko");
+    if (fromText) return fromText;
+    const mirrorDate = item.brain_mirror?.suggestedDateText;
+    if (mirrorDate) {
+      return calmSuggestionReason(mirrorDate, lang === "en" ? "en" : "ko");
+    }
+    return null;
+  }, [item, lang]);
 
   useEffect(() => {
     if (!open || !item) return;
@@ -60,6 +73,7 @@ export function FocusScheduleSheet({ item, open, onClose, onConfirm }: Props) {
         onTitleChange={setTitle}
         initialStart={initialStart}
         suggestedStart={initialStart}
+        suggestionReason={suggestionReason}
         onConfirm={(start, end, options) => {
           onConfirm(
             title.trim() || thoughtFirstLine(item.text),

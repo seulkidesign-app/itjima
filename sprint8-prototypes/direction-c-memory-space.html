@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=390" />
+  <title>Direction C — Memory Space</title>
+  <link rel="stylesheet" href="shared.css" />
+  <style>
+    .space-bg {
+      min-height: 780px;
+      background:
+        radial-gradient(ellipse 120% 80% at 50% -10%, rgba(255,224,51,0.07) 0%, transparent 55%),
+        #ffffff;
+    }
+    .content { padding: 24px 20px 32px; }
+    .eyebrow { font-size: 12px; color: rgba(154,154,144,0.7); }
+    .title {
+      margin-top: 4px;
+      font-size: 24px;
+      font-weight: 700;
+      letter-spacing: -0.03em;
+    }
+    .count { margin-top: 6px; font-size: 13px; color: #9a9a90; }
+    .room {
+      margin-top: 22px;
+      padding: 18px 16px 16px;
+      border-radius: 24px;
+      background: rgba(0,0,0,0.025);
+      border: 1px solid rgba(0,0,0,0.04);
+    }
+    .room-label {
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: rgba(154,154,144,0.5);
+    }
+    .room-name {
+      margin-top: 4px;
+      font-size: 16px;
+      font-weight: 600;
+    }
+    .objects {
+      margin-top: 14px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    .object {
+      padding: 14px 16px;
+      border-radius: 20px;
+      background: #ffffff;
+      border: 1px solid rgba(0,0,0,0.04);
+    }
+    .object-offset { margin-left: 12px; }
+    .object-offset2 { margin-left: 24px; }
+    .object-title {
+      font-size: 15px;
+      font-weight: 600;
+      line-height: 1.4;
+    }
+    .object-meta {
+      margin-top: 4px;
+      font-size: 12px;
+      color: rgba(154,154,144,0.75);
+    }
+    .rooms-row {
+      margin-top: 16px;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
+    .room-small {
+      padding: 14px;
+      border-radius: 20px;
+      background: rgba(0,0,0,0.02);
+      border: 1px solid rgba(0,0,0,0.04);
+      min-height: 88px;
+    }
+    .room-small .room-label { font-size: 10px; }
+    .room-small .room-name { font-size: 14px; margin-top: 6px; }
+    .room-small .object-meta { margin-top: 8px; }
+    .entrance {
+      margin-top: 20px;
+      text-align: center;
+      font-size: 12px;
+      color: rgba(154,154,144,0.55);
+      line-height: 1.65;
+    }
+  </style>
+</head>
+<body>
+  <div class="phone space-bg">
+    <span class="badge-proto">C · Memory Space</span>
+    <div class="nav">
+      <div class="logo">ITJIMA<span>·</span></div>
+      <div style="font-size:12px;color:#9a9a90">한국어</div>
+    </div>
+    <div class="tabs">
+      <div class="tab">생각</div>
+      <div class="tab">그때</div>
+      <div class="tab on">기억함</div>
+    </div>
+    <div class="content">
+      <p class="eyebrow">잊어도 돼요.</p>
+      <h1 class="title">여기 있어요.</h1>
+      <p class="count">4개가 이 공간에 있어요</p>
+      <section class="room">
+        <p class="room-label">Room · 나중에</p>
+        <p class="room-name">미뤄둔 생각들</p>
+        <div class="objects">
+          <div class="object">
+            <p class="object-title">엄마 생일 준비</p>
+            <p class="object-meta">7월 8일 · 가까운 순</p>
+          </div>
+          <div class="object object-offset">
+            <p class="object-title">독일 유학 비자</p>
+            <p class="object-meta">7월 5일</p>
+          </div>
+        </div>
+      </section>
+      <div class="rooms-row">
+        <section class="room-small">
+          <p class="room-label">Room · 장소</p>
+          <p class="room-name">홍대 카페</p>
+          <p class="object-meta">6월 28일</p>
+        </section>
+        <section class="room-small">
+          <p class="room-label">Room · 읽기</p>
+          <p class="room-name">읽다 만 책</p>
+          <p class="object-meta">6월 12일</p>
+        </section>
+      </div>
+      <p class="entrance">공간을 천천히 걸어도 돼요.<br />기억은 그대로 있을 거예요.</p>
+    </div>
+  </div>
+</body>
+</html>

@@ -167,6 +167,52 @@ export function detectDate(
   return { label, start: target, end };
 }
 
+/** One calm sentence below the suggested time — no AI calls. */
+export function calmSuggestionReason(
+  text: string,
+  lang: "ko" | "en",
+): string | null {
+  const det = detectDate(text);
+  if (!det) return null;
+  const t = text.toLowerCase();
+
+  if (lang === "en") {
+    if (/birthday|생일/.test(t)) {
+      return "You could prepare with ease before the day arrives.";
+    }
+    if (/tomorrow|내일/.test(t) || det.label === "Tomorrow" || det.label === "내일") {
+      return "Tomorrow might be a good moment to think about this again.";
+    }
+    if (/next\s+week|다음\s*주/.test(t)) {
+      return "Next week should leave enough room to prepare.";
+    }
+    if (/weekend|주말/.test(t)) {
+      return "The weekend could be a calm time to come back to this.";
+    }
+    if (/today|오늘/.test(t)) {
+      return "Today could be enough — no need to carry it all day.";
+    }
+    return "That moment should give you space to prepare.";
+  }
+
+  if (/생일/.test(text)) {
+    return "생일 전에 여유 있게 준비할 수 있을 것 같아요.";
+  }
+  if (/내일/.test(text) || det.label === "내일") {
+    return "내일쯤 다시 떠올리면 준비하기 좋을 것 같아요.";
+  }
+  if (/다음\s*주/.test(text)) {
+    return "다음 주면 여유 있게 준비할 수 있을 것 같아요.";
+  }
+  if (/주말/.test(text)) {
+    return "주말이면 마음 놓고 챙길 수 있을 것 같아요.";
+  }
+  if (/오늘/.test(text)) {
+    return "오늘 안에 가볍게 떠올려보면 좋을 것 같아요.";
+  }
+  return "그때쯤 다시 떠올리면 준비하기 좋을 것 같아요.";
+}
+
 export function formatDateLabel(d: Date): string {
   return `${d.getMonth() + 1}월 ${d.getDate()}일 ${d.getHours().toString().padStart(2, "0")}:${d
     .getMinutes()

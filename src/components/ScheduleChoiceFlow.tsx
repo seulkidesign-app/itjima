@@ -1,5 +1,5 @@
 import { useEffect, useState, type ReactNode } from "react";
-import { Check, ChevronLeft } from "lucide-react";
+import { Check } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { WheelPicker } from "./WheelPicker";
 import { useT, useLang } from "@/lib/i18n";
@@ -22,8 +22,10 @@ import {
   formatSuggestedMoment,
 } from "@/lib/scheduleChoices";
 import type { RepeatRule } from "@/lib/store";
-import { MOTION_STEP } from "@/lib/motionLanguage";
+import { EASE_OUT_APP } from "@/lib/motion";
 import { confirm as confirmHaptic, tick } from "@/lib/haptics";
+
+const STEP_FADE = { duration: 0.28, ease: EASE_OUT_APP };
 
 type Step = "when" | "time" | "reminder";
 
@@ -43,6 +45,8 @@ type Props = {
   initialRepeat?: RepeatRule | null;
   /** When set, shows the quiet “we picked a moment” hint (detect / default). */
   suggestedStart?: Date;
+  /** One calm reason from date detection — no AI. */
+  suggestionReason?: string | null;
   editMode?: boolean;
   onConfirm: (start: Date, end: Date, options: ScheduleConfirmOptions) => void;
 };
@@ -75,14 +79,6 @@ function Chip({
     >
       {children}
     </button>
-  );
-}
-
-function StepLabel({ children }: { children: ReactNode }) {
-  return (
-    <p className="mb-2.5 text-[12px] font-medium tracking-[-0.01em] text-ink-soft/75">
-      {children}
-    </p>
   );
 }
 
@@ -169,6 +165,7 @@ export function ScheduleChoiceFlow({
   initialAllDay,
   initialRepeat,
   suggestedStart,
+  suggestionReason,
   editMode,
   onConfirm,
 }: Props) {
@@ -239,7 +236,16 @@ export function ScheduleChoiceFlow({
     allDay,
   );
 
-  const showMomentHint = !editMode && !!suggestedStart;
+  const showMomentHint = !editMode && !!suggestedStart && !suggestionReason;
+
+  const calmReason =
+    suggestionReason ??
+    (showMomentHint
+      ? t(
+          "여유 있게 준비할 수 있는 순간을 골라봤어요.",
+          "We picked a moment with room to breathe.",
+        )
+      : null);
 
   const whenOptions: { key: WhenKey; label: string }[] = [
     { key: "today", label: t("오늘", "Today") },
@@ -305,66 +311,53 @@ export function ScheduleChoiceFlow({
     });
   };
 
-  const stepIndex = step === "when" ? 0 : step === "time" ? 1 : 2;
+  const nextLabel =
+    step === "when"
+      ? t("시간 보기", "Pick a time")
+      : t("알림 정하기", "Set a reminder");
 
   return (
     <div className="flex min-h-0 flex-1 flex-col">
       <div className="sheet-scroll min-h-0 flex-1 overflow-y-auto overscroll-contain px-5 pb-4">
-        {!editMode && (
-          <div className="mb-5">
+        {!editMode && step === "when" && (
+          <div className="mb-4">
             <h2 className="text-[17px] font-semibold leading-[1.45] tracking-[-0.02em] text-ink">
               {t(
                 "이 생각은 언제 다시 떠올리면 좋을까요?",
                 "When would be a good moment to remember this?",
               )}
             </h2>
-            {showMomentHint && (
-              <p className="mt-2 text-[14px] leading-relaxed text-ink-soft/80">
-                {t(
-                  "여유 있게 준비할 수 있는 순간을 골라봤어요.",
-                  "We picked a moment with room to breathe.",
-                )}
-              </p>
-            )}
             <div className="mt-3 rounded-[18px] bg-ink/[0.04] px-4 py-3.5 ring-1 ring-ink/[0.04]">
               <p className="text-[15px] font-medium leading-snug text-ink">
                 {momentPreview}
               </p>
-              <p className="mt-1.5 text-[12px] leading-relaxed text-ink-soft/70">
-                {t("필요하면 바로 바꿀 수 있어요.", "Change it anytime.")}
-              </p>
             </div>
+            {calmReason && (
+              <p className="mt-2.5 px-0.5 text-[13px] leading-relaxed text-ink-soft/70">
+                {calmReason}
+              </p>
+            )}
           </div>
         )}
 
-        <input
-          value={title}
-          onChange={(e) => onTitleChange(e.target.value)}
-          placeholder={t("무엇을 기억할까요", "What to remember")}
-          className="mb-5 w-full rounded-[20px] border border-transparent bg-ink/[0.04] px-4 py-3.5 text-[18px] font-semibold tracking-[-0.02em] text-ink placeholder:text-ink-soft/55 input-focus-ring focus:border-primary/30 focus:bg-white"
-        />
-
-        <div className="mb-4 flex items-center gap-1.5">
-          {[0, 1, 2].map((i) => (
-            <div
-              key={i}
-              className={`h-0.5 flex-1 rounded-full transition-colors duration-300 ${
-                i <= stepIndex ? "bg-ink/70" : "bg-ink/8"
-              }`}
-            />
-          ))}
-        </div>
+        {(step !== "when" || editMode) && (
+          <input
+            value={title}
+            onChange={(e) => onTitleChange(e.target.value)}
+            placeholder={t("무엇을 기억할까요", "What to remember")}
+            className="mb-4 w-full rounded-[18px] border-0 bg-ink/[0.035] px-4 py-3 text-[16px] font-medium tracking-[-0.01em] text-ink placeholder:text-ink-soft/50 input-focus-ring focus:bg-ink/[0.05]"
+          />
+        )}
 
         <AnimatePresence mode="wait">
           {step === "when" && (
             <motion.div
               key="when"
-              initial={{ opacity: 0, x: 20 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: -16 }}
-              transition={MOTION_STEP}
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={STEP_FADE}
             >
-              <StepLabel>{t("언제", "When")}</StepLabel>
               <div className="flex flex-col gap-1.5">
                 {whenOptions.map(({ key, label }) => (
                   <Chip
@@ -396,21 +389,18 @@ export function ScheduleChoiceFlow({
           {step === "time" && (
             <motion.div
               key="time"
-              initial={{ opacity: 0, x: 20 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: -16 }}
-              transition={MOTION_STEP}
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={STEP_FADE}
             >
               <button
                 type="button"
                 onClick={goBack}
-                className="mb-3 flex items-center gap-1 text-[13px] font-medium text-ink-soft touch-press"
+                className="mb-4 text-[13px] font-medium text-ink-soft/70 touch-press"
               >
-                <ChevronLeft size={16} />
-                {t("언제", "When")}
+                {t("← 언제", "← When")}
               </button>
-
-              <StepLabel>{t("시간", "Time")}</StepLabel>
 
               <SettingsGroup>
                 <SettingsRow
@@ -427,7 +417,7 @@ export function ScheduleChoiceFlow({
                 {!allDay && (
                   <>
                     <div className="border-b border-ink/[0.06] px-4 py-3">
-                      <p className="mb-2 text-[13px] font-semibold text-ink-soft">
+                      <p className="mb-2 text-[12px] font-medium text-ink-soft/65">
                         {t("시작", "Starts")}
                       </p>
                       <WheelPicker
@@ -437,7 +427,7 @@ export function ScheduleChoiceFlow({
                       />
                     </div>
                     <div className="px-4 py-3">
-                      <p className="mb-2 text-[13px] font-semibold text-ink-soft">
+                      <p className="mb-2 text-[12px] font-medium text-ink-soft/65">
                         {t("종료", "Ends")}
                       </p>
                       <WheelPicker
@@ -457,7 +447,9 @@ export function ScheduleChoiceFlow({
               )}
 
               <div className="mt-4">
-                <StepLabel>{t("반복", "Repeat")}</StepLabel>
+                <p className="mb-2 text-[12px] font-medium text-ink-soft/65">
+                  {t("반복", "Repeat")}
+                </p>
                 <SettingsGroup>
                   {REPEAT_OPTIONS.map((key, i) => {
                     const active = repeat === key;
@@ -501,21 +493,19 @@ export function ScheduleChoiceFlow({
           {step === "reminder" && (
             <motion.div
               key="reminder"
-              initial={{ opacity: 0, x: 20 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: -16 }}
-              transition={MOTION_STEP}
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={STEP_FADE}
             >
               <button
                 type="button"
                 onClick={goBack}
-                className="mb-3 flex items-center gap-1 text-[13px] font-medium text-ink-soft touch-press"
+                className="mb-4 text-[13px] font-medium text-ink-soft/70 touch-press"
               >
-                <ChevronLeft size={16} />
-                {t("시간", "Time")}
+                {t("← 시간", "← Time")}
               </button>
-              <StepLabel>{t("알림", "Reminder")}</StepLabel>
-              <div className="flex flex-wrap gap-2 pb-2">
+              <div className="flex flex-col gap-1.5 pb-2">
                 {(
                   [
                     ["at", t("정각", "At time")],
@@ -529,6 +519,7 @@ export function ScheduleChoiceFlow({
                 ).map(([key, label]) => (
                   <Chip
                     key={key}
+                    large
                     active={reminder === key}
                     onClick={() => setReminder(key as ReminderKey)}
                   >
@@ -560,9 +551,9 @@ export function ScheduleChoiceFlow({
           <button
             type="button"
             onClick={goNext}
-            className="touch-press w-full rounded-full bg-ink py-3.5 text-[15px] font-semibold text-white"
+            className="touch-press w-full rounded-full bg-ink py-3.5 text-[15px] font-medium text-white"
           >
-            {t("다음", "Next")}
+            {nextLabel}
           </button>
         )}
       </div>

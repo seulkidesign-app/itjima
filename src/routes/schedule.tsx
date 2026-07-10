@@ -408,12 +408,14 @@ function Schedule() {
         </div>
         <div className="px-5 pb-3">
           <LayoutGroup>
-            <div className="inline-flex border-b border-ink/10" role="tablist">
+            <div
+              className="flex w-full items-end border-b border-ink/10"
+              role="tablist"
+            >
               {(
                 [
                   ["list", t("흐름", "Flow"), "schedule-panel-list"],
                   ["today", t("오늘", "Today"), "schedule-panel-today"],
-                  ["cal", t("달", "Month"), "schedule-panel-cal"],
                 ] as const
               ).map(([k, label, panelId]) => (
                 <button
@@ -438,6 +440,26 @@ function Schedule() {
                   )}
                 </button>
               ))}
+              <button
+                type="button"
+                role="tab"
+                id="schedule-tab-cal"
+                aria-selected={tab === "cal"}
+                aria-controls="schedule-panel-cal"
+                onClick={() => setTab("cal")}
+                className={`relative ml-auto min-h-11 px-3 py-2 text-[12px] font-medium tracking-[-0.01em] transition-colors duration-200 ${
+                  tab === "cal" ? "text-ink-soft" : "text-ink-soft/45"
+                }`}
+              >
+                {t("달", "Month")}
+                {tab === "cal" && (
+                  <motion.span
+                    layoutId="schedule-tab-underline-cal"
+                    className="absolute inset-x-1 -bottom-px h-[2px] rounded-full bg-ink/25"
+                    transition={SPRING_TAB}
+                  />
+                )}
+              </button>
             </div>
           </LayoutGroup>
         </div>

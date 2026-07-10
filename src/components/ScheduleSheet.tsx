@@ -2,7 +2,8 @@ import { useEffect, useState } from "react";
 import { X } from "lucide-react";
 import { BottomSheet } from "./BottomSheet";
 import { ScheduleChoiceFlow } from "./ScheduleChoiceFlow";
-import { useT } from "@/lib/i18n";
+import { useT, useLang } from "@/lib/i18n";
+import { calmSuggestionReason } from "@/lib/dateDetect";
 import type { RepeatRule } from "@/lib/store";
 
 export type ScheduleSaveOptions = {
@@ -40,12 +41,18 @@ export function ScheduleSheet({
   ) => void;
 }) {
   const t = useT();
+  const { lang } = useLang();
   const [text, setText] = useState(initialText);
 
   useEffect(() => {
     if (!open) return;
     setText(initialText);
   }, [open, initialText]);
+
+  const suggestionReason =
+    !saveLabel && initialText.trim()
+      ? calmSuggestionReason(initialText, lang === "en" ? "en" : "ko")
+      : null;
 
   return (
     <BottomSheet
@@ -71,6 +78,7 @@ export function ScheduleSheet({
           onTitleChange={setText}
           initialStart={initialStart}
           suggestedStart={initialStart}
+          suggestionReason={suggestionReason}
           initialEnd={initialEnd}
           initialAllDay={initialAllDay}
           initialRepeat={initialRepeat}
