@@ -877,6 +877,11 @@ function ScheduleCard({
 
   const onDown = (e: ReactPointerEvent<HTMLDivElement>) => {
     if (done || acting) return;
+    // Taps that start on a nested action control (pin/timer/alarm/delete)
+    // must never be captured by the card's swipe gesture — capturing here
+    // routes all subsequent pointer events (and often the resulting click)
+    // through the card, silently swallowing the button press.
+    if ((e.target as HTMLElement).closest("[data-card-action]")) return;
     dragging.current = true;
     longFired.current = false;
     startX.current = e.clientX;
@@ -1041,52 +1046,79 @@ function ScheduleCard({
             )}
           </div>
           {!done && (
-            <div className="flex shrink-0 flex-col gap-1.5">
+            <div
+              data-card-action
+              className="flex shrink-0 flex-col items-end gap-2"
+            >
+              <div className="flex items-center gap-1.5">
+                <button
+                  type="button"
+                  data-card-action
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onPin();
+                  }}
+                  aria-label={t("고정", "Pin")}
+                  className={`touch-target rounded-full transition ${
+                    pinned ? "bg-primary text-ink" : "bg-white/70 text-ink-soft"
+                  }`}
+                >
+                  <Pin size={14} className={pinned ? "fill-current" : ""} />
+                </button>
+                <button
+                  type="button"
+                  data-card-action
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onTimer();
+                  }}
+                  aria-label={t("타이머", "Timer")}
+                  className={`touch-target rounded-full transition ${
+                    timerEnd ? "bg-ink text-white" : "bg-white/70 text-ink-soft"
+                  }`}
+                >
+                  <Timer size={14} />
+                </button>
+              </div>
+              {/* Alarm: iOS-style pill toggle. On = filled yellow, knob right.
+                  Tap toggles on/off directly when an alarm time already
+                  exists; if none is set yet, tap opens the alarm sheet
+                  to choose a time (first-time setup only). */}
               <button
                 type="button"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onPin();
-                }}
-                aria-label={t("고정", "Pin")}
-                className={`touch-target rounded-full transition ${
-                  pinned ? "bg-primary text-ink" : "bg-white/70 text-ink-soft"
-                }`}
-              >
-                <Pin size={14} className={pinned ? "fill-current" : ""} />
-              </button>
-              <button
-                type="button"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onTimer();
-                }}
-                aria-label={t("타이머", "Timer")}
-                className={`touch-target rounded-full transition ${
-                  timerEnd ? "bg-ink text-white" : "bg-white/70 text-ink-soft"
-                }`}
-              >
-                <Timer size={14} />
-              </button>
-              <button
-                type="button"
+                data-card-action
                 onClick={(e) => {
                   e.stopPropagation();
                   onAlarm();
                 }}
-                aria-label={t("알림", "Reminder")}
-                className={`touch-target rounded-full transition ${
-                  s.alarm ? "bg-primary text-ink" : "bg-white/70 text-ink-soft"
+                aria-label={
+                  s.alarm ? t("알림 끄기", "Turn off reminder") : t("알림 켜기", "Turn on reminder")
+                }
+                aria-pressed={!!s.alarm}
+                className={`relative h-8 w-14 shrink-0 rounded-full transition-colors duration-200 ${
+                  s.alarm ? "bg-primary" : "bg-ink/15"
                 }`}
               >
-                {s.alarm ? <Bell size={14} /> : <BellOff size={14} />}
+                <span
+                  className={`absolute top-1 flex h-6 w-6 items-center justify-center rounded-full bg-white shadow-card transition-all duration-200 ${
+                    s.alarm ? "left-7" : "left-1"
+                  }`}
+                >
+                  {s.alarm ? (
+                    <Bell size={13} className="text-ink" />
+                  ) : (
+                    <BellOff size={13} className="text-ink-soft" />
+                  )}
+                </span>
               </button>
             </div>
           )}
         </div>
         {!done && (
-          <div className="mt-2 flex justify-end">
+          <div data-card-action className="mt-2 flex justify-end">
             <button
+              type="button"
+              data-card-action
               onClick={(e) => {
                 e.stopPropagation();
                 onDelete();
