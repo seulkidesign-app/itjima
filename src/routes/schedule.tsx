@@ -5,6 +5,7 @@ import {
   useRef,
   useState,
   type ComponentProps,
+  type ComponentType,
   type PointerEvent as ReactPointerEvent,
 } from "react";
 import {
@@ -877,6 +878,26 @@ function ScheduleCard({
       : !r.past && start.toDateString() === new Date().toDateString()
         ? "bg-primary"
         : "bg-ink/25";
+  const title = scheduleDisplayTitle(s);
+  const preview = rawPreview(s);
+  const alarmAt = s.alarm ? effectiveAlarmAt(s) : null;
+  const timerEnd = getActiveTimerEnd(s.id);
+  const pressTimer = useRef<number | null>(null);
+  const longFired = useRef(false);
+  const dragging = useRef(false);
+  const dxRef = useRef(0);
+  const [dx, setDx] = useState(0);
+  const [acting, setActing] = useState(false);
+  const startX = useRef(0);
+
+  dxRef.current = dx;
+
+  const clearPress = () => {
+    if (pressTimer.current) {
+      clearTimeout(pressTimer.current);
+      pressTimer.current = null;
+    }
+  };
 
   const onDown = (e: ReactPointerEvent<HTMLDivElement>) => {
     if (done || acting) return;
@@ -946,12 +967,6 @@ function ScheduleCard({
   };
 
   const swipeHint = dx > 24;
-  const dotColor =
-    dot === "urgent"
-      ? "bg-red-500"
-      : dot === "today"
-        ? "bg-primary"
-        : "bg-ink/25";
 
   return (
     <div className="relative">
@@ -1004,6 +1019,23 @@ function ScheduleCard({
             )}
           </button>
           <div className="min-w-0 flex-1">
+            {timer ? (
+              <>
+                <p className="text-[12px] text-ink-soft">
+                  {t("다음에 떠올릴 것", "Next up")}
+                </p>
+                <div className="mt-1 text-[17px] font-bold leading-snug text-ink">
+                  {title}
+                </div>
+                <p className="mt-1.5 text-[13.5px] text-ink-soft">
+                  {formatTodaySpotlightTime(s.start_time, lang)}
+                </p>
+                <span className="mt-2 inline-block rounded-full bg-ink/[0.04] px-2.5 py-1 text-[12px] text-ink-soft">
+                  {scheduleStatusBadge(s.start_time, lang)}
+                </span>
+              </>
+            ) : (
+              <>
             <div className="flex flex-wrap items-center gap-2">
               {pinned && (
                 <Pin size={12} className="fill-primary text-primary" />
@@ -1046,6 +1078,8 @@ function ScheduleCard({
               <span className="mt-1.5 inline-flex items-center gap-1 rounded-full bg-ink/10 px-2 py-0.5 text-[11px] font-bold text-ink">
                 <Timer size={11} /> {formatTimerLabel(timerEnd, lang)}
               </span>
+            )}
+              </>
             )}
           </div>
           {!done && (
@@ -1134,6 +1168,163 @@ function ScheduleCard({
           </div>
         )}
       </div>
+    </div>
+  );
+}
+
+function FlowedPastSection({
+  items,
+  cardProps,
+  t,
+  lang,
+}: {
+  items: ScheduleItem[];
+  cardProps: (
+    s: ScheduleItem,
+  ) => Omit<ComponentProps<typeof ScheduleCard>, "emphasize" | "timer">;
+  t: ReturnType<typeof useT>;
+  lang: "ko" | "en";
+}) {
+  const [open, setOpen] = useState(false);
+  if (!items.length) return null;
+
+  const locale = lang === "en" ? "en-US" : "ko-KR";
+  const visible = open ? items : items.slice(0, 1);
+
+  return (
+    <section className="mt-6 border-t border-ink/[0.06] pt-4">
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        className="flex w-full items-center justify-between px-1 py-1.5 text-[14px] text-ink-soft touch-press"
+      >
+        <span>{t("흘러간 것", "Flowed past")}</span>
+        <span className="text-[13px]">
+          {items.length} {open ? "▴" : "▾"}
+        </span>
+      </button>
+      <div className="flex flex-col">
+        {visible.map((s) => (
+          <div
+            key={s.id}
+            className="flex items-center justify-between px-1 py-3.5 text-[15px] text-ink/45"
+          >
+            <span className="min-w-0 truncate pr-3">
+              {scheduleDisplayTitle(s)}
+            </span>
+            <span className="shrink-0 text-[12.5px] text-ink-soft">
+              {new Date(s.end_time).toLocaleDateString(locale, {
+                month: "short",
+                day: "numeric",
+              })}
+            </span>
+          </div>
+        ))}
+      </div>
+    </section>
+  );
+}
+
+function ScheduleTodayPanel({
+  todayItems,
+  flowedItems,
+  activeItems,
+  archiveItems,
+  doneCount,
+  ScheduleCard,
+  cardProps,
+  DoneSection,
+  doneItems,
+}: {
+  todayItems: ScheduleItem[];
+  flowedItems: ScheduleItem[];
+  activeItems: ScheduleItem[];
+  archiveItems: import("@/lib/store").ArchiveItem[];
+  doneCount: number;
+  ScheduleCard: ComponentType<Record<string, unknown>>;
+  cardProps: (s: ScheduleItem) => Record<string, unknown>;
+  DoneSection: ComponentType<{
+    items: ScheduleItem[];
+    cardProps: (s: ScheduleItem) => Record<string, unknown>;
+    t: ReturnType<typeof useT>;
+  }>;
+  doneItems: ScheduleItem[];
+}) {
+  const t = useT();
+  const { lang } = useLang();
+  const suggestion = pickTodaySuggestion(
+    todayItems,
+    activeItems,
+    archiveItems,
+    lang,
+  );
+  const spotlight = todayItems[0] ?? null;
+  const alsoToday = todayItems.slice(1);
+
+  return (
+    <div className="flex flex-col gap-8 animate-craft-in px-0.5 pb-4 pt-3">
+      {spotlight && (
+        <motion.section
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={MOTION_CRAFT}
+          className="mx-1 rounded-[24px] border border-ink/[0.03] bg-primary/[0.08] px-[22px] py-5"
+        >
+          <p className="text-[12px] text-ink-soft">
+            {t("다음에 떠올릴 것", "Next up")}
+          </p>
+          <p className="mt-2 text-[17px] font-bold leading-snug text-ink">
+            {scheduleDisplayTitle(spotlight)}
+          </p>
+          <p className="mt-1.5 text-[13.5px] text-ink-soft">
+            {formatTodaySpotlightTime(spotlight.start_time, lang)}
+          </p>
+          <span className="mt-2.5 inline-block rounded-full bg-ink/[0.04] px-2.5 py-1 text-[12px] text-ink-soft">
+            {scheduleStatusBadge(spotlight.start_time, lang)}
+          </span>
+        </motion.section>
+      )}
+
+      {suggestion && (
+        <div className="craft-suggestion mx-0.5 px-4 py-3.5">
+          <p className="text-[14px] leading-[1.65] tracking-[0.005em] text-ink/88">
+            {lang === "en" ? suggestion.messageEn : suggestion.messageKo}
+          </p>
+        </div>
+      )}
+
+      {alsoToday.length > 0 && (
+        <section className="flex flex-col gap-3 px-0.5">
+          <p className="text-[12px] font-medium tracking-[0.02em] text-ink-soft/65">
+            {t("오늘 더 있어요", "Also today")}
+          </p>
+          <div className="flex flex-col gap-3 opacity-[0.82]">
+            {alsoToday.map((s) => (
+              <ScheduleCard key={s.id} {...cardProps(s)} timer />
+            ))}
+          </div>
+        </section>
+      )}
+
+      <FlowedPastSection
+        items={flowedItems}
+        cardProps={cardProps}
+        t={t}
+        lang={lang}
+      />
+
+      {doneItems.length > 0 && (
+        <DoneSection items={doneItems} cardProps={cardProps} t={t} />
+      )}
+
+      {todayItems.length === 0 && doneCount === 0 && flowedItems.length === 0 && (
+        <p className="px-4 text-center text-[14px] leading-[1.7] text-ink-soft/85">
+          {t(
+            "오늘은 특별히 떠올릴 게 없어요. 괜찮아요.",
+            "Nothing needs your attention today — and that's okay.",
+          )}
+        </p>
+      )}
     </div>
   );
 }

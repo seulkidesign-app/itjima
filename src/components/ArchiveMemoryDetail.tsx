@@ -28,6 +28,8 @@ export function ArchiveMemoryDetail({
   useScrollLock(!!item);
 
   const locale = lang === "en" ? "en-US" : "ko-KR";
+  const displayTitle = item ? archiveDisplayTitle(item.id, item) : "";
+  const bodyText = item ? (item.raw_text ?? item.text) : "";
 
   return (
     <AnimatePresence>
@@ -64,7 +66,7 @@ export function ArchiveMemoryDetail({
                   })}
                 </p>
                 <h2 className="mt-1 text-[22px] font-bold tracking-[-0.02em] text-ink">
-                  {archiveDisplayTitle(item.id, item)}
+                  {displayTitle}
                 </h2>
               </div>
               <button
@@ -75,9 +77,11 @@ export function ArchiveMemoryDetail({
                 <X size={20} />
               </button>
             </div>
+            {bodyText.trim() !== displayTitle.trim() && (
             <p className="mt-4 whitespace-pre-wrap text-[15px] leading-[1.65] text-ink/90">
-              {item.raw_text ?? item.text}
+              {bodyText}
             </p>
+            )}
             {item.images?.length > 0 && (
               <div className="mt-4 flex gap-2 overflow-x-auto">
                 {item.images.map((src, i) => (

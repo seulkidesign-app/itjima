@@ -19,6 +19,7 @@ import {
 import {
   aiCacheKeyText,
   isRelativeDateReference,
+  hasScheduleTimeIntent,
   type MirrorTimingExtra,
 } from "@/lib/dateDetect";
 
@@ -81,13 +82,30 @@ function parseTimingFromRaw(
   };
 }
 
+function hasHighConfidenceTiming(
+  result: BrainMirrorResult & MirrorTimingExtra,
+): boolean {
+  return (
+    result.timingConfidence === "high" &&
+    typeof result.suggestedStart === "string" &&
+    result.suggestedStart.length > 0
+  );
+}
+
+function mergeTiming(
+  base: BrainMirrorResult,
+  raw: Record<string, unknown>,
+): BrainMirrorResult & MirrorTimingExtra {
+  const timing = parseTimingFromRaw(raw);
+  if (!timing) return base;
+  return { ...base, ...timing };
+}
+
 function attachTiming(
   result: BrainMirrorResult,
   raw: Record<string, unknown>,
 ): BrainMirrorResult & MirrorTimingExtra {
-  const timing = parseTimingFromRaw(raw);
-  if (!timing) return result;
-  return { ...result, ...timing };
+  return mergeTiming(result, raw);
 }
 
 function stripTimingForCache(
@@ -132,21 +150,35 @@ async function fetchBrainMirrorInner(
   const cacheKey = mode === "classify" ? classifyCacheKey(trimmed) : trimmed;
   const skipCacheForRelative =
     mode === "classify" && isRelativeDateReference(trimmed);
+  const scheduleTimeIntent =
+    mode === "classify" && hasScheduleTimeIntent(trimmed);
+  let pendingLocal: BrainMirrorResult | null = null;
 
   if (!force && mode === "classify") {
     const resolution = resolveIntelligence(trimmed);
     if (resolution.kind === "local" || resolution.kind === "cache") {
       if (resolution.result?.items.length) {
-        if (resolution.kind === "local") {
-          if (!skipCacheForRelative) {
+        const timingExtra = readCachedTimingExtra(trimmed);
+        const merged = timingExtra
+          ? ({ ...resolution.result, ...timingExtra } as BrainMirrorResult &
+              MirrorTimingExtra)
+          : resolution.result;
+        if (
+          !scheduleTimeIntent ||
+          hasHighConfidenceTiming(merged as BrainMirrorResult & MirrorTimingExtra)
+        ) {
+          if (resolution.kind === "local" && !skipCacheForRelative) {
             setCachedAiResult(cacheKey, resolution.result, "local");
           }
+          return {
+            status: "ok",
+            result: merged,
+            source: resolution.kind,
+          };
         }
-        return {
-          status: "ok",
-          result: resolution.result,
-          source: resolution.kind,
-        };
+        if (resolution.kind === "local") {
+          pendingLocal = resolution.result;
+        }
       }
     }
     if (
@@ -156,7 +188,7 @@ async function fetchBrainMirrorInner(
     ) {
       return { status: "skipped" };
     }
-    if (!shouldCallFallbackAi(trimmed)) {
+    if (!shouldCallFallbackAi(trimmed) && !scheduleTimeIntent) {
       if (!skipCacheForRelative) setCachedSkip(cacheKey);
       return { status: "skipped" };
     }
@@ -217,10 +249,14 @@ async function fetchBrainMirrorInner(
         }
         return { status: "empty" };
       }
+      const result =
+        pendingLocal && mode === "classify"
+          ? mergeTiming(pendingLocal, data as Record<string, unknown>)
+          : parsed;
       if (mode === "classify") {
         const toStore = skipCacheForRelative
-          ? stripTimingForCache(parsed)
-          : parsed;
+          ? stripTimingForCache(result)
+          : result;
         if (!skipCacheForRelative) {
           setCachedAiResult(cacheKey, toStore, "classify");
         }
@@ -229,7 +265,7 @@ async function fetchBrainMirrorInner(
       }
       return {
         status: "ok",
-        result: parsed,
+        result,
         source: mode === "organize" ? "organize" : "classify",
       };
     }

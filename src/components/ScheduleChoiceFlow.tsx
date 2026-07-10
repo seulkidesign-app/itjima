@@ -383,7 +383,7 @@ export function ScheduleChoiceFlow({
                 "Shall we bring this thought back then?",
               )}
             </h2>
-            <div className="shadow-card card-radius mt-4 border border-ink/[0.04] px-[26px] py-[30px]">
+            <div className="shadow-card mt-4 rounded-[32px] border border-ink/[0.04] px-[26px] py-[30px]">
               <p className="text-[12.5px] text-ink-soft">
                 {t("ItJima가 찾은 순간", "A moment ItJima found")}
               </p>
@@ -416,6 +416,14 @@ export function ScheduleChoiceFlow({
               {t("다시 생각할게요", "I'll think again")}
             </button>
           </>
+        )}
+
+        {!showSuggested && thoughtText && !editMode && step === "when" && (
+          <div className="mb-5 rounded-[16px] border border-ink/[0.05] bg-ink/[0.03] px-4 py-3.5">
+            <p className="text-[15px] font-medium leading-snug text-ink">
+              {thoughtText}
+            </p>
+          </div>
         )}
 
         {!showSuggested && !editMode && step === "when" && (
