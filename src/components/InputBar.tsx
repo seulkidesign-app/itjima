@@ -339,6 +339,7 @@ export function InputBar({
           } ${hero ? "py-4 ring-1 ring-ink/5" : "py-3"}`}
         >
           <textarea
+            id="capture-input"
             ref={textareaRef}
             value={text}
             onChange={(e) => setText(e.target.value)}

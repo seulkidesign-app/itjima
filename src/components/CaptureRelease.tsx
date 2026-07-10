@@ -441,21 +441,25 @@ export function CaptureRelease({
   const shellClass =
     variant === "hero"
       ? "relative z-10 flex flex-1 flex-col items-center justify-center px-6 pb-8"
-      : "pointer-events-none fixed inset-0 z-[45] flex items-center justify-center px-6 pb-24 pt-16";
+      : "pointer-events-auto fixed inset-0 z-[45] flex items-center justify-center px-6 pb-24 pt-16";
 
   return (
     <div className={shellClass} aria-live="polite">
       {variant === "overlay" && (
         <motion.div
-          className="pointer-events-none absolute inset-0 bg-white/55 backdrop-blur-[2px]"
+          className="pointer-events-auto absolute inset-0 bg-white/55 backdrop-blur-[2px]"
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ duration: 0.35 }}
+          onClick={() => {
+            if (!pendingSchedule) finishRelease();
+          }}
         />
       )}
 
       <motion.div
-        className="pointer-events-auto relative w-full max-w-[360px]"
+        className="pointer-events-auto relative z-[1] w-full max-w-[360px]"
+        onClick={(e) => e.stopPropagation()}
         initial={{ opacity: 0, y: variant === "hero" ? 28 : 48, scale: 0.94 }}
         animate={{ opacity: 1, y: 0, scale: 1 }}
         transition={{ duration: 0.5, ease: EASE_OUT_APP }}

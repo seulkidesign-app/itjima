@@ -86,6 +86,13 @@ function Inbox() {
   >(null);
   const releaseItemRef = useRef<InboxItem | null>(null);
   releaseItemRef.current = releaseItem;
+  const releasePendingScheduleIdRef = useRef(releasePendingScheduleId);
+  releasePendingScheduleIdRef.current = releasePendingScheduleId;
+  const focusScheduleOpenRef = useRef(focusScheduleSheet.open);
+  focusScheduleOpenRef.current = focusScheduleSheet.open;
+  const releaseSubmittingRef = useRef(false);
+  const ignoreReleasePopRef = useRef(false);
+  const releaseHistoryActiveRef = useRef(false);
 
   const items = inbox.items;
   const menuItem = menuFor
@@ -132,18 +139,32 @@ function Inbox() {
     };
   }, [releaseItem]);
 
+  const clearReleaseHistory = useCallback(() => {
+    if (!releaseHistoryActiveRef.current) return;
+    releaseHistoryActiveRef.current = false;
+    ignoreReleasePopRef.current = true;
+    history.back();
+  }, []);
+
   const completeRelease = useCallback(() => {
     const releasingId = releaseItemRef.current?.id;
+    clearReleaseHistory();
     setReleaseItem(null);
     setReleasePendingScheduleId(null);
     setFocusPendingScheduleId(null);
+    releaseSubmittingRef.current = false;
     if (releasingId) {
       setFocusScheduleSheet((prev) =>
         prev.item?.id === releasingId ? { open: false } : prev,
       );
     }
     maybeNudgeLogin();
-  }, []);
+    requestAnimationFrame(() => {
+      if (window.matchMedia("(pointer: fine)").matches) {
+        document.getElementById("capture-input")?.focus();
+      }
+    });
+  }, [clearReleaseHistory]);
 
   const cancelReleaseSchedule = useCallback(() => {
     setReleasePendingScheduleId(null);
@@ -156,25 +177,53 @@ function Inbox() {
     setFocusScheduleSheet({ open: true, item: it });
   }, []);
 
+  const dismissReleaseOverlay = useCallback(() => {
+    if (
+      releasePendingScheduleIdRef.current ||
+      focusScheduleOpenRef.current
+    ) {
+      cancelReleaseSchedule();
+      return;
+    }
+    completeRelease();
+  }, [cancelReleaseSchedule, completeRelease]);
+
   useEffect(() => {
     if (!releaseItem) return;
     const onKey = (e: KeyboardEvent) => {
       if (e.key !== "Escape") return;
-      if (releasePendingScheduleId || focusScheduleSheet.open) {
-        cancelReleaseSchedule();
-        return;
-      }
-      completeRelease();
+      dismissReleaseOverlay();
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [
-    releaseItem,
-    releasePendingScheduleId,
-    focusScheduleSheet.open,
-    cancelReleaseSchedule,
-    completeRelease,
-  ]);
+  }, [releaseItem, dismissReleaseOverlay]);
+
+  useEffect(() => {
+    if (!releaseItem) return;
+    history.pushState({ captureRelease: true }, "");
+    releaseHistoryActiveRef.current = true;
+
+    const onPopState = () => {
+      if (ignoreReleasePopRef.current) {
+        ignoreReleasePopRef.current = false;
+        return;
+      }
+      if (
+        releasePendingScheduleIdRef.current ||
+        focusScheduleOpenRef.current
+      ) {
+        cancelReleaseSchedule();
+        history.pushState({ captureRelease: true }, "");
+        releaseHistoryActiveRef.current = true;
+        return;
+      }
+      releaseHistoryActiveRef.current = false;
+      completeRelease();
+    };
+
+    window.addEventListener("popstate", onPopState);
+    return () => window.removeEventListener("popstate", onPopState);
+  }, [releaseItem, cancelReleaseSchedule, completeRelease]);
 
   useEffect(() => {
     if (!menuItem && !pasteSheet) return;
@@ -336,6 +385,8 @@ function Inbox() {
 
   const handleAdd = async (text: string, images: string[]) => {
     if (!text && !images.length) return;
+    if (releaseItem !== null || releaseSubmittingRef.current) return;
+    releaseSubmittingRef.current = true;
     haptic([6, 16, 10]);
     try {
       const { item: created } = await inbox.add({
@@ -353,6 +404,7 @@ function Inbox() {
       const revival = buildRevivalHint(created, archive.items, "inbox");
       if (revival) setInboxRevival(revival);
     } catch {
+      releaseSubmittingRef.current = false;
       toast.error(t("남기지 못했어요", "Couldn't keep it"));
     }
   };
