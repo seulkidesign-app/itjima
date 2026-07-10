@@ -15,7 +15,7 @@ export function pickTodaySuggestion(
   todayItems: ScheduleItem[],
   activeItems: ScheduleItem[],
   archiveItems: ArchiveItem[],
-  lang: "ko" | "en",
+  _lang: "ko" | "en",
 ): TodaySuggestion | null {
   const now = new Date();
   const tomorrow = new Date(now);
@@ -32,8 +32,8 @@ export function pickTodaySuggestion(
     return {
       kind: "prepare",
       scheduleId: next.id,
-      messageKo: `내일 "${title}" — 오늘 준비하면 여유로울 것 같아요.`,
-      messageEn: `Tomorrow: "${title}" — a little prep today might feel easier.`,
+      messageKo: `내일 "${title}" — 오늘 한 번만 떠올려도 돼요.`,
+      messageEn: `Tomorrow: "${title}" — a quiet look today is enough.`,
     };
   }
 
@@ -47,7 +47,7 @@ export function pickTodaySuggestion(
     return {
       kind: "prepare",
       scheduleId: soon.s.id,
-      messageKo: `${soon.r.days}일 뒤 "${title}" — 오늘 한 번 떠올려볼까요?`,
+      messageKo: `${soon.r.days}일 뒤 "${title}" — 오늘 잠깐만 떠올려볼까요?`,
       messageEn: `"${title}" is in ${soon.r.days} days — worth a gentle look today.`,
     };
   }
@@ -56,37 +56,18 @@ export function pickTodaySuggestion(
     return {
       kind: "rediscovery",
       rediscoveryPath: true,
-      messageKo: "오늘 다시 보면 좋을 기억이 있어요.",
-      messageEn: "A memory worth revisiting today.",
+      messageKo: "맡겨둔 기억 중 하나를 꺼내봤어요.",
+      messageEn: "One memory you left here is worth revisiting.",
     };
   }
 
   if (todayItems.length > 0) {
     return {
       kind: "calm",
-      messageKo: "오늘은 이것만 봐도 충분해요.",
-      messageEn: "These are enough for today.",
+      messageKo: "오늘은 이 생각만 보면 돼요.",
+      messageEn: "This one thought is enough for today.",
     };
   }
 
   return null;
-}
-
-export function formatTodayHeaderDate(lang: "ko" | "en", date = new Date()): string {
-  return date.toLocaleDateString(lang === "en" ? "en-US" : "ko-KR", {
-    month: "long",
-    day: "numeric",
-    weekday: "long",
-  });
-}
-
-export function weekStripDays(anchor = new Date()): Date[] {
-  const start = new Date(anchor);
-  start.setDate(anchor.getDate() - anchor.getDay());
-  start.setHours(0, 0, 0, 0);
-  return Array.from({ length: 7 }, (_, i) => {
-    const d = new Date(start);
-    d.setDate(start.getDate() + i);
-    return d;
-  });
 }

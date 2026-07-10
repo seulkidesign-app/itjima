@@ -76,21 +76,27 @@ export function pickRediscoveryCandidate(
   const ageKo = formatRevivalAge(memory.created_at, "ko");
   const ageEn = formatRevivalAge(memory.created_at, "en");
 
+  const visitCount = visits[memory.id] ?? 0;
+  const ageDays = (now - +new Date(memory.created_at)) / 86400000;
+
   let nudgeKo: string;
   let nudgeEn: string;
 
   if (linked && daysUntil !== undefined && daysUntil <= 7) {
     nudgeKo =
       daysUntil <= 1
-        ? "내일이 다가왔어요. 이 생각, 다시 꺼내볼까요?"
-        : `${daysUntil}일 남았어요. 오늘 다시 보면 좋을 것 같아요.`;
+        ? "곧 그때가 와서, 이 생각을 다시 꺼내봤어요."
+        : "그때가 다가와서, 이 생각을 다시 꺼내봤어요.";
     nudgeEn =
       daysUntil <= 1
-        ? "Tomorrow is close. Shall we bring this thought out again?"
-        : `${daysUntil} days left — worth revisiting today.`;
+        ? "That moment is almost here — so this thought came back."
+        : "That moment is getting closer — so this thought came back.";
+  } else if (ageDays >= 21 && visitCount <= 1) {
+    nudgeKo = "그때의 내가 잊지 않으려고 남겨둔 생각이에요.";
+    nudgeEn = "A thought you left so future-you wouldn't forget.";
   } else {
     nudgeKo = "오늘 다시 보면 좋을 것 같아요.";
-    nudgeEn = "Worth another look today.";
+    nudgeEn = "Worth another quiet look today.";
   }
 
   return {

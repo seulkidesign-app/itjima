@@ -405,8 +405,8 @@ function Schedule() {
           <p className="mt-1.5 text-[13px] leading-relaxed text-ink-soft">
             {tab === "today"
               ? t(
-                  "오늘 마음에 두면 좋을 것들이에요",
-                  "What deserves your attention today",
+                  "오늘 마음에 두면 좋을 생각이에요",
+                  "Thoughts that deserve your attention today",
                 )
               : activeItems.length > 0
                 ? t(

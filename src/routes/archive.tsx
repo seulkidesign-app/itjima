@@ -620,16 +620,16 @@ function Archive() {
       <div className="sticky top-0 z-10 shrink-0 bg-white pb-1">
         <div className="px-5 pb-2 pt-6">
           <p className="text-[13px] font-medium text-ink-soft">
-            {t("잊어도 돼요.", "It's okay to forget.")}
+            {t("잊어도 괜찮아요.", "It's okay to forget.")}
           </p>
           <h1 className="mt-1 text-[28px] font-bold tracking-[-0.02em] text-ink">
-            {t("여기 있어요.", "It's here for you.")}
+            {t("여기 맡겨두세요.", "Leave it here.")}
           </h1>
           {items.length > 0 && (
             <p className="mt-2 text-[13px] text-ink-soft/80">
               {t(
-                `${items.length}개의 생각이 조용히 기다리고 있어요`,
-                `${items.length} thoughts safely waiting here`,
+                `${items.length}개의 생각을 맡아두고 있어요`,
+                `${items.length} thoughts you entrusted here`,
               )}
             </p>
           )}
@@ -663,8 +663,8 @@ function Archive() {
                   setExpandedId(null);
                 }}
                 placeholder={t(
-                  "떠올리고 싶은 걸 찾아보세요",
-                  "Search what you remember",
+                  "기억하고 싶은 걸 찾아보세요",
+                  "Find a thought you kept",
                 )}
                 className="flex-1 bg-transparent text-[14px] text-ink placeholder:text-ink-soft/70 focus:outline-none"
               />
@@ -1240,9 +1240,9 @@ function Empty() {
   return (
     <EmptyState
       emoji="🗂"
-      titleKo="아직 남겨둔 게 없어요"
-      titleEn="Nothing kept here yet"
-      hintKo="마음에 남는 생각을 왼쪽으로 밀어 두면, 여기서 다시 만날 수 있어요"
+      titleKo="아직 맡겨둔 게 없어요"
+      titleEn="Nothing entrusted here yet"
+      hintKo="마음에 남는 생각을 왼쪽으로 밀면, 여기서 다시 만날 수 있어요"
       hintEn="Swipe left on a thought you want to keep — it'll wait here for you"
     />
   );
