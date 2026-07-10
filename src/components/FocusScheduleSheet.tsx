@@ -59,6 +59,7 @@ export function FocusScheduleSheet({ item, open, onClose, onConfirm }: Props) {
         title={title}
         onTitleChange={setTitle}
         initialStart={initialStart}
+        suggestedStart={initialStart}
         onConfirm={(start, end, options) => {
           onConfirm(
             title.trim() || thoughtFirstLine(item.text),

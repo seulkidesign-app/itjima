@@ -19,6 +19,7 @@ import {
   repeatRuleToKey,
   repeatLabel,
   startOfDay,
+  formatSuggestedMoment,
 } from "@/lib/scheduleChoices";
 import type { RepeatRule } from "@/lib/store";
 import { MOTION_STEP } from "@/lib/motionLanguage";
@@ -40,6 +41,8 @@ type Props = {
   initialEnd?: Date;
   initialAllDay?: boolean;
   initialRepeat?: RepeatRule | null;
+  /** When set, shows the quiet “we picked a moment” hint (detect / default). */
+  suggestedStart?: Date;
   editMode?: boolean;
   onConfirm: (start: Date, end: Date, options: ScheduleConfirmOptions) => void;
 };
@@ -56,29 +59,28 @@ function Chip({
   large?: boolean;
 }) {
   return (
-    <motion.button
+    <button
       type="button"
-      whileTap={{ scale: 0.96 }}
       onClick={() => {
         tick();
         onClick();
       }}
-      className={`chip-select flex-1 rounded-full font-bold transition-colors ${
-        large ? "py-3.5 text-[17px]" : "py-2.5 text-[13px]"
+      className={`chip-moment w-full rounded-full text-left font-medium transition-colors duration-200 ${
+        large ? "px-4 py-3 text-[16px]" : "px-3 py-2.5 text-[13px]"
       } ${
         active
-          ? "chip-select-active bg-primary text-ink shadow-card"
-          : "bg-ink/[0.05] text-ink-soft"
+          ? "bg-primary text-ink"
+          : "bg-ink/[0.03] text-ink-soft/85 ring-1 ring-ink/[0.05]"
       }`}
     >
       {children}
-    </motion.button>
+    </button>
   );
 }
 
 function StepLabel({ children }: { children: ReactNode }) {
   return (
-    <p className="mb-2.5 text-[11px] font-extrabold uppercase tracking-[0.14em] text-ink-soft">
+    <p className="mb-2.5 text-[12px] font-medium tracking-[-0.01em] text-ink-soft/75">
       {children}
     </p>
   );
@@ -166,6 +168,7 @@ export function ScheduleChoiceFlow({
   initialEnd,
   initialAllDay,
   initialRepeat,
+  suggestedStart,
   editMode,
   onConfirm,
 }: Props) {
@@ -230,17 +233,13 @@ export function ScheduleChoiceFlow({
     day: when === "pick_date" ? "numeric" : undefined,
   });
 
-  const summaryTime = allDay
-    ? `${dateSummary} · ${t("하루 종일", "All-day")}`
-    : `${start.toLocaleTimeString(locale, {
-        hour: "2-digit",
-        minute: "2-digit",
-        hour12: false,
-      })} – ${end.toLocaleTimeString(locale, {
-        hour: "2-digit",
-        minute: "2-digit",
-        hour12: false,
-      })}`;
+  const momentPreview = formatSuggestedMoment(
+    start,
+    lang === "en" ? "en" : "ko",
+    allDay,
+  );
+
+  const showMomentHint = !editMode && !!suggestedStart;
 
   const whenOptions: { key: WhenKey; label: string }[] = [
     { key: "today", label: t("오늘", "Today") },
@@ -311,6 +310,33 @@ export function ScheduleChoiceFlow({
   return (
     <div className="flex min-h-0 flex-1 flex-col">
       <div className="sheet-scroll min-h-0 flex-1 overflow-y-auto overscroll-contain px-5 pb-4">
+        {!editMode && (
+          <div className="mb-5">
+            <h2 className="text-[17px] font-semibold leading-[1.45] tracking-[-0.02em] text-ink">
+              {t(
+                "이 생각은 언제 다시 떠올리면 좋을까요?",
+                "When would be a good moment to remember this?",
+              )}
+            </h2>
+            {showMomentHint && (
+              <p className="mt-2 text-[14px] leading-relaxed text-ink-soft/80">
+                {t(
+                  "여유 있게 준비할 수 있는 순간을 골라봤어요.",
+                  "We picked a moment with room to breathe.",
+                )}
+              </p>
+            )}
+            <div className="mt-3 rounded-[18px] bg-ink/[0.04] px-4 py-3.5 ring-1 ring-ink/[0.04]">
+              <p className="text-[15px] font-medium leading-snug text-ink">
+                {momentPreview}
+              </p>
+              <p className="mt-1.5 text-[12px] leading-relaxed text-ink-soft/70">
+                {t("필요하면 바로 바꿀 수 있어요.", "Change it anytime.")}
+              </p>
+            </div>
+          </div>
+        )}
+
         <input
           value={title}
           onChange={(e) => onTitleChange(e.target.value)}
@@ -322,8 +348,8 @@ export function ScheduleChoiceFlow({
           {[0, 1, 2].map((i) => (
             <div
               key={i}
-              className={`h-1 flex-1 rounded-full transition-colors duration-300 ${
-                i <= stepIndex ? "bg-ink" : "bg-ink/10"
+              className={`h-0.5 flex-1 rounded-full transition-colors duration-300 ${
+                i <= stepIndex ? "bg-ink/70" : "bg-ink/8"
               }`}
             />
           ))}
@@ -339,7 +365,7 @@ export function ScheduleChoiceFlow({
               transition={MOTION_STEP}
             >
               <StepLabel>{t("언제", "When")}</StepLabel>
-              <div className="flex flex-col gap-2">
+              <div className="flex flex-col gap-1.5">
                 {whenOptions.map(({ key, label }) => (
                   <Chip
                     key={key}
@@ -520,14 +546,13 @@ export function ScheduleChoiceFlow({
           <button
             type="button"
             onClick={handleDone}
-            className="touch-press flex w-full flex-col items-center justify-center gap-0.5 rounded-full bg-ink py-4 text-white shadow-[0_4px_20px_-4px_oklch(0_0_0/0.35)]"
+            className="touch-press flex w-full flex-col items-center justify-center gap-1 rounded-full bg-ink py-4 text-white shadow-[0_4px_20px_-4px_oklch(0_0_0/0.35)]"
           >
-            <span className="flex items-center gap-2 text-[16px] font-bold">
-              <Check size={18} strokeWidth={3} />
-              {t("남겨둘게요", "Keep it")}
+            <span className="text-[16px] font-semibold tracking-[-0.01em]">
+              {t("그때 맡겨둘게요", "I'll leave it for then")}
             </span>
-            <span className="text-[12px] font-medium text-white/75">
-              {summaryTime}
+            <span className="text-[12px] font-medium text-white/70">
+              {momentPreview}
               {repeat !== "none" ? ` · ${repeatLabel(repeat, t)}` : ""}
             </span>
           </button>
@@ -535,7 +560,7 @@ export function ScheduleChoiceFlow({
           <button
             type="button"
             onClick={goNext}
-            className="touch-press w-full rounded-full bg-ink py-3.5 text-[15px] font-bold text-white"
+            className="touch-press w-full rounded-full bg-ink py-3.5 text-[15px] font-semibold text-white"
           >
             {t("다음", "Next")}
           </button>

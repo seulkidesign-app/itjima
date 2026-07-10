@@ -638,7 +638,7 @@ function Schedule() {
                 source: "manual",
                 text_length: text.length,
               });
-              toast.success(t("기억해 둘게요", "I'll remember this"));
+              toast.success(t("그때 다시 떠올릴게요", "I'll remember this for then"));
             }
             setSheet({ open: false });
           } catch {
@@ -896,7 +896,11 @@ function ScheduleCard({
 
   const swipeHint = dx > 24;
   const dotColor =
-    dot === "urgent" ? "bg-ink" : dot === "today" ? "bg-primary" : "bg-ink/25";
+    dot === "urgent"
+      ? "bg-red-500"
+      : dot === "today"
+        ? "bg-primary"
+        : "bg-ink/25";
 
   return (
     <div className="relative">

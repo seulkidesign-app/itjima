@@ -160,3 +160,43 @@ export function inferTimeFromDate(d: Date): TimeKey {
   if (h === 18) return "evening";
   return "custom";
 }
+
+/** Calm one-line moment for the schedule suggestion card. */
+export function formatSuggestedMoment(
+  d: Date,
+  lang: "ko" | "en",
+  allDay = false,
+): string {
+  if (allDay) {
+    const locale = lang === "en" ? "en-US" : "ko-KR";
+    const date = d.toLocaleDateString(locale, {
+      month: "long",
+      day: "numeric",
+      weekday: "short",
+    });
+    return lang === "en" ? `${date} · All day` : `${date} · 하루 종일`;
+  }
+
+  if (lang === "ko") {
+    const datePart = d.toLocaleDateString("ko-KR", {
+      month: "long",
+      day: "numeric",
+      weekday: "short",
+    });
+    const hours = d.getHours();
+    const minutes = d.getMinutes();
+    const period = hours < 12 ? "오전" : "오후";
+    const h12 = hours % 12 || 12;
+    const min = minutes.toString().padStart(2, "0");
+    return `${datePart} ${period} ${h12}:${min}`;
+  }
+
+  return d.toLocaleString("en-US", {
+    month: "short",
+    day: "numeric",
+    weekday: "short",
+    hour: "numeric",
+    minute: "2-digit",
+    hour12: true,
+  });
+}

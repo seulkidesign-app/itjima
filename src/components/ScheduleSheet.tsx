@@ -70,6 +70,7 @@ export function ScheduleSheet({
           title={text}
           onTitleChange={setText}
           initialStart={initialStart}
+          suggestedStart={initialStart}
           initialEnd={initialEnd}
           initialAllDay={initialAllDay}
           initialRepeat={initialRepeat}
