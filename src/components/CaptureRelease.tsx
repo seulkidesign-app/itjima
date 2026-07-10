@@ -33,7 +33,6 @@ import {
   MOTION_ARCHIVE,
   MOTION_SCHEDULE,
   MOTION_DELETE,
-  MOTION_THINKING,
 } from "@/lib/motionLanguage";
 import {
   rubberBand,
@@ -61,10 +60,20 @@ const COMMIT_PX = 88;
 const UNDERSTAND_MS = 1000;
 const MIRROR_TIMEOUT_MS = 8000;
 const PHASE_SAFETY_MS = 3500;
-const EMERGE_SPRING = {
-  type: "spring" as const,
-  stiffness: 260,
-  damping: 30,
+const EMERGE = {
+  duration: 0.88,
+  ease: EASE_OUT_APP,
+};
+
+const MIRROR_REVEAL = {
+  duration: 0.95,
+  ease: EASE_OUT_APP,
+};
+
+const HINT_REVEAL = {
+  duration: 0.65,
+  ease: EASE_OUT_APP,
+  delay: 1.05,
 };
 
 function advancePhase(current: Phase, next: Phase): Phase {
@@ -84,10 +93,10 @@ function SwipeStamp({
   progress: number;
   label: string;
 }) {
-  if (progress < 0.12) return null;
-  const opacity = Math.min(1, (progress - 0.12) * 2.4);
+  if (progress < 0.28) return null;
+  const opacity = Math.min(0.5, (progress - 0.28) * 1.6);
   const base =
-    "pointer-events-none absolute z-[2] rounded-xl border-[3px] px-3 py-1.5 text-[13px] font-extrabold uppercase tracking-[0.1em]";
+    "pointer-events-none absolute z-[2] rounded-xl border px-3 py-1.5 text-[12px] font-semibold uppercase tracking-[0.06em]";
   const pos =
     dir === "left"
       ? "left-5 top-1/2 -translate-y-1/2 -rotate-12 border-ink bg-ink/[0.06] text-ink"
@@ -130,6 +139,7 @@ export function CaptureRelease({
   const [phase, setPhase] = useState<Phase>("emerge");
   const [interpretation, setInterpretation] = useState<string | null>(null);
   const [emergeY, setEmergeY] = useState(0);
+  const [emergeReady, setEmergeReady] = useState(false);
   const [offset, setOffset] = useState({ x: 0, y: 0 });
   const [dragging, setDragging] = useState(false);
   const [exiting, setExiting] = useState(false);
@@ -158,7 +168,7 @@ export function CaptureRelease({
 
   const springBack = useCallback(() => {
     animate(0, 1, {
-      duration: 0.32,
+      duration: 0.38,
       ease: EASE_OUT_APP,
       onUpdate: (p) => {
         const ease = 1 - Math.pow(1 - p, 3);
@@ -198,13 +208,14 @@ export function CaptureRelease({
 
     setPhase("emerge");
     setInterpretation(null);
+    setEmergeReady(false);
     setOffset({ x: 0, y: 0 });
     setCardOpacity(1);
     completingRef.current = false;
     actingRef.current = false;
     setExiting(false);
 
-    schedule(() => setPhase((p) => advancePhase(p, "understand")), 280);
+    schedule(() => setPhase((p) => advancePhase(p, "understand")), 320);
 
     void (async () => {
       let mirror: BrainMirrorResult | null = null;
@@ -253,7 +264,7 @@ export function CaptureRelease({
       schedule(() => {
         setInterpretation(sentence);
         setPhase((p) => advancePhase(p, "mirror"));
-        schedule(() => setPhase((p) => advancePhase(p, "interactive")), 420);
+        schedule(() => setPhase((p) => advancePhase(p, "interactive")), 920);
       }, wait);
     })();
 
@@ -276,13 +287,16 @@ export function CaptureRelease({
   useEffect(() => {
     const measure = () => {
       const input = document.getElementById("capture-input");
+      const shell = document.querySelector(".input-shell");
+      const origin = input ?? shell;
       const zone = cardZoneRef.current;
-      if (!input || !zone) return;
-      const inputRect = input.getBoundingClientRect();
+      if (!origin || !zone) return;
+      const originRect = origin.getBoundingClientRect();
       const zoneRect = zone.getBoundingClientRect();
-      const inputCenter = inputRect.top + inputRect.height / 2;
+      const originCenter = originRect.top + originRect.height / 2;
       const zoneCenter = zoneRect.top + zoneRect.height / 2;
-      setEmergeY(inputCenter - zoneCenter);
+      setEmergeY(originCenter - zoneCenter);
+      setEmergeReady(true);
     };
     measure();
     requestAnimationFrame(measure);
@@ -454,7 +468,7 @@ export function CaptureRelease({
   const progressMag = Math.max(memoryProgress, scheduleProgress, letGoProgress);
   const rotate = dragging ? swipeRotation(offset.x, cardW()) * 0.55 : 0;
   const shadow = cardShadowBlur(progressMag);
-  const shadowBreathing = phase === "understand" && !dragging;
+  const shadowHeld = phase === "understand" && !dragging;
 
   const shellClass =
     variant === "hero"
@@ -470,10 +484,10 @@ export function CaptureRelease({
     <div className={shellClass} aria-live="polite">
       {variant === "overlay" && (
         <motion.div
-          className="pointer-events-auto absolute inset-0 bg-white/55 backdrop-blur-[6px]"
+          className="pointer-events-auto absolute inset-0 bg-white/38 backdrop-blur-[4px]"
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
-          transition={{ duration: 0.35 }}
+          transition={{ duration: 0.72, ease: EASE_OUT_APP }}
           onClick={() => {
             if (!pendingSchedule) finishRelease();
           }}
@@ -484,31 +498,40 @@ export function CaptureRelease({
         ref={cardZoneRef}
         className="pointer-events-auto relative z-[1] flex w-full max-w-[320px] flex-col items-center"
         onClick={(e) => e.stopPropagation()}
-        initial={{ y: emergeY, scale: 0.96, opacity: 1 }}
-        animate={{ y: 0, scale: 1, opacity: 1 }}
-        transition={EMERGE_SPRING}
+        initial={
+          emergeReady
+            ? { y: emergeY, opacity: 0.86 }
+            : { y: emergeY, opacity: 0 }
+        }
+        animate={{ y: 0, opacity: 1 }}
+        transition={EMERGE}
       >
         <motion.div
-          ref={cardRef}
-          className={`relative touch-none select-none rounded-[32px] bg-white px-[26px] py-9 ${
-            shadowBreathing ? "capture-shadow-breathe" : "shadow-float ring-1 ring-ink/[0.05]"
-          }`}
+          className="relative w-full"
           style={{
             opacity:
               swipeOpacity(
                 Math.abs(offset.x) + Math.abs(offset.y) * 0.4,
                 MAX_DRAG_X,
               ) * cardOpacity,
-            boxShadow: cardShadowStyle,
             rotate,
             x: offset.x,
             y: offset.y,
           }}
-          onPointerDown={onDown}
-          onPointerMove={onMove}
-          onPointerUp={onUp}
-          onPointerCancel={onUp}
         >
+          <motion.div
+            ref={cardRef}
+            className={`relative touch-none select-none rounded-[32px] bg-white px-[26px] py-9 ${
+              shadowHeld
+                ? "capture-shadow-held"
+                : "shadow-[0_2px_6px_rgba(0,0,0,0.035),0_10px_32px_-12px_rgba(0,0,0,0.08)] ring-1 ring-ink/[0.04]"
+            }`}
+            style={{ boxShadow: cardShadowStyle }}
+            onPointerDown={onDown}
+            onPointerMove={onMove}
+            onPointerUp={onUp}
+            onPointerCancel={onUp}
+          >
           <SwipeStamp
             dir="left"
             progress={memoryProgress}
@@ -545,31 +568,32 @@ export function CaptureRelease({
           <AnimatePresence>
             {interpretation && phase !== "emerge" && phase !== "understand" && (
               <motion.div
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.55, ease: EASE_OUT_APP, ...MOTION_THINKING }}
-                className="mt-7"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={MIRROR_REVEAL}
+                className="mt-[40px]"
               >
-                <p className="text-[15px] font-medium leading-[1.65] text-[rgba(154,154,144,0.95)]">
+                <p className="text-[15px] font-normal leading-[1.75] tracking-[0.015em] text-[rgba(154,154,144,0.62)]">
                   {interpretation}
                 </p>
               </motion.div>
             )}
           </AnimatePresence>
+          </motion.div>
         </motion.div>
 
         <AnimatePresence>
           {phase === "interactive" && !pendingSchedule && (
             <motion.div
-              initial={{ opacity: 0, y: 8 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0 }}
-              transition={{ delay: 0.15, duration: 0.4 }}
-              className="mt-[30px] flex w-full items-center justify-between px-[10px] text-[11.5px] font-semibold tracking-[0.03em] text-[rgba(154,154,144,0.55)]"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 0.62 }}
+              exit={{ opacity: 0, transition: { duration: 0.32, ease: EASE_OUT_APP } }}
+              transition={HINT_REVEAL}
+              className="mt-[38px] flex w-full items-center justify-between px-[10px] text-[11px] font-normal tracking-[0.015em] text-[rgba(154,154,144,0.34)]"
             >
               <span>← {t("기억", "Keep")}</span>
               <span>↑ {t("놓기", "Let go")}</span>
-              <span className="rounded-full bg-primary px-3 py-[5px] font-bold text-ink">
+              <span className="rounded-full bg-primary px-3 py-[5px] font-medium text-ink/75">
                 {t("그때 →", "When →")}
               </span>
             </motion.div>

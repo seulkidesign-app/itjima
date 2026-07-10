@@ -538,8 +538,8 @@ function Inbox() {
       ) : (
         <>
           <div
-            className={`min-h-0 flex-1 overflow-y-auto overflow-x-hidden px-4 pb-2 transition-opacity duration-500 ${
-              releaseItem ? "opacity-[0.22] pointer-events-none" : ""
+            className={`min-h-0 flex-1 overflow-y-auto overflow-x-hidden px-4 pb-2 transition-opacity duration-700 ease-out ${
+              releaseItem ? "opacity-[0.18] pointer-events-none" : ""
             }`}
           >
             <div className="chat-scroll flex w-full flex-col gap-2 pb-4">

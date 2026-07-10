@@ -279,10 +279,10 @@ export function InputBar({
       onSubmit={onSubmit}
       initial={false}
       animate={{
-        y: 0,
+        y: releasing ? -4 : 0,
         opacity: releasing ? 0 : 1,
       }}
-      transition={{ duration: 0.15, ease: [0.32, 0.72, 0, 1] }}
+      transition={{ duration: 0.52, ease: [0.22, 1, 0.36, 1] }}
       style={{ pointerEvents: releasing ? "none" : undefined }}
       className={`border-t border-ink/5 bg-white/95 backdrop-blur-xl shadow-[0_-8px_32px_-12px_rgba(0,0,0,0.08)] pb-[env(safe-area-inset-bottom)] ${
         hero ? "border-t-0 shadow-none" : ""
