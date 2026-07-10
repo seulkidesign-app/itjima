@@ -16,6 +16,11 @@ import {
   setCachedSkip,
   hasBeenAnalyzed,
 } from "@/lib/aiCache";
+import {
+  aiCacheKeyText,
+  isRelativeDateReference,
+  type MirrorTimingExtra,
+} from "@/lib/dateDetect";
 
 export type BrainMirrorFetchOutcome =
   | {
@@ -35,27 +40,85 @@ export type BrainMirrorFetchOptions = {
   force?: boolean;
 };
 
+const CLASSIFY_TIMEOUT_MS = 2500;
+
 const inflight = new Map<string, Promise<BrainMirrorFetchOutcome>>();
 
 function inflightKey(text: string, mode: "classify" | "organize", force: boolean) {
   return `${mode}:${force ? "1" : "0"}:${text}`;
 }
 
+function classifyCacheKey(text: string): string {
+  return aiCacheKeyText(text);
+}
+
+function parseTimingFromRaw(
+  raw: Record<string, unknown>,
+): MirrorTimingExtra | null {
+  const suggestedStart =
+    typeof raw.suggestedStart === "string" ? raw.suggestedStart.trim() : "";
+  const timingReason =
+    typeof raw.reason === "string"
+      ? raw.reason.trim()
+      : typeof raw.timingReason === "string"
+        ? raw.timingReason.trim()
+        : "";
+  const confRaw =
+    typeof raw.confidence === "string"
+      ? raw.confidence.trim().toLowerCase()
+      : typeof raw.timingConfidence === "string"
+        ? raw.timingConfidence.trim().toLowerCase()
+        : "";
+  const timingConfidence: MirrorTimingExtra["timingConfidence"] =
+    confRaw === "high" || confRaw === "low" ? confRaw : undefined;
+
+  if (!suggestedStart && !timingReason && !timingConfidence) return null;
+
+  return {
+    ...(suggestedStart ? { suggestedStart } : {}),
+    ...(timingReason ? { timingReason } : {}),
+    ...(timingConfidence ? { timingConfidence } : {}),
+  };
+}
+
+function attachTiming(
+  result: BrainMirrorResult,
+  raw: Record<string, unknown>,
+): BrainMirrorResult & MirrorTimingExtra {
+  const timing = parseTimingFromRaw(raw);
+  if (!timing) return result;
+  return { ...result, ...timing };
+}
+
+function stripTimingForCache(
+  result: BrainMirrorResult & MirrorTimingExtra,
+): BrainMirrorResult {
+  const { suggestedStart, timingReason, timingConfidence, ...rest } =
+    result as BrainMirrorResult & MirrorTimingExtra;
+  void suggestedStart;
+  void timingReason;
+  void timingConfidence;
+  return rest;
+}
+
 function parseApiPayload(
   text: string,
   data: unknown,
   mode: "classify" | "organize",
-): BrainMirrorResult | null {
+): (BrainMirrorResult & MirrorTimingExtra) | null {
   if (!data || typeof data !== "object") return null;
   const raw = data as Record<string, unknown>;
 
   if (mode === "classify") {
     const full = parseBrainMirrorResult(data);
-    if (full?.items.length) return full;
-    return expandClassifyPayload(text, raw);
+    if (full?.items.length) return attachTiming(full, raw);
+    const expanded = expandClassifyPayload(text, raw);
+    if (!expanded) return null;
+    return attachTiming(expanded, raw);
   }
 
-  return parseBrainMirrorResult(data);
+  const parsed = parseBrainMirrorResult(data);
+  return parsed;
 }
 
 async function fetchBrainMirrorInner(
@@ -66,12 +129,18 @@ async function fetchBrainMirrorInner(
   const trimmed = text.trim();
   if (trimmed.length < 2) return { status: "skipped" };
 
+  const cacheKey = mode === "classify" ? classifyCacheKey(trimmed) : trimmed;
+  const skipCacheForRelative =
+    mode === "classify" && isRelativeDateReference(trimmed);
+
   if (!force && mode === "classify") {
     const resolution = resolveIntelligence(trimmed);
     if (resolution.kind === "local" || resolution.kind === "cache") {
       if (resolution.result?.items.length) {
         if (resolution.kind === "local") {
-          setCachedAiResult(trimmed, resolution.result, "local");
+          if (!skipCacheForRelative) {
+            setCachedAiResult(cacheKey, resolution.result, "local");
+          }
         }
         return {
           status: "ok",
@@ -88,11 +157,11 @@ async function fetchBrainMirrorInner(
       return { status: "skipped" };
     }
     if (!shouldCallFallbackAi(trimmed)) {
-      setCachedSkip(trimmed);
+      if (!skipCacheForRelative) setCachedSkip(cacheKey);
       return { status: "skipped" };
     }
-    if (hasBeenAnalyzed(trimmed)) {
-      const cached = getCachedAiResult(trimmed);
+    if (!skipCacheForRelative && hasBeenAnalyzed(cacheKey)) {
+      const cached = getCachedAiResult(cacheKey);
       if (cached?.items.length) {
         return {
           status: "ok",
@@ -104,8 +173,8 @@ async function fetchBrainMirrorInner(
     }
   }
 
-  if (!force && mode === "classify") {
-    const cached = getCachedAiResult(trimmed);
+  if (!force && mode === "classify" && !skipCacheForRelative) {
+    const cached = getCachedAiResult(cacheKey);
     if (cached?.items.length) {
       return {
         status: "ok",
@@ -116,17 +185,22 @@ async function fetchBrainMirrorInner(
   }
 
   try {
+    const timeout =
+      mode === "classify" && !signal
+        ? AbortSignal.timeout(CLASSIFY_TIMEOUT_MS)
+        : signal;
+
     const res = await fetch("/api/brain-mirror", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ text: trimmed, mode }),
-      signal,
+      signal: timeout,
     });
 
     if (res.ok) {
       const data = await res.json();
       if (data === null) {
-        if (mode === "classify") setCachedSkip(trimmed);
+        if (mode === "classify" && !skipCacheForRelative) setCachedSkip(cacheKey);
         return { status: "empty" };
       }
       const parsed = parseApiPayload(trimmed, data, mode);
@@ -134,18 +208,25 @@ async function fetchBrainMirrorInner(
         if (mode === "classify") {
           const local = classifyLocally(trimmed);
           if (local?.result?.items.length) {
-            setCachedAiResult(trimmed, local.result, "local");
+            if (!skipCacheForRelative) {
+              setCachedAiResult(cacheKey, local.result, "local");
+            }
             return { status: "ok", result: local.result, source: "local" };
           }
-          setCachedSkip(trimmed);
+          if (!skipCacheForRelative) setCachedSkip(cacheKey);
         }
         return { status: "empty" };
       }
-      setCachedAiResult(
-        trimmed,
-        parsed,
-        mode === "organize" ? "organize" : "classify",
-      );
+      if (mode === "classify") {
+        const toStore = skipCacheForRelative
+          ? stripTimingForCache(parsed)
+          : parsed;
+        if (!skipCacheForRelative) {
+          setCachedAiResult(cacheKey, toStore, "classify");
+        }
+      } else {
+        setCachedAiResult(cacheKey, parsed, "organize");
+      }
       return {
         status: "ok",
         result: parsed,
@@ -162,7 +243,7 @@ async function fetchBrainMirrorInner(
   if (mode === "organize") {
     const mock = mockBrainMirror(trimmed);
     if (mock?.items.length) {
-      setCachedAiResult(trimmed, mock, "organize");
+      setCachedAiResult(cacheKey, mock, "organize");
       return { status: "ok", result: mock, source: "organize" };
     }
     return { status: "empty" };
@@ -170,20 +251,57 @@ async function fetchBrainMirrorInner(
 
   const local = classifyLocally(trimmed);
   if (local?.result?.items.length) {
-    setCachedAiResult(trimmed, local.result, "local");
+    if (!skipCacheForRelative) {
+      setCachedAiResult(cacheKey, local.result, "local");
+    }
     return { status: "ok", result: local.result, source: "local" };
   }
 
   if (import.meta.env.DEV) {
     const mock = mockBrainMirror(trimmed);
     if (mock?.items.length) {
-      setCachedAiResult(trimmed, mock, "classify");
-      return { status: "ok", result: mock, source: "classify" };
+      const enriched = attachTiming(mock, {
+        suggestedStart: devSuggestedStart(trimmed),
+        reason: devTimingReason(trimmed),
+        confidence: devTimingConfidence(trimmed),
+      });
+      if (!skipCacheForRelative) {
+        setCachedAiResult(cacheKey, enriched, "classify");
+      }
+      return { status: "ok", result: enriched, source: "classify" };
     }
   }
 
-  setCachedSkip(trimmed);
+  if (!skipCacheForRelative) setCachedSkip(cacheKey);
   return { status: "empty" };
+}
+
+function devSuggestedStart(text: string): string {
+  if (!/생일|birthday/i.test(text)) return "";
+  const d = new Date();
+  d.setDate(d.getDate() + 11);
+  d.setHours(10, 0, 0, 0);
+  return d.toISOString();
+}
+
+function devTimingReason(text: string): string {
+  if (/생일|birthday/i.test(text)) {
+    return "생일 2일 전, 여유롭게 준비할 수 있는 순간이에요.";
+  }
+  return "";
+}
+
+function devTimingConfidence(text: string): string {
+  if (/생일|birthday/i.test(text)) return "high";
+  return "low";
+}
+
+/** Read timing extras written alongside a cached classify result. */
+export function readCachedTimingExtra(text: string): MirrorTimingExtra | null {
+  if (isRelativeDateReference(text)) return null;
+  const cached = getCachedAiResult(aiCacheKeyText(text));
+  if (!cached) return null;
+  return parseTimingFromRaw(cached as Record<string, unknown>);
 }
 
 /**

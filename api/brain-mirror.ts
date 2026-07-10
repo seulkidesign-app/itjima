@@ -4,10 +4,13 @@ import type { VercelRequest, VercelResponse } from "@vercel/node";
 const ANTHROPIC_MODEL = "claude-haiku-4-5-20251001";
 
 /** Layer 2 — minimal classify prompt (<150 tokens). JSON only. */
-const CLASSIFY_PROMPT = `JSON only: {"category":"","title":"","suggestedDate":""}
+const CLASSIFY_PROMPT = `JSON only: {"category":"","title":"","suggestedDate":"","suggestedStart":"","reason":"","confidence":""}
 category: schedule|shopping|reminder|task|list|note
 title: max 18 chars from input
-suggestedDate: date word from input or ""`;
+suggestedDate: date word from input or ""
+suggestedStart: ISO8601 revisit moment if date intent else ""
+reason: one calm Korean sentence why this moment, or ""
+confidence: high|low — high only if a specific revisit datetime is inferable`;
 
 /** Layer 3 — user-initiated organize (still compact). */
 const ORGANIZE_PROMPT = `User tapped Organize. JSON only:
@@ -18,6 +21,9 @@ type ClassifyPayload = {
   category: string;
   title: string;
   suggestedDate: string;
+  suggestedStart: string;
+  reason: string;
+  confidence: "high" | "low" | "";
 };
 
 type OrganizePayload = {
@@ -55,7 +61,17 @@ function normalizeClassifyPayload(raw: unknown): ClassifyPayload | null {
         ? o.suggestedDateText.trim().slice(0, 24)
         : "";
 
-  return { category, title, suggestedDate };
+  const suggestedStart =
+    typeof o.suggestedStart === "string" ? o.suggestedStart.trim() : "";
+
+  const reason = typeof o.reason === "string" ? o.reason.trim().slice(0, 120) : "";
+
+  const confRaw =
+    typeof o.confidence === "string" ? o.confidence.trim().toLowerCase() : "";
+  const confidence: ClassifyPayload["confidence"] =
+    confRaw === "high" || confRaw === "low" ? confRaw : "";
+
+  return { category, title, suggestedDate, suggestedStart, reason, confidence };
 }
 
 function normalizeOrganizePayload(raw: unknown): OrganizePayload | null {
@@ -164,7 +180,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       return res.status(200).json(payload);
     }
 
-    const raw = await callAnthropicJson(apiKey, CLASSIFY_PROMPT, input, 72);
+    const raw = await callAnthropicJson(apiKey, CLASSIFY_PROMPT, input, 128);
     const payload = normalizeClassifyPayload(raw);
     if (!payload) {
       return res.status(502).json({ error: "invalid model response" });

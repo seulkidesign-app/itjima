@@ -6,7 +6,13 @@ import {
 } from "./ScheduleChoiceFlow";
 import type { InboxItem } from "@/lib/store";
 import { thoughtFirstLine } from "@/lib/brainMirror";
-import { calmSuggestionReason, detectDate } from "@/lib/dateDetect";
+import { readCachedTimingExtra } from "@/lib/brainMirrorApi";
+import {
+  detectDate,
+  hasScheduleTimeIntent,
+  resolveTimingSuggestion,
+  type ResolvedTiming,
+} from "@/lib/dateDetect";
 import { useLang } from "@/lib/i18n";
 
 type Props = {
@@ -40,28 +46,32 @@ function defaultStart(item: InboxItem): Date {
 
 export function FocusScheduleSheet({ item, open, onClose, onConfirm }: Props) {
   const [title, setTitle] = useState("");
+  const [flowMode, setFlowMode] = useState<"suggested" | "manual">("manual");
   const { lang } = useLang();
 
-  const initialStart = useMemo(
-    () => (item ? defaultStart(item) : undefined),
-    [item],
-  );
-
-  const suggestionReason = useMemo(() => {
-    if (!item) return null;
-    const fromText = calmSuggestionReason(item.text, lang === "en" ? "en" : "ko");
-    if (fromText) return fromText;
-    const mirrorDate = item.brain_mirror?.suggestedDateText;
-    if (mirrorDate) {
-      return calmSuggestionReason(mirrorDate, lang === "en" ? "en" : "ko");
-    }
-    return null;
+  const aiSuggestion = useMemo((): ResolvedTiming | null => {
+    if (!item || !hasScheduleTimeIntent(item.text)) return null;
+    const cacheExtra = readCachedTimingExtra(item.text);
+    return resolveTimingSuggestion(
+      item.text,
+      item.brain_mirror,
+      cacheExtra,
+      lang === "en" ? "en" : "ko",
+    );
   }, [item, lang]);
+
+  const initialStart = useMemo(() => {
+    if (!item) return undefined;
+    return aiSuggestion?.start ?? defaultStart(item);
+  }, [item, aiSuggestion]);
 
   useEffect(() => {
     if (!open || !item) return;
     setTitle(thoughtFirstLine(item.text));
-  }, [open, item]);
+    setFlowMode(
+      aiSuggestion?.confidence === "high" ? "suggested" : "manual",
+    );
+  }, [open, item, aiSuggestion]);
 
   if (!item) return null;
 
@@ -71,9 +81,12 @@ export function FocusScheduleSheet({ item, open, onClose, onConfirm }: Props) {
         open={open}
         title={title}
         onTitleChange={setTitle}
+        thoughtText={item.text}
         initialStart={initialStart}
         suggestedStart={initialStart}
-        suggestionReason={suggestionReason}
+        flowMode={flowMode}
+        onFlowModeChange={setFlowMode}
+        aiSuggestion={aiSuggestion}
         onConfirm={(start, end, options) => {
           onConfirm(
             title.trim() || thoughtFirstLine(item.text),

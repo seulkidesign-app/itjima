@@ -1,6 +1,8 @@
 import type { ArchiveItem, ScheduleItem } from "@/lib/store";
 import { scheduleDisplayTitle } from "@/lib/thoughtProvenance";
 import { remainingUntil } from "@/lib/scheduleTime";
+import { formatSuggestedMoment } from "@/lib/scheduleChoices";
+import { isFlowedPast } from "@/lib/dateDetect";
 
 export type TodaySuggestion = {
   messageKo: string;
@@ -70,4 +72,38 @@ export function pickTodaySuggestion(
   }
 
   return null;
+}
+
+/** Spotlight card time line for the Today tab. */
+export function formatTodaySpotlightTime(
+  startIso: string,
+  lang: "ko" | "en",
+): string {
+  return formatSuggestedMoment(
+    new Date(startIso),
+    lang === "en" ? "en" : "ko",
+  );
+}
+
+/** Partition active items for Today vs 흘러간 것. */
+export function partitionTodaySchedules(
+  items: ScheduleItem[],
+  pins: Set<string>,
+  now = new Date(),
+): { today: ScheduleItem[]; flowed: ScheduleItem[] } {
+  const today: ScheduleItem[] = [];
+  const flowed: ScheduleItem[] = [];
+
+  for (const s of items) {
+    if (isFlowedPast(s.end_time, now) && !pins.has(s.id)) {
+      flowed.push(s);
+      continue;
+    }
+    today.push(s);
+  }
+
+  today.sort((a, b) => +new Date(a.start_time) - +new Date(b.start_time));
+  flowed.sort((a, b) => +new Date(b.end_time) - +new Date(a.end_time));
+
+  return { today, flowed };
 }

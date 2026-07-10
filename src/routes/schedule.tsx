@@ -34,7 +34,13 @@ import {
 import { EmptyState } from "@/components/EmptyState";
 import { ScheduleListSkeleton } from "@/components/Skeleton";
 import { SyncIndicator } from "@/components/SyncIndicator";
-import { TodayExperience } from "@/components/TodayExperience";
+import {
+  partitionTodaySchedules,
+  pickTodaySuggestion,
+  formatTodaySpotlightTime,
+} from "@/lib/todaySuggestions";
+import { scheduleStatusBadge } from "@/lib/dateDetect";
+import { MOTION_CRAFT } from "@/lib/motionLanguage";
 import { useScrollLock } from "@/hooks/useScrollLock";
 import { allCloudSynced } from "@/lib/syncFeedback";
 import {
@@ -51,7 +57,7 @@ import {
   type AlarmPreset,
   type TimerPreset,
 } from "@/lib/scheduleReminders";
-import { formatScheduleTimeLoose, scheduleDotStatus } from "@/lib/scheduleTime";
+import { formatScheduleTimeLoose, remainingUntil } from "@/lib/scheduleTime";
 import {
   groupSchedulesForFeel,
   feelSectionLabel,
@@ -73,6 +79,10 @@ export const Route = createFileRoute("/schedule")({
 
 const toastBtn =
   "touch-target shrink-0 rounded-full bg-primary px-4 text-xs font-bold text-ink";
+
+const scheduleToast = {
+  style: { marginTop: "calc(env(safe-area-inset-top, 0px) + 56px)" },
+} as const;
 
 function defaultStartForDay(y: number, m: number, d: number) {
   const now = new Date();
@@ -184,6 +194,7 @@ function Schedule() {
             "앱을 열어두면 그때 알려드릴게요",
             "I'll remind you while the app is open",
           ),
+          scheduleToast,
         );
       } else if (perm === "denied") {
         toast.message(
@@ -191,9 +202,10 @@ function Schedule() {
             "알림은 꺼져 있지만, 그때는 기억해 둘게요",
             "Notifications off — we'll still remember when",
           ),
+          scheduleToast,
         );
       } else {
-        toast.success(t("그때 다시 떠올릴게요", "I'll remember this for then"));
+        toast.success(t("그때 다시 떠올릴게요", "I'll remember this for then"), scheduleToast);
       }
     } catch {
       toast.error(t("알림을 설정하지 못했어요", "Couldn't set reminder"));
@@ -220,6 +232,7 @@ function Schedule() {
           "앱을 열어두면 알려드릴게요",
           "I'll notify you while the app is open",
         ),
+        scheduleToast,
       );
     } catch {
       toast.error(t("타이머를 시작하지 못했어요", "Couldn't start timer"));
@@ -236,14 +249,17 @@ function Schedule() {
     [activeItems, pins],
   );
 
+  const { today: todayActive, flowed: flowedPast } = useMemo(
+    () => partitionTodaySchedules(activeItems, pins),
+    [activeItems, pins],
+  );
+
   const todayTimerItems = useMemo(() => {
-    return [...activeItems]
-      .filter((s) => {
-        const k = classifySchedule(s.start_time);
-        return k === "now" || k === "today" || pins.has(s.id);
-      })
-      .sort((a, b) => +new Date(a.start_time) - +new Date(b.start_time));
-  }, [activeItems, pins]);
+    return todayActive.filter((s) => {
+      const k = classifySchedule(s.start_time);
+      return k === "now" || k === "today" || pins.has(s.id);
+    });
+  }, [todayActive, pins]);
 
   const moveEventsToDate = async (
     ids: string[],
@@ -339,7 +355,7 @@ function Schedule() {
       const done = await update(s.id, { status: "done" });
       hapticConfirm();
       track("schedule_completed", { text_length: s.text.length });
-      if (done) toast.success(t("다녀온 기억이에요", "You can let this go"));
+      if (done) toast.success(t("다녀온 기억이에요", "You can let this go"), scheduleToast);
     } catch {
       toast.error(t("완료하지 못했어요", "Couldn't mark done"));
     }
@@ -357,7 +373,7 @@ function Schedule() {
       const scheduleSynced = await remove(s.id);
       if (pins.has(s.id)) togglePin(s.id);
       if (allCloudSynced(archiveSynced, scheduleSynced)) {
-        toast.success(t("기억함으로 옮겼어요", "Moved to Kept"));
+        toast.success(t("기억함으로 옮겼어요", "Moved to Kept"), scheduleToast);
       }
     } catch {
       toast.error(t("옮기지 못했어요", "Couldn't move"));
@@ -508,8 +524,9 @@ function Schedule() {
           activeItems.length === 0 && doneItems.length === 0 ? (
             <Empty />
           ) : (
-            <TodayExperience
+            <ScheduleTodayPanel
               todayItems={todayTimerItems}
+              flowedItems={flowedPast}
               activeItems={activeItems}
               archiveItems={archive.items}
               doneCount={doneItems.length}
@@ -667,7 +684,7 @@ function Schedule() {
                 repeat: opts?.repeat ?? null,
                 ...alarmPayload,
               });
-              toast.success(t("다듬었어요", "Refined"));
+              toast.success(t("다듬었어요", "Refined"), scheduleToast);
             } else {
               await add({
                 text,
@@ -681,7 +698,7 @@ function Schedule() {
                 source: "manual",
                 text_length: text.length,
               });
-              toast.success(t("그때 다시 떠올릴게요", "I'll remember this for then"));
+              toast.success(t("그때 다시 떠올릴게요", "I'll remember this for then"), scheduleToast);
             }
             setSheet({ open: false });
           } catch {
@@ -853,27 +870,13 @@ function ScheduleCard({
   const start = new Date(s.start_time);
   const end = new Date(s.end_time);
   const rel = formatScheduleTimeLoose(start, lang);
-  const dot = scheduleDotStatus(start);
-  const title = scheduleDisplayTitle(s);
-  const preview = rawPreview(s);
-  const alarmAt = s.alarm ? effectiveAlarmAt(s) : null;
-  const timerEnd = getActiveTimerEnd(s.id);
-  const pressTimer = useRef<number | null>(null);
-  const longFired = useRef(false);
-  const dragging = useRef(false);
-  const dxRef = useRef(0);
-  const [dx, setDx] = useState(0);
-  const [acting, setActing] = useState(false);
-  const startX = useRef(0);
-
-  dxRef.current = dx;
-
-  const clearPress = () => {
-    if (pressTimer.current) {
-      clearTimeout(pressTimer.current);
-      pressTimer.current = null;
-    }
-  };
+  const r = remainingUntil(start);
+  const dotColor =
+    !r.past && r.ms > 0 && r.ms < 10 * 60_000
+      ? "bg-red-500"
+      : !r.past && start.toDateString() === new Date().toDateString()
+        ? "bg-primary"
+        : "bg-ink/25";
 
   const onDown = (e: ReactPointerEvent<HTMLDivElement>) => {
     if (done || acting) return;

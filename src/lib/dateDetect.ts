@@ -1,5 +1,215 @@
 /** Lightweight date/time keyword detection (KO + EN). Returns datetime guess or null. */
 
+const RELATIVE_DATE_RE =
+  /오늘|내일|모레|글피|다음\s*주|이번\s*주|주말|today|tomorrow|day after tomorrow|next\s+week|this\s+week|weekend/i;
+
+const ABSOLUTE_DATE_RE =
+  /(\d{1,2})\s*월\s*(\d{1,2})\s*일|\b(\d{1,2})[/-](\d{1,2})\b|(일|월|화|수|목|금|토)요일|\b(sunday|monday|tuesday|wednesday|thursday|friday|saturday)\b/i;
+
+export type MirrorTimingExtra = {
+  suggestedStart?: string;
+  timingReason?: string;
+  timingConfidence?: "high" | "low";
+};
+
+export type ResolvedTiming = {
+  start: Date;
+  reason: string;
+  confidence: "high" | "low";
+};
+
+export function isRelativeDateReference(text: string): boolean {
+  return RELATIVE_DATE_RE.test(text);
+}
+
+export function isAbsoluteDateReference(text: string): boolean {
+  return ABSOLUTE_DATE_RE.test(text);
+}
+
+/** Cache key segment so absolute vs relative date results never collide. */
+export function aiCacheKeyText(text: string): string {
+  const kind = isRelativeDateReference(text)
+    ? "rel"
+    : isAbsoluteDateReference(text)
+      ? "abs"
+      : "none";
+  return `${kind}::${text.trim()}`;
+}
+
+export function hasScheduleTimeIntent(text: string): boolean {
+  if (detectDate(text)) return true;
+  if (/생일|birthday|기념일|anniversary/i.test(text)) return true;
+  return false;
+}
+
+function clampSuggestedStart(d: Date): Date {
+  const out = new Date(d);
+  const h = out.getHours();
+  const m = out.getMinutes();
+  if (h === 0 && m === 0) {
+    out.setHours(9, 0, 0, 0);
+    return out;
+  }
+  if (h < 7 || h > 22 || (h === 22 && m > 0)) {
+    out.setHours(9, 0, 0, 0);
+  }
+  return out;
+}
+
+function parseSuggestedStartIso(iso: string): Date | null {
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return null;
+  return clampSuggestedStart(d);
+}
+
+function readTimingExtra(
+  source: Record<string, unknown> | null | undefined,
+): MirrorTimingExtra | null {
+  if (!source) return null;
+  const suggestedStart =
+    typeof source.suggestedStart === "string" ? source.suggestedStart : undefined;
+  const timingReason =
+    typeof source.timingReason === "string"
+      ? source.timingReason
+      : typeof source.reason === "string"
+        ? source.reason
+        : undefined;
+  const confRaw =
+    typeof source.timingConfidence === "string"
+      ? source.timingConfidence
+      : typeof source.confidence === "string"
+        ? source.confidence
+        : undefined;
+  const timingConfidence =
+    confRaw === "high" || confRaw === "low" ? confRaw : undefined;
+  if (!suggestedStart && !timingReason && !timingConfidence) return null;
+  return { suggestedStart, timingReason, timingConfidence };
+}
+
+/** Resolve AI timing from cache extras + rule-based date priority for relative phrases. */
+export function resolveTimingSuggestion(
+  text: string,
+  mirror: { suggestedDateText?: string } | null | undefined,
+  cacheExtra?: MirrorTimingExtra | null,
+  lang: "ko" | "en" = "ko",
+  now = new Date(),
+): ResolvedTiming | null {
+  const trimmed = text.trim();
+  if (!hasScheduleTimeIntent(trimmed)) return null;
+
+  const relative = isRelativeDateReference(trimmed);
+  const extra = cacheExtra ?? readTimingExtra(mirror as Record<string, unknown>);
+
+  let start: Date | null = null;
+  let reason = extra?.timingReason?.trim() ?? "";
+  let confidence: "high" | "low" =
+    extra?.timingConfidence === "high" ? "high" : "low";
+
+  if (relative) {
+    const det = detectDate(trimmed);
+    if (!det) return null;
+    start = det.start;
+    confidence = "low";
+    if (!reason) reason = calmSuggestionReason(trimmed, lang) ?? "";
+  } else if (extra?.suggestedStart) {
+    start = parseSuggestedStartIso(extra.suggestedStart);
+    if (!reason) reason = calmSuggestionReason(trimmed, lang) ?? "";
+  } else {
+    const det =
+      detectDate(trimmed) ??
+      (mirror?.suggestedDateText
+        ? detectDate(mirror.suggestedDateText)
+        : null);
+    if (!det) return null;
+    start = det.start;
+    confidence = "low";
+    if (!reason) reason = calmSuggestionReason(trimmed, lang) ?? "";
+  }
+
+  if (!start || !reason) return null;
+
+  const dayStart = new Date(now);
+  dayStart.setHours(0, 0, 0, 0);
+  if (start.getTime() < dayStart.getTime()) return null;
+
+  return { start, reason, confidence };
+}
+
+/** Compact label for the return-to-suggestion pill. */
+export function formatSuggestionPill(d: Date, lang: "ko" | "en"): string {
+  const locale = lang === "en" ? "en-US" : "ko-KR";
+  if (lang === "ko") {
+    const md = d.toLocaleDateString("ko-KR", {
+      month: "numeric",
+      day: "numeric",
+      weekday: "short",
+    });
+    const hours = d.getHours();
+    const period = hours < 12 ? "오전" : "오후";
+    const h12 = hours % 12 || 12;
+    const min = d.getMinutes().toString().padStart(2, "0");
+    return `${md} ${period} ${h12}:${min}`;
+  }
+  return d.toLocaleString("en-US", {
+    month: "numeric",
+    day: "numeric",
+    weekday: "short",
+    hour: "numeric",
+    minute: "2-digit",
+    hour12: true,
+  });
+}
+
+/** Split date/time lines for the SUGGESTED suggestion card. */
+export function formatSuggestionCardParts(
+  d: Date,
+  lang: "ko" | "en",
+): { dateLine: string; timeLine: string } {
+  const locale = lang === "en" ? "en-US" : "ko-KR";
+  if (lang === "ko") {
+    const dateLine = d.toLocaleDateString("ko-KR", {
+      month: "long",
+      day: "numeric",
+      weekday: "short",
+    });
+    const hours = d.getHours();
+    const period = hours < 12 ? "오전" : "오후";
+    const h12 = hours % 12 || 12;
+    const min = d.getMinutes().toString().padStart(2, "0");
+    return { dateLine, timeLine: `${period} ${h12}:${min}` };
+  }
+  return {
+    dateLine: d.toLocaleDateString(locale, {
+      month: "short",
+      day: "numeric",
+      weekday: "short",
+    }),
+    timeLine: d.toLocaleTimeString(locale, {
+      hour: "numeric",
+      minute: "2-digit",
+      hour12: true,
+    }),
+  };
+}
+
+/** Schedule tab status badge — shown once (no ring duplicate). */
+export function scheduleStatusBadge(
+  startIso: string,
+  lang: "ko" | "en",
+  now = new Date(),
+): string {
+  const start = new Date(startIso);
+  if (start.getTime() > now.getTime()) {
+    return lang === "en" ? "Before start" : "시작 전";
+  }
+  return lang === "en" ? "Started" : "시작됨";
+}
+
+/** Ended more than 24 hours ago — belongs in "흘러간 것". */
+export function isFlowedPast(endIso: string, now = new Date()): boolean {
+  return new Date(endIso).getTime() < now.getTime() - 24 * 60 * 60 * 1000;
+}
+
 const KO_WEEKDAYS = ["일", "월", "화", "수", "목", "금", "토"] as const;
 const EN_WEEKDAYS = [
   "sunday",
