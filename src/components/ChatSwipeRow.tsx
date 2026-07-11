@@ -176,12 +176,10 @@ export function ChatSwipeRow({
       e.preventDefault();
     }
 
-    if (openSide === "right") x = Math.max(openOffset("right"), x);
-    if (openSide === "left") x = Math.min(openOffset("left"), x);
-
-    if (!openSide) {
-      x = rubber(x, MAX_DRAG);
-    }
+    // Always rubber-clamp total travel — regardless of open state, so a
+    // reverse swipe can drag back toward 0 to close (previously a
+    // one-directional clamp blocked this and only outside-tap could close).
+    x = rubber(x, MAX_DRAG);
 
     offsetRef.current = x;
     setOffsetX(x);

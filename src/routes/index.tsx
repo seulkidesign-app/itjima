@@ -127,6 +127,23 @@ function Inbox() {
     prevCountRef.current = items.length;
   }, [items.length, releaseItem]);
 
+  // The scroll-on-new-item effect above is gated on `!releaseItem`, so if a
+  // release animation is still playing when the item count updates, that
+  // scroll gets skipped. Once the release animation finishes, catch up and
+  // reveal the newly landed item at the bottom (KakaoTalk-style).
+  const prevReleaseItemRef = useRef(releaseItem);
+  useEffect(() => {
+    if (prevReleaseItemRef.current && !releaseItem) {
+      requestAnimationFrame(() => {
+        listEndRef.current?.scrollIntoView({
+          behavior: "smooth",
+          block: "end",
+        });
+      });
+    }
+    prevReleaseItemRef.current = releaseItem;
+  }, [releaseItem]);
+
   useEffect(() => {
     if (!releaseItem) return;
     const scroll = document.getElementById("phone-scroll");
