@@ -1,8 +1,14 @@
 import type { InboxItem } from "@/lib/store";
 
 const KEYBOARD_MASH =
-  /^(asdf|qwer|zxcv|ㅁㄴㅇ|ㅎㅎ|ㅋㅋ|test|aaa+|111+|\.{2,})$/i;
+  /^(asdf|qwer|zxcv|ㅁㄴㅇ|ㅎㅎ|ㅋㅋ|ㅇㅇ|ㅇㅋ|ㄴㄴ|ㄱㄱ|test|aaa+|111+|\.{2,})$/i;
 const FRAGMENT = /^[^\p{L}\p{N}]{1,3}$/u;
+
+/** Chat-filler tokens (no real content) — used to gate Brain Mirror too. */
+export function isChatFiller(text: string): boolean {
+  const norm = text.trim().toLowerCase().replace(/\s+/g, " ");
+  return norm.length > 0 && KEYBOARD_MASH.test(norm);
+}
 
 function normalize(text: string) {
   return text.trim().toLowerCase().replace(/\s+/g, " ");

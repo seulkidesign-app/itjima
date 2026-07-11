@@ -17,6 +17,7 @@ import {
   type BrainMirrorResult,
 } from "@/lib/brainMirror";
 import { fetchBrainMirror } from "@/lib/brainMirrorApi";
+import { isChatFiller } from "@/lib/junkDetect";
 import { buildCalmInterpretation } from "@/lib/mirrorSentence";
 import {
   useInbox,
@@ -224,7 +225,11 @@ export function CaptureRelease({
         lang === "en" ? "en" : "ko",
       );
 
-      if (item.text.trim().length >= 2 && isBrainMirrorCandidate(item.text)) {
+      if (
+        item.text.trim().length >= 2 &&
+        !isChatFiller(item.text) &&
+        isBrainMirrorCandidate(item.text)
+      ) {
         try {
           const outcome = await Promise.race([
             fetchBrainMirror(item.text, { signal: ac.signal }),
