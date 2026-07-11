@@ -102,7 +102,7 @@ function Column({
           className="pointer-events-none absolute inset-x-0 top-1/2 z-0 -translate-y-1/2 rounded-[20px] bg-primary/15"
           style={{ height: ROW_H }}
         />
-        <div ref={ref} onScroll={onScroll} className="wheel-col relative z-[1]">
+        <div ref={ref} onScroll={onScroll} className="wheel-col relative z-[1] select-none">
           <div style={{ height: padTop }} aria-hidden />
           {col.values.map((v) => {
             const isActive = v === internal;

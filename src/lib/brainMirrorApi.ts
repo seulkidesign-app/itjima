@@ -20,6 +20,7 @@ import {
   aiCacheKeyText,
   isRelativeDateReference,
   hasScheduleTimeIntent,
+  isGroundedScheduleReason,
   type MirrorTimingExtra,
 } from "@/lib/dateDetect";
 
@@ -82,13 +83,14 @@ function parseTimingFromRaw(
   };
 }
 
-function hasHighConfidenceTiming(
+function hasHighConfidenceReason(
   result: BrainMirrorResult & MirrorTimingExtra,
 ): boolean {
+  const reason = result.timingReason?.trim();
   return (
     result.timingConfidence === "high" &&
-    typeof result.suggestedStart === "string" &&
-    result.suggestedStart.length > 0
+    !!reason &&
+    isGroundedScheduleReason(reason)
   );
 }
 
@@ -98,7 +100,21 @@ function mergeTiming(
 ): BrainMirrorResult & MirrorTimingExtra {
   const timing = parseTimingFromRaw(raw);
   if (!timing) return base;
-  return { ...base, ...timing };
+  const sanitized = sanitizeTimingExtra(timing);
+  if (!sanitized) return base;
+  return { ...base, ...sanitized };
+}
+
+function sanitizeTimingExtra(
+  extra: MirrorTimingExtra,
+): MirrorTimingExtra | null {
+  const reason = extra.timingReason?.trim();
+  if (!reason || extra.timingConfidence !== "high") return null;
+  if (!isGroundedScheduleReason(reason)) return null;
+  return {
+    timingReason: reason,
+    timingConfidence: "high",
+  };
 }
 
 function attachTiming(
@@ -165,7 +181,7 @@ async function fetchBrainMirrorInner(
           : resolution.result;
         if (
           !scheduleTimeIntent ||
-          hasHighConfidenceTiming(merged as BrainMirrorResult & MirrorTimingExtra)
+          hasHighConfidenceReason(merged as BrainMirrorResult & MirrorTimingExtra)
         ) {
           if (resolution.kind === "local" && !skipCacheForRelative) {
             setCachedAiResult(cacheKey, resolution.result, "local");
@@ -297,7 +313,6 @@ async function fetchBrainMirrorInner(
     const mock = mockBrainMirror(trimmed);
     if (mock?.items.length) {
       const enriched = attachTiming(mock, {
-        suggestedStart: devSuggestedStart(trimmed),
         reason: devTimingReason(trimmed),
         confidence: devTimingConfidence(trimmed),
       });
@@ -312,17 +327,9 @@ async function fetchBrainMirrorInner(
   return { status: "empty" };
 }
 
-function devSuggestedStart(text: string): string {
-  if (!/생일|birthday/i.test(text)) return "";
-  const d = new Date();
-  d.setDate(d.getDate() + 11);
-  d.setHours(10, 0, 0, 0);
-  return d.toISOString();
-}
-
 function devTimingReason(text: string): string {
   if (/생일|birthday/i.test(text)) {
-    return "생일 2일 전, 여유롭게 준비할 수 있는 순간이에요.";
+    return "여유롭게 준비할 수 있을 때가 좋을 것 같아요.";
   }
   return "";
 }

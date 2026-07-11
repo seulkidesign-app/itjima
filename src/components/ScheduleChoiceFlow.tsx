@@ -24,11 +24,6 @@ import {
 import type { RepeatRule } from "@/lib/store";
 import { EASE_OUT_APP } from "@/lib/motion";
 import { confirm as confirmHaptic, tick } from "@/lib/haptics";
-import {
-  formatSuggestionCardParts,
-  formatSuggestionPill,
-  type ResolvedTiming,
-} from "@/lib/dateDetect";
 
 const STEP_FADE = { duration: 0.28, ease: EASE_OUT_APP };
 
@@ -53,9 +48,8 @@ type Props = {
   /** One calm reason from date detection — no AI. */
   suggestionReason?: string | null;
   thoughtText?: string;
-  flowMode?: "suggested" | "manual";
-  onFlowModeChange?: (mode: "suggested" | "manual") => void;
-  aiSuggestion?: ResolvedTiming | null;
+  /** High-confidence AI reason banner — no date claims. */
+  guidanceReason?: string | null;
   editMode?: boolean;
   onConfirm: (start: Date, end: Date, options: ScheduleConfirmOptions) => void;
 };
@@ -176,9 +170,7 @@ export function ScheduleChoiceFlow({
   suggestedStart,
   suggestionReason,
   thoughtText,
-  flowMode = "manual",
-  onFlowModeChange,
-  aiSuggestion,
+  guidanceReason,
   editMode,
   onConfirm,
 }: Props) {
@@ -209,34 +201,8 @@ export function ScheduleChoiceFlow({
     setStartTime([seed.getHours(), snapMinute(seed.getMinutes())]);
     setEndTime([seedEnd.getHours(), snapMinute(seedEnd.getMinutes())]);
     setReminder("30m");
-    setStep(flowMode === "suggested" ? "when" : "when");
-  }, [open, initialStart, initialEnd, initialAllDay, initialRepeat, flowMode]);
-
-  const seedFromSuggestion = (s: ResolvedTiming) => {
-    setWhen(inferWhenFromDate(s.start));
-    setPickDate([s.start.getMonth() + 1, s.start.getDate()]);
-    setStartTime([s.start.getHours(), snapMinute(s.start.getMinutes())]);
-    const end = defaultEndFromStart(s.start);
-    setEndTime([end.getHours(), snapMinute(end.getMinutes())]);
-  };
-
-  const handleAcceptSuggestion = () => {
-    if (!aiSuggestion) return;
-    tick();
-    seedFromSuggestion(aiSuggestion);
-    setStep("reminder");
-  };
-
-  const handleRejectSuggestion = () => {
-    tick();
-    onFlowModeChange?.("manual");
-  };
-
-  const handleReturnToSuggestion = () => {
-    tick();
-    onFlowModeChange?.("suggested");
     setStep("when");
-  };
+  }, [open, initialStart, initialEnd, initialAllDay, initialRepeat]);
 
   const buildBaseDate = (): Date => {
     let base = baseDateForWhen(when);
@@ -274,17 +240,6 @@ export function ScheduleChoiceFlow({
     lang === "en" ? "en" : "ko",
     allDay,
   );
-
-  const showMomentHint = !editMode && !!suggestedStart && !suggestionReason;
-
-  const calmReason =
-    suggestionReason ??
-    (showMomentHint
-      ? t(
-          "여유 있게 준비할 수 있는 순간을 골라봤어요.",
-          "We picked a moment with room to breathe.",
-        )
-      : null);
 
   const whenOptions: { key: WhenKey; label: string }[] = [
     { key: "today", label: t("오늘", "Today") },
@@ -355,116 +310,39 @@ export function ScheduleChoiceFlow({
       ? t("시간 보기", "Pick a time")
       : t("알림 정하기", "Set a reminder");
 
-  const showSuggested =
-    !editMode && flowMode === "suggested" && !!aiSuggestion && step === "when";
-
-  const suggestionParts = aiSuggestion
-    ? formatSuggestionCardParts(
-        aiSuggestion.start,
-        lang === "en" ? "en" : "ko",
-      )
-    : null;
-
   return (
     <div className="flex min-h-0 flex-1 flex-col">
       <div className="sheet-scroll min-h-0 flex-1 overflow-y-auto overscroll-contain px-5 pb-4">
-        {showSuggested && (
-          <>
-            {thoughtText && (
-              <div className="mb-5 rounded-[16px] border border-ink/[0.05] bg-ink/[0.03] px-4 py-3.5">
-                <p className="text-[15px] font-medium leading-snug text-ink">
-                  {thoughtText}
-                </p>
-              </div>
-            )}
-            <h2 className="text-[17px] font-bold leading-[1.45] tracking-[-0.02em] text-ink">
-              {t(
-                "이 생각, 이때 다시 떠올릴까요?",
-                "Shall we bring this thought back then?",
-              )}
-            </h2>
-            <div className="shadow-card mt-4 rounded-[32px] border border-ink/[0.04] px-[26px] py-[30px]">
-              <p className="text-[12.5px] text-ink-soft">
-                {t("ItJima가 찾은 순간", "A moment ItJima found")}
-              </p>
-              {suggestionParts && (
-                <>
-                  <p className="mt-2.5 text-[24px] font-extrabold leading-[1.3] tracking-[-0.01em] text-ink">
-                    {suggestionParts.dateLine}{" "}
-                    <span className="text-[24px] font-extrabold">
-                      {suggestionParts.timeLine}
-                    </span>
-                  </p>
-                  <p className="mt-3.5 text-[15px] leading-[1.65] text-ink-soft">
-                    {aiSuggestion.reason}
-                  </p>
-                </>
-              )}
-            </div>
-            <button
-              type="button"
-              onClick={handleAcceptSuggestion}
-              className="touch-press mt-2 w-full rounded-full bg-primary py-[17px] text-[17px] font-bold text-ink"
-            >
-              {t("좋아요, 그때 맡겨둘게요", "Yes, leave it for then")}
-            </button>
-            <button
-              type="button"
-              onClick={handleRejectSuggestion}
-              className="touch-press mt-0.5 w-full bg-transparent py-[15px] text-[15px] font-medium text-ink-soft"
-            >
-              {t("다시 생각할게요", "I'll think again")}
-            </button>
-          </>
-        )}
-
-        {!showSuggested && thoughtText && !editMode && step === "when" && (
-          <div className="mb-5 rounded-[16px] border border-ink/[0.05] bg-ink/[0.03] px-4 py-3.5">
+        {thoughtText && !editMode && step === "when" && (
+          <div className="mb-3.5 rounded-[16px] border border-ink/[0.05] bg-ink/[0.03] px-4 py-3.5">
             <p className="text-[15px] font-medium leading-snug text-ink">
               {thoughtText}
             </p>
           </div>
         )}
 
-        {!showSuggested && !editMode && step === "when" && (
-          <div className="mb-4">
-            <h2 className="text-[17px] font-semibold leading-[1.45] tracking-[-0.02em] text-ink">
-              {t(
-                "이 생각은 언제 다시 떠올리면 좋을까요?",
-                "When would be a good moment to remember this?",
-              )}
-            </h2>
-            {aiSuggestion && (
-              <button
-                type="button"
-                onClick={handleReturnToSuggestion}
-                className="touch-press mb-4 mt-3 inline-flex items-center gap-2 rounded-full border border-ink/[0.05] bg-ink/[0.03] px-4 py-2 text-[13.5px] text-ink-soft"
-              >
-                <span>
-                  {t("↺ 제안으로 돌아가기 ·", "↺ Back to suggestion ·")}
-                </span>
-                <span className="font-semibold text-ink">
-                  {formatSuggestionPill(
-                    aiSuggestion.start,
-                    lang === "en" ? "en" : "ko",
-                  )}
-                </span>
-              </button>
-            )}
-            <div className="mt-3 rounded-[18px] bg-ink/[0.04] px-4 py-3.5 ring-1 ring-ink/[0.04]">
-              <p className="text-[15px] font-medium leading-snug text-ink">
-                {momentPreview}
-              </p>
-            </div>
-            {calmReason && (
-              <p className="mt-2.5 px-0.5 text-[13px] leading-relaxed text-ink-soft/70">
-                {calmReason}
-              </p>
-            )}
+        {!editMode && step === "when" && guidanceReason && (
+          <div className="mb-[18px] flex items-start gap-2 rounded-2xl border border-primary/50 bg-[#FFFBE6] px-3.5 py-3">
+            <span
+              className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-primary"
+              aria-hidden
+            />
+            <p className="text-[14px] leading-[1.55] text-ink/75">
+              {guidanceReason}
+            </p>
           </div>
         )}
 
-        {(step !== "when" || editMode) && !showSuggested && (
+        {!editMode && step === "when" && (
+          <h2 className="mb-3.5 text-[17px] font-bold leading-[1.45] tracking-[-0.02em] text-ink">
+            {t(
+              "이 생각은 언제 다시 떠올리면 좋을까요?",
+              "When would be a good moment to remember this?",
+            )}
+          </h2>
+        )}
+
+        {(step !== "when" || editMode) && (
           <input
             value={title}
             onChange={(e) => onTitleChange(e.target.value)}
@@ -474,7 +352,7 @@ export function ScheduleChoiceFlow({
         )}
 
         <AnimatePresence mode="wait">
-          {!showSuggested && step === "when" && (
+          {step === "when" && (
             <motion.div
               key="when"
               initial={{ opacity: 0 }}
@@ -657,7 +535,7 @@ export function ScheduleChoiceFlow({
       </div>
 
       <div className="sheet-cta-bar shrink-0 border-t border-ink/[0.08] bg-white/98 px-5 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] backdrop-blur-md">
-        {showSuggested ? null : step === "reminder" ? (
+        {step === "reminder" ? (
           <button
             type="button"
             onClick={handleDone}

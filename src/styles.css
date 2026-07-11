@@ -623,6 +623,8 @@
   overscroll-behavior-y: contain;
   touch-action: pan-y;
   -webkit-overflow-scrolling: touch;
+  user-select: none;
+  -webkit-user-select: none;
   -webkit-mask-image: linear-gradient(
     180deg,
     transparent 0%,

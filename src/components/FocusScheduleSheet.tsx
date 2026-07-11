@@ -7,13 +7,7 @@ import {
 import type { InboxItem } from "@/lib/store";
 import { thoughtFirstLine } from "@/lib/brainMirror";
 import { readCachedTimingExtra } from "@/lib/brainMirrorApi";
-import {
-  detectDate,
-  hasScheduleTimeIntent,
-  resolveTimingSuggestion,
-  type ResolvedTiming,
-} from "@/lib/dateDetect";
-import { useLang } from "@/lib/i18n";
+import { detectDate, resolveScheduleGuidanceReason } from "@/lib/dateDetect";
 
 type Props = {
   item: InboxItem | null;
@@ -46,32 +40,21 @@ function defaultStart(item: InboxItem): Date {
 
 export function FocusScheduleSheet({ item, open, onClose, onConfirm }: Props) {
   const [title, setTitle] = useState("");
-  const [flowMode, setFlowMode] = useState<"suggested" | "manual">("manual");
-  const { lang } = useLang();
 
-  const aiSuggestion = useMemo((): ResolvedTiming | null => {
-    if (!item || !open || !hasScheduleTimeIntent(item.text)) return null;
-    const cacheExtra = readCachedTimingExtra(item.text);
-    return resolveTimingSuggestion(
-      item.text,
-      item.brain_mirror,
-      cacheExtra,
-      lang === "en" ? "en" : "ko",
-    );
-  }, [item, lang, open]);
+  const guidanceReason = useMemo(() => {
+    if (!item || !open) return null;
+    return resolveScheduleGuidanceReason(readCachedTimingExtra(item.text));
+  }, [item, open]);
 
-  const initialStart = useMemo(() => {
-    if (!item) return undefined;
-    return aiSuggestion?.start ?? defaultStart(item);
-  }, [item, aiSuggestion]);
+  const initialStart = useMemo(
+    () => (item ? defaultStart(item) : undefined),
+    [item],
+  );
 
   useEffect(() => {
     if (!open || !item) return;
     setTitle(thoughtFirstLine(item.text));
-    setFlowMode(
-      aiSuggestion?.confidence === "high" ? "suggested" : "manual",
-    );
-  }, [open, item, aiSuggestion]);
+  }, [open, item]);
 
   if (!item) return null;
 
@@ -82,11 +65,8 @@ export function FocusScheduleSheet({ item, open, onClose, onConfirm }: Props) {
         title={title}
         onTitleChange={setTitle}
         thoughtText={item.text}
+        guidanceReason={guidanceReason}
         initialStart={initialStart}
-        suggestedStart={initialStart}
-        flowMode={flowMode}
-        onFlowModeChange={setFlowMode}
-        aiSuggestion={aiSuggestion}
         onConfirm={(start, end, options) => {
           onConfirm(
             title.trim() || thoughtFirstLine(item.text),

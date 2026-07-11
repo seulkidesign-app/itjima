@@ -428,8 +428,8 @@ function Schedule() {
           >
             {tab === "today"
               ? t(
-                  "오늘 마음에 두면 좋을 생각이에요",
-                  "Thoughts that deserve your attention today",
+                  "오늘 떠올리면 좋은 생각",
+                  "Thoughts worth revisiting today",
                 )
               : activeItems.length > 0
                 ? t(

@@ -8,9 +8,9 @@ const CLASSIFY_PROMPT = `JSON only: {"category":"","title":"","suggestedDate":""
 category: schedule|shopping|reminder|task|list|note
 title: max 18 chars from input
 suggestedDate: date word from input or ""
-suggestedStart: ISO8601 revisit moment if date intent else ""
-reason: one calm Korean sentence why this moment, or ""
-confidence: high|low — high only if a specific revisit datetime is inferable`;
+suggestedStart: ISO8601 internal only if date in input, else ""
+reason: calm Korean nudge only — NO dates, weekdays, or "N일 전"; general framing ok
+confidence: high if reason uses only input facts; low if reason needs invented date/interval`;
 
 /** Layer 3 — user-initiated organize (still compact). */
 const ORGANIZE_PROMPT = `User tapped Organize. JSON only:
@@ -45,6 +45,12 @@ function extractJson(text: string): unknown {
   }
 }
 
+function reasonHasDateClaim(reason: string): boolean {
+  return /(?:\d\s*월|\d\s*일|\d+일\s*전|전에\s*\d+|월요일|화요일|수요일|목요일|금요일|토요일|일요일|\b(?:mon|tue|wed|thu|fri|sat|sun)day\b)/i.test(
+    reason,
+  );
+}
+
 function normalizeClassifyPayload(raw: unknown): ClassifyPayload | null {
   if (!raw || typeof raw !== "object") return null;
   const o = raw as Record<string, unknown>;
@@ -64,12 +70,20 @@ function normalizeClassifyPayload(raw: unknown): ClassifyPayload | null {
   const suggestedStart =
     typeof o.suggestedStart === "string" ? o.suggestedStart.trim() : "";
 
-  const reason = typeof o.reason === "string" ? o.reason.trim().slice(0, 120) : "";
+  let reason = typeof o.reason === "string" ? o.reason.trim().slice(0, 120) : "";
 
   const confRaw =
     typeof o.confidence === "string" ? o.confidence.trim().toLowerCase() : "";
-  const confidence: ClassifyPayload["confidence"] =
+  let confidence: ClassifyPayload["confidence"] =
     confRaw === "high" || confRaw === "low" ? confRaw : "";
+
+  if (reason && reasonHasDateClaim(reason)) {
+    reason = "";
+    confidence = "low";
+  }
+  if (confidence !== "high") {
+    reason = "";
+  }
 
   return { category, title, suggestedDate, suggestedStart, reason, confidence };
 }
