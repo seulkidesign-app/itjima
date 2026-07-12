@@ -82,7 +82,7 @@ export function ReminderSheet({
   };
 
   return (
-    <BottomSheet open={open} onClose={onClose} maxHeight="72vh">
+    <BottomSheet open={open} onClose={onClose} maxHeight="72dvh">
       <div className="px-5 pb-[calc(env(safe-area-inset-bottom)+1.25rem)]">
         <h2 className="text-[17px] font-bold text-ink">
           {t("알림 시간", "Reminder time")}

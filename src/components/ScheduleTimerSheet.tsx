@@ -32,7 +32,7 @@ export function ScheduleTimerSheet({
   ];
 
   return (
-    <BottomSheet open={open} onClose={onClose} maxHeight="58vh">
+    <BottomSheet open={open} onClose={onClose} maxHeight="58dvh">
       <div className="px-5 pb-[calc(env(safe-area-inset-bottom)+1.25rem)]">
         <h2 className="text-[17px] font-bold text-ink">
           {t("빠른 타이머", "Quick timer")}

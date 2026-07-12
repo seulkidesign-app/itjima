@@ -99,7 +99,7 @@ export function FeedbackSheet({
     <BottomSheet
       open={open}
       onClose={onClose}
-      maxHeight="88vh"
+      maxHeight="88dvh"
       title={t("문의 · 피드백", "Contact · Feedback")}
     >
       <div className="sheet-scroll flex min-h-0 flex-1 flex-col overflow-y-auto px-5 pb-4">

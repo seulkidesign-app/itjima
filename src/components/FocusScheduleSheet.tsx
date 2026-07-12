@@ -59,7 +59,7 @@ export function FocusScheduleSheet({ item, open, onClose, onConfirm }: Props) {
   if (!item) return null;
 
   return (
-    <BottomSheet open={open} onClose={onClose} maxHeight="88vh">
+    <BottomSheet open={open} onClose={onClose} maxHeight="88dvh">
       <ScheduleChoiceFlow
         open={open}
         title={title}

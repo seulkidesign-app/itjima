@@ -58,7 +58,7 @@ export function ScheduleSheet({
     <BottomSheet
       open={open}
       onClose={onClose}
-      maxHeight="88vh"
+      maxHeight="88dvh"
       title={saveLabel ? t("그때 수정", "Edit when") : t("그때 남기기", "Remember for then")}
     >
       <div className="flex min-h-0 flex-1 flex-col">

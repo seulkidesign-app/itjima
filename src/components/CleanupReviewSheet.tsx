@@ -84,7 +84,7 @@ export function CleanupReviewSheet({
   };
 
   return (
-    <BottomSheet open={open} onClose={onClose} maxHeight="85vh">
+    <BottomSheet open={open} onClose={onClose} maxHeight="85dvh">
       <div className="flex max-h-[85vh] min-h-0 flex-col">
         <div className="sheet-scroll min-h-0 flex-1 overflow-y-auto px-5 pb-4">
           <h2 className="text-[17px] font-bold text-ink">

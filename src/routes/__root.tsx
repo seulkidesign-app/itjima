@@ -49,6 +49,7 @@ function RootLayout() {
             position="top-center"
             theme="light"
             toastOptions={calmToastOptions}
+            offset={72}
           />
         </div>
       </LanguageProvider>
@@ -94,6 +95,7 @@ function RootLayout() {
             position="top-center"
             theme="light"
             toastOptions={calmToastOptions}
+            offset={72}
           />
         </div>
       )}

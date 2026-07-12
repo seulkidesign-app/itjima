@@ -17,7 +17,7 @@ export function BottomSheet({
   open,
   onClose,
   children,
-  maxHeight = "72vh",
+  maxHeight = "72dvh",
   title,
 }: Props) {
   const t = useT();
@@ -74,7 +74,7 @@ export function BottomSheet({
           <motion.button
             type="button"
             aria-label={t("닫기", "Close")}
-            className="min-h-0 w-full flex-1 bg-ink/35 backdrop-blur-md backdrop-saturate-150"
+            className="absolute inset-0 z-0 bg-ink/35 backdrop-blur-md backdrop-saturate-150"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
@@ -102,7 +102,7 @@ export function BottomSheet({
             animate={{ y: 0 }}
             exit={{ y: "100%" }}
             transition={SPRING_SHEET}
-            className="sheet-chrome relative flex w-full max-h-[var(--sheet-max-h)] shrink-0 flex-col overflow-hidden bg-white/98 shadow-[0_-20px_60px_-10px_rgba(0,0,0,0.22)] backdrop-blur-2xl"
+            className="sheet-chrome relative z-[1] mt-auto flex w-full max-h-[var(--sheet-max-h)] shrink-0 flex-col overflow-hidden bg-white/98 shadow-[0_-20px_60px_-10px_rgba(0,0,0,0.22)] backdrop-blur-2xl"
             style={
               {
                 "--sheet-max-h": maxHeight,
