@@ -216,6 +216,42 @@ function Inbox() {
     return () => window.removeEventListener("keydown", onKey);
   }, [releaseItem, dismissReleaseOverlay]);
 
+  // Base history anchor — without this, the app has zero history entries
+  // of its own, so pressing Back on the bare base screen (no sheet open)
+  // falls straight through to the browser and exits the app entirely (e.g.
+  // back to a Google search result). This establishes a "press Back again
+  // to exit" pattern instead, matching common app conventions.
+  const exitArmedRef = useRef(false);
+  const exitArmedTimerRef = useRef<number | undefined>(undefined);
+  useEffect(() => {
+    history.pushState({ itjimaAnchor: true }, "");
+
+    const onPopState = () => {
+      // Any sheet-specific popstate handler (releaseItem, focusScheduleSheet,
+      // etc.) has already run first if a sheet was open — those each
+      // re-push their own entry, so if we reach here it means we're at the
+      // true base screen with nothing else to unwind.
+      if (exitArmedRef.current) {
+        return; // let this Back actually leave the app
+      }
+      exitArmedRef.current = true;
+      history.pushState({ itjimaAnchor: true }, "");
+      toast(t("뒤로 한 번 더 누르면 나가져요", "Press back again to exit"));
+      window.clearTimeout(exitArmedTimerRef.current);
+      exitArmedTimerRef.current = window.setTimeout(() => {
+        exitArmedRef.current = false;
+      }, 2000);
+    };
+
+    window.addEventListener("popstate", onPopState);
+    return () => {
+      window.removeEventListener("popstate", onPopState);
+      window.clearTimeout(exitArmedTimerRef.current);
+    };
+    // Mount-only: this anchor covers the whole session, not per-render state.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   useEffect(() => {
     if (!releaseItem) return;
     history.pushState({ captureRelease: true }, "");
@@ -242,6 +278,31 @@ function Inbox() {
     window.addEventListener("popstate", onPopState);
     return () => window.removeEventListener("popstate", onPopState);
   }, [releaseItem, cancelReleaseSchedule, completeRelease]);
+
+  // The FocusScheduleSheet can also be opened directly from a ChatSwipeRow
+  // swipe in the default inbox list — a separate path from `releaseItem`
+  // above, which previously had no back-button guard at all. Without this,
+  // pressing Back while this sheet is open falls through to real browser
+  // history and can exit the app entirely (e.g. back to a search engine).
+  const ignoreFocusScheduleSheetPopRef = useRef(false);
+  useEffect(() => {
+    // Skip when the release-flow sheet is already managing history for the
+    // same item, to avoid pushing a duplicate/competing history entry.
+    if (!focusScheduleSheet.open || releaseItem) return;
+    history.pushState({ focusScheduleSheet: true }, "");
+
+    const onPopState = () => {
+      if (ignoreFocusScheduleSheetPopRef.current) {
+        ignoreFocusScheduleSheetPopRef.current = false;
+        return;
+      }
+      setFocusScheduleSheet({ open: false });
+      setFocusPendingScheduleId(null);
+    };
+
+    window.addEventListener("popstate", onPopState);
+    return () => window.removeEventListener("popstate", onPopState);
+  }, [focusScheduleSheet.open, releaseItem]);
 
   useEffect(() => {
     if (!menuItem && !pasteSheet) return;
@@ -794,6 +855,10 @@ function Inbox() {
           ) {
             cancelReleaseSchedule();
             return;
+          }
+          if (!releaseItem) {
+            ignoreFocusScheduleSheetPopRef.current = true;
+            history.back();
           }
           setFocusScheduleSheet({ open: false });
           setFocusPendingScheduleId(null);
