@@ -262,10 +262,14 @@ function Inbox() {
         ignoreReleasePopRef.current = false;
         return;
       }
-      if (
-        releasePendingScheduleIdRef.current ||
-        focusScheduleOpenRef.current
-      ) {
+      // If the schedule sub-sheet is open, the dedicated guard below owns
+      // this Back press (it calls cancelReleaseSchedule itself and manages
+      // its own history entry) — bail out here to avoid both handlers
+      // reacting to the same pop and pushing competing entries.
+      if (focusScheduleOpenRef.current) {
+        return;
+      }
+      if (releasePendingScheduleIdRef.current) {
         cancelReleaseSchedule();
         history.pushState({ captureRelease: true }, "");
         releaseHistoryActiveRef.current = true;
@@ -286,14 +290,19 @@ function Inbox() {
   // history and can exit the app entirely (e.g. back to a search engine).
   const ignoreFocusScheduleSheetPopRef = useRef(false);
   useEffect(() => {
-    // Skip when the release-flow sheet is already managing history for the
-    // same item, to avoid pushing a duplicate/competing history entry.
-    if (!focusScheduleSheet.open || releaseItem) return;
+    if (!focusScheduleSheet.open) return;
     history.pushState({ focusScheduleSheet: true }, "");
 
     const onPopState = () => {
       if (ignoreFocusScheduleSheetPopRef.current) {
         ignoreFocusScheduleSheetPopRef.current = false;
+        return;
+      }
+      // If this sheet was opened mid-release-card-flow (swiping "그때 →"
+      // on the full card), cancelling must return to the card itself, not
+      // just generically close the sheet.
+      if (releaseItemRef.current) {
+        cancelReleaseSchedule();
         return;
       }
       setFocusScheduleSheet({ open: false });
@@ -302,7 +311,7 @@ function Inbox() {
 
     window.addEventListener("popstate", onPopState);
     return () => window.removeEventListener("popstate", onPopState);
-  }, [focusScheduleSheet.open, releaseItem]);
+  }, [focusScheduleSheet.open, cancelReleaseSchedule]);
 
   useEffect(() => {
     if (!menuItem && !pasteSheet) return;
