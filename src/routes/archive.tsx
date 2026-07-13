@@ -107,6 +107,9 @@ function Archive() {
   const [layoutMode, setLayoutMode] = useState<"space" | "list">("space");
   const [timelineMonth, setTimelineMonth] = useState<string | null>(null);
   const [detailItem, setDetailItem] = useState<ArchiveItem | null>(null);
+  const [detailClusterIds, setDetailClusterIds] = useState<string[] | undefined>(
+    undefined,
+  );
   const [revival, setRevival] = useState<RevivalHint | null>(() =>
     readRevivalHint(),
   );
@@ -610,23 +613,52 @@ function Archive() {
     );
   };
 
+  const isSpaceView =
+    !isSearching && layoutMode === "space" && groupFilter === "all";
+
   return (
-    <div className="flex h-full flex-col bg-white">
+    <div
+      className={`flex h-full flex-col ${
+        isSpaceView ? "archive-space-page" : "bg-white"
+      }`}
+    >
       <SyncIndicator
         syncing={syncState === "syncing"}
         error={syncState === "error"}
         onRetry={retrySync}
       />
-      <div className="sticky top-0 z-10 shrink-0 bg-white pb-2">
+      <div
+        className={`sticky top-0 z-10 shrink-0 pb-2 ${
+          isSpaceView ? "bg-transparent" : "bg-white"
+        }`}
+      >
         <div className="px-5 pb-3 pt-7">
-          <p className="page-eyebrow">
+          <p
+            className={
+              isSpaceView
+                ? "text-[13px] font-medium text-[color:var(--archive-text-soft)]"
+                : "page-eyebrow"
+            }
+          >
             {t("잊어도 괜찮아요.", "It's okay to forget.")}
           </p>
-          <h1 className="page-title mt-2">
+          <h1
+            className={`mt-2 font-bold tracking-[-0.02em] ${
+              isSpaceView
+                ? "text-[26px] text-[color:var(--archive-text)]"
+                : "page-title"
+            }`}
+          >
             {t("여기 맡겨두세요.", "Leave it here.")}
           </h1>
           {items.length > 0 && (
-            <p className="page-eyebrow mt-3 text-ink-soft/75">
+            <p
+              className={`mt-3 text-[13px] ${
+                isSpaceView
+                  ? "text-[color:var(--archive-text-soft)]"
+                  : "page-eyebrow text-ink-soft/75"
+              }`}
+            >
               {t(
                 `${items.length}개의 생각을 맡아두고 있어요`,
                 `${items.length} thoughts you entrusted here`,
@@ -634,7 +666,7 @@ function Archive() {
             </p>
           )}
         </div>
-        {items.length >= 2 && (
+        {items.length >= 2 && !isSpaceView && (
           <div className="flex items-center justify-between px-5 pb-2">
             <button
               type="button"
@@ -654,8 +686,21 @@ function Archive() {
 
         {items.length > 0 && (
           <div className="px-5 pb-3">
-            <div className="flex items-center gap-2 rounded-[26px] border border-ink/[0.04] bg-white px-4 py-3 shadow-card">
-              <Search size={16} className="shrink-0 text-ink-soft" />
+            <div
+              className={`flex items-center gap-2 rounded-[26px] px-4 py-3 ${
+                isSpaceView
+                  ? "archive-space-search shadow-none"
+                  : "border border-ink/[0.04] bg-white shadow-card"
+              }`}
+            >
+              <Search
+                size={16}
+                className={`shrink-0 ${
+                  isSpaceView
+                    ? "text-[color:var(--archive-text-soft)]"
+                    : "text-ink-soft"
+                }`}
+              />
               <input
                 value={q}
                 onChange={(e) => {
@@ -666,7 +711,11 @@ function Archive() {
                   "기억하고 싶은 걸 찾아보세요",
                   "Find a thought you kept",
                 )}
-                className="flex-1 bg-transparent text-[14px] text-ink placeholder:text-ink-soft/70 focus:outline-none"
+                className={`flex-1 bg-transparent text-[14px] focus:outline-none ${
+                  isSpaceView
+                    ? "text-[color:var(--archive-text)] placeholder:text-[color:var(--archive-text-soft)]"
+                    : "text-ink placeholder:text-ink-soft/70"
+                }`}
               />
               {q.trim() && (
                 <button
@@ -702,14 +751,22 @@ function Archive() {
             )}
             {!isSearching && (
               <div className="mt-2 flex flex-wrap items-center gap-1.5">
-                <div className="flex rounded-full bg-ink/[0.05] p-0.5">
+                <div
+                  className={`flex rounded-full p-0.5 ${
+                    isSpaceView ? "archive-space-toggle" : "bg-ink/[0.05]"
+                  }`}
+                >
                   <button
                     type="button"
                     onClick={() => setLayoutMode("space")}
                     className={`rounded-full px-3 py-1.5 text-[12px] font-semibold ${
                       layoutMode === "space"
-                        ? "bg-white text-ink shadow-card"
-                        : "text-ink-soft"
+                        ? isSpaceView
+                          ? "archive-space-toggle-active"
+                          : "bg-white text-ink shadow-card"
+                        : isSpaceView
+                          ? "text-[color:var(--archive-text-soft)]"
+                          : "text-ink-soft"
                     }`}
                   >
                     {t("공간", "Space")}
@@ -719,8 +776,12 @@ function Archive() {
                     onClick={() => setLayoutMode("list")}
                     className={`rounded-full px-3 py-1.5 text-[12px] font-semibold ${
                       layoutMode === "list"
-                        ? "bg-white text-ink shadow-card"
-                        : "text-ink-soft"
+                        ? isSpaceView
+                          ? "archive-space-toggle-active"
+                          : "bg-white text-ink shadow-card"
+                        : isSpaceView
+                          ? "text-[color:var(--archive-text-soft)]"
+                          : "text-ink-soft"
                     }`}
                   >
                     {t("목록", "List")}
@@ -731,8 +792,12 @@ function Archive() {
                   onClick={() => setGroupFilter("all")}
                   className={`rounded-full px-3 py-1.5 text-[12px] font-medium transition-colors ${
                     groupFilter === "all"
-                      ? "bg-ink text-white"
-                      : "bg-ink/[0.06] text-ink-soft"
+                      ? isSpaceView
+                        ? "archive-space-chip-active font-semibold"
+                        : "bg-ink text-white"
+                      : isSpaceView
+                        ? "archive-space-chip"
+                        : "bg-ink/[0.06] text-ink-soft"
                   }`}
                 >
                   {t("모두", "Everything")}
@@ -744,8 +809,12 @@ function Archive() {
                     onClick={() => setGroupFilter(g.key)}
                     className={`rounded-full px-3 py-1.5 text-[12px] font-medium transition-colors ${
                       groupFilter === g.key
-                        ? "bg-ink text-white"
-                        : "bg-ink/[0.06] text-ink-soft"
+                        ? isSpaceView
+                          ? "archive-space-chip-active font-semibold"
+                          : "bg-ink text-white"
+                        : isSpaceView
+                          ? "archive-space-chip"
+                          : "bg-ink/[0.06] text-ink-soft"
                     }`}
                   >
                     {g.emoji} {lang === "en" ? g.en : g.ko}
@@ -787,7 +856,7 @@ function Archive() {
         {syncState === "syncing" && items.length === 0 ? (
           <ArchiveGridSkeleton />
         ) : items.length === 0 ? (
-          <Empty />
+          <Empty dark={isSpaceView} />
         ) : filtered.length === 0 ? (
           <div className="rounded-[24px] bg-ink/[0.04] px-5 py-10 text-center">
             <p className="text-[15px] font-semibold text-ink">
@@ -844,8 +913,9 @@ function Archive() {
                   pins={pins}
                   selectedMonth={timelineMonth}
                   onSelectMonth={setTimelineMonth}
-                  onOpenDetail={(it) => {
+                  onOpenDetail={(it, clusterIds) => {
                     recordArchiveVisit(it.id);
+                    setDetailClusterIds(clusterIds);
                     setDetailItem(it);
                   }}
                 />
@@ -1203,7 +1273,12 @@ function Archive() {
         item={detailItem}
         allItems={items}
         pinned={detailItem ? pins.has(detailItem.id) : false}
-        onClose={() => setDetailItem(null)}
+        clusterMemberIds={detailClusterIds}
+        dark={isSpaceView}
+        onClose={() => {
+          setDetailItem(null);
+          setDetailClusterIds(undefined);
+        }}
         onTogglePin={() => {
           if (!detailItem) return;
           toggleArchivePin(detailItem.id);
@@ -1236,14 +1311,16 @@ function Archive() {
   );
 }
 
-function Empty() {
+function Empty({ dark = false }: { dark?: boolean }) {
   return (
-    <EmptyState
-      emoji="🗂"
-      titleKo="아직 맡겨둔 게 없어요"
-      titleEn="Nothing entrusted here yet"
-      hintKo="마음에 남는 생각을 왼쪽으로 밀면, 여기서 다시 만날 수 있어요"
-      hintEn="Swipe left on a thought you want to keep — it'll wait here for you"
-    />
+    <div className={dark ? "text-[color:var(--archive-text-soft)]" : undefined}>
+      <EmptyState
+        emoji="🗂"
+        titleKo="아직 맡겨둔 게 없어요"
+        titleEn="Nothing entrusted here yet"
+        hintKo="마음에 남는 생각을 왼쪽으로 밀면, 여기서 다시 만날 수 있어요"
+        hintEn="Swipe left on a thought you want to keep — it'll wait here for you"
+      />
+    </div>
   );
 }

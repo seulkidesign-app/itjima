@@ -751,3 +751,112 @@ iframe[src*="lovable.dev"] {
   pointer-events: none !important;
   visibility: hidden !important;
 }
+
+/* ── Archive memory space (Sprint 8) — scoped tokens only ── */
+.archive-space-page {
+  --archive-bg-1: #070b14;
+  --archive-bg-2: #121a2b;
+  --archive-star: #f5efd8;
+  --archive-star-mid: #e8dcc0;
+  --archive-line: rgba(255, 255, 255, 0.1);
+  --archive-node-satellite: rgba(255, 255, 255, 0.94);
+  --archive-node-single: rgba(130, 138, 155, 0.42);
+  --archive-text: rgba(255, 255, 255, 0.94);
+  --archive-text-soft: rgba(255, 255, 255, 0.52);
+  --archive-chip: rgba(255, 255, 255, 0.1);
+  --archive-chip-active: rgba(245, 239, 216, 0.92);
+  --archive-chip-active-text: #1a1a1a;
+  --archive-search-bg: rgba(255, 255, 255, 0.06);
+  --archive-search-border: rgba(255, 255, 255, 0.08);
+  --archive-sheet-bg: #161c2a;
+  --archive-sheet-border: rgba(255, 255, 255, 0.08);
+  --archive-glow: rgba(245, 239, 216, 0.28);
+  background: radial-gradient(
+    ellipse 120% 90% at 50% -10%,
+    var(--archive-bg-2) 0%,
+    var(--archive-bg-1) 62%
+  );
+  color: var(--archive-text);
+}
+
+.archive-starfield {
+  background-image:
+    radial-gradient(1px 1px at 12% 18%, rgba(255, 255, 255, 0.34), transparent),
+    radial-gradient(1px 1px at 78% 12%, rgba(255, 255, 255, 0.22), transparent),
+    radial-gradient(1.2px 1.2px at 34% 62%, rgba(255, 255, 255, 0.18), transparent),
+    radial-gradient(1px 1px at 88% 74%, rgba(255, 255, 255, 0.26), transparent),
+    radial-gradient(1px 1px at 52% 38%, rgba(255, 255, 255, 0.14), transparent),
+    radial-gradient(1px 1px at 22% 82%, rgba(255, 255, 255, 0.2), transparent),
+    radial-gradient(1px 1px at 66% 28%, rgba(255, 255, 255, 0.16), transparent);
+}
+
+.archive-space-search {
+  border: 1px solid var(--archive-search-border);
+  background: var(--archive-search-bg);
+}
+
+.archive-space-chip {
+  background: var(--archive-chip);
+  color: var(--archive-text-soft);
+}
+
+.archive-space-chip-active {
+  background: var(--archive-chip-active);
+  color: var(--archive-chip-active-text);
+}
+
+.archive-space-toggle {
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.archive-space-toggle-active {
+  background: rgba(255, 255, 255, 0.14);
+  color: var(--archive-text);
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.25);
+}
+
+.archive-space-canvas {
+  min-height: 420px;
+}
+
+.archive-space-node-anchor {
+  background: radial-gradient(
+    circle at 38% 32%,
+    var(--archive-star) 0%,
+    var(--archive-star-mid) 100%
+  );
+  box-shadow:
+    0 0 0 1px rgba(255, 255, 255, 0.12),
+    0 0 28px var(--archive-glow);
+  color: #2a2418;
+}
+
+.archive-space-node-satellite {
+  background: var(--archive-node-satellite);
+  box-shadow: 0 2px 14px rgba(0, 0, 0, 0.22);
+  color: #1a1a1a;
+}
+
+.archive-space-node-single {
+  background: var(--archive-node-single);
+  color: rgba(255, 255, 255, 0.72);
+}
+
+.archive-space-overflow {
+  background: rgba(255, 255, 255, 0.12);
+  color: var(--archive-text);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+}
+
+.archive-detail-sheet {
+  background: var(--archive-sheet-bg);
+  border-top: 1px solid var(--archive-sheet-border);
+  color: var(--archive-text);
+}
+
+.archive-detail-chip {
+  background: var(--archive-chip);
+  color: var(--archive-text);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
