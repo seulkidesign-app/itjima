@@ -216,42 +216,6 @@ function Inbox() {
     return () => window.removeEventListener("keydown", onKey);
   }, [releaseItem, dismissReleaseOverlay]);
 
-  // Base history anchor — without this, the app has zero history entries
-  // of its own, so pressing Back on the bare base screen (no sheet open)
-  // falls straight through to the browser and exits the app entirely (e.g.
-  // back to a Google search result). This establishes a "press Back again
-  // to exit" pattern instead, matching common app conventions.
-  const exitArmedRef = useRef(false);
-  const exitArmedTimerRef = useRef<number | undefined>(undefined);
-  useEffect(() => {
-    history.pushState({ itjimaAnchor: true }, "");
-
-    const onPopState = () => {
-      // Any sheet-specific popstate handler (releaseItem, focusScheduleSheet,
-      // etc.) has already run first if a sheet was open — those each
-      // re-push their own entry, so if we reach here it means we're at the
-      // true base screen with nothing else to unwind.
-      if (exitArmedRef.current) {
-        return; // let this Back actually leave the app
-      }
-      exitArmedRef.current = true;
-      history.pushState({ itjimaAnchor: true }, "");
-      toast(t("뒤로 한 번 더 누르면 나가져요", "Press back again to exit"));
-      window.clearTimeout(exitArmedTimerRef.current);
-      exitArmedTimerRef.current = window.setTimeout(() => {
-        exitArmedRef.current = false;
-      }, 2000);
-    };
-
-    window.addEventListener("popstate", onPopState);
-    return () => {
-      window.removeEventListener("popstate", onPopState);
-      window.clearTimeout(exitArmedTimerRef.current);
-    };
-    // Mount-only: this anchor covers the whole session, not per-render state.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
   useEffect(() => {
     if (!releaseItem) return;
     history.pushState({ captureRelease: true }, "");
