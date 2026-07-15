@@ -80,8 +80,7 @@ function RootLayout() {
           <Toaster position="top-center" richColors closeButton />
         </div>
       ) : (
-        <div className="md:flex md:items-start md:justify-center md:gap-6">
-          <SideNav />
+        <div className="flex min-h-dvh w-full items-start justify-center">
           <div className="phone-frame flex flex-col">
             <TopNav />
             <div

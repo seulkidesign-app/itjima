@@ -576,7 +576,10 @@
   border: 1.5px solid oklch(0 0 0 / 0.12);
 }
 
-/* App container — phone frame on mobile, ChatGPT-style wide column on desktop */
+/* App container — locked to mobile width on every screen size.
+   ItJima is mobile-native; desktop renders the exact same phone-sized
+   frame rather than a wider "app shell", per the mobile-native
+   positioning decision (2026-07-14). */
 @utility phone-frame {
   width: 100%;
   max-width: 430px;
@@ -584,17 +587,6 @@
   margin: 0 auto;
   position: relative;
   background: #ffffff;
-}
-@media (min-width: 768px) {
-  .phone-frame {
-    max-width: min(880px, 100vw);
-    height: 100dvh;
-    margin: 0 auto;
-    border-radius: 0;
-    box-shadow: none;
-    border-left: 1px solid oklch(0 0 0 / 0.06);
-    border-right: 1px solid oklch(0 0 0 / 0.06);
-  }
 }
 
 #phone-scroll {

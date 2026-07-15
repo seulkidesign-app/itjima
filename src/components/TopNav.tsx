@@ -37,7 +37,7 @@ export function TopNav() {
 
   return (
     <div
-      className={`shrink-0 z-40 md:hidden bg-white/95 backdrop-blur-md transition-shadow ${
+      className={`shrink-0 z-40 bg-white/95 backdrop-blur-md transition-shadow ${
         scrolled ? "border-b border-ink/10 shadow-card" : ""
       }`}
       style={{ paddingTop: "env(safe-area-inset-top)" }}
