@@ -156,6 +156,12 @@ function expandCluster(
   allItems: ArchiveItem[],
   assigned: Set<string>,
 ) {
+  // The cluster's own starting members must be marked assigned before we
+  // scan for new candidates — otherwise a member already inside `cluster`
+  // looks "unassigned" to the loop below, matches itself with near-perfect
+  // similarity, and gets pushed in again as a duplicate.
+  cluster.forEach((m) => assigned.add(m.id));
+
   let expanded = true;
   while (expanded) {
     expanded = false;
@@ -250,7 +256,9 @@ export function computeMemorySpaceLayout(
 
     const visibleSatellites = sortedOthers.slice(0, MAX_SATELLITES);
     const overflow = sortedOthers.slice(MAX_SATELLITES);
-    const allIds = [anchor.id, ...sortedOthers.map((m) => m.id)];
+    const allIds = Array.from(
+      new Set([anchor.id, ...sortedOthers.map((m) => m.id)]),
+    );
     clusterMap.set(anchor.id, allIds);
     visibleSatellites.forEach((s) => clusterMap.set(s.id, allIds));
     overflow.forEach((s) => clusterMap.set(s.id, allIds));
