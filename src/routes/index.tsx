@@ -348,6 +348,8 @@ function Inbox() {
         end_time: end.toISOString(),
         alarm: options.reminderMinutes !== null,
         all_day: options.allDay,
+        start_all_day: options.startAllDay,
+        end_all_day: options.endAllDay,
         repeat: options.repeat,
       });
       const { item: created, cloudSynced: scheduleSynced } = await schedules.add({

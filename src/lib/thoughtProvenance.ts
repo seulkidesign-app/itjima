@@ -1,5 +1,9 @@
 import type { BrainMirrorResult } from "@/lib/brainMirror";
 import type { InboxItem, RepeatRule } from "@/lib/store";
+import {
+  scheduleAllDayFieldsFromConfirm,
+  type ScheduleAllDayFields,
+} from "@/lib/scheduleTime";
 
 /** Strip accidental `undefined`/`null` prefixes from legacy `${optional}${text}` saves. */
 function sanitizeProvenanceText(value: unknown): string {
@@ -27,14 +31,30 @@ export function scheduleFromInbox(
     end_time: string;
     alarm?: boolean;
     all_day?: boolean;
+    start_all_day?: boolean;
+    end_all_day?: boolean;
     repeat?: RepeatRule | null;
   },
 ) {
   const snap = inboxSnapshot(item);
+  const allDayFields: ScheduleAllDayFields =
+    opts.start_all_day !== undefined || opts.end_all_day !== undefined
+      ? {
+          start_all_day: opts.start_all_day ?? opts.all_day ?? false,
+          end_all_day: opts.end_all_day ?? opts.all_day ?? false,
+          all_day:
+            (opts.start_all_day ?? opts.all_day ?? false) &&
+            (opts.end_all_day ?? opts.all_day ?? false),
+        }
+      : scheduleAllDayFieldsFromConfirm({
+          allDay: opts.all_day ?? false,
+          startAllDay: opts.all_day ?? false,
+          endAllDay: opts.all_day ?? false,
+        });
   return {
     ...opts,
+    ...allDayFields,
     alarm: opts.alarm ?? false,
-    all_day: opts.all_day ?? false,
     repeat: opts.repeat ?? null,
     source_id: item.id,
     raw_text: snap.raw_text,

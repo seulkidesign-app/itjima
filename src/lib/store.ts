@@ -98,10 +98,13 @@ function normalizeRow(row: unknown, table: TableName) {
   }
   if (table === "schedules") {
     const legacyAllDay = r.all_day;
-    if (r.start_all_day === undefined && typeof legacyAllDay === "boolean") {
+    const startMissing =
+      r.start_all_day === undefined || r.start_all_day === null;
+    const endMissing = r.end_all_day === undefined || r.end_all_day === null;
+    if (startMissing && typeof legacyAllDay === "boolean") {
       r.start_all_day = legacyAllDay;
     }
-    if (r.end_all_day === undefined && typeof legacyAllDay === "boolean") {
+    if (endMissing && typeof legacyAllDay === "boolean") {
       r.end_all_day = legacyAllDay;
     }
   }
@@ -167,6 +170,8 @@ const FULL_CLOUD_KEYS: Record<TableName, readonly string[]> = {
     "alarm",
     "created_at",
     "all_day",
+    "start_all_day",
+    "end_all_day",
     "repeat",
     "source_id",
     "raw_text",

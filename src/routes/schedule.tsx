@@ -63,7 +63,13 @@ import {
   type AlarmPreset,
   type TimerPreset,
 } from "@/lib/scheduleReminders";
-import { formatScheduleTimeLoose, remainingUntil } from "@/lib/scheduleTime";
+import {
+  formatScheduleTimeLoose,
+  remainingUntil,
+  resolveScheduleAllDayFlags,
+  scheduleAllDayFieldsFromConfirm,
+  scheduleAllDayFieldsFromItem,
+} from "@/lib/scheduleTime";
 import {
   groupSchedulesForFeel,
   feelSectionLabel,
@@ -338,7 +344,7 @@ function Schedule() {
         text: s.text,
         start_time: s.start_time,
         end_time: s.end_time,
-        all_day: s.all_day,
+        ...scheduleAllDayFieldsFromItem(s),
         repeat: s.repeat,
         raw_text: s.raw_text,
         brain_mirror: s.brain_mirror,
@@ -664,6 +670,16 @@ function Schedule() {
         }
         initialEnd={sheet.edit ? new Date(sheet.edit.end_time) : undefined}
         initialAllDay={sheet.edit?.all_day}
+        initialStartAllDay={
+          sheet.edit
+            ? resolveScheduleAllDayFlags(sheet.edit).startAllDay
+            : undefined
+        }
+        initialEndAllDay={
+          sheet.edit
+            ? resolveScheduleAllDayFlags(sheet.edit).endAllDay
+            : undefined
+        }
         initialRepeat={sheet.edit?.repeat}
         saveLabel={sheet.edit ? t("다듬기", "Refine") : undefined}
         onClose={() => setSheet({ open: false })}
@@ -681,12 +697,18 @@ function Schedule() {
                   }
                 : { alarm: false };
 
+            const allDayFields = scheduleAllDayFieldsFromConfirm({
+              allDay: opts?.allDay ?? false,
+              startAllDay: opts?.startAllDay ?? opts?.allDay ?? false,
+              endAllDay: opts?.endAllDay ?? opts?.allDay ?? false,
+            });
+
             if (sheet.edit) {
               await update(sheet.edit.id, {
                 text,
                 start_time: start.toISOString(),
                 end_time: end.toISOString(),
-                all_day: opts?.allDay ?? false,
+                ...allDayFields,
                 repeat: opts?.repeat ?? null,
                 ...alarmPayload,
               });
@@ -696,7 +718,7 @@ function Schedule() {
                 text,
                 start_time: start.toISOString(),
                 end_time: end.toISOString(),
-                all_day: opts?.allDay ?? false,
+                ...allDayFields,
                 repeat: opts?.repeat ?? null,
                 ...alarmPayload,
               });

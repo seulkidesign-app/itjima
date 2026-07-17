@@ -104,28 +104,55 @@ export type Database = {
       schedules: {
         Row: {
           alarm: boolean;
+          all_day: boolean;
+          alarm_at: string | null;
+          brain_mirror: Json | null;
           created_at: string;
+          end_all_day: boolean | null;
           end_time: string;
           id: string;
+          raw_text: string | null;
+          repeat: string | null;
+          source_id: string | null;
+          start_all_day: boolean | null;
           start_time: string;
+          status: string;
           text: string;
           user_id: string;
         };
         Insert: {
           alarm?: boolean;
+          all_day?: boolean;
+          alarm_at?: string | null;
+          brain_mirror?: Json | null;
           created_at?: string;
+          end_all_day?: boolean | null;
           end_time: string;
           id?: string;
+          raw_text?: string | null;
+          repeat?: string | null;
+          source_id?: string | null;
+          start_all_day?: boolean | null;
           start_time: string;
+          status?: string;
           text: string;
           user_id: string;
         };
         Update: {
           alarm?: boolean;
+          all_day?: boolean;
+          alarm_at?: string | null;
+          brain_mirror?: Json | null;
           created_at?: string;
+          end_all_day?: boolean | null;
           end_time?: string;
           id?: string;
+          raw_text?: string | null;
+          repeat?: string | null;
+          source_id?: string | null;
+          start_all_day?: boolean | null;
           start_time?: string;
+          status?: string;
           text?: string;
           user_id?: string;
         };

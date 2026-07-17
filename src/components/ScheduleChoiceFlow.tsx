@@ -23,6 +23,7 @@ import {
 } from "@/lib/scheduleChoices";
 import {
   inferScheduleAllDayFlags,
+  resolveScheduleAllDayFlags,
   formatScheduleConfigSummary,
 } from "@/lib/scheduleTime";
 import type { RepeatRule } from "@/lib/store";
@@ -49,6 +50,8 @@ type Props = {
   initialStart?: Date;
   initialEnd?: Date;
   initialAllDay?: boolean;
+  initialStartAllDay?: boolean;
+  initialEndAllDay?: boolean;
   initialRepeat?: RepeatRule | null;
   /** When set, shows the quiet “we picked a moment” hint (detect / default). */
   suggestedStart?: Date;
@@ -302,6 +305,8 @@ export function ScheduleChoiceFlow({
   initialStart,
   initialEnd,
   initialAllDay,
+  initialStartAllDay,
+  initialEndAllDay,
   initialRepeat,
   suggestedStart,
   suggestionReason,
@@ -344,15 +349,38 @@ export function ScheduleChoiceFlow({
       const now = new Date();
       setCalendarView({ y: now.getFullYear(), m: now.getMonth() });
     }
-    const inferred = inferScheduleAllDayFlags(seed, seedEnd, initialAllDay);
-    setStartAllDay(inferred.startAllDay);
-    setEndAllDay(inferred.endAllDay);
+    const resolved =
+      initialStartAllDay !== undefined || initialEndAllDay !== undefined
+        ? {
+            startAllDay: initialStartAllDay ?? false,
+            endAllDay: initialEndAllDay ?? false,
+          }
+        : editMode && initialStart && initialEnd
+          ? resolveScheduleAllDayFlags({
+              start_time: seed.toISOString(),
+              end_time: seedEnd.toISOString(),
+              all_day: initialAllDay,
+              start_all_day: initialStartAllDay,
+              end_all_day: initialEndAllDay,
+            })
+          : inferScheduleAllDayFlags(seed, seedEnd, initialAllDay);
+    setStartAllDay(resolved.startAllDay);
+    setEndAllDay(resolved.endAllDay);
     setRepeat(repeatRuleToKey(initialRepeat));
     setStartTime([seed.getHours(), snapMinute(seed.getMinutes())]);
     setEndTime([seedEnd.getHours(), snapMinute(seedEnd.getMinutes())]);
     setReminder("30m");
     setStep("when");
-  }, [open, initialStart, initialEnd, initialAllDay, initialRepeat]);
+  }, [
+    open,
+    initialStart,
+    initialEnd,
+    initialAllDay,
+    initialStartAllDay,
+    initialEndAllDay,
+    initialRepeat,
+    editMode,
+  ]);
 
   const buildBaseDate = (): Date => {
     let base = baseDateForWhen(when);

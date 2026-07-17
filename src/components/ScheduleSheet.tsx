@@ -8,6 +8,8 @@ import type { RepeatRule } from "@/lib/store";
 
 export type ScheduleSaveOptions = {
   allDay?: boolean;
+  startAllDay?: boolean;
+  endAllDay?: boolean;
   repeat?: RepeatRule | null;
   reminderMinutes?: number | null;
   /** @deprecated use reminderMinutes */
@@ -20,6 +22,8 @@ export function ScheduleSheet({
   initialStart,
   initialEnd,
   initialAllDay,
+  initialStartAllDay,
+  initialEndAllDay,
   initialRepeat,
   saveLabel,
   onClose,
@@ -30,6 +34,8 @@ export function ScheduleSheet({
   initialStart?: Date;
   initialEnd?: Date;
   initialAllDay?: boolean;
+  initialStartAllDay?: boolean;
+  initialEndAllDay?: boolean;
   initialRepeat?: RepeatRule | null;
   saveLabel?: string;
   onClose: () => void;
@@ -81,6 +87,8 @@ export function ScheduleSheet({
           suggestionReason={suggestionReason}
           initialEnd={initialEnd}
           initialAllDay={initialAllDay}
+          initialStartAllDay={initialStartAllDay}
+          initialEndAllDay={initialEndAllDay}
           initialRepeat={initialRepeat}
           editMode={!!saveLabel}
           onConfirm={(start, end, opts) => {

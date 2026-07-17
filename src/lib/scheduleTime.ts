@@ -24,17 +24,24 @@ export function inferScheduleAllDayFlags(
   };
 }
 
+function hasStoredAllDayFlag(value: boolean | null | undefined): value is boolean {
+  return value !== undefined && value !== null;
+}
+
 export function resolveScheduleAllDayFlags(
   item: Pick<
     ScheduleItem,
     "start_time" | "end_time" | "all_day" | "start_all_day" | "end_all_day"
   >,
 ): { startAllDay: boolean; endAllDay: boolean } {
-  if (item.start_all_day !== undefined || item.end_all_day !== undefined) {
+  const hasStart = hasStoredAllDayFlag(item.start_all_day);
+  const hasEnd = hasStoredAllDayFlag(item.end_all_day);
+
+  if (hasStart || hasEnd) {
     const legacy = item.all_day === true;
     return {
-      startAllDay: item.start_all_day ?? legacy,
-      endAllDay: item.end_all_day ?? legacy,
+      startAllDay: hasStart ? item.start_all_day : legacy,
+      endAllDay: hasEnd ? item.end_all_day : legacy,
     };
   }
   return inferScheduleAllDayFlags(
@@ -42,6 +49,34 @@ export function resolveScheduleAllDayFlags(
     new Date(item.end_time),
     item.all_day,
   );
+}
+
+export type ScheduleAllDayFields = Pick<
+  ScheduleItem,
+  "all_day" | "start_all_day" | "end_all_day"
+>;
+
+export function scheduleAllDayFieldsFromConfirm(opts: {
+  allDay: boolean;
+  startAllDay: boolean;
+  endAllDay: boolean;
+}): ScheduleAllDayFields {
+  return {
+    all_day: opts.startAllDay && opts.endAllDay,
+    start_all_day: opts.startAllDay,
+    end_all_day: opts.endAllDay,
+  };
+}
+
+export function scheduleAllDayFieldsFromItem(
+  item: Pick<ScheduleItem, "all_day" | "start_all_day" | "end_all_day">,
+): ScheduleAllDayFields {
+  const flags = resolveScheduleAllDayFlags(item);
+  return scheduleAllDayFieldsFromConfirm({
+    allDay: flags.startAllDay && flags.endAllDay,
+    startAllDay: flags.startAllDay,
+    endAllDay: flags.endAllDay,
+  });
 }
 
 function formatKoreanClock(d: Date): string {

@@ -58,6 +58,7 @@ import { EmptyState } from "@/components/EmptyState";
 import { SyncIndicator } from "@/components/SyncIndicator";
 import { SwipeCard } from "@/components/SwipeCard";
 import { ScheduleSheet, type ScheduleSaveOptions } from "@/components/ScheduleSheet";
+import { scheduleAllDayFieldsFromConfirm } from "@/lib/scheduleTime";
 import { track } from "@/lib/analytics";
 import { SPRING_DEFAULT } from "@/lib/motion";
 
@@ -509,11 +510,16 @@ function Archive() {
               ).toISOString(),
             }
           : { alarm: false };
+      const allDayFields = scheduleAllDayFieldsFromConfirm({
+        allDay: opts?.allDay ?? false,
+        startAllDay: opts?.startAllDay ?? opts?.allDay ?? false,
+        endAllDay: opts?.endAllDay ?? opts?.allDay ?? false,
+      });
       const { cloudSynced: scheduleSynced } = await schedules.add({
         text,
         start_time: start.toISOString(),
         end_time: end.toISOString(),
-        all_day: opts?.allDay ?? false,
+        ...allDayFields,
         repeat: opts?.repeat ?? null,
         alarm: alarmPayload.alarm ?? false,
         alarm_at: alarmPayload.alarm
