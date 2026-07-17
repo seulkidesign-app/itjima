@@ -20,6 +20,7 @@ import {
   Pencil,
   Move,
   CheckSquare,
+  Archive,
 } from "lucide-react";
 import { animate, motion, AnimatePresence, LayoutGroup } from "framer-motion";
 import { useArchive, useSchedules, type ScheduleItem } from "@/lib/store";
@@ -723,7 +724,9 @@ function ScheduleFeelRow({
   onEdit: () => void;
 }) {
   const t = useT();
+  const { lang } = useLang();
   const title = scheduleDisplayTitle(s);
+  const flowDateLabel = formatScheduleTimeLoose(new Date(s.start_time), lang);
   const dxRef = useRef(0);
   const [dx, setDx] = useState(0);
   const [acting, setActing] = useState(false);
@@ -818,8 +821,13 @@ function ScheduleFeelRow({
         }`}
         aria-hidden
       />
-      <span className="min-w-0 flex-1 truncate text-[16px] font-semibold text-ink">
-        {title}
+      <span className="min-w-0 flex-1">
+        <span className="block truncate text-[16px] font-semibold text-ink">
+          {title}
+        </span>
+        <span className="block text-[12px] text-ink-soft">
+          {flowDateLabel}
+        </span>
       </span>
     </li>
   );
@@ -1007,10 +1015,12 @@ function ScheduleCard({
                 ? "border-primary bg-primary text-ink"
                 : "border-ink/20 hover:border-primary"
             }`}
-            aria-label={t("다녀옴", "Done")}
+            aria-label={
+              done ? t("기억함으로 보관하기", "Save to Archive") : t("다녀옴", "Done")
+            }
           >
             {done ? (
-              <Check size={14} strokeWidth={3} />
+              <Archive size={13} strokeWidth={2.25} />
             ) : (
               <span
                 className={`h-2.5 w-2.5 rounded-full ${dotColor}`}
@@ -1830,7 +1840,7 @@ function ScheduleEventMenu({
     },
     {
       key: "del",
-      label: t("내려놓기", "Let go"),
+      label: t("삭제하기", "Delete"),
       icon: Trash2,
       onClick: onDelete,
       danger: true,

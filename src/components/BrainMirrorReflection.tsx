@@ -157,7 +157,7 @@ export function BrainMirrorReflectionShell({
   children,
 }: ShellProps) {
   const t = useT();
-  const reflectionLabel = t("되비침", "Reflection");
+  const reflectionLabel = t("다시 이해하기", "Understand again");
   if (!visible) return null;
 
   if (compact) {

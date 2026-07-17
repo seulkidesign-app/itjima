@@ -680,7 +680,7 @@ function Inbox() {
             />
             <MenuItem
               icon={<Sparkles size={18} />}
-              label={t("되비침", "Reflect")}
+              label={t("다시 이해하기", "Understand again")}
               onClick={() => {
                 const target = menuItem;
                 setMenuFor(null);
@@ -716,7 +716,7 @@ function Inbox() {
             />
             <MenuItem
               icon={<Trash2 size={18} />}
-              label={t("내려놓기", "Let go")}
+              label={t("삭제하기", "Delete")}
               danger
               onClick={() => {
                 setMenuFor(null);

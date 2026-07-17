@@ -449,44 +449,61 @@ export function ScheduleChoiceFlow({
               )}
 
               <div className="mt-4">
-                <p className="mb-2 text-[12px] font-medium text-ink-soft/65">
-                  {t("반복", "Repeat")}
-                </p>
                 <SettingsGroup>
-                  {REPEAT_OPTIONS.map((key, i) => {
-                    const active = repeat === key;
-                    const isLast = i === REPEAT_OPTIONS.length - 1;
-                    return (
-                      <button
-                        key={key}
-                        type="button"
-                        onClick={() => {
+                  <SettingsRow
+                    label={t("반복", "Repeat")}
+                    trailing={
+                      <IosSwitch
+                        checked={repeat !== "none"}
+                        onChange={(v) => {
                           tick();
-                          setRepeat(key);
+                          setRepeat(v ? "daily" : "none");
                         }}
-                        className={`flex w-full items-center justify-between px-4 py-3.5 text-left touch-press active:bg-ink/[0.03] ${
-                          !isLast ? "border-b border-ink/[0.06]" : ""
-                        }`}
-                      >
-                        <span
-                          className={`text-[16px] ${
-                            active
-                              ? "font-semibold text-ink"
-                              : "font-medium text-ink"
-                          }`}
-                        >
-                          {repeatLabel(key, t)}
-                        </span>
-                        {active && (
-                          <Check
-                            size={18}
-                            strokeWidth={2.75}
-                            className="text-ink"
-                          />
-                        )}
-                      </button>
-                    );
-                  })}
+                        label={t("반복", "Repeat")}
+                      />
+                    }
+                    border={repeat === "none"}
+                  />
+                  {repeat !== "none" && (
+                    <>
+                      {REPEAT_OPTIONS.filter((k) => k !== "none").map(
+                        (key, i, arr) => {
+                          const active = repeat === key;
+                          const isLast = i === arr.length - 1;
+                          return (
+                            <button
+                              key={key}
+                              type="button"
+                              onClick={() => {
+                                tick();
+                                setRepeat(key);
+                              }}
+                              className={`flex w-full items-center justify-between px-4 py-3.5 text-left touch-press active:bg-ink/[0.03] ${
+                                !isLast ? "border-b border-ink/[0.06]" : ""
+                              }`}
+                            >
+                              <span
+                                className={`text-[16px] ${
+                                  active
+                                    ? "font-semibold text-ink"
+                                    : "font-medium text-ink"
+                                }`}
+                              >
+                                {repeatLabel(key, t)}
+                              </span>
+                              {active && (
+                                <Check
+                                  size={18}
+                                  strokeWidth={2.75}
+                                  className="text-ink"
+                                />
+                              )}
+                            </button>
+                          );
+                        },
+                      )}
+                    </>
+                  )}
                 </SettingsGroup>
               </div>
             </motion.div>

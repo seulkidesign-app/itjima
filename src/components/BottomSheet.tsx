@@ -68,7 +68,7 @@ export function BottomSheet({
     <AnimatePresence>
       {open && (
         <div
-          className="absolute inset-0 z-[80] flex flex-col"
+          className="fixed inset-0 z-[80] mx-auto flex max-w-[430px] flex-col"
           role="presentation"
         >
           <motion.button

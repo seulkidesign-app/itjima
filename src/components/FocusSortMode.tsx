@@ -115,7 +115,7 @@ function DeckCardBody({ item }: { item: InboxItem }) {
         <div
           className="mt-5 border-t border-ink/[0.07] pt-4"
           role="complementary"
-          aria-label={t("되비침", "Reflection")}
+          aria-label={t("다시 이해하기", "Understand again")}
         >
           <BrainMirrorReflectionBody
             result={bm}

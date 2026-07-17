@@ -70,7 +70,7 @@ export function ScheduleAlarmSheet({
           >
             {t("직접 설정", "Custom time")}
           </button>
-          {armed && onDisarm && (
+          {armed && onDisarm ? (
             <button
               type="button"
               onClick={() => {
@@ -80,6 +80,16 @@ export function ScheduleAlarmSheet({
               className="touch-press mt-1 w-full rounded-[20px] bg-ink/[0.06] px-4 py-3.5 text-[15px] font-semibold text-ink"
             >
               {t("알림 끄기", "Turn off alarm")}
+            </button>
+          ) : (
+            <button
+              type="button"
+              onClick={() => {
+                onClose();
+              }}
+              className="touch-press mt-1 w-full rounded-[20px] px-4 py-3.5 text-[15px] font-medium text-ink-soft"
+            >
+              {t("알림 없이 둘게요", "No alarm for now")}
             </button>
           )}
         </div>
