@@ -6,7 +6,7 @@ import {
   type RefObject,
 } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Pin } from "lucide-react";
+import { Pin, GripVertical } from "lucide-react";
 import type { ScheduleItem } from "@/lib/store";
 import { SPRING_DEFAULT, SPRING_SNAP_BACK } from "@/lib/motion";
 import { tick, confirm as hapticConfirm } from "@/lib/haptics";
@@ -324,9 +324,15 @@ export function CalendarDayCell({
             if (onDragStart) onDragStart(e, firstEvent);
           }}
           onClick={(e) => e.stopPropagation()}
-          className="mt-auto touch-none rounded-[8px] bg-primary/35 px-1 py-0.5 active:scale-[0.97]"
+          className="mt-auto flex touch-none items-center gap-0.5 rounded-[9px] bg-primary/45 px-1.5 py-1 active:scale-[0.97]"
         >
-          <span className="line-clamp-1 text-[9px] font-semibold leading-tight text-ink">
+          <GripVertical
+            size={9}
+            strokeWidth={2.5}
+            className="shrink-0 text-ink/45"
+            aria-hidden
+          />
+          <span className="line-clamp-1 text-[10px] font-semibold leading-tight text-ink">
             {preview}
             {eventCount > 1 ? ` +${eventCount - 1}` : ""}
           </span>

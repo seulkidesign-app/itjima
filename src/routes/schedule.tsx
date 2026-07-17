@@ -1650,6 +1650,12 @@ function CalendarGrid({
                   );
                 })}
               </div>
+              <p className="mt-2 px-1 text-[11px] text-ink-soft/70">
+                {t(
+                  "→ 노란 블록을 눌러 다른 날로 옮길 수 있어요",
+                  "→ Press and drag a yellow block to move it to another day",
+                )}
+              </p>
             </motion.div>
           </AnimatePresence>
 

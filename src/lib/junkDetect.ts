@@ -1,7 +1,7 @@
 import type { InboxItem } from "@/lib/store";
 
 const KEYBOARD_MASH =
-  /^(asdf|qwer|zxcv|ㅁㄴㅇ|ㅎㅎ|ㅋㅋ|ㅇㅇ|ㅇㅋ|ㄴㄴ|ㄱㄱ|test|aaa+|111+|\.{2,})$/i;
+  /^(asdf|qwer|zxcv|ㅁㄴㅇ|ㅎㅎ|ㅋㅋ|ㅇㅇ|ㅇㅋ|ㄴㄴ|ㄱㄱ|test|aaa+|111+|\.{2,}|음|어|그냥|글쎄|응|네|아니|몰라|뭐지|뭐야|ㅇㅋㅇㅋ|hi|hello)$/i;
 const FRAGMENT = /^[^\p{L}\p{N}]{1,3}$/u;
 
 /** Chat-filler tokens (no real content) — used to gate Brain Mirror too. */
@@ -19,7 +19,10 @@ export type JunkReason =
   | "single_char"
   | "keyboard_mash"
   | "fragment"
-  | "duplicate";
+  | "duplicate"
+  | "stale";
+
+const STALE_DAYS = 14;
 
 export type JunkCandidate = {
   item: InboxItem;
@@ -59,9 +62,19 @@ export function detectJunk(items: InboxItem[]): JunkCandidate[] {
       const age = Date.now() - new Date(item.created_at).getTime();
       if (prev !== undefined && age < 5 * 60 * 1000) {
         out.push({ item, reason: "duplicate" });
+        continue;
       } else {
         seen.set(norm, age);
       }
+    }
+
+    // "오래되고 안 열어본 것" — inbox items don't have a per-item visit
+    // count (unlike Archive), so age sitting unprocessed in the inbox is
+    // the closest meaningful proxy available.
+    const ageDays =
+      (Date.now() - new Date(item.created_at).getTime()) / 86_400_000;
+    if (ageDays >= STALE_DAYS) {
+      out.push({ item, reason: "stale" });
     }
   }
 
@@ -73,8 +86,9 @@ export function junkReasonLabel(reason: JunkReason, lang: "ko" | "en"): string {
     empty: "비어 있음",
     single_char: "한 글자",
     keyboard_mash: "실수로 적은 것",
-    fragment: "짧은 휴지",
+    fragment: "짧은 흔적",
     duplicate: "같은 말을 또",
+    stale: "오래 머물러 있어요",
   };
   const en: Record<JunkReason, string> = {
     empty: "Empty",
@@ -82,6 +96,7 @@ export function junkReasonLabel(reason: JunkReason, lang: "ko" | "en"): string {
     keyboard_mash: "Accidental typing",
     fragment: "Tiny fragment",
     duplicate: "Sent twice",
+    stale: "Been sitting a while",
   };
   return lang === "en" ? en[reason] : ko[reason];
 }

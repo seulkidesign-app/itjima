@@ -9,6 +9,9 @@ import {
   FolderPlus,
   Pin,
   FolderInput,
+  Orbit,
+  List as ListIcon,
+  Sparkles,
 } from "lucide-react";
 import { useArchive, useSchedules, type ArchiveItem } from "@/lib/store";
 import { archiveGroup, detectDate } from "@/lib/dateDetect";
@@ -36,6 +39,8 @@ import {
   writeCustomGroups,
   readCollapsedGroups,
   writeCollapsedGroups,
+  readAutoClassify,
+  writeAutoClassify,
   type RevivalHint,
   type ArchiveGroupDef,
 } from "@/lib/archiveMeta";
@@ -86,6 +91,9 @@ function Archive() {
   );
   const [collapsed, setCollapsed] = useState<Set<string>>(() =>
     readCollapsedGroups(),
+  );
+  const [autoClassify, setAutoClassify] = useState<boolean>(() =>
+    readAutoClassify(),
   );
 
   // Selection mode (long-press)
@@ -195,7 +203,7 @@ function Archive() {
   );
 
   const groupOf = (id: string, text: string) =>
-    overrides[id] ?? archiveGroup(text).key;
+    overrides[id] ?? (autoClassify ? archiveGroup(text).key : "etc");
 
   const persistOverrides = (next: Record<string, string>) => {
     setOverrides(next);
@@ -222,7 +230,7 @@ function Archive() {
     });
     return allGroups.filter((g) => (counts.get(g.key) ?? 0) > 0);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [items, overrides, allGroups]);
+  }, [items, overrides, allGroups, autoClassify]);
 
   const isSearching = q.trim().length > 0;
 

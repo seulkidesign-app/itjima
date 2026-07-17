@@ -256,6 +256,19 @@ export function writeCollapsedGroups(next: string[]) {
   touchMetaUpdatedAt();
 }
 
+// Auto-classification into keyword-based groups (e.g. "기타") is opt-in —
+// off by default. Users must explicitly turn it on; otherwise items stay
+// ungrouped rather than being silently sorted into categories they didn't
+// choose.
+export function readAutoClassify(): boolean {
+  return readJSON<boolean>(metaKey("auto_classify"), false);
+}
+
+export function writeAutoClassify(value: boolean) {
+  writeJSON(metaKey("auto_classify"), value);
+  touchMetaUpdatedAt();
+}
+
 export function readSchedulePins(): Set<string> {
   return new Set(readJSON<string[]>(schedulePinKey(), []));
 }
