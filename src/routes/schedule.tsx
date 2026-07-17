@@ -31,6 +31,10 @@ import { ScheduleTimerSheet } from "@/components/ScheduleTimerSheet";
 import {
   CalendarDragLayer,
   CalendarDayCell,
+  CalendarWeekSpanBars,
+  computeWeekSpanSegments,
+  isMultiDaySchedule,
+  scheduleRangeInMonth,
   useCalendarScrollParent,
 } from "@/components/CalendarDragLayer";
 import { EmptyState } from "@/components/EmptyState";
@@ -1437,6 +1441,12 @@ function CalendarGrid({
     ...Array.from({ length: startDay }, () => null),
     ...Array.from({ length: days }, (_, i) => i + 1),
   ];
+  const weeks: (number | null)[][] = [];
+  for (let i = 0; i < cells.length; i += 7) {
+    const row = cells.slice(i, i + 7);
+    while (row.length < 7) row.push(null);
+    weeks.push(row);
+  }
   const eventsOf = (day: number) =>
     items.filter((s) => {
       const dt = new Date(s.start_time);
@@ -1444,6 +1454,11 @@ function CalendarGrid({
         dt.getFullYear() === y && dt.getMonth() === m && dt.getDate() === day
       );
     });
+  const singleDayEventsOf = (day: number) =>
+    eventsOf(day).filter((s) => !isMultiDaySchedule(s));
+  const multiDayInMonth = items.filter(
+    (s) => scheduleRangeInMonth(s, y, m) != null && isMultiDaySchedule(s),
+  );
   const [selected, setSelected] = useState<number | null>(today.getDate());
   const [menuFor, setMenuFor] = useState<ScheduleItem | null>(null);
   const [selectMode, setSelectMode] = useState(false);
@@ -1464,10 +1479,7 @@ function CalendarGrid({
 
   const selectedEvents = selected ? eventsOf(selected) : [];
   const locale = lang === "en" ? "en-US" : "ko-KR";
-  const monthHasEvents = items.some((s) => {
-    const dt = new Date(s.start_time);
-    return dt.getFullYear() === y && dt.getMonth() === m;
-  });
+  const monthHasEvents = items.some((s) => scheduleRangeInMonth(s, y, m) != null);
   const viewingTodayMonth =
     y === today.getFullYear() && m === today.getMonth();
   const selectedDate =
@@ -1613,40 +1625,64 @@ function CalendarGrid({
                   </div>
                 ))}
               </div>
-              <div className="mt-1 grid grid-cols-7 gap-1">
-                {cells.map((c, i) => {
-                  if (!c) return <div key={i} className="min-h-[52px]" />;
-                  const evs = eventsOf(c);
-                  const weekday = (startDay + c - 1) % 7;
-                  const isToday =
-                    c === today.getDate() &&
-                    m === today.getMonth() &&
-                    y === today.getFullYear();
-                  const isSel = c === selected;
-                  const preview = evs.length
-                    ? scheduleDisplayTitle(evs[0])
-                    : undefined;
+              <div className="mt-1 space-y-0.5">
+                {weeks.map((week, wi) => {
+                  const spanSegments = computeWeekSpanSegments(
+                    week,
+                    multiDayInMonth,
+                    y,
+                    m,
+                  );
                   return (
-                    <CalendarDayCell
-                      key={i}
-                      day={c}
-                      weekday={weekday}
-                      hoverDay={hoverDay}
-                      dragging={draggingIds.length > 0}
-                      isToday={isToday}
-                      isSelected={isSel}
-                      eventCount={evs.length}
-                      preview={preview}
-                      firstEvent={evs[0]}
-                      onSelect={() => {
-                        setSelected(c);
-                        haptic(6);
-                      }}
-                      onLongPressEmpty={() =>
-                        onQuickAdd(defaultStartForDay(y, m, c))
-                      }
-                      onDragStart={startDrag}
-                    />
+                    <div key={wi}>
+                      <div className="grid grid-cols-7 gap-1">
+                        {week.map((c, i) => {
+                          if (!c) {
+                            return (
+                              <div key={`${wi}-${i}`} className="min-h-[52px]" />
+                            );
+                          }
+                          const evs = singleDayEventsOf(c);
+                          const weekday = (startDay + c - 1) % 7;
+                          const isToday =
+                            c === today.getDate() &&
+                            m === today.getMonth() &&
+                            y === today.getFullYear();
+                          const isSel = c === selected;
+                          const preview = evs.length
+                            ? scheduleDisplayTitle(evs[0])
+                            : undefined;
+                          return (
+                            <CalendarDayCell
+                              key={`${wi}-${i}`}
+                              day={c}
+                              weekday={weekday}
+                              hoverDay={hoverDay}
+                              dragging={draggingIds.length > 0}
+                              isToday={isToday}
+                              isSelected={isSel}
+                              eventCount={evs.length}
+                              preview={preview}
+                              firstEvent={evs[0]}
+                              onSelect={() => {
+                                setSelected(c);
+                                haptic(6);
+                              }}
+                              onLongPressEmpty={() =>
+                                onQuickAdd(defaultStartForDay(y, m, c))
+                              }
+                              onDragStart={startDrag}
+                            />
+                          );
+                        })}
+                      </div>
+                      <CalendarWeekSpanBars
+                        segments={spanSegments}
+                        titleFor={scheduleDisplayTitle}
+                        draggingIds={draggingIds}
+                        onDragStart={startDrag}
+                      />
+                    </div>
                   );
                 })}
               </div>

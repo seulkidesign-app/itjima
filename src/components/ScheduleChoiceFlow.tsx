@@ -1,5 +1,5 @@
 import { useEffect, useState, type ReactNode } from "react";
-import { Check } from "lucide-react";
+import { Check, ChevronLeft, ChevronRight } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { WheelPicker } from "./WheelPicker";
 import { useT, useLang } from "@/lib/i18n";
@@ -21,6 +21,10 @@ import {
   startOfDay,
   formatSuggestedMoment,
 } from "@/lib/scheduleChoices";
+import {
+  inferScheduleAllDayFlags,
+  formatScheduleConfigSummary,
+} from "@/lib/scheduleTime";
 import type { RepeatRule } from "@/lib/store";
 import { EASE_OUT_APP } from "@/lib/motion";
 import { confirm as confirmHaptic, tick } from "@/lib/haptics";
@@ -31,7 +35,10 @@ type Step = "when" | "time" | "reminder";
 
 export type ScheduleConfirmOptions = {
   reminderMinutes: number | null;
+  /** Both sides all-day — kept for callers that still read a single flag. */
   allDay: boolean;
+  startAllDay: boolean;
+  endAllDay: boolean;
   repeat: RepeatRule | null;
 };
 
@@ -159,6 +166,135 @@ const REPEAT_OPTIONS: RepeatKey[] = [
   "yearly",
 ];
 
+function startOfToday(): Date {
+  const d = new Date();
+  d.setHours(0, 0, 0, 0);
+  return d;
+}
+
+function sameCalendarDay(a: Date, b: Date): boolean {
+  return (
+    a.getFullYear() === b.getFullYear() &&
+    a.getMonth() === b.getMonth() &&
+    a.getDate() === b.getDate()
+  );
+}
+
+function formatPickDateCta(d: Date, lang: "ko" | "en"): string {
+  if (lang === "en") {
+    const date = d.toLocaleDateString("en-US", {
+      month: "short",
+      day: "numeric",
+    });
+    const wd = d.toLocaleDateString("en-US", { weekday: "short" });
+    return `${date} (${wd}) selected`;
+  }
+  const wd = d.toLocaleDateString("ko-KR", { weekday: "short" });
+  return `${d.getMonth() + 1}월 ${d.getDate()}일 (${wd}) 선택`;
+}
+
+function SchedulePickCalendar({
+  viewYear,
+  viewMonth,
+  selected,
+  onSelectDay,
+  onPrevMonth,
+  onNextMonth,
+  lang,
+}: {
+  viewYear: number;
+  viewMonth: number;
+  selected: Date | null;
+  onSelectDay: (day: number) => void;
+  onPrevMonth: () => void;
+  onNextMonth: () => void;
+  lang: "ko" | "en";
+}) {
+  const today = startOfToday();
+  const first = new Date(viewYear, viewMonth, 1);
+  const startDay = first.getDay();
+  const daysInMonth = new Date(viewYear, viewMonth + 1, 0).getDate();
+  const monthLabel =
+    lang === "en"
+      ? first.toLocaleString("en-US", { month: "long", year: "numeric" })
+      : `${viewYear}년 ${viewMonth + 1}월`;
+  const weekdays =
+    lang === "en"
+      ? ["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"]
+      : ["일", "월", "화", "수", "목", "금", "토"];
+
+  const cells: (number | null)[] = [];
+  for (let i = 0; i < startDay; i++) cells.push(null);
+  for (let d = 1; d <= daysInMonth; d++) cells.push(d);
+
+  return (
+    <div className="mt-3 overflow-hidden rounded-[16px] bg-ink/[0.04] p-3 ring-1 ring-ink/[0.05]">
+      <div className="mb-2 flex items-center justify-between">
+        <button
+          type="button"
+          onClick={onPrevMonth}
+          className="touch-press flex h-8 w-8 items-center justify-center rounded-full text-ink-soft active:bg-ink/[0.06]"
+          aria-label={lang === "en" ? "Previous month" : "이전 달"}
+        >
+          <ChevronLeft size={18} strokeWidth={2.25} />
+        </button>
+        <span className="text-[15px] font-semibold text-ink">{monthLabel}</span>
+        <button
+          type="button"
+          onClick={onNextMonth}
+          className="touch-press flex h-8 w-8 items-center justify-center rounded-full text-ink-soft active:bg-ink/[0.06]"
+          aria-label={lang === "en" ? "Next month" : "다음 달"}
+        >
+          <ChevronRight size={18} strokeWidth={2.25} />
+        </button>
+      </div>
+      <div className="grid grid-cols-7 gap-1 text-center text-[10px] font-semibold text-ink-soft/70">
+        {weekdays.map((label) => (
+          <span key={label} className="py-1">
+            {label}
+          </span>
+        ))}
+      </div>
+      <div className="mt-1 grid grid-cols-7 gap-1">
+        {cells.map((day, i) => {
+          if (day === null) {
+            return <div key={`empty-${i}`} aria-hidden />;
+          }
+          const date = new Date(viewYear, viewMonth, day);
+          date.setHours(0, 0, 0, 0);
+          const isPast = date.getTime() < today.getTime();
+          const isToday = sameCalendarDay(date, today);
+          const isSelected = selected ? sameCalendarDay(date, selected) : false;
+          const weekday = date.getDay();
+          const isWeekend = weekday === 0 || weekday === 6;
+
+          return (
+            <button
+              key={day}
+              type="button"
+              disabled={isPast}
+              onClick={() => onSelectDay(day)}
+              className={`touch-press flex h-10 items-center justify-center rounded-[12px] text-[13px] font-semibold tabular-nums transition-colors ${
+                isPast
+                  ? "cursor-not-allowed text-ink-soft/25"
+                  : isSelected
+                    ? "bg-primary text-ink"
+                    : isToday
+                      ? "text-ink ring-1 ring-ink/10"
+                      : isWeekend
+                        ? "text-ink-soft/55 active:bg-ink/[0.05]"
+                        : "text-ink-soft active:bg-ink/[0.05]"
+              }`}
+            >
+              {day}
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 export function ScheduleChoiceFlow({
   open,
   title,
@@ -176,17 +312,20 @@ export function ScheduleChoiceFlow({
 }: Props) {
   const t = useT();
   const { lang } = useLang();
-  const locale = lang === "en" ? "en-US" : "ko-KR";
 
   const [step, setStep] = useState<Step>("when");
   const [when, setWhen] = useState<WhenKey>("today");
-  const [allDay, setAllDay] = useState(false);
+  const [startAllDay, setStartAllDay] = useState(false);
+  const [endAllDay, setEndAllDay] = useState(false);
   const [repeat, setRepeat] = useState<RepeatKey>("none");
   const [reminder, setReminder] = useState<ReminderKey>("30m");
-  const [pickDate, setPickDate] = useState<[number, number]>([
-    new Date().getMonth() + 1,
-    new Date().getDate(),
-  ]);
+  const [calendarView, setCalendarView] = useState(() => {
+    const now = new Date();
+    return { y: now.getFullYear(), m: now.getMonth() };
+  });
+  const [pickedCalendarDate, setPickedCalendarDate] = useState<Date | null>(
+    null,
+  );
   const [startTime, setStartTime] = useState<[number, number]>([9, 0]);
   const [endTime, setEndTime] = useState<[number, number]>([10, 0]);
 
@@ -194,9 +333,20 @@ export function ScheduleChoiceFlow({
     if (!open) return;
     const seed = initialStart ?? new Date();
     const seedEnd = initialEnd ?? defaultEndFromStart(seed);
-    setWhen(inferWhenFromDate(seed));
-    setPickDate([seed.getMonth() + 1, seed.getDate()]);
-    setAllDay(initialAllDay ?? false);
+    const seedWhen = inferWhenFromDate(seed);
+    setWhen(seedWhen);
+    if (seedWhen === "pick_date") {
+      const dayStart = startOfDay(seed);
+      setPickedCalendarDate(dayStart);
+      setCalendarView({ y: seed.getFullYear(), m: seed.getMonth() });
+    } else {
+      setPickedCalendarDate(null);
+      const now = new Date();
+      setCalendarView({ y: now.getFullYear(), m: now.getMonth() });
+    }
+    const inferred = inferScheduleAllDayFlags(seed, seedEnd, initialAllDay);
+    setStartAllDay(inferred.startAllDay);
+    setEndAllDay(inferred.endAllDay);
     setRepeat(repeatRuleToKey(initialRepeat));
     setStartTime([seed.getHours(), snapMinute(seed.getMinutes())]);
     setEndTime([seedEnd.getHours(), snapMinute(seedEnd.getMinutes())]);
@@ -207,38 +357,49 @@ export function ScheduleChoiceFlow({
   const buildBaseDate = (): Date => {
     let base = baseDateForWhen(when);
     if (when === "pick_date") {
-      const y = new Date().getFullYear();
-      base = new Date(y, pickDate[0] - 1, pickDate[1], 0, 0, 0, 0);
+      if (!pickedCalendarDate) {
+        const now = new Date();
+        return new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0, 0);
+      }
+      return startOfDay(pickedCalendarDate);
     }
     return base;
   };
 
   const buildRange = (): { start: Date; end: Date } => {
     const base = buildBaseDate();
-    if (allDay) {
-      const start = startOfDay(base);
-      return { start, end: endOfDay(base) };
-    }
-    const start = applyTimeToDate(base, "custom", startTime[0], startTime[1]);
-    let end = applyTimeToDate(base, "custom", endTime[0], endTime[1]);
-    if (end.getTime() <= start.getTime()) {
-      end = defaultEndFromStart(start);
+    const start = startAllDay
+      ? startOfDay(base)
+      : applyTimeToDate(base, "custom", startTime[0], startTime[1]);
+
+    let end: Date;
+    if (endAllDay) {
+      end = endOfDay(startAllDay ? base : start);
+    } else {
+      end = applyTimeToDate(base, "custom", endTime[0], endTime[1]);
+      if (end.getTime() <= start.getTime()) {
+        end = defaultEndFromStart(start);
+      }
     }
     return { start, end };
   };
 
-  const { start, end } = buildRange();
+  const bothAllDay = startAllDay && endAllDay;
 
-  const dateSummary = start.toLocaleDateString(locale, {
-    weekday: when === "today" ? undefined : "short",
-    month: when === "pick_date" ? "short" : undefined,
-    day: when === "pick_date" ? "numeric" : undefined,
-  });
+  const { start, end } = buildRange();
 
   const momentPreview = formatSuggestedMoment(
     start,
     lang === "en" ? "en" : "ko",
-    allDay,
+    bothAllDay,
+  );
+
+  const configSummary = formatScheduleConfigSummary(
+    startAllDay,
+    endAllDay,
+    start,
+    end,
+    lang === "en" ? "en" : "ko",
   );
 
   const whenOptions: { key: WhenKey; label: string }[] = [
@@ -247,17 +408,6 @@ export function ScheduleChoiceFlow({
     { key: "weekend", label: t("이번 주말", "This weekend") },
     { key: "next_week", label: t("다음 주", "Next week") },
     { key: "pick_date", label: t("날짜 선택", "Pick date") },
-  ];
-
-  const dateColDef = [
-    {
-      label: t("월", "Mo"),
-      values: Array.from({ length: 12 }, (_, i) => i + 1),
-    },
-    {
-      label: t("일", "Day"),
-      values: Array.from({ length: 31 }, (_, i) => i + 1),
-    },
   ];
 
   const timeColDef = [
@@ -269,7 +419,23 @@ export function ScheduleChoiceFlow({
     { label: t("분", "Min"), values: [...MINUTE_STEPS], pad: 2 },
   ];
 
+  const nextLabel =
+    step === "when"
+      ? t("시간 보기", "Pick a time")
+      : t("알림 정하기", "Set a reminder");
+
+  const canProceedWhen =
+    step !== "when" || when !== "pick_date" || pickedCalendarDate != null;
+
+  const whenStepCtaLabel =
+    step === "when" && when === "pick_date" && pickedCalendarDate
+      ? formatPickDateCta(pickedCalendarDate, lang === "en" ? "en" : "ko")
+      : step === "when" && when === "pick_date"
+        ? t("날짜를 선택해 주세요", "Choose a date")
+        : nextLabel;
+
   const goNext = () => {
+    if (step === "when" && when === "pick_date" && !pickedCalendarDate) return;
     if (step === "when") setStep("time");
     else if (step === "time") setStep("reminder");
   };
@@ -293,22 +459,19 @@ export function ScheduleChoiceFlow({
   const handleDone = () => {
     confirmHaptic();
     let { start: s, end: e } = buildRange();
-    if (!editMode && !allDay && s.getTime() < Date.now() - 60 * 60 * 1000) {
+    if (!editMode && !startAllDay && s.getTime() < Date.now() - 60 * 60 * 1000) {
       s = new Date(s);
       s.setFullYear(s.getFullYear() + 1);
-      e = allDay ? endOfDay(s) : defaultEndFromStart(s);
+      e = bothAllDay ? endOfDay(s) : defaultEndFromStart(s);
     }
     onConfirm(s, e, {
       reminderMinutes: reminderToMinutes(reminder),
-      allDay,
+      allDay: bothAllDay,
+      startAllDay,
+      endAllDay,
       repeat: repeatKeyToRule(repeat),
     });
   };
-
-  const nextLabel =
-    step === "when"
-      ? t("시간 보기", "Pick a time")
-      : t("알림 정하기", "Set a reminder");
 
   return (
     <div className="flex min-h-0 flex-1 flex-col">
@@ -366,24 +529,54 @@ export function ScheduleChoiceFlow({
                     key={key}
                     large
                     active={when === key}
-                    onClick={() => setWhen(key)}
+                    onClick={() => {
+                      if (key !== "pick_date") {
+                        setPickedCalendarDate(null);
+                      } else if (when !== "pick_date") {
+                        setPickedCalendarDate(null);
+                      }
+                      setWhen(key);
+                    }}
                   >
                     {label}
                   </Chip>
                 ))}
               </div>
               {when === "pick_date" && (
-                <motion.div
-                  initial={{ opacity: 0, height: 0 }}
-                  animate={{ opacity: 1, height: "auto" }}
-                  className="mt-3 overflow-hidden"
-                >
-                  <WheelPicker
-                    columns={dateColDef}
-                    value={pickDate}
-                    onChange={setPickDate}
-                  />
-                </motion.div>
+                <SchedulePickCalendar
+                  viewYear={calendarView.y}
+                  viewMonth={calendarView.m}
+                  selected={pickedCalendarDate}
+                  lang={lang === "en" ? "en" : "ko"}
+                  onSelectDay={(day) => {
+                    tick();
+                    const picked = new Date(
+                      calendarView.y,
+                      calendarView.m,
+                      day,
+                      0,
+                      0,
+                      0,
+                      0,
+                    );
+                    setPickedCalendarDate(picked);
+                    setWhen("pick_date");
+                  }}
+                  onPrevMonth={() => {
+                    tick();
+                    setCalendarView((v) => {
+                      if (v.m === 0) return { y: v.y - 1, m: 11 };
+                      return { y: v.y, m: v.m - 1 };
+                    });
+                  }}
+                  onNextMonth={() => {
+                    tick();
+                    setCalendarView((v) => {
+                      if (v.m === 11) return { y: v.y + 1, m: 0 };
+                      return { y: v.y, m: v.m + 1 };
+                    });
+                  }}
+                />
               )}
             </motion.div>
           )}
@@ -406,47 +599,50 @@ export function ScheduleChoiceFlow({
 
               <SettingsGroup>
                 <SettingsRow
-                  label={t("하루 종일", "All-day")}
+                  label={t("시작", "Start")}
                   trailing={
                     <IosSwitch
-                      checked={allDay}
-                      onChange={setAllDay}
+                      checked={startAllDay}
+                      onChange={setStartAllDay}
                       label={t("하루 종일", "All-day")}
                     />
                   }
-                  border={!allDay}
+                  border={!startAllDay}
                 />
-                {!allDay && (
-                  <>
-                    <div className="border-b border-ink/[0.06] px-4 py-3">
-                      <p className="mb-2 text-[12px] font-medium text-ink-soft/65">
-                        {t("시작", "Starts")}
-                      </p>
-                      <WheelPicker
-                        columns={timeColDef}
-                        value={startTime}
-                        onChange={handleStartTimeChange}
-                      />
-                    </div>
-                    <div className="px-4 py-3">
-                      <p className="mb-2 text-[12px] font-medium text-ink-soft/65">
-                        {t("종료", "Ends")}
-                      </p>
-                      <WheelPicker
-                        columns={timeColDef}
-                        value={endTime}
-                        onChange={setEndTime}
-                      />
-                    </div>
-                  </>
+                {!startAllDay && (
+                  <div className="border-b border-ink/[0.06] px-4 py-3">
+                    <WheelPicker
+                      columns={timeColDef}
+                      value={startTime}
+                      onChange={handleStartTimeChange}
+                    />
+                  </div>
+                )}
+                <SettingsRow
+                  label={t("종료", "End")}
+                  trailing={
+                    <IosSwitch
+                      checked={endAllDay}
+                      onChange={setEndAllDay}
+                      label={t("하루 종일", "All-day")}
+                    />
+                  }
+                  border={!endAllDay}
+                />
+                {!endAllDay && (
+                  <div className="px-4 py-3">
+                    <WheelPicker
+                      columns={timeColDef}
+                      value={endTime}
+                      onChange={setEndTime}
+                    />
+                  </div>
                 )}
               </SettingsGroup>
 
-              {allDay && (
-                <p className="mt-3 px-1 text-[14px] font-medium text-ink-soft">
-                  {dateSummary} · {t("하루 종일", "All-day")}
-                </p>
-              )}
+              <p className="mt-3 px-1 text-[14px] font-medium leading-[1.5] text-ink-soft">
+                {configSummary}
+              </p>
 
               <div className="mt-4">
                 <SettingsGroup>
@@ -570,9 +766,10 @@ export function ScheduleChoiceFlow({
           <button
             type="button"
             onClick={goNext}
-            className="touch-press w-full rounded-full bg-ink py-3.5 text-[15px] font-medium text-white"
+            disabled={step === "when" && !canProceedWhen}
+            className="touch-press w-full rounded-full bg-ink py-3.5 text-[15px] font-medium text-white disabled:opacity-40"
           >
-            {nextLabel}
+            {step === "when" ? whenStepCtaLabel : nextLabel}
           </button>
         )}
       </div>

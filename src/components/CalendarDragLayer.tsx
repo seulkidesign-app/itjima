@@ -223,6 +223,153 @@ export function useCalendarScrollParent(
   return parent;
 }
 
+export function isMultiDaySchedule(item: ScheduleItem): boolean {
+  const start = new Date(item.start_time);
+  const end = new Date(item.end_time);
+  return (
+    start.getFullYear() !== end.getFullYear() ||
+    start.getMonth() !== end.getMonth() ||
+    start.getDate() !== end.getDate()
+  );
+}
+
+export function scheduleRangeInMonth(
+  item: ScheduleItem,
+  year: number,
+  month: number,
+): { startDay: number; endDay: number } | null {
+  const start = new Date(item.start_time);
+  const end = new Date(item.end_time);
+  const monthStart = new Date(year, month, 1);
+  const monthEnd = new Date(year, month + 1, 0, 23, 59, 59, 999);
+  if (end < monthStart || start > monthEnd) return null;
+  const clipStart = start < monthStart ? monthStart : start;
+  const clipEnd = end > monthEnd ? monthEnd : end;
+  return {
+    startDay: clipStart.getDate(),
+    endDay: clipEnd.getDate(),
+  };
+}
+
+type SpanSegment = {
+  item: ScheduleItem;
+  colStart: number;
+  colSpan: number;
+  roundLeft: boolean;
+  roundRight: boolean;
+  lane: number;
+};
+
+function assignSpanLanes(segments: Omit<SpanSegment, "lane">[]): SpanSegment[] {
+  const sorted = [...segments].sort(
+    (a, b) => a.colStart - b.colStart || b.colSpan - a.colSpan,
+  );
+  const laneEnds: number[] = [];
+  const placed: SpanSegment[] = [];
+  for (const seg of sorted) {
+    let lane = laneEnds.findIndex((endCol) => endCol < seg.colStart);
+    if (lane < 0) {
+      lane = laneEnds.length;
+      laneEnds.push(-1);
+    }
+    laneEnds[lane] = seg.colStart + seg.colSpan - 1;
+    placed.push({ ...seg, lane });
+  }
+  return placed;
+}
+
+export function computeWeekSpanSegments(
+  week: (number | null)[],
+  items: ScheduleItem[],
+  year: number,
+  month: number,
+): SpanSegment[] {
+  const weekDays = week.filter((d): d is number => d != null);
+  if (!weekDays.length) return [];
+  const weekStart = weekDays[0];
+  const weekEnd = weekDays[weekDays.length - 1];
+  const raw: Omit<SpanSegment, "lane">[] = [];
+
+  for (const item of items) {
+    if (!isMultiDaySchedule(item)) continue;
+    const range = scheduleRangeInMonth(item, year, month);
+    if (!range) continue;
+    const segStart = Math.max(range.startDay, weekStart);
+    const segEnd = Math.min(range.endDay, weekEnd);
+    if (segStart > segEnd) continue;
+    const colStart = week.indexOf(segStart);
+    const colEnd = week.indexOf(segEnd);
+    if (colStart < 0 || colEnd < 0) continue;
+    raw.push({
+      item,
+      colStart,
+      colSpan: colEnd - colStart + 1,
+      roundLeft: segStart === range.startDay,
+      roundRight: segEnd === range.endDay,
+    });
+  }
+  return assignSpanLanes(raw);
+}
+
+export function CalendarWeekSpanBars({
+  segments,
+  titleFor,
+  draggingIds,
+  onDragStart,
+}: {
+  segments: SpanSegment[];
+  titleFor: (item: ScheduleItem) => string;
+  draggingIds: string[];
+  onDragStart: (e: ReactPointerEvent, item: ScheduleItem) => void;
+}) {
+  if (!segments.length) return null;
+  const laneCount = Math.max(...segments.map((s) => s.lane)) + 1;
+
+  return (
+    <div className="mt-0.5 space-y-0.5">
+      {Array.from({ length: laneCount }, (_, lane) => (
+        <div key={lane} className="grid grid-cols-7 gap-1">
+          {segments
+            .filter((seg) => seg.lane === lane)
+            .map((seg) => {
+              const hidden = draggingIds.includes(seg.item.id);
+              return (
+                <div
+                  key={`${seg.item.id}-${seg.colStart}-${seg.lane}`}
+                  role="presentation"
+                  onPointerDown={(e) => {
+                    e.stopPropagation();
+                    onDragStart(e, seg.item);
+                  }}
+                  className={`flex h-[18px] touch-none items-center gap-0.5 bg-primary/45 px-1.5 active:scale-[0.97] ${
+                    seg.roundLeft ? "rounded-l-[9px]" : ""
+                  } ${seg.roundRight ? "rounded-r-[9px]" : ""} ${
+                    hidden ? "opacity-0" : ""
+                  }`}
+                  style={{
+                    gridColumn: `${seg.colStart + 1} / span ${seg.colSpan}`,
+                  }}
+                >
+                  {seg.roundLeft && (
+                    <GripVertical
+                      size={9}
+                      strokeWidth={2.5}
+                      className="shrink-0 text-ink/45"
+                      aria-hidden
+                    />
+                  )}
+                  <span className="line-clamp-1 text-[10px] font-semibold leading-tight text-ink">
+                    {titleFor(seg.item)}
+                  </span>
+                </div>
+              );
+            })}
+        </div>
+      ))}
+    </div>
+  );
+}
+
 export function CalendarDayCell({
   day,
   weekday,

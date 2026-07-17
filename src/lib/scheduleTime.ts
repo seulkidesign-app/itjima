@@ -1,4 +1,91 @@
+import type { ScheduleItem } from "@/lib/store";
+
 /** Countdown ring + remaining-time helpers for Schedule v0.3 */
+
+export function isScheduleStartOfDay(d: Date): boolean {
+  return d.getHours() === 0 && d.getMinutes() === 0;
+}
+
+export function isScheduleEndOfDay(d: Date): boolean {
+  return d.getHours() === 23 && d.getMinutes() === 59;
+}
+
+export function inferScheduleAllDayFlags(
+  start: Date,
+  end: Date,
+  legacyAllDay?: boolean,
+): { startAllDay: boolean; endAllDay: boolean } {
+  if (legacyAllDay === true) {
+    return { startAllDay: true, endAllDay: true };
+  }
+  return {
+    startAllDay: isScheduleStartOfDay(start),
+    endAllDay: isScheduleEndOfDay(end),
+  };
+}
+
+export function resolveScheduleAllDayFlags(
+  item: Pick<
+    ScheduleItem,
+    "start_time" | "end_time" | "all_day" | "start_all_day" | "end_all_day"
+  >,
+): { startAllDay: boolean; endAllDay: boolean } {
+  if (item.start_all_day !== undefined || item.end_all_day !== undefined) {
+    const legacy = item.all_day === true;
+    return {
+      startAllDay: item.start_all_day ?? legacy,
+      endAllDay: item.end_all_day ?? legacy,
+    };
+  }
+  return inferScheduleAllDayFlags(
+    new Date(item.start_time),
+    new Date(item.end_time),
+    item.all_day,
+  );
+}
+
+function formatKoreanClock(d: Date): string {
+  const hours = d.getHours();
+  const minutes = d.getMinutes();
+  const period = hours < 12 ? "오전" : "오후";
+  const h12 = hours % 12 || 12;
+  if (minutes === 0) return `${period} ${h12}시`;
+  return `${period} ${h12}:${minutes.toString().padStart(2, "0")}`;
+}
+
+function formatEnglishClock(d: Date): string {
+  return d.toLocaleTimeString("en-US", {
+    hour: "numeric",
+    minute: "2-digit",
+    hour12: true,
+  });
+}
+
+/** One-line summary for the schedule time step (QA #7 mockup pattern). */
+export function formatScheduleConfigSummary(
+  startAllDay: boolean,
+  endAllDay: boolean,
+  start: Date,
+  end: Date,
+  lang: "ko" | "en",
+): string {
+  if (lang === "ko") {
+    const startPart = startAllDay
+      ? "시작은 하루 종일"
+      : `시작은 ${formatKoreanClock(start)}`;
+    const endPart = endAllDay
+      ? "종료는 하루 종일"
+      : `종료는 ${formatKoreanClock(end)}까지`;
+    return `${startPart}, ${endPart}로 설정돼요.`;
+  }
+  const startPart = startAllDay
+    ? "Start is all-day"
+    : `Start is ${formatEnglishClock(start)}`;
+  const endPart = endAllDay
+    ? "end is all-day"
+    : `end is until ${formatEnglishClock(end)}`;
+  return `${startPart}, ${endPart}.`;
+}
 
 export type RemainingParts = {
   ms: number;

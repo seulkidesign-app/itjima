@@ -32,6 +32,8 @@ export type ScheduleItem = {
   alarm: boolean;
   created_at: string;
   all_day?: boolean;
+  start_all_day?: boolean;
+  end_all_day?: boolean;
   repeat?: RepeatRule | null;
   source_id?: string | null;
   raw_text?: string | null;
@@ -93,6 +95,15 @@ function normalizeRow(row: unknown, table: TableName) {
   }
   if (table === "schedules" && !r.status) {
     r.status = "active";
+  }
+  if (table === "schedules") {
+    const legacyAllDay = r.all_day;
+    if (r.start_all_day === undefined && typeof legacyAllDay === "boolean") {
+      r.start_all_day = legacyAllDay;
+    }
+    if (r.end_all_day === undefined && typeof legacyAllDay === "boolean") {
+      r.end_all_day = legacyAllDay;
+    }
   }
   if ("brain_mirror" in r) {
     r.brain_mirror = parseBrainMirrorResult(r.brain_mirror);
