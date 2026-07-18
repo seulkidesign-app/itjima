@@ -15,6 +15,10 @@ async function resetForScheduleAllDay(page: Page) {
   });
   await page.reload();
   await page.getByRole("link", { name: /^When/ }).waitFor({ state: "visible" });
+  const closeButtons = page.getByRole("button", { name: "Close" });
+  if (await closeButtons.count()) {
+    await closeButtons.first().click();
+  }
 }
 
 function app(page: Page) {
@@ -59,15 +63,43 @@ async function openEditTimeStep(page: Page, title: string) {
   await ui.getByRole("link", { name: /^When/ }).click();
   await ui.getByRole("tab", { name: "Flow" }).click();
   await ui
-    .getByRole("button", { name: new RegExp(`^${title.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\.`) })
+    .getByRole("button", {
+      name: new RegExp(
+        `^${title.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\.`,
+      ),
+    })
     .click();
-  await ui.getByRole("button", { name: "Next", exact: true }).click();
-  await ui.getByRole("button", { name: "Next", exact: true }).click();
+  await page.getByRole("dialog").getByRole("button", { name: "Pick a time" }).click();
+  await page
+    .getByRole("dialog")
+    .getByRole("switch", { name: "All-day" })
+    .first()
+    .waitFor({ state: "visible" });
+}
+
+async function openCreateTimeStep(page: Page) {
+  const ui = await app(page);
+  await ui.getByRole("link", { name: /^When/ }).click();
+  await ui.getByRole("button", { name: "Remember something new" }).click();
+  await page.getByRole("dialog").getByRole("button", { name: "Pick a time" }).click();
+  await page
+    .getByRole("dialog")
+    .getByRole("switch", { name: "All-day" })
+    .first()
+    .waitFor({ state: "visible" });
 }
 
 test.describe("Schedule start/end all-day flags (QA #7)", () => {
   test.beforeEach(async ({ page }) => {
     await resetForScheduleAllDay(page);
+  });
+
+  test.afterEach(async ({ page }) => {
+    const dialog = page.getByRole("dialog");
+    if (await dialog.count()) {
+      const close = dialog.getByRole("button", { name: "Close" });
+      if (await close.count()) await close.first().click();
+    }
   });
 
   test("persists start_all_day=true and end_all_day=false after refresh", async ({
@@ -119,8 +151,7 @@ test.describe("Schedule start/end all-day flags (QA #7)", () => {
     await page.reload();
     await openEditTimeStep(page, "Mixed all-day edit");
 
-    const ui = await app(page);
-    const switches = ui.getByRole("switch", { name: "All-day" });
+    const switches = page.getByRole("dialog").getByRole("switch", { name: "All-day" });
     await expect(switches.nth(0)).toHaveAttribute("aria-checked", "true");
     await expect(switches.nth(1)).toHaveAttribute("aria-checked", "false");
   });
@@ -146,8 +177,7 @@ test.describe("Schedule start/end all-day flags (QA #7)", () => {
     await page.reload();
     await openEditTimeStep(page, "Midnight timed");
 
-    const ui = await app(page);
-    const switches = ui.getByRole("switch", { name: "All-day" });
+    const switches = page.getByRole("dialog").getByRole("switch", { name: "All-day" });
     await expect(switches.nth(0)).toHaveAttribute("aria-checked", "false");
     await expect(switches.nth(1)).toHaveAttribute("aria-checked", "false");
   });
@@ -171,8 +201,7 @@ test.describe("Schedule start/end all-day flags (QA #7)", () => {
     await page.reload();
     await openEditTimeStep(page, "Legacy all day");
 
-    const ui = await app(page);
-    const switches = ui.getByRole("switch", { name: "All-day" });
+    const switches = page.getByRole("dialog").getByRole("switch", { name: "All-day" });
     await expect(switches.nth(0)).toHaveAttribute("aria-checked", "true");
     await expect(switches.nth(1)).toHaveAttribute("aria-checked", "true");
   });
@@ -180,32 +209,23 @@ test.describe("Schedule start/end all-day flags (QA #7)", () => {
   test("creates schedule with start all-day and end timed via When FAB", async ({
     page,
   }) => {
-    const ui = await app(page);
-    await ui.getByRole("link", { name: /^When/ }).click();
-    await ui
-      .getByRole("button", { name: "Remember something new" })
-      .click();
-    await ui.getByPlaceholder("What to remember").waitFor({ state: "visible" });
+    await openCreateTimeStep(page);
+    const sheet = page.getByRole("dialog");
 
-    const text = `Start all-day ${Date.now()}`;
-    await ui.getByPlaceholder("What to remember").fill(text);
-    await ui.getByRole("button", { name: "Next", exact: true }).click();
-
-    const switches = ui.getByRole("switch", { name: "All-day" });
+    const switches = sheet.getByRole("switch", { name: "All-day" });
     await switches.nth(0).click();
 
-    await ui.getByRole("button", { name: "Next", exact: true }).click();
-    await ui.getByRole("button", { name: /Keep it/ }).click();
+    await sheet.getByRole("button", { name: "Set a reminder" }).click();
+    await sheet.getByRole("button", { name: "I'll leave it for then" }).click();
 
     await page.reload();
     const schedules = (await readGuestList(
       page,
       GUEST_SCHEDULE_KEY,
     )) as SeedSchedule[];
-    const saved = schedules.find((s) => s.text === text);
-    expect(saved).toBeTruthy();
-    expect(saved!.start_all_day).toBe(true);
-    expect(saved!.end_all_day).toBe(false);
-    expect(saved!.all_day).toBe(false);
+    expect(schedules.length).toBe(1);
+    expect(schedules[0]!.start_all_day).toBe(true);
+    expect(schedules[0]!.end_all_day).toBe(false);
+    expect(schedules[0]!.all_day).toBe(false);
   });
 });

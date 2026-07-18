@@ -373,8 +373,8 @@ export function ScheduleChoiceFlow({
     setStep("when");
   }, [
     open,
-    initialStart,
-    initialEnd,
+    initialStart?.getTime(),
+    initialEnd?.getTime(),
     initialAllDay,
     initialStartAllDay,
     initialEndAllDay,
