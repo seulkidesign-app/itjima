@@ -1,9 +1,8 @@
 import { test } from "@playwright/test";
 import { GUEST_INBOX_KEY } from "./helpers";
+import { CHAT_SWIPE_OPEN_DISTANCE } from "../src/components/ChatSwipeRow";
 
-const OPEN_SLOT = 58;
-
-async function seedAndOpen(page: import("@playwright/test").Page, width: number) {
+async function seed(page: import("@playwright/test").Page, width: number) {
   await page.setViewportSize({ width, height: 844 });
   await page.goto("/");
   await page.evaluate(
@@ -31,7 +30,11 @@ async function seedAndOpen(page: import("@playwright/test").Page, width: number)
   if (await close.count()) await close.first().click();
 }
 
-async function dragOpen(page: import("@playwright/test").Page) {
+async function dragTo(
+  page: import("@playwright/test").Page,
+  deltaX: number,
+  opts?: { release?: boolean },
+) {
   const handle = page.locator("[data-chat-swipe-handle]").first();
   const box = await handle.boundingBox();
   if (!box) return;
@@ -44,33 +47,49 @@ async function dragOpen(page: import("@playwright/test").Page) {
     clientY: y,
     bubbles: true,
   });
-  for (let i = 1; i <= 12; i += 1) {
+  const steps = 10;
+  for (let i = 1; i <= steps; i += 1) {
     await handle.dispatchEvent("pointermove", {
       button: 0,
       pointerId: 1,
-      clientX: startX + (-OPEN_SLOT * i) / 12,
+      clientX: startX + (deltaX * i) / steps,
       clientY: y,
       bubbles: true,
     });
   }
-  await handle.dispatchEvent("pointerup", {
-    button: 0,
-    pointerId: 1,
-    clientX: startX - OPEN_SLOT,
-    clientY: y,
-    bubbles: true,
-  });
-  await page.waitForTimeout(350);
+  if (opts?.release !== false) {
+    await handle.dispatchEvent("pointerup", {
+      button: 0,
+      pointerId: 1,
+      clientX: startX + deltaX,
+      clientY: y,
+      bubbles: true,
+    });
+    await page.waitForTimeout(350);
+  }
 }
 
-test("capture QA2/3 screenshots", async ({ page }) => {
+test("capture QA2/3 tray screenshots", async ({ page }) => {
   for (const width of [390, 430]) {
-    await seedAndOpen(page, width);
+    await seed(page, width);
     await page.screenshot({
       path: `sprint8-screenshots/qa2-qa3/qa2-${width}-closed.png`,
       fullPage: false,
     });
-    await dragOpen(page);
+
+    await dragTo(page, -CHAT_SWIPE_OPEN_DISTANCE * 0.55, { release: false });
+    await page.screenshot({
+      path: `sprint8-screenshots/qa2-qa3/qa2-${width}-dragging.png`,
+      fullPage: false,
+    });
+    await page.locator("[data-chat-swipe-handle]").first().dispatchEvent("pointerup", {
+      button: 0,
+      pointerId: 1,
+      bubbles: true,
+    });
+    await page.waitForTimeout(250);
+
+    await dragTo(page, -CHAT_SWIPE_OPEN_DISTANCE);
     await page.screenshot({
       path: `sprint8-screenshots/qa2-qa3/qa2-${width}-open.png`,
       fullPage: false,

@@ -12,13 +12,13 @@ import { useT } from "@/lib/i18n";
 import { tickDebounced, confirm as confirmHaptic, tap as tapHaptic } from "@/lib/haptics";
 import { SPRING_ROW, SPRING_SNAP_BACK } from "@/lib/motion";
 
-type Side = "left" | "right";
-
 /** Shared with `.swipe-pill-btn` width in styles.css */
 const BTN = 48;
-const GAP = 10;
-const OPEN_SLOT = BTN + GAP;
-const OPEN_AT = 28;
+const GAP_BUBBLE = 10;
+const BTN_GAP = 8;
+/** 10 + 48 + 8 + 48 — full tray width behind the bubble */
+export const CHAT_SWIPE_OPEN_DISTANCE = GAP_BUBBLE + BTN + BTN_GAP + BTN;
+const OPEN_AT = Math.round(CHAT_SWIPE_OPEN_DISTANCE * 0.4);
 
 function rubber(value: number, limit: number) {
   const abs = Math.abs(value);
@@ -26,23 +26,16 @@ function rubber(value: number, limit: number) {
   return Math.sign(value) * (limit + (abs - limit) * 0.15);
 }
 
-function clampOffset(value: number, openSide: Side | null) {
-  const banded = rubber(value, OPEN_SLOT);
-  if (openSide === "right") return Math.max(0, Math.min(banded, OPEN_SLOT));
-  if (openSide === "left") return Math.min(0, Math.max(banded, -OPEN_SLOT));
-  return Math.max(-OPEN_SLOT, Math.min(banded, OPEN_SLOT));
+function clampOffset(value: number, isOpen: boolean) {
+  if (value > 0) return 0;
+  const banded = rubber(value, CHAT_SWIPE_OPEN_DISTANCE);
+  const clamped = Math.max(-CHAT_SWIPE_OPEN_DISTANCE, Math.min(0, banded));
+  if (isOpen) return clamped;
+  return clamped;
 }
 
 function clamp01(v: number) {
   return Math.min(1, Math.max(0, v));
-}
-
-function revealWidths(offsetX: number) {
-  return {
-    leftReveal: Math.max(0, Math.min(OPEN_SLOT, offsetX)),
-    rightReveal: Math.max(0, Math.min(OPEN_SLOT, -offsetX)),
-    bubbleTranslate: Math.min(0, offsetX),
-  };
 }
 
 export function ChatSwipeRow({
@@ -69,7 +62,7 @@ export function ChatSwipeRow({
   const t = useT();
   const rowRef = useRef<HTMLDivElement>(null);
   const [offsetX, setOffsetX] = useState(0);
-  const [openSide, setOpenSide] = useState<Side | null>(null);
+  const [isOpen, setIsOpen] = useState(false);
   const [acting, setActing] = useState(false);
   const [dragging, setDragging] = useState(false);
   const draggingRef = useRef(false);
@@ -80,8 +73,6 @@ export function ChatSwipeRow({
   const moved = useRef(false);
 
   offsetRef.current = offsetX;
-
-  const openOffset = (side: Side) => (side === "right" ? OPEN_SLOT : -OPEN_SLOT);
 
   const springX = useCallback((to: number, onDone?: () => void) => {
     animate(offsetRef.current, to, {
@@ -99,29 +90,26 @@ export function ChatSwipeRow({
   }, []);
 
   const dismiss = useCallback(() => {
-    setOpenSide(null);
+    setIsOpen(false);
     if (rowId && onOpenRowChange) onOpenRowChange(null);
     springX(0);
   }, [rowId, onOpenRowChange, springX]);
 
-  const snapOpen = useCallback(
-    (side: Side) => {
-      setOpenSide(side);
-      if (rowId && onOpenRowChange) onOpenRowChange(rowId);
-      springX(openOffset(side));
-      tickDebounced();
-    },
-    [rowId, onOpenRowChange, springX],
-  );
+  const snapOpen = useCallback(() => {
+    setIsOpen(true);
+    if (rowId && onOpenRowChange) onOpenRowChange(rowId);
+    springX(-CHAT_SWIPE_OPEN_DISTANCE);
+    tickDebounced();
+  }, [rowId, onOpenRowChange, springX]);
 
   const commit = useCallback(
-    (side: Side) => {
+    (action: "schedule" | "archive") => {
       if (acting) return;
       setActing(true);
       confirmHaptic();
-      if (side === "right") onSwipeRight();
+      if (action === "schedule") onSwipeRight();
       else onSwipeLeft();
-      setOpenSide(null);
+      setIsOpen(false);
       setActing(false);
       offsetRef.current = 0;
       setOffsetX(0);
@@ -132,11 +120,11 @@ export function ChatSwipeRow({
 
   useEffect(() => {
     if (!rowId || openRowId === undefined) return;
-    if (openRowId !== rowId && openSide) dismiss();
-  }, [openRowId, rowId, openSide, dismiss]);
+    if (openRowId !== rowId && isOpen) dismiss();
+  }, [openRowId, rowId, isOpen, dismiss]);
 
   useEffect(() => {
-    if (!openSide) return;
+    if (!isOpen) return;
     const onDocDown = (e: Event) => {
       const target = e.target as Node;
       if (rowRef.current?.contains(target)) return;
@@ -151,7 +139,7 @@ export function ChatSwipeRow({
       window.removeEventListener("pointerdown", onDocDown, true);
       window.removeEventListener("keydown", onKey);
     };
-  }, [openSide, dismiss]);
+  }, [isOpen, dismiss]);
 
   const clearLongPress = () => {
     if (longTimer.current) {
@@ -190,7 +178,7 @@ export function ChatSwipeRow({
       e.preventDefault();
     }
 
-    x = clampOffset(x, openSide);
+    x = clampOffset(x, isOpen);
 
     offsetRef.current = x;
     setOffsetX(x);
@@ -206,38 +194,22 @@ export function ChatSwipeRow({
 
     const x = offsetRef.current;
 
-    if (openSide) {
-      const target = openOffset(openSide);
-      const closedDistance = Math.abs(x);
-      const openDistance = Math.abs(x - target);
-      if (closedDistance < OPEN_AT * 0.4 || openDistance > Math.abs(target) * 0.55) {
-        dismiss();
-      } else {
-        springX(target);
-      }
+    if (isOpen) {
+      if (x > -OPEN_AT * 0.45) dismiss();
+      else springX(-CHAT_SWIPE_OPEN_DISTANCE);
       return;
     }
 
-    if (x >= OPEN_AT) {
-      snapOpen("right");
-      return;
-    }
     if (x <= -OPEN_AT) {
-      snapOpen("left");
+      snapOpen();
       return;
     }
     if (!moved.current && onTap) onTap();
     springX(0);
   };
 
-  const { leftReveal, rightReveal, bubbleTranslate } = revealWidths(offsetX);
-
-  const scheduleOpacity =
-    openSide === "right" ? 1 : clamp01(leftReveal / OPEN_AT);
-  const archiveOpacity =
-    openSide === "left" ? 1 : clamp01(rightReveal / OPEN_AT);
-  const showSchedule = openSide === "right" || leftReveal > 2;
-  const showArchive = openSide === "left" || rightReveal > 2;
+  const trayOpacity = isOpen ? 1 : clamp01(-offsetX / OPEN_AT);
+  const showTray = isOpen || offsetX < -2;
 
   return (
     <div
@@ -245,61 +217,56 @@ export function ChatSwipeRow({
       className="swipe-row relative w-full min-w-0 py-0.5"
       style={{ touchAction: dragging ? "none" : "pan-y" }}
     >
-      {showArchive && (
-        <div
-          className="pointer-events-none absolute inset-y-0 right-0 z-[1] flex items-center overflow-hidden"
-          style={{ width: rightReveal }}
-        >
+      <div className="relative ml-auto w-fit max-w-full">
+        {showTray && (
           <div
-            className="flex items-center justify-end"
-            style={{ width: OPEN_SLOT }}
+            className="pointer-events-none absolute inset-y-0 right-0 z-[1] flex items-center"
+            style={{ width: CHAT_SWIPE_OPEN_DISTANCE }}
           >
-            <span className="block shrink-0" style={{ width: GAP }} aria-hidden />
-            <button
-              type="button"
-              onClick={(e) => {
-                e.stopPropagation();
-                tapHaptic();
-                commit("left");
-              }}
-              className="swipe-pill-btn swipe-pill-archive pointer-events-auto shrink-0"
-              style={{
-                opacity: archiveOpacity,
-                pointerEvents: archiveOpacity > 0.5 ? "auto" : "none",
-                transform: `scale(${0.88 + archiveOpacity * 0.12})`,
-              }}
-              aria-label={t("생각 지도에 남기기", "Save to thought map")}
-            >
-              <Archive size={20} strokeWidth={2.25} />
-            </button>
-          </div>
-        </div>
-      )}
-
-      <div className="relative ml-auto flex min-w-0 max-w-full items-stretch justify-end">
-        {showSchedule && (
-          <div
-            className="flex shrink-0 items-center overflow-hidden"
-            style={{ width: leftReveal }}
-          >
-            <div className="flex items-center" style={{ width: OPEN_SLOT }}>
-              <span className="block shrink-0" style={{ width: GAP }} aria-hidden />
+            <div className="flex items-center" style={{ width: CHAT_SWIPE_OPEN_DISTANCE }}>
+              <span
+                className="block shrink-0"
+                style={{ width: GAP_BUBBLE }}
+                aria-hidden
+              />
               <button
                 type="button"
                 onClick={(e) => {
                   e.stopPropagation();
                   tapHaptic();
-                  commit("right");
+                  commit("schedule");
                 }}
                 className="swipe-pill-btn swipe-pill-schedule pointer-events-auto shrink-0"
                 style={{
-                  opacity: scheduleOpacity,
-                  pointerEvents: scheduleOpacity > 0.5 ? "auto" : "none",
-                  transform: `scale(${0.88 + scheduleOpacity * 0.12})`,
+                  opacity: trayOpacity,
+                  pointerEvents: trayOpacity > 0.5 ? "auto" : "none",
+                  transform: `scale(${0.88 + trayOpacity * 0.12})`,
                 }}
                 aria-label={t("할 일로 보내기", "Send to tasks")}
               >
                 <Calendar size={20} strokeWidth={2.25} />
+              </button>
+              <span
+                className="block shrink-0"
+                style={{ width: BTN_GAP }}
+                aria-hidden
+              />
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  tapHaptic();
+                  commit("archive");
+                }}
+                className="swipe-pill-btn swipe-pill-archive pointer-events-auto shrink-0"
+                style={{
+                  opacity: trayOpacity,
+                  pointerEvents: trayOpacity > 0.5 ? "auto" : "none",
+                  transform: `scale(${0.88 + trayOpacity * 0.12})`,
+                }}
+                aria-label={t("생각 지도에 남기기", "Save to thought map")}
+              >
+                <Archive size={20} strokeWidth={2.25} />
               </button>
             </div>
           </div>
@@ -307,6 +274,7 @@ export function ChatSwipeRow({
 
         <div
           data-chat-swipe-handle
+          data-offset-x={Math.round(offsetX * 100) / 100}
           onPointerDown={onDown}
           onPointerMove={onMove}
           onPointerUp={onUp}
@@ -314,9 +282,7 @@ export function ChatSwipeRow({
           className="relative z-[2] min-w-0 shrink-0 touch-none select-none will-change-transform"
           style={{
             transform:
-              bubbleTranslate === 0
-                ? undefined
-                : `translate3d(${bubbleTranslate}px, 0, 0)`,
+              offsetX === 0 ? undefined : `translate3d(${offsetX}px, 0, 0)`,
           }}
         >
           {children}
