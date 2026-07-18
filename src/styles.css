@@ -337,7 +337,7 @@
 .swipe-row {
   touch-action: pan-y;
   background: transparent;
-  overflow: visible;
+  overflow: hidden;
 }
 
 .swipe-pill-btn {
