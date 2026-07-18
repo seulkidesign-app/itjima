@@ -122,7 +122,7 @@ export function BrainMirrorReflectionActions({
               compact ? "" : "py-2.5"
             }`}
           >
-            {t("그때 기억하기", "Remember for then")}
+            {t("할 일로 보내기", "Send to tasks")}
           </button>
           <button
             type="button"

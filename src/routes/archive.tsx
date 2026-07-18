@@ -17,7 +17,7 @@ import { useArchive, useSchedules, type ArchiveItem } from "@/lib/store";
 import { archiveGroup, detectDate } from "@/lib/dateDetect";
 import { useT, useLang } from "@/lib/i18n";
 import { useScrollLock } from "@/hooks/useScrollLock";
-import { haptic } from "@/lib/haptics";
+import { haptic, tap } from "@/lib/haptics";
 import { ArchiveOrganizeSheet } from "@/components/ArchiveOrganizeSheet";
 import { ArchiveMemoryCard } from "@/components/ArchiveMemoryCard";
 import { ArchiveMoveSheet } from "@/components/ArchiveMoveSheet";
@@ -567,7 +567,7 @@ function Archive() {
         softLabels
         disabled={swipeDisabled}
         leftLabel={t("지우기", "Remove")}
-        rightLabel={t("그때", "When")}
+        rightLabel={t("할 일", "Tasks")}
         onLongPress={selecting ? undefined : () => enterSelection(it.id)}
         onSwipe={(dir) => {
           if (dir === "right") openScheduleSheet(it);
@@ -647,24 +647,27 @@ function Archive() {
         }`}
       >
         <div className="px-5 pb-3 pt-7">
-          <p
-            className={
-              isSpaceView
-                ? "text-[13px] font-medium text-[color:var(--archive-text-soft)]"
-                : "page-eyebrow"
-            }
-          >
-            {t("잊어도 괜찮아요.", "It's okay to forget.")}
-          </p>
           <h1
-            className={`mt-2 font-bold tracking-[-0.02em] ${
+            className={`font-bold tracking-[-0.02em] ${
               isSpaceView
                 ? "text-[26px] text-[color:var(--archive-text)]"
                 : "page-title"
             }`}
           >
-            {t("여기 맡겨두세요.", "Leave it here.")}
+            {t("생각 지도", "Thought map")}
           </h1>
+          <p
+            className={`mt-2 leading-relaxed ${
+              isSpaceView
+                ? "text-[13px] text-[color:var(--archive-text-soft)]"
+                : "page-eyebrow text-ink-soft"
+            }`}
+          >
+            {t(
+              "남은 생각들이 서로 연결된 지도",
+              "A map where remaining thoughts connect to each other",
+            )}
+          </p>
           {items.length > 0 && (
             <p
               className={`mt-3 text-[13px] ${
@@ -681,7 +684,7 @@ function Archive() {
           )}
         </div>
         {items.length >= 2 && !isSpaceView && (
-          <div className="flex items-center justify-between px-5 pb-2">
+          <div className="flex items-center justify-end px-5 pb-2">
             <button
               type="button"
               onClick={openOrganizeSheet}
@@ -689,12 +692,6 @@ function Archive() {
             >
               {t("키워드로 모아보기", "Gather by theme")}
             </button>
-            <Link
-              to="/rediscovery"
-              className="text-[12px] font-medium text-ink-soft/80 touch-press active:underline"
-            >
-              {t("다시 만나기", "Revisit")}
-            </Link>
           </div>
         )}
 
@@ -783,7 +780,7 @@ function Archive() {
                           : "text-ink-soft"
                     }`}
                   >
-                    {t("공간", "Space")}
+                    {t("지도", "Map")}
                   </button>
                   <button
                     type="button"
@@ -800,6 +797,17 @@ function Archive() {
                   >
                     {t("목록", "List")}
                   </button>
+                  <Link
+                    to="/rediscovery"
+                    onClick={tap}
+                    className={`rounded-full px-3 py-1.5 text-[12px] font-semibold touch-press ${
+                      isSpaceView
+                        ? "archive-space-chip text-[color:var(--archive-text-soft)]"
+                        : "bg-ink/[0.06] text-ink-soft"
+                    }`}
+                  >
+                    {t("다시 만나기", "Revisit")}
+                  </Link>
                 </div>
                 <button
                   type="button"

@@ -540,12 +540,12 @@ export function CaptureRelease({
           <SwipeStamp
             dir="left"
             progress={memoryProgress}
-            label={t("기억함", "Kept")}
+            label={t("생각 지도", "Thought map")}
           />
           <SwipeStamp
             dir="right"
             progress={scheduleProgress}
-            label={t("그때", "When")}
+            label={t("할 일", "Tasks")}
           />
           <SwipeStamp
             dir="up"
@@ -596,10 +596,10 @@ export function CaptureRelease({
               transition={HINT_REVEAL}
               className="mt-[38px] flex w-full items-center justify-between px-[10px] text-[11px] font-normal tracking-[0.015em] text-[rgba(154,154,144,0.34)]"
             >
-              <span>← {t("기억", "Kept")}</span>
+              <span>← {t("생각 지도", "Thought map")}</span>
               <span>↑ {t("놓기", "Let go")}</span>
               <span className="rounded-full bg-primary px-3 py-[5px] font-medium text-ink/75">
-                {t("그때 →", "When →")}
+                {t("할 일 →", "Tasks →")}
               </span>
             </motion.div>
           )}

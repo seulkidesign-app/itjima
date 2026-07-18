@@ -702,7 +702,7 @@ function Inbox() {
             />
             <MenuItem
               icon={<Calendar size={18} />}
-              label={t("그때 기억하기", "Remember for then")}
+              label={t("할 일로 보내기", "Send to tasks")}
               onClick={() => {
                 setMenuFor(null);
                 openHomeSchedule(menuItem);
@@ -710,7 +710,7 @@ function Inbox() {
             />
             <MenuItem
               icon={<ArchiveIcon size={18} />}
-              label={t("기억함에 둘게요", "Move to Kept")}
+              label={t("생각 지도에 남기기", "Save to thought map")}
               onClick={() => {
                 setMenuFor(null);
                 moveToArchive(menuItem);

@@ -385,7 +385,7 @@ function Schedule() {
       const scheduleSynced = await remove(s.id);
       if (pins.has(s.id)) togglePin(s.id);
       if (allCloudSynced(archiveSynced, scheduleSynced)) {
-        toast.success(t("기억함으로 옮겼어요", "Moved to Kept"), scheduleToast);
+        toast.success(t("생각 지도로 옮겼어요", "Moved to thought map"), scheduleToast);
       }
     } catch {
       toast.error(t("옮기지 못했어요", "Couldn't move"));
@@ -427,9 +427,7 @@ function Schedule() {
       />
       <div className="sticky top-0 z-10 shrink-0 bg-white">
         <div className={`px-5 ${tab === "today" ? "pb-4 pt-6" : "pb-3 pt-5"}`}>
-          <h1 className="page-title">
-            {tab === "today" ? t("오늘", "Today") : t("그때", "When")}
-          </h1>
+          <h1 className="page-title">{t("할 일", "Tasks")}</h1>
           <p
             className={`leading-relaxed text-ink-soft ${
               tab === "today"
@@ -437,20 +435,10 @@ function Schedule() {
                 : "mt-1.5 text-[13px]"
             }`}
           >
-            {tab === "today"
-              ? t(
-                  "오늘 떠올리면 좋은 생각",
-                  "Thoughts worth revisiting today",
-                )
-              : activeItems.length > 0
-                ? t(
-                    `${activeItems.length}가지를 기억하고 있어요`,
-                    `${activeItems.length} moments to remember`,
-                  )
-                : t(
-                    "아직 그때가 정해진 게 없어요",
-                    "Nothing anchored to time yet",
-                  )}
+            {t(
+              "해야 할 생각을 잊지 않도록",
+              "So you don't forget thoughts that need to be done",
+            )}
           </p>
         </div>
         <div className="px-5 pb-3">
@@ -462,7 +450,7 @@ function Schedule() {
               {(
                 [
                   ["today", t("오늘", "Today"), "schedule-panel-today"],
-                  ["list", t("흐름", "Flow"), "schedule-panel-list"],
+                  ["list", t("예정", "Upcoming"), "schedule-panel-list"],
                 ] as const
               ).map(([k, label, panelId]) => (
                 <button
@@ -498,7 +486,7 @@ function Schedule() {
                   tab === "cal" ? "text-ink-soft" : "text-ink-soft/45"
                 }`}
               >
-                {t("달", "Month")}
+                {t("달력", "Calendar")}
                 {tab === "cal" && (
                   <motion.span
                     layoutId="schedule-tab-underline-cal"
@@ -613,7 +601,7 @@ function Schedule() {
           transition={{ ...SPRING_SNAP_BACK, delay: 0.15 }}
           className="absolute right-5 z-30 flex h-14 w-14 items-center justify-center rounded-full bg-primary text-ink shadow-float touch-press"
           style={{ bottom: "calc(env(safe-area-inset-bottom) + 1.25rem)" }}
-          aria-label={t("새로 남기기", "Remember something new")}
+          aria-label={t("할 일 추가", "Add task")}
         >
           <Plus size={26} strokeWidth={2.5} />
         </motion.button>
@@ -1042,7 +1030,7 @@ function ScheduleCard({
                 : "border-ink/20 hover:border-primary"
             }`}
             aria-label={
-              done ? t("기억함으로 보관하기", "Save to Archive") : t("다녀옴", "Done")
+              done ? t("생각 지도에 남기기", "Save to thought map") : t("다녀옴", "Done")
             }
           >
             {done ? (
