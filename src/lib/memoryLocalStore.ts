@@ -9,7 +9,13 @@ import {
   findMemoryByLegacy,
   migrateLegacyBucketsToMemories,
   normalizeMemoryRow,
+  reconcileLegacyMemory,
+  resolveRemovedLegacyMemory,
+  type LegacyMemoryItem,
+  type LegacyMemorySource,
   type Memory,
+  type MemoryWriteIntent,
+  type ResolutionKind,
 } from "@/lib/memory";
 
 const GUEST = "guest";
@@ -96,8 +102,15 @@ function mergeGuestMemoriesIntoUser(userId: string) {
     if (source && legacyId && findMemoryByLegacy(merged, source, legacyId)) {
       continue;
     }
-    if (merged.some((m) => m.id === memory.id)) continue;
-    merged.push(memory);
+    if (merged.some((m) => m.id === memory.id)) {
+      merged.push({
+        ...memory,
+        id: crypto.randomUUID(),
+        updated_at: new Date().toISOString(),
+      });
+    } else {
+      merged.push(memory);
+    }
     added += 1;
   }
 
@@ -163,6 +176,11 @@ export function ensureCanonicalMemoriesMigrated(userId: string | null) {
   if (typeof window === "undefined") return;
   if (userId) {
     runLocalMemoryMigration(GUEST);
+    runLocalMemoryMigration(userId);
+    // A returning user can create new guest memories after their original
+    // migration marker was completed. Merge those every time auth resumes.
+    mergeGuestMemoriesIntoUser(userId);
+    return;
   }
   runLocalMemoryMigration(userId);
 }
@@ -171,6 +189,44 @@ export function getMemoryMigrationState(
   userId: string | null,
 ): MemoryMigrationState | null {
   return readMigrationState(userId);
+}
+
+/**
+ * Compatibility dual-write while the existing Inbox/Schedule/Archive UI is
+ * still backed by legacy buckets. Local Memory is updated synchronously so a
+ * failed or unavailable cloud migration never makes the user's action fail.
+ */
+export function mirrorLegacyItemToCanonical(
+  userId: string | null,
+  source: LegacyMemorySource,
+  item: LegacyMemoryItem,
+  intent: MemoryWriteIntent = "sync",
+): Memory {
+  ensureCanonicalMemoriesMigrated(userId);
+  const current = readLocalMemories(userId);
+  const result = reconcileLegacyMemory(
+    current,
+    source,
+    item,
+    defaultMemoryTimezone(),
+    intent,
+  );
+  writeLocalMemories(userId, result.memories);
+  return result.memory;
+}
+
+export function mirrorLegacyRemovalToCanonical(
+  userId: string | null,
+  source: LegacyMemorySource,
+  legacyId: string,
+  kind: ResolutionKind = "no_longer_needed",
+): Memory | null {
+  ensureCanonicalMemoriesMigrated(userId);
+  const current = readLocalMemories(userId);
+  const result = resolveRemovedLegacyMemory(current, source, legacyId, kind);
+  if (!result) return null;
+  writeLocalMemories(userId, result.memories);
+  return result.memory;
 }
 
 function memoryToCloudRow(userId: string, memory: Memory) {

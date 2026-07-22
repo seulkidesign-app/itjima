@@ -101,8 +101,8 @@ function nextWeekday(
 
 export function detectDate(
   text: string,
+  now = new Date(),
 ): { label: string; start: Date; end: Date } | null {
-  const now = new Date();
   let target = new Date(now);
   let matched = false;
   let timeSet = false;
@@ -128,17 +128,17 @@ export function detectDate(
   }
 
   // English relative days
-  if (/\btoday\b/i.test(text)) {
+  if (/\bday after tomorrow\b/i.test(text)) {
+    target.setDate(now.getDate() + 2);
+    matched = true;
+    label = label || "Day after tomorrow";
+  } else if (/\btoday\b/i.test(text)) {
     matched = true;
     label = label || "Today";
   } else if (/\btomorrow\b/i.test(text)) {
     target.setDate(now.getDate() + 1);
     matched = true;
     label = label || "Tomorrow";
-  } else if (/\bday after tomorrow\b/i.test(text)) {
-    target.setDate(now.getDate() + 2);
-    matched = true;
-    label = label || "Day after tomorrow";
   }
 
   // Next week
@@ -180,7 +180,9 @@ export function detectDate(
     const m = parseInt(md[1], 10) - 1;
     const d = parseInt(md[2], 10);
     target = new Date(now.getFullYear(), m, d);
-    if (target < now) target.setFullYear(now.getFullYear() + 1);
+    const today = new Date(now);
+    today.setHours(0, 0, 0, 0);
+    if (target < today) target.setFullYear(now.getFullYear() + 1);
     matched = true;
     label = `${m + 1}월 ${d}일`;
   } else {
@@ -189,7 +191,9 @@ export function detectDate(
       const m = parseInt(slash[1], 10) - 1;
       const d = parseInt(slash[2], 10);
       target = new Date(now.getFullYear(), m, d);
-      if (target < now) target.setFullYear(now.getFullYear() + 1);
+      const today = new Date(now);
+      today.setHours(0, 0, 0, 0);
+      if (target < today) target.setFullYear(now.getFullYear() + 1);
       matched = true;
       label = `${m + 1}/${d}`;
     }
@@ -240,6 +244,58 @@ export function detectDate(
   const end = new Date(target);
   end.setHours(end.getHours() + 1);
   return { label, start: target, end };
+}
+
+export type ResurfaceSuggestion = {
+  start: Date;
+  end: Date;
+  source: "detected" | "default";
+  detectedLabel: string | null;
+};
+
+function nextCalmHour(now: Date): Date {
+  const next = new Date(now);
+  next.setMinutes(0, 0, 0);
+  next.setHours(next.getHours() + 1);
+  if (next.getHours() >= 22 || next.getDate() !== now.getDate()) {
+    const tomorrow = new Date(now);
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    tomorrow.setHours(9, 0, 0, 0);
+    return tomorrow;
+  }
+  return next;
+}
+
+/**
+ * Deterministic capture suggestion. Natural-language dates win; otherwise we
+ * offer tomorrow at 9. No network or AI call is involved.
+ */
+export function suggestResurfaceTime(
+  text: string,
+  now = new Date(),
+): ResurfaceSuggestion {
+  const detected = detectDate(text, now);
+  if (detected) {
+    let start = new Date(detected.start);
+    if (start.getTime() <= now.getTime()) {
+      start = nextCalmHour(now);
+    }
+    const end = new Date(start);
+    end.setHours(end.getHours() + 1);
+    return {
+      start,
+      end,
+      source: "detected",
+      detectedLabel: detected.label,
+    };
+  }
+
+  const start = new Date(now);
+  start.setDate(start.getDate() + 1);
+  start.setHours(9, 0, 0, 0);
+  const end = new Date(start);
+  end.setHours(end.getHours() + 1);
+  return { start, end, source: "default", detectedLabel: null };
 }
 
 /** One calm sentence below the suggested time — no AI calls. */

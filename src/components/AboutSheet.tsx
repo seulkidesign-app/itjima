@@ -42,7 +42,7 @@ export function AboutSheet({
           </div>
           <p className="mt-4 text-[14px] leading-[1.6] text-ink/90">
             {t(
-              "캘린더도 할 일 목록도 아닙니다. 머릿속에 떠오른 걸 여기에 남겨두세요. 오른쪽으로 밀면 그때, 왼쪽으로 밀면 기억함에.",
+              "캘린더도 할 일 목록도 아닙니다. 머릿속에 떠오른 걸 여기에 남겨두세요. 오른쪽으로 밀면 다시 꺼낼 시점을 정하고, 왼쪽으로 밀면 보관함에 남겨둡니다.",
               "Not a calendar, not a to-do list. Leave what floats through your mind here — swipe right for when, swipe left to keep it safe.",
             )}
           </p>
@@ -51,7 +51,7 @@ export function AboutSheet({
               {t("→ 오른쪽: 그때를 기억하기", "→ Swipe right: remember for then")}
             </div>
             <div>
-              {t("← 왼쪽: 기억함에 저장", "← Swipe left: Kept")}
+              {t("← 왼쪽: 보관함에 저장", "← Swipe left: move to Archive")}
             </div>
             <div>
               {t(

@@ -1,6 +1,7 @@
 import {
   ensureCanonicalMemoriesMigrated,
   getMemoryMigrationState,
+  mirrorLegacyItemToCanonical,
   readLocalMemories,
   MEMORY_MIGRATION_VERSION,
 } from "../src/lib/memoryLocalStore";
@@ -58,4 +59,10 @@ export function withMemoryLocalStorage<T>(
   }
 }
 
-export { MEMORY_MIGRATION_VERSION, readLocalMemories, getMemoryMigrationState, ensureCanonicalMemoriesMigrated };
+export {
+  MEMORY_MIGRATION_VERSION,
+  readLocalMemories,
+  getMemoryMigrationState,
+  ensureCanonicalMemoriesMigrated,
+  mirrorLegacyItemToCanonical,
+};

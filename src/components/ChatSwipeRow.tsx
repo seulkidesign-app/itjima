@@ -242,7 +242,7 @@ export function ChatSwipeRow({
                   pointerEvents: trayOpacity > 0.5 ? "auto" : "none",
                   transform: `scale(${0.88 + trayOpacity * 0.12})`,
                 }}
-                aria-label={t("할 일로 보내기", "Send to tasks")}
+                aria-label={t("나중에 다시 꺼내기", "Bring back later")}
               >
                 <Calendar size={20} strokeWidth={2.25} />
               </button>
@@ -264,7 +264,7 @@ export function ChatSwipeRow({
                   pointerEvents: trayOpacity > 0.5 ? "auto" : "none",
                   transform: `scale(${0.88 + trayOpacity * 0.12})`,
                 }}
-                aria-label={t("생각 지도에 남기기", "Save to thought map")}
+                aria-label={t("보관함에 넣기", "Move to archive")}
               >
                 <Archive size={20} strokeWidth={2.25} />
               </button>

@@ -47,7 +47,7 @@ async function resetForScheduleAllDay(page: Page) {
     sessionStorage.clear();
   });
   await page.reload();
-  await page.getByRole("link", { name: /^Thoughts/ }).waitFor({ state: "visible" });
+  await page.getByRole("link", { name: /^Leave it/ }).waitFor({ state: "visible" });
   const closeButtons = page.getByRole("button", { name: "Close" });
   if (await closeButtons.count()) {
     await closeButtons.first().click();
@@ -78,7 +78,7 @@ async function openEditTimeStep(
   opts?: { upcoming?: boolean },
 ) {
   const ui = await app(page);
-  await ui.getByRole("link", { name: /^Tasks/ }).click();
+  await ui.getByRole("link", { name: /^Today/ }).click();
   if (opts?.upcoming) {
     await ui.getByRole("tab", { name: "Upcoming" }).click();
   }
@@ -102,8 +102,8 @@ async function openCreateTimeStep(
   opts?: { tomorrow?: boolean; title?: string },
 ) {
   const ui = await app(page);
-  await ui.getByRole("link", { name: /^Tasks/ }).click();
-  await ui.getByRole("button", { name: "Add task" }).click();
+  await ui.getByRole("link", { name: /^Today/ }).click();
+  await ui.getByRole("button", { name: "Add reminder" }).click();
   const sheet = page.getByRole("dialog");
   if (opts?.tomorrow) {
     await sheet.getByRole("button", { name: "Tomorrow" }).click();
@@ -126,7 +126,7 @@ async function injectSignedInUserForQa7(page: Page) {
     { userId: TEST_USER_ID },
   );
   await page.reload();
-  await page.getByRole("link", { name: /^Thoughts/ }).waitFor({ state: "visible" });
+  await page.getByRole("link", { name: /^Leave it/ }).waitFor({ state: "visible" });
 }
 
 async function expectToggleStates(

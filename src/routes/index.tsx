@@ -333,14 +333,14 @@ function Inbox() {
     setFocusScheduleSheet({ open: true, item: it });
   };
 
-  const saveHomeSchedule = async (
+  const commitInboxSchedule = async (
+    it: InboxItem,
     text: string,
     start: Date,
     end: Date,
     options: ScheduleConfirmOptions,
+    source: "suggested" | "focus_sort" | "inbox_swipe",
   ) => {
-    const it = focusScheduleSheet.item;
-    if (!it) return;
     try {
       const payload = scheduleFromInbox(it, {
         text,
@@ -364,10 +364,7 @@ function Inbox() {
       });
       const inboxSynced = await inbox.remove(it.id);
       track("schedule_created", {
-        source:
-          focusSortOpen && focusPendingScheduleId === it.id
-            ? "focus_sort"
-            : "inbox_swipe",
+        source,
         text_length: text.length,
       });
       setFocusScheduleSheet({ open: false });
@@ -381,6 +378,47 @@ function Inbox() {
       toast.error(t("일정을 남기지 못했어요", "Couldn't anchor it in time"));
       if (releaseItemRef.current?.id === it.id) cancelReleaseSchedule();
     }
+  };
+
+  const saveHomeSchedule = async (
+    text: string,
+    start: Date,
+    end: Date,
+    options: ScheduleConfirmOptions,
+  ) => {
+    const it = focusScheduleSheet.item;
+    if (!it) return;
+    await commitInboxSchedule(
+      it,
+      text,
+      start,
+      end,
+      options,
+      focusSortOpen && focusPendingScheduleId === it.id
+        ? "focus_sort"
+        : "inbox_swipe",
+    );
+  };
+
+  const saveSuggestedSchedule = async (
+    it: InboxItem,
+    start: Date,
+    end: Date,
+  ) => {
+    await commitInboxSchedule(
+      it,
+      it.text,
+      start,
+      end,
+      {
+        reminderMinutes: null,
+        allDay: false,
+        startAllDay: false,
+        endAllDay: false,
+        repeat: null,
+      },
+      "suggested",
+    );
   };
 
   const moveToArchive = async (it: InboxItem) => {
@@ -397,10 +435,14 @@ function Inbox() {
       }
       if (inboxRevival?.sourceId === it.id) setInboxRevival(null);
 
+      if (releaseItemRef.current?.id === it.id) completeRelease();
+
       if (allCloudSynced(archiveSynced, inboxSynced)) {
-        showUndoToast(t("기억함에 뒀어요", "Kept safe"), async () => {
+        showUndoToast(t("보관함에 뒀어요", "Moved to archive"), async () => {
           await archive.remove(created.id);
-          const { item: restored } = await inbox.add({
+          await inbox.add({
+            id: it.id,
+            created_at: it.created_at,
             text: payload.text,
             images: payload.images,
             brain_mirror: payload.brain_mirror,
@@ -558,7 +600,7 @@ function Inbox() {
               pendingSchedule={releasePendingScheduleId === releaseItem.id}
               onArchive={(it) => moveToArchive(it)}
               onSchedule={beginReleaseSchedule}
-              onLetGo={(it) => moveToDelete(it)}
+              onConfirmSuggested={saveSuggestedSchedule}
               onComplete={completeRelease}
             />
           ) : (
@@ -639,7 +681,7 @@ function Inbox() {
               pendingSchedule={releasePendingScheduleId === releaseItem.id}
               onArchive={(it) => moveToArchive(it)}
               onSchedule={beginReleaseSchedule}
-              onLetGo={(it) => moveToDelete(it)}
+              onConfirmSuggested={saveSuggestedSchedule}
               onComplete={completeRelease}
             />
           )}
@@ -702,7 +744,7 @@ function Inbox() {
             />
             <MenuItem
               icon={<Calendar size={18} />}
-              label={t("할 일로 보내기", "Send to tasks")}
+              label={t("나중에 다시 꺼내기", "Bring back later")}
               onClick={() => {
                 setMenuFor(null);
                 openHomeSchedule(menuItem);
@@ -710,7 +752,7 @@ function Inbox() {
             />
             <MenuItem
               icon={<ArchiveIcon size={18} />}
-              label={t("생각 지도에 남기기", "Save to thought map")}
+              label={t("보관함에 넣기", "Move to archive")}
               onClick={() => {
                 setMenuFor(null);
                 moveToArchive(menuItem);

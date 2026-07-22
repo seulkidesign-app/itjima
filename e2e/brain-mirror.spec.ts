@@ -1,47 +1,94 @@
 import { test, expect } from "@playwright/test";
-import { resetAppState, phone } from "./helpers";
+import {
+  GUEST_ARCHIVE_KEY,
+  GUEST_INBOX_KEY,
+  GUEST_MEMORY_KEY,
+  GUEST_SCHEDULE_KEY,
+  readGuestList,
+  resetAppState,
+  phone,
+} from "./helpers";
 
-test.describe("Brain Mirror API failures", () => {
+test.describe("AI-free Capture suggestions", () => {
   test.beforeEach(async ({ page }) => {
     await resetAppState(page);
+  });
+
+  test("offers a calm default without calling Brain Mirror", async ({
+    page,
+  }) => {
+    let brainMirrorCalls = 0;
     await page.route("**/api/brain-mirror", async (route) => {
+      brainMirrorCalls += 1;
       await route.fulfill({
         status: 503,
         contentType: "application/json",
         body: JSON.stringify({ message: "e2e unavailable" }),
       });
     });
+
+    const text = "A thought with no date that I want to remember later";
+    const frame = phone(page);
+    await frame.locator("textarea").first().fill(text);
+    await frame.getByRole("button", { name: "Leave it", exact: true }).click();
+
+    await expect(frame.getByText("Saved safely")).toBeVisible();
+    await expect(frame.getByText("Suggested moment")).toBeVisible();
+    await expect(
+      frame.getByRole("button", { name: "Bring it back then" }),
+    ).toBeVisible();
+    await expect(
+      frame.getByText(
+        "There was no date, so tomorrow morning is a gentle default. You can change it.",
+      ),
+    ).toBeVisible();
+    expect(brainMirrorCalls).toBe(0);
   });
 
-  test("shows release card quietly when API fails without a date hint", async ({
+  test("approving a detected time moves one canonical memory to waiting", async ({
     page,
   }) => {
-    const text =
-      "Quarterly planning merge roadmap hiring budget office move vendor contracts without clear next steps or dates anywhere in sight";
+    let brainMirrorCalls = 0;
+    await page.route("**/api/brain-mirror", async (route) => {
+      brainMirrorCalls += 1;
+      await route.fulfill({ status: 204, body: "" });
+    });
+
+    const text = "Tomorrow morning, call the clinic";
     const frame = phone(page);
-    const input = frame.locator("textarea").first();
-    await input.fill(text);
+    await frame.locator("textarea").first().fill(text);
     await frame.getByRole("button", { name: "Leave it", exact: true }).click();
-    await frame.getByText(text, { exact: true }).waitFor({ state: "visible" });
-    await frame.getByText("Tasks →").waitFor({ state: "visible", timeout: 15_000 });
-    await expect(
-      page.getByText("Couldn't load a reflection right now"),
-    ).toHaveCount(0);
+    await frame.getByRole("button", { name: "Bring it back then" }).click();
+    await expect(frame.getByText("Saved safely")).toHaveCount(0);
+
+    const inbox = await readGuestList(page, GUEST_INBOX_KEY);
+    const schedules = await readGuestList(page, GUEST_SCHEDULE_KEY);
+    const memories = await readGuestList(page, GUEST_MEMORY_KEY);
+
+    expect(brainMirrorCalls).toBe(0);
+    expect(inbox).toHaveLength(0);
+    expect(schedules).toHaveLength(1);
+    expect((schedules[0] as { text: string }).text).toBe(text);
+    expect(memories).toHaveLength(1);
+    expect((memories[0] as { status: string }).status).toBe("waiting");
   });
 
-  test("still offers task routing when API fails but date is detected", async ({
+  test("Archive only moves the capture to one kept memory", async ({
     page,
   }) => {
-    const text =
-      "Tomorrow hospital, pack documents, insurance cards, call clinic";
+    const text = "A reference I only want to keep";
     const frame = phone(page);
-    const input = frame.locator("textarea").first();
-    await input.fill(text);
+    await frame.locator("textarea").first().fill(text);
     await frame.getByRole("button", { name: "Leave it", exact: true }).click();
-    await frame.getByText(text, { exact: true }).waitFor({ state: "visible" });
-    await frame.getByText("Tasks →").waitFor({ state: "visible", timeout: 15_000 });
-    await expect(
-      page.getByText("Couldn't load a reflection right now"),
-    ).toHaveCount(0);
+    await frame.getByRole("button", { name: "Archive only" }).click();
+    await expect(frame.getByText("Saved safely")).toHaveCount(0);
+
+    const inbox = await readGuestList(page, GUEST_INBOX_KEY);
+    const archive = await readGuestList(page, GUEST_ARCHIVE_KEY);
+    const memories = await readGuestList(page, GUEST_MEMORY_KEY);
+    expect(inbox).toHaveLength(0);
+    expect(archive).toHaveLength(1);
+    expect(memories).toHaveLength(1);
+    expect((memories[0] as { status: string }).status).toBe("kept");
   });
 });

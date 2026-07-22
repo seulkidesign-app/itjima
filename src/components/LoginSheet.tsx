@@ -74,7 +74,7 @@ export function LoginSheet({
           </div>
           <div className="mt-1 text-sm leading-relaxed text-ink-soft">
             {t(
-              "로그인하면 어디서든 같은 기억함을 열 수 있어요.",
+              "로그인하면 어디서든 같은 보관함을 열 수 있어요.",
               "Sign in to open the same vault on any device.",
             )}
           </div>

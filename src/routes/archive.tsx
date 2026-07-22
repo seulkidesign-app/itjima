@@ -1,4 +1,4 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { toast } from "sonner";
@@ -11,13 +11,12 @@ import {
   FolderInput,
   Orbit,
   List as ListIcon,
-  Sparkles,
 } from "lucide-react";
 import { useArchive, useSchedules, type ArchiveItem } from "@/lib/store";
 import { archiveGroup, detectDate } from "@/lib/dateDetect";
 import { useT, useLang } from "@/lib/i18n";
 import { useScrollLock } from "@/hooks/useScrollLock";
-import { haptic, tap } from "@/lib/haptics";
+import { haptic } from "@/lib/haptics";
 import { ArchiveOrganizeSheet } from "@/components/ArchiveOrganizeSheet";
 import { ArchiveMemoryCard } from "@/components/ArchiveMemoryCard";
 import { ArchiveMoveSheet } from "@/components/ArchiveMoveSheet";
@@ -45,12 +44,6 @@ import {
   type ArchiveGroupDef,
 } from "@/lib/archiveMeta";
 import { recentArchiveItems, searchArchiveItems } from "@/lib/archiveSearch";
-import { useMemoryLenses } from "@/hooks/useMemoryLenses";
-import { ArchiveDiscoverySection } from "@/components/ArchiveDiscoverySection";
-import { ThinkingInsightsSection } from "@/components/ThinkingInsightsSection";
-import { useThinkingInsights } from "@/hooks/useThinkingInsights";
-import { MemoryJourneySection } from "@/components/MemoryJourneySection";
-import { useMemoryJourney } from "@/hooks/useMemoryJourney";
 import { MemoryRevivalHint } from "@/components/MemoryRevivalHint";
 import { consumeRevivalJumpTarget } from "@/lib/memoryRevival";
 import { ArchiveGridSkeleton } from "@/components/Skeleton";
@@ -113,7 +106,7 @@ function Archive() {
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [scrollToId, setScrollToId] = useState<string | null>(null);
   const [moveSheetOpen, setMoveSheetOpen] = useState(false);
-  const [layoutMode, setLayoutMode] = useState<"space" | "list">("space");
+  const [layoutMode, setLayoutMode] = useState<"space" | "list">("list");
   const [timelineMonth, setTimelineMonth] = useState<string | null>(null);
   const [detailItem, setDetailItem] = useState<ArchiveItem | null>(null);
   const [detailClusterIds, setDetailClusterIds] = useState<string[] | undefined>(
@@ -123,27 +116,6 @@ function Archive() {
     readRevivalHint(),
   );
   const cardRefs = useRef<Record<string, HTMLDivElement | null>>({});
-
-  const { lenses } = useMemoryLenses(items);
-  const { insights: thinkingInsights } = useThinkingInsights();
-  const { chapters: journeyChapters, thoughts: journeyThoughts } =
-    useMemoryJourney(pins);
-
-  const archiveInsightIds = useMemo(
-    () => new Set(items.map((it) => it.id)),
-    [items],
-  );
-
-  const insightsForArchive = useMemo(
-    () =>
-      thinkingInsights.map((insight) => ({
-        ...insight,
-        memoryIds: insight.memoryIds.filter((id) =>
-          archiveInsightIds.has(id),
-        ),
-      })),
-    [thinkingInsights, archiveInsightIds],
-  );
 
   useEffect(() => {
     const h = () => {
@@ -517,6 +489,7 @@ function Archive() {
       });
       const { cloudSynced: scheduleSynced } = await schedules.add({
         text,
+        images: it.images ?? [],
         start_time: start.toISOString(),
         end_time: end.toISOString(),
         ...allDayFields,
@@ -567,7 +540,7 @@ function Archive() {
         softLabels
         disabled={swipeDisabled}
         leftLabel={t("지우기", "Remove")}
-        rightLabel={t("할 일", "Tasks")}
+        rightLabel={t("다시 꺼내기", "Bring back")}
         onLongPress={selecting ? undefined : () => enterSelection(it.id)}
         onSwipe={(dir) => {
           if (dir === "right") openScheduleSheet(it);
@@ -654,7 +627,7 @@ function Archive() {
                 : "page-title"
             }`}
           >
-            {t("생각 지도", "Thought map")}
+            {t("보관함", "Archive")}
           </h1>
           <p
             className={`mt-2 leading-relaxed ${
@@ -664,8 +637,8 @@ function Archive() {
             }`}
           >
             {t(
-              "남은 생각들이 서로 연결된 지도",
-              "A map where remaining thoughts connect to each other",
+              "맡겨둔 생각과 지나온 기억을 다시 찾는 곳",
+              "Find the thoughts you kept and the moments you finished",
             )}
           </p>
           {items.length > 0 && (
@@ -780,7 +753,7 @@ function Archive() {
                           : "text-ink-soft"
                     }`}
                   >
-                    {t("지도", "Map")}
+                    {t("생각 지도", "Thought map")}
                   </button>
                   <button
                     type="button"
@@ -797,17 +770,6 @@ function Archive() {
                   >
                     {t("목록", "List")}
                   </button>
-                  <Link
-                    to="/rediscovery"
-                    onClick={tap}
-                    className={`rounded-full px-3 py-1.5 text-[12px] font-semibold touch-press ${
-                      isSpaceView
-                        ? "archive-space-chip text-[color:var(--archive-text-soft)]"
-                        : "bg-ink/[0.06] text-ink-soft"
-                    }`}
-                  >
-                    {t("다시 만나기", "Revisit")}
-                  </Link>
                 </div>
                 <button
                   type="button"
@@ -956,30 +918,6 @@ function Archive() {
                   clearRevivalHint();
                   setRevival(null);
                 }}
-              />
-            )}
-
-            {!isSearching && (
-              <ThinkingInsightsSection
-                insights={insightsForArchive}
-                onRevisit={jumpToMemory}
-              />
-            )}
-
-            {!isSearching && (
-              <MemoryJourneySection
-                chapters={journeyChapters}
-                thoughts={journeyThoughts}
-                archiveItems={items}
-                onOpenMemory={jumpToMemory}
-              />
-            )}
-
-            {!isSearching && (
-              <ArchiveDiscoverySection
-                lenses={lenses}
-                items={items}
-                onOpenMemory={jumpToMemory}
               />
             )}
 

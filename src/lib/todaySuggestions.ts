@@ -12,6 +12,26 @@ export type TodaySuggestion = {
   rediscoveryPath?: boolean;
 };
 
+/** Due thoughts stay actionable until the user resolves or snoozes them. */
+export function dueSchedules(
+  items: ScheduleItem[],
+  pins: Set<string>,
+  now = new Date(),
+): ScheduleItem[] {
+  const nowMs = now.getTime();
+  return items
+    .filter((item) => item.status !== "done")
+    .filter(
+      (item) =>
+        pins.has(item.id) || new Date(item.start_time).getTime() <= nowMs,
+    )
+    .sort(
+      (a, b) =>
+        new Date(a.start_time).getTime() -
+        new Date(b.start_time).getTime(),
+    );
+}
+
 /** Gentle, rule-based suggestions — no AI. */
 export function pickTodaySuggestion(
   todayItems: ScheduleItem[],

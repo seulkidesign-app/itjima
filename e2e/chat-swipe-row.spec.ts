@@ -25,7 +25,7 @@ async function resetThoughts(page: Page) {
     sessionStorage.clear();
   });
   await page.reload();
-  await page.getByRole("link", { name: /^Thoughts/ }).waitFor({ state: "visible" });
+  await page.getByRole("link", { name: /^Leave it/ }).waitFor({ state: "visible" });
   const closeButtons = page.getByRole("button", { name: "Close" });
   if (await closeButtons.count()) {
     await closeButtons.first().click();
@@ -40,7 +40,7 @@ async function seedInbox(page: Page, items: InboxSeed[]) {
     { key: GUEST_INBOX_KEY, rows: items },
   );
   await page.reload();
-  await page.getByRole("link", { name: /^Thoughts/ }).waitFor({ state: "visible" });
+  await page.getByRole("link", { name: /^Leave it/ }).waitFor({ state: "visible" });
   const closeButtons = page.getByRole("button", { name: "Close" });
   if (await closeButtons.count()) {
     await closeButtons.first().click();
@@ -133,8 +133,8 @@ async function rowButtons(page: Page, text: string) {
   const ui = await app(page);
   const row = ui.locator(".swipe-row").filter({ hasText: text });
   return {
-    schedule: row.getByRole("button", { name: "Send to tasks" }),
-    archive: row.getByRole("button", { name: "Save to thought map" }),
+    schedule: row.getByRole("button", { name: "Bring back later" }),
+    archive: row.getByRole("button", { name: "Move to archive" }),
   };
 }
 

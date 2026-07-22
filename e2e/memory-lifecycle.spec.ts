@@ -16,6 +16,7 @@ import {
 import {
   ensureCanonicalMemoriesMigrated,
   getMemoryMigrationState,
+  mirrorLegacyItemToCanonical,
   readLocalMemories,
   withMemoryLocalStorage,
   MEMORY_MIGRATION_VERSION,
@@ -421,6 +422,56 @@ test.describe("Memory local migration", () => {
         expect(readLocalMemories(null)).toHaveLength(1);
         ensureCanonicalMemoriesMigrated(null);
         expect(readLocalMemories(null)).toHaveLength(1);
+      },
+    );
+  });
+
+  test("returning user merges guest memories created after initial migration", () => {
+    withMemoryLocalStorage(
+      () => undefined,
+      () => {
+        ensureCanonicalMemoriesMigrated("user-1");
+        mirrorLegacyItemToCanonical(null, "inbox", {
+          id: "late-guest",
+          text: "captured while signed out",
+          images: [],
+          created_at: "2026-07-22T12:00:00.000Z",
+          status: "active",
+        });
+
+        ensureCanonicalMemoriesMigrated("user-1");
+        const merged = readLocalMemories("user-1");
+        expect(
+          merged.filter(
+            (memory) => memory.provenance?.legacy_id === "late-guest",
+          ),
+        ).toHaveLength(1);
+      },
+    );
+  });
+
+  test("guest merge preserves unrelated memories when canonical ids collide", () => {
+    withMemoryLocalStorage(
+      () => undefined,
+      () => {
+        mirrorLegacyItemToCanonical("user-1", "inbox", {
+          id: "shared-canonical-id",
+          text: "signed-in memory",
+          images: [],
+          created_at: "2026-07-22T10:00:00.000Z",
+          status: "active",
+        });
+        mirrorLegacyItemToCanonical(null, "archive", {
+          id: "shared-canonical-id",
+          text: "guest archive memory",
+          images: [],
+          created_at: "2026-07-22T11:00:00.000Z",
+        });
+
+        ensureCanonicalMemoriesMigrated("user-1");
+        const merged = readLocalMemories("user-1");
+        expect(merged).toHaveLength(2);
+        expect(new Set(merged.map((memory) => memory.id)).size).toBe(2);
       },
     );
   });

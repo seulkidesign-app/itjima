@@ -124,7 +124,7 @@ function AboutPage() {
         n: "02",
         t: t("스와이프로 0.5초 결정.", "Swipe to decide in half a second."),
         d: t(
-          "오른쪽 = 그때. 왼쪽 = 기억함. 틴더처럼. 그게 전부입니다.",
+          "오른쪽 = 다시 꺼내기. 왼쪽 = 보관함. 틴더처럼. 그게 전부입니다.",
           "Right = when. Left = saved. Like swiping cards. That's it.",
         ),
       },

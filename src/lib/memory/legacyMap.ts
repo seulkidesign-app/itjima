@@ -54,7 +54,7 @@ function contentFromArchive(item: ArchiveItem): MemoryContent {
 function contentFromSchedule(item: ScheduleItem): MemoryContent {
   return {
     text: item.text,
-    images: [],
+    images: item.images ?? [],
     raw_text: item.raw_text ?? item.text,
     brain_mirror: item.brain_mirror ?? null,
   };
@@ -109,7 +109,7 @@ function scheduleResurfacePlan(
 export function mapInboxToMemory(
   item: InboxItem,
   timezone: string,
-  memoryId = crypto.randomUUID(),
+  memoryId: string = crypto.randomUUID(),
 ): Memory {
   return createCapturedMemory({
     id: memoryId,
@@ -123,7 +123,7 @@ export function mapInboxToMemory(
 export function mapArchiveToMemory(
   item: ArchiveItem,
   timezone: string,
-  memoryId = crypto.randomUUID(),
+  memoryId: string = crypto.randomUUID(),
 ): Memory {
   const captured = createCapturedMemory({
     id: memoryId,
@@ -136,6 +136,14 @@ export function mapArchiveToMemory(
     created_at: item.created_at,
     resurface_timezone: timezone,
   });
+  if (item.resolution_kind) {
+    return {
+      ...captured,
+      status: "resolved",
+      resolution_kind: item.resolution_kind,
+      updated_at: item.resolved_at ?? item.created_at,
+    };
+  }
   return {
     ...captured,
     status: "kept",
@@ -146,7 +154,7 @@ export function mapArchiveToMemory(
 export function mapScheduleToMemory(
   item: ScheduleItem,
   timezone: string,
-  memoryId = crypto.randomUUID(),
+  memoryId: string = crypto.randomUUID(),
 ): Memory {
   const base = createCapturedMemory({
     id: memoryId,

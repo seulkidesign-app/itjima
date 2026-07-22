@@ -1,6 +1,16 @@
 import { supabase } from "@/integrations/supabase/client";
 import { mergeCloudRow, shouldPreferLocalInboxStatus } from "@/lib/cloudMerge";
-import { ensureCanonicalMemoriesMigrated } from "@/lib/memoryLocalStore";
+import {
+  ensureCanonicalMemoriesMigrated,
+  mirrorLegacyItemToCanonical,
+  mirrorLegacyRemovalToCanonical,
+} from "@/lib/memoryLocalStore";
+import type {
+  LegacyMemoryItem,
+  LegacyMemorySource,
+  MemoryWriteIntent,
+  ResolutionKind,
+} from "@/lib/memory";
 import {
   parseBrainMirrorResult,
   finalizeBrainMirror,
@@ -28,6 +38,8 @@ export type ScheduleStatus = "active" | "done";
 export type ScheduleItem = {
   id: string;
   text: string;
+  /** Local compatibility copy until canonical Memory cloud writes are enabled. */
+  images?: string[];
   start_time: string;
   end_time: string;
   alarm: boolean;
@@ -50,10 +62,17 @@ export type ArchiveItem = {
   brain_mirror?: BrainMirrorResult | null;
   source_id?: string | null;
   raw_text?: string | null;
+  resolution_kind?: ResolutionKind | null;
+  resolved_at?: string | null;
 };
 
 type ListKind = "inbox" | "schedules" | "archive";
 type TableName = "inbox" | "schedules" | "archive";
+
+type MemoryMutationOptions = {
+  memoryIntent?: MemoryWriteIntent;
+  removalKind?: ResolutionKind;
+};
 
 const GUEST = "guest";
 
@@ -70,6 +89,41 @@ const META = {
 
 function storageKey(kind: ListKind, userId: string | null) {
   return `itjima.${userId ?? GUEST}.${kind}`;
+}
+
+function canonicalSource(kind: ListKind): LegacyMemorySource {
+  return kind === "schedules" ? "schedule" : kind;
+}
+
+function mirrorItemQuietly(
+  userId: string | null,
+  kind: ListKind,
+  item: LegacyMemoryItem,
+  intent: MemoryWriteIntent = "sync",
+) {
+  try {
+    mirrorLegacyItemToCanonical(userId, canonicalSource(kind), item, intent);
+  } catch (error) {
+    console.error("[memory] local compatibility write", error);
+  }
+}
+
+function mirrorRemovalQuietly(
+  userId: string | null,
+  kind: ListKind,
+  id: string,
+  resolution: ResolutionKind,
+) {
+  try {
+    mirrorLegacyRemovalToCanonical(
+      userId,
+      canonicalSource(kind),
+      id,
+      resolution,
+    );
+  } catch (error) {
+    console.error("[memory] local compatibility removal", error);
+  }
 }
 
 function readLS<T>(key: string, table: TableName): T[] {
@@ -512,7 +566,10 @@ function useLocalList<T extends { id: string; created_at: string }>(
   }, [userId, key, kind, table, syncRetry]);
 
   const add = useCallback(
-    async (partial: Partial<T> & { text: string }) => {
+    async (
+      partial: Partial<T> & { text: string },
+      options?: MemoryMutationOptions,
+    ) => {
       const item = {
         id: uid(),
         created_at: new Date().toISOString(),
@@ -523,6 +580,12 @@ function useLocalList<T extends { id: string; created_at: string }>(
 
       const next = sortByCreated([item, ...readLS<T>(key, table)]);
       writeLS(key, next);
+      mirrorItemQuietly(
+        userId,
+        kind,
+        item as unknown as LegacyMemoryItem,
+        options?.memoryIntent ?? "sync",
+      );
 
       let cloudSynced = true;
       if (userId) {
@@ -542,15 +605,30 @@ function useLocalList<T extends { id: string; created_at: string }>(
 
       return { item, cloudSynced };
     },
-    [key, userId, table],
+    [key, userId, table, kind, markWriteError],
   );
 
   const update = useCallback(
-    async (id: string, patch: Partial<T>) => {
-      const next = readLS<T>(key, table).map((it) =>
-        it.id === id ? { ...it, ...patch } : it,
-      );
+    async (
+      id: string,
+      patch: Partial<T>,
+      options?: MemoryMutationOptions,
+    ) => {
+      let updatedItem: T | undefined;
+      const next = readLS<T>(key, table).map((it) => {
+        if (it.id !== id) return it;
+        updatedItem = { ...it, ...patch };
+        return updatedItem;
+      });
       writeLS(key, next);
+      if (updatedItem) {
+        mirrorItemQuietly(
+          userId,
+          kind,
+          updatedItem as unknown as LegacyMemoryItem,
+          options?.memoryIntent ?? "sync",
+        );
+      }
       if (!userId) return true;
       const ok = await cloudMutate(
         "update",
@@ -563,13 +641,19 @@ function useLocalList<T extends { id: string; created_at: string }>(
       else clearWriteError();
       return ok;
     },
-    [key, userId, table, markWriteError, clearWriteError],
+    [key, userId, table, kind, markWriteError, clearWriteError],
   );
 
   const remove = useCallback(
-    async (id: string) => {
+    async (id: string, options?: MemoryMutationOptions) => {
       const next = readLS<T>(key, table).filter((it) => it.id !== id);
       writeLS(key, next);
+      mirrorRemovalQuietly(
+        userId,
+        kind,
+        id,
+        options?.removalKind ?? "no_longer_needed",
+      );
       if (!userId) return true;
       const { error } = await supabase
         .from(table)
@@ -584,7 +668,7 @@ function useLocalList<T extends { id: string; created_at: string }>(
       clearWriteError();
       return true;
     },
-    [key, userId, table, markWriteError, clearWriteError],
+    [key, userId, table, kind, markWriteError, clearWriteError],
   );
 
   return { items, add, update, remove, syncState, retrySync };

@@ -12,7 +12,7 @@ async function saveToArchive(page: import("@playwright/test").Page, text: string
   await openContextMenu(page, text);
   await phone(page)
     .getByRole("dialog")
-    .getByRole("button", { name: "Save to thought map", exact: true })
+    .getByRole("button", { name: "Move to archive", exact: true })
     .click();
   await expect(phone(page).getByText(text, { exact: true })).toHaveCount(0);
 }

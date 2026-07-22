@@ -18,9 +18,9 @@ export function TopNav() {
   const userId = useUserId();
   const isAdmin = useIsAdmin();
   const tabs = [
-    { to: "/", label: t("생각", "Thoughts") },
-    { to: "/schedule", label: t("할 일", "Tasks") },
-    { to: "/archive", label: t("생각 지도", "Thought map") },
+    { to: "/", label: t("맡기기", "Leave it") },
+    { to: "/schedule", label: t("오늘", "Today") },
+    { to: "/archive", label: t("보관함", "Archive") },
   ] as const;
 
   // Subtle scroll shadow once scrolled past 4px

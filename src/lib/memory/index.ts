@@ -47,3 +47,10 @@ export {
   normalizeMemoryRow,
   type LegacyBuckets,
 } from "./legacyMap";
+
+export {
+  reconcileLegacyMemory,
+  resolveRemovedLegacyMemory,
+  type LegacyMemoryItem,
+  type MemoryWriteIntent,
+} from "./legacySync";

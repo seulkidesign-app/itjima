@@ -54,6 +54,7 @@ export function scheduleFromInbox(
   return {
     ...opts,
     ...allDayFields,
+    images: snap.images,
     alarm: opts.alarm ?? false,
     repeat: opts.repeat ?? null,
     source_id: item.id,

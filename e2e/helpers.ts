@@ -5,6 +5,7 @@ import { resolve } from "path";
 export const GUEST_INBOX_KEY = "itjima.guest.inbox";
 export const GUEST_ARCHIVE_KEY = "itjima.guest.archive";
 export const GUEST_SCHEDULE_KEY = "itjima.guest.schedules";
+export const GUEST_MEMORY_KEY = "itjima.guest.memories";
 export const TEST_USER_ID = "11111111-1111-4111-8111-111111111111";
 
 export function getSupabaseProjectId(): string | null {
@@ -25,7 +26,7 @@ export async function injectSignedInUser(page: Page) {
     { userId: TEST_USER_ID },
   );
   await page.reload();
-  await phone(page).getByRole("link", { name: /^Thoughts/ }).waitFor({
+  await phone(page).getByRole("link", { name: /^Leave it/ }).waitFor({
     state: "visible",
   });
 }
@@ -59,7 +60,7 @@ export async function resetAppState(page: Page) {
     sessionStorage.clear();
   });
   await page.reload();
-  await phone(page).getByRole("link", { name: /^Thoughts/ }).waitFor({
+  await phone(page).getByRole("link", { name: /^Leave it/ }).waitFor({
     state: "visible",
   });
 }
@@ -68,17 +69,18 @@ export async function gotoInbox(page: Page) {
   if (!page.url().includes("127.0.0.1")) {
     await page.goto("/");
   }
-  await phone(page).getByRole("link", { name: /^Thoughts/ }).waitFor({
+  await phone(page).getByRole("link", { name: /^Leave it/ }).waitFor({
     state: "visible",
   });
 }
 
 export async function gotoArchiveListView(page: Page) {
-  await phone(page).getByRole("link", { name: /^Thought map/ }).click();
+  await phone(page).getByRole("link", { name: /^Archive/ }).click();
   await phone(page)
-    .getByRole("heading", { name: "Thought map" })
+    .getByRole("heading", { name: "Archive" })
     .waitFor({ state: "visible" });
-  await phone(page).getByRole("button", { name: "List", exact: true }).click();
+  const list = phone(page).getByRole("button", { name: "List", exact: true });
+  if (await list.isVisible().catch(() => false)) await list.click();
 }
 
 export async function completeScheduleDialog(page: Page) {
@@ -93,22 +95,13 @@ export async function completeScheduleDialog(page: Page) {
 }
 export async function dismissReleaseOverlay(page: Page) {
   const frame = phone(page);
-  const hint = frame.getByText("Tasks →");
-  const backdrop = frame.locator(".bg-white\\/38").first();
-  const inRelease =
-    (await hint.isVisible().catch(() => false)) ||
-    (await backdrop.isVisible().catch(() => false));
-  if (!inRelease) return;
-
-  await page.keyboard.press("Escape");
-  try {
-    await hint.waitFor({ state: "hidden", timeout: 8000 });
-  } catch {
-    if (await backdrop.isVisible().catch(() => false)) {
-      await backdrop.click({ position: { x: 8, y: 8 } });
-      await backdrop.waitFor({ state: "hidden", timeout: 8000 });
-    }
-  }
+  const decideLater = frame.getByRole("button", {
+    name: "Keep it here and decide later",
+    exact: true,
+  });
+  if (!(await decideLater.isVisible().catch(() => false))) return;
+  await decideLater.click();
+  await decideLater.waitFor({ state: "hidden", timeout: 8000 });
 }
 
 export async function addThought(page: Page, text: string) {
@@ -129,7 +122,7 @@ export async function openContextMenu(page: Page, thoughtText: string) {
   await bubble.dispatchEvent("pointerup", { button: 0, pointerId: 1 });
   await frame
     .getByRole("dialog")
-    .getByRole("button", { name: "Save to thought map", exact: true })
+    .getByRole("button", { name: "Move to archive", exact: true })
     .waitFor({
       state: "visible",
     });
@@ -137,12 +130,12 @@ export async function openContextMenu(page: Page, thoughtText: string) {
 
 export async function getTabCount(
   page: Page,
-  tab: "Thoughts" | "Tasks" | "Thought map",
+  tab: "Leave it" | "Today" | "Archive",
 ) {
   const key =
-    tab === "Thoughts"
+    tab === "Leave it"
       ? GUEST_INBOX_KEY
-      : tab === "Tasks"
+      : tab === "Today"
         ? GUEST_SCHEDULE_KEY
         : GUEST_ARCHIVE_KEY;
   const list = await readGuestList(page, key);

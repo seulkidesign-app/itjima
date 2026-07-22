@@ -41,8 +41,7 @@ import { EmptyState } from "@/components/EmptyState";
 import { ScheduleListSkeleton } from "@/components/Skeleton";
 import { SyncIndicator } from "@/components/SyncIndicator";
 import {
-  partitionTodaySchedules,
-  pickTodaySuggestion,
+  dueSchedules,
   formatTodaySpotlightTime,
 } from "@/lib/todaySuggestions";
 import { scheduleStatusBadge } from "@/lib/dateDetect";
@@ -141,16 +140,17 @@ function usePins() {
 }
 
 function useTimerTick() {
-  const [, setTick] = useState(0);
+  const [now, setNow] = useState(() => Date.now());
   useEffect(() => {
-    const id = setInterval(() => setTick((n) => n + 1), 1000);
-    const h = () => setTick((n) => n + 1);
+    const id = setInterval(() => setNow(Date.now()), 1000);
+    const h = () => setNow(Date.now());
     window.addEventListener("itjima:timers", h);
     return () => {
       clearInterval(id);
       window.removeEventListener("itjima:timers", h);
     };
   }, []);
+  return now;
 }
 
 function Schedule() {
@@ -169,7 +169,8 @@ function Schedule() {
   const [reminderSheet, setReminderSheet] = useState<ScheduleItem | null>(null);
   const [alarmSheet, setAlarmSheet] = useState<ScheduleItem | null>(null);
   const [timerSheet, setTimerSheet] = useState<ScheduleItem | null>(null);
-  useTimerTick();
+  const actionInFlightRef = useRef(new Set<string>());
+  const nowMs = useTimerTick();
   const { pins, toggle: togglePin } = usePins();
 
   const activeItems = useMemo(
@@ -261,17 +262,9 @@ function Schedule() {
     [activeItems, pins],
   );
 
-  const { today: todayActive, flowed: flowedPast } = useMemo(
-    () => partitionTodaySchedules(activeItems, pins),
-    [activeItems, pins],
-  );
-
   const todayTimerItems = useMemo(() => {
-    return todayActive.filter((s) => {
-      const k = classifySchedule(s.start_time);
-      return k === "now" || k === "today" || pins.has(s.id);
-    });
-  }, [todayActive, pins]);
+    return dueSchedules(activeItems, pins, new Date(nowMs));
+  }, [activeItems, pins, nowMs]);
 
   const moveEventsToDate = async (
     ids: string[],
@@ -340,18 +333,22 @@ function Schedule() {
 
   const duplicateSchedule = async (s: ScheduleItem) => {
     try {
-      await add({
-        text: s.text,
-        start_time: s.start_time,
-        end_time: s.end_time,
-        ...scheduleAllDayFieldsFromItem(s),
-        repeat: s.repeat,
-        raw_text: s.raw_text,
-        brain_mirror: s.brain_mirror,
-        source_id: s.source_id,
-        alarm: false,
-        status: "active",
-      });
+      await add(
+        {
+          text: s.text,
+          images: s.images ?? [],
+          start_time: s.start_time,
+          end_time: s.end_time,
+          ...scheduleAllDayFieldsFromItem(s),
+          repeat: s.repeat,
+          raw_text: s.raw_text,
+          brain_mirror: s.brain_mirror,
+          source_id: s.source_id,
+          alarm: false,
+          status: "active",
+        },
+        { memoryIntent: "copy" },
+      );
       toast.success(t("복사됐어요", "Copied here"));
     } catch {
       toast.error(t("복사하지 못했어요", "Couldn't copy"));
@@ -362,14 +359,110 @@ function Schedule() {
     setSheet({ open: true, draftStart: date });
   };
 
-  const markDone = async (s: ScheduleItem) => {
+  const resolveSchedule = async (
+    s: ScheduleItem,
+    resolution: "completed" | "no_longer_needed",
+  ) => {
+    if (actionInFlightRef.current.has(s.id)) return;
+    actionInFlightRef.current.add(s.id);
     try {
-      const done = await update(s.id, { status: "done" });
+      const resolvedAt = new Date().toISOString();
+      const done = await update(
+        s.id,
+        { status: "done" },
+        {
+          memoryIntent:
+            resolution === "completed" ? "completed" : "no_longer_needed",
+        },
+      );
+      const { cloudSynced: archiveSynced } = await archive.add(
+        {
+          text: s.raw_text ?? s.text,
+          images: s.images ?? [],
+          source_id: s.source_id ?? s.id,
+          raw_text: s.raw_text ?? s.text,
+          brain_mirror: s.brain_mirror ?? null,
+          resolution_kind: resolution,
+          resolved_at: resolvedAt,
+        },
+        {
+          memoryIntent:
+            resolution === "completed" ? "completed" : "no_longer_needed",
+        },
+      );
+      const removed = await remove(s.id, { removalKind: resolution });
+      if (pins.has(s.id)) togglePin(s.id);
       hapticConfirm();
-      track("schedule_completed", { text_length: s.text.length });
-      if (done) toast.success(t("다녀온 기억이에요", "You can let this go"), scheduleToast);
+      track(
+        resolution === "completed"
+          ? "schedule_completed"
+          : "schedule_no_longer_needed",
+        { text_length: s.text.length },
+      );
+      if (allCloudSynced(done, archiveSynced, removed)) {
+        toast.success(
+          resolution === "completed"
+            ? t("처리했어요. 보관함에 남겨뒀어요", "Done — it's in your archive")
+            : t("이제 괜찮아요. 보관함에 남겨뒀어요", "No longer needed — kept in your archive"),
+          scheduleToast,
+        );
+      }
     } catch {
-      toast.error(t("완료하지 못했어요", "Couldn't mark done"));
+      toast.error(t("처리하지 못했어요", "Couldn't update this memory"));
+    } finally {
+      actionInFlightRef.current.delete(s.id);
+    }
+  };
+
+  const markDone = async (s: ScheduleItem) => {
+    await resolveSchedule(s, "completed");
+  };
+
+  const markNoLongerNeeded = async (s: ScheduleItem) => {
+    await resolveSchedule(s, "no_longer_needed");
+  };
+
+  const snoozeUntilTomorrow = async (s: ScheduleItem) => {
+    if (actionInFlightRef.current.has(s.id)) return;
+    actionInFlightRef.current.add(s.id);
+    try {
+      const originalStart = new Date(s.start_time);
+      const originalEnd = new Date(s.end_time);
+      const storedDuration = originalEnd.getTime() - originalStart.getTime();
+      const duration =
+        Number.isFinite(storedDuration) && storedDuration > 0
+          ? storedDuration
+          : 60 * 60 * 1000;
+      const nextStart = new Date();
+      nextStart.setDate(nextStart.getDate() + 1);
+      nextStart.setHours(
+        originalStart.getHours(),
+        originalStart.getMinutes(),
+        0,
+        0,
+      );
+      const nextEnd = new Date(nextStart.getTime() + duration);
+      const synced = await update(
+        s.id,
+        {
+          start_time: nextStart.toISOString(),
+          end_time: nextEnd.toISOString(),
+          status: "active",
+        },
+        { memoryIntent: "snooze" },
+      );
+      haptic(8);
+      track("schedule_snoozed", { preset: "tomorrow" });
+      if (synced) {
+        toast.success(
+          t("내일 다시 꺼내드릴게요", "I'll bring it back tomorrow"),
+          scheduleToast,
+        );
+      }
+    } catch {
+      toast.error(t("미루지 못했어요", "Couldn't snooze it"));
+    } finally {
+      actionInFlightRef.current.delete(s.id);
     }
   };
 
@@ -377,7 +470,7 @@ function Schedule() {
     try {
       const { cloudSynced: archiveSynced } = await archive.add({
         text: s.raw_text ?? s.text,
-        images: [],
+        images: s.images ?? [],
         source_id: s.source_id ?? s.id,
         raw_text: s.raw_text ?? s.text,
         brain_mirror: s.brain_mirror ?? null,
@@ -385,7 +478,7 @@ function Schedule() {
       const scheduleSynced = await remove(s.id);
       if (pins.has(s.id)) togglePin(s.id);
       if (allCloudSynced(archiveSynced, scheduleSynced)) {
-        toast.success(t("생각 지도로 옮겼어요", "Moved to thought map"), scheduleToast);
+        toast.success(t("보관함으로 옮겼어요", "Moved to archive"), scheduleToast);
       }
     } catch {
       toast.error(t("옮기지 못했어요", "Couldn't move"));
@@ -403,6 +496,8 @@ function Schedule() {
     },
     onEdit: () => setSheet({ open: true, edit: s }),
     onComplete: () => markDone(s),
+    onSnooze: () => snoozeUntilTomorrow(s),
+    onNoLongerNeeded: () => markNoLongerNeeded(s),
     onMoveToArchive: () => moveDoneToArchive(s),
     onAlarm: () => setAlarmSheet(s),
     onTimer: () => setTimerSheet(s),
@@ -427,7 +522,7 @@ function Schedule() {
       />
       <div className="sticky top-0 z-10 shrink-0 bg-white">
         <div className={`px-5 ${tab === "today" ? "pb-4 pt-6" : "pb-3 pt-5"}`}>
-          <h1 className="page-title">{t("할 일", "Tasks")}</h1>
+          <h1 className="page-title">{t("오늘", "Today")}</h1>
           <p
             className={`leading-relaxed text-ink-soft ${
               tab === "today"
@@ -436,8 +531,8 @@ function Schedule() {
             }`}
           >
             {t(
-              "해야 할 생각을 잊지 않도록",
-              "So you don't forget thoughts that need to be done",
+              "지금 다시 볼 생각만 꺼내드려요",
+              "Only the thoughts that need you now",
             )}
           </p>
         </div>
@@ -526,9 +621,6 @@ function Schedule() {
           ) : (
             <ScheduleTodayPanel
               todayItems={todayTimerItems}
-              flowedItems={flowedPast}
-              activeItems={activeItems}
-              archiveItems={archive.items}
               doneCount={doneItems.length}
               ScheduleCard={ScheduleCard}
               cardProps={cardProps}
@@ -601,7 +693,7 @@ function Schedule() {
           transition={{ ...SPRING_SNAP_BACK, delay: 0.15 }}
           className="absolute right-5 z-30 flex h-14 w-14 items-center justify-center rounded-full bg-primary text-ink shadow-float touch-press"
           style={{ bottom: "calc(env(safe-area-inset-bottom) + 1.25rem)" }}
-          aria-label={t("할 일 추가", "Add task")}
+          aria-label={t("다시 꺼낼 생각 추가", "Add reminder")}
         >
           <Plus size={26} strokeWidth={2.5} />
         </motion.button>
@@ -866,6 +958,8 @@ type ScheduleCardProps = {
   onPin: () => void;
   onEdit: () => void;
   onComplete: () => void;
+  onSnooze: () => void;
+  onNoLongerNeeded: () => void;
   onMoveToArchive?: () => void;
   onAlarm: () => void;
   onTimer: () => void;
@@ -885,6 +979,8 @@ function ScheduleCard({
   onPin,
   onEdit,
   onComplete,
+  onSnooze,
+  onNoLongerNeeded,
   onMoveToArchive,
   onAlarm,
   onTimer,
@@ -1034,7 +1130,7 @@ function ScheduleCard({
                 : "border-ink/20 hover:border-primary"
             }`}
             aria-label={
-              done ? t("생각 지도에 남기기", "Save to thought map") : t("다녀옴", "Done")
+              done ? t("보관함에 남기기", "Move to archive") : t("다녀옴", "Done")
             }
           >
             {done ? (
@@ -1050,7 +1146,7 @@ function ScheduleCard({
             {timer ? (
               <>
                 <p className="text-[12px] text-ink-soft">
-                  {t("다음에 떠올릴 것", "Next up")}
+                  {t("지금 다시 꺼낸 생각", "Brought back now")}
                 </p>
                 <div className="mt-1 text-[17px] font-bold leading-snug text-ink">
                   {title}
@@ -1179,7 +1275,46 @@ function ScheduleCard({
             </div>
           )}
         </div>
-        {!done && (
+        {!done && timer ? (
+          <div
+            data-card-action
+            className="mt-4 grid grid-cols-3 gap-1.5 border-t border-ink/[0.06] pt-3"
+          >
+            <button
+              type="button"
+              data-card-action
+              onClick={(e) => {
+                e.stopPropagation();
+                onComplete();
+              }}
+              className="touch-press min-h-11 rounded-full bg-ink px-2 text-[11px] font-semibold text-white"
+            >
+              {t("처리했어요", "Done")}
+            </button>
+            <button
+              type="button"
+              data-card-action
+              onClick={(e) => {
+                e.stopPropagation();
+                onSnooze();
+              }}
+              className="touch-press min-h-11 rounded-full bg-primary px-2 text-[11px] font-semibold text-ink"
+            >
+              {t("내일로 미루기", "Tomorrow")}
+            </button>
+            <button
+              type="button"
+              data-card-action
+              onClick={(e) => {
+                e.stopPropagation();
+                onNoLongerNeeded();
+              }}
+              className="touch-press min-h-11 rounded-full bg-ink/[0.06] px-2 text-[11px] font-semibold text-ink-soft"
+            >
+              {t("이제 괜찮아요", "No longer needed")}
+            </button>
+          </div>
+        ) : !done ? (
           <div data-card-action className="mt-2 flex justify-end">
             <button
               type="button"
@@ -1194,70 +1329,14 @@ function ScheduleCard({
               {t("삭제", "Delete")}
             </button>
           </div>
-        )}
+        ) : null}
       </div>
     </div>
   );
 }
 
-function FlowedPastSection({
-  items,
-  cardProps,
-  t,
-  lang,
-}: {
-  items: ScheduleItem[];
-  cardProps: (
-    s: ScheduleItem,
-  ) => Omit<ComponentProps<typeof ScheduleCard>, "emphasize" | "timer">;
-  t: ReturnType<typeof useT>;
-  lang: "ko" | "en";
-}) {
-  const [open, setOpen] = useState(false);
-  if (!items.length) return null;
-
-  const locale = lang === "en" ? "en-US" : "ko-KR";
-  const visible = open ? items : items.slice(0, 1);
-
-  return (
-    <section className="mt-6 border-t border-ink/[0.06] pt-4">
-      <button
-        type="button"
-        onClick={() => setOpen((v) => !v)}
-        className="flex w-full items-center justify-between px-1 py-1.5 text-[14px] text-ink-soft touch-press"
-      >
-        <span>{t("흘러간 것", "Flowed past")}</span>
-        <span className="text-[13px]">
-          {items.length} {open ? "▴" : "▾"}
-        </span>
-      </button>
-      <div className="flex flex-col">
-        {visible.map((s) => (
-          <div
-            key={s.id}
-            className="flex items-center justify-between px-1 py-3.5 text-[15px] text-ink/45"
-          >
-            <span className="min-w-0 truncate pr-3">
-              {scheduleDisplayTitle(s)}
-            </span>
-            <span className="shrink-0 text-[12.5px] text-ink-soft">
-              {new Date(s.end_time).toLocaleDateString(locale, {
-                month: "short",
-                day: "numeric",
-              })}
-            </span>
-          </div>
-        ))}
-      </div>
-    </section>
-  );
-}
-
 function ScheduleTodayPanel({
   todayItems,
-  flowedItems,
-  activeItems,
-  archiveItems,
   doneCount,
   ScheduleCard,
   cardProps,
@@ -1265,9 +1344,6 @@ function ScheduleTodayPanel({
   doneItems,
 }: {
   todayItems: ScheduleItem[];
-  flowedItems: ScheduleItem[];
-  activeItems: ScheduleItem[];
-  archiveItems: import("@/lib/store").ArchiveItem[];
   doneCount: number;
   ScheduleCard: ComponentType<ScheduleCardProps>;
   cardProps: (s: ScheduleItem) => ScheduleCardBaseProps;
@@ -1280,14 +1356,9 @@ function ScheduleTodayPanel({
 }) {
   const t = useT();
   const { lang } = useLang();
-  const suggestion = pickTodaySuggestion(
-    todayItems,
-    activeItems,
-    archiveItems,
-    lang,
-  );
   const spotlight = todayItems[0] ?? null;
   const alsoToday = todayItems.slice(1);
+  const spotlightActions = spotlight ? cardProps(spotlight) : null;
 
   return (
     <div className="flex flex-col gap-8 animate-craft-in px-0.5 pb-4 pt-3">
@@ -1299,7 +1370,7 @@ function ScheduleTodayPanel({
           className="mx-1 rounded-[24px] border border-ink/[0.03] bg-primary/[0.08] px-[22px] py-5"
         >
           <p className="text-[12px] text-ink-soft">
-            {t("다음에 떠올릴 것", "Next up")}
+            {t("지금 다시 꺼낸 생각", "Brought back now")}
           </p>
           <p className="mt-2 text-[17px] font-bold leading-snug text-ink">
             {scheduleDisplayTitle(spotlight)}
@@ -1310,15 +1381,32 @@ function ScheduleTodayPanel({
           <span className="mt-2.5 inline-block rounded-full bg-ink/[0.04] px-2.5 py-1 text-[12px] text-ink-soft">
             {scheduleStatusBadge(spotlight.start_time, lang)}
           </span>
+          {spotlightActions && (
+            <div className="mt-5 grid grid-cols-3 gap-1.5 border-t border-ink/[0.06] pt-4">
+              <button
+                type="button"
+                onClick={spotlightActions.onComplete}
+                className="touch-press min-h-11 rounded-full bg-ink px-2 text-[11px] font-semibold text-white"
+              >
+                {t("처리했어요", "Done")}
+              </button>
+              <button
+                type="button"
+                onClick={spotlightActions.onSnooze}
+                className="touch-press min-h-11 rounded-full bg-primary px-2 text-[11px] font-semibold text-ink"
+              >
+                {t("내일로 미루기", "Tomorrow")}
+              </button>
+              <button
+                type="button"
+                onClick={spotlightActions.onNoLongerNeeded}
+                className="touch-press min-h-11 rounded-full bg-white px-2 text-[11px] font-semibold text-ink-soft ring-1 ring-ink/[0.08]"
+              >
+                {t("이제 괜찮아요", "No longer needed")}
+              </button>
+            </div>
+          )}
         </motion.section>
-      )}
-
-      {suggestion && (
-        <div className="craft-suggestion mx-0.5 px-4 py-3.5">
-          <p className="text-[14px] leading-[1.65] tracking-[0.005em] text-ink/88">
-            {lang === "en" ? suggestion.messageEn : suggestion.messageKo}
-          </p>
-        </div>
       )}
 
       {alsoToday.length > 0 && (
@@ -1334,18 +1422,11 @@ function ScheduleTodayPanel({
         </section>
       )}
 
-      <FlowedPastSection
-        items={flowedItems}
-        cardProps={cardProps}
-        t={t}
-        lang={lang}
-      />
-
       {doneItems.length > 0 && (
         <DoneSection items={doneItems} cardProps={cardProps} t={t} />
       )}
 
-      {todayItems.length === 0 && doneCount === 0 && flowedItems.length === 0 && (
+      {todayItems.length === 0 && doneCount === 0 && (
         <p className="px-4 text-center text-[14px] leading-[1.7] text-ink-soft/85">
           {t(
             "오늘은 특별히 떠올릴 게 없어요. 괜찮아요.",

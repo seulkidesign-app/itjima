@@ -608,12 +608,12 @@ export function FocusSortMode({
                     <SwipeStamp
                       side="schedule"
                       progress={scheduleProgress}
-                      label={t("할 일", "Tasks")}
+                      label={t("다시 꺼내기", "Bring back")}
                     />
                     <SwipeStamp
                       side="archive"
                       progress={archiveProgress}
-                      label={t("생각 지도", "Thought map")}
+                      label={t("보관함", "Archive")}
                     />
 
                     <div className="flex-1 px-7 pb-4 pt-8">
@@ -627,7 +627,7 @@ export function FocusSortMode({
                         onClick={handleScheduleTap}
                         className="touch-press flex-1 rounded-full bg-primary py-3.5 text-[15px] font-bold text-ink shadow-card transition-transform active:scale-[0.97] disabled:opacity-40"
                       >
-                        {t("할 일로 보내기", "Send to tasks")}
+                        {t("나중에 다시 꺼내기", "Bring back later")}
                       </button>
                       <button
                         type="button"
@@ -635,7 +635,7 @@ export function FocusSortMode({
                         onClick={handleArchiveTap}
                         className="touch-press flex-1 rounded-full bg-ink py-3.5 text-[15px] font-bold text-white shadow-card transition-transform active:scale-[0.97] disabled:opacity-40"
                       >
-                        {t("생각 지도에 남기기", "Save to thought map")}
+                        {t("보관함에 넣기", "Move to archive")}
                       </button>
                     </div>
                   </div>
@@ -647,7 +647,7 @@ export function FocusSortMode({
                     disabled={locked}
                     onClick={handleArchiveTap}
                     className="swipe-pill-btn swipe-pill-archive h-14 w-14 transition-transform active:scale-90 disabled:opacity-40"
-                    aria-label={t("생각 지도에 남기기", "Save to thought map")}
+                    aria-label={t("보관함에 넣기", "Move to archive")}
                   >
                     <Archive size={22} strokeWidth={2.25} />
                   </button>
@@ -656,7 +656,7 @@ export function FocusSortMode({
                     disabled={locked}
                     onClick={handleScheduleTap}
                     className="swipe-pill-btn swipe-pill-schedule h-14 w-14 transition-transform active:scale-90 disabled:opacity-40"
-                    aria-label={t("할 일로 보내기", "Send to tasks")}
+                    aria-label={t("나중에 다시 꺼내기", "Bring back later")}
                   >
                     <Calendar size={22} strokeWidth={2.25} />
                   </button>
@@ -664,8 +664,8 @@ export function FocusSortMode({
 
                 <p className="mt-4 text-center text-[11px] font-medium text-ink-soft/70">
                   {t(
-                    "← 생각 지도 · → 할 일 · ↓ 다음 · ↑ 이전",
-                    "← Thought map · → Tasks · ↓ next · ↑ previous",
+                    "← 보관함 · → 다시 꺼내기 · ↓ 다음 · ↑ 이전",
+                    "← Archive · → bring back · ↓ next · ↑ previous",
                   )}
                 </p>
               </>
