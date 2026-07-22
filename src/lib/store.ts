@@ -1,5 +1,6 @@
 import { supabase } from "@/integrations/supabase/client";
 import { mergeCloudRow, shouldPreferLocalInboxStatus } from "@/lib/cloudMerge";
+import { ensureCanonicalMemoriesMigrated } from "@/lib/memoryLocalStore";
 import {
   parseBrainMirrorResult,
   finalizeBrainMirror,
@@ -130,7 +131,6 @@ function migrateAllBuckets(userId: string | null) {
   if (userId) migrateLegacy("inbox", GUEST);
   if (userId) migrateLegacy("schedules", GUEST);
   if (userId) migrateLegacy("archive", GUEST);
-  ensureCanonicalMemoriesMigrated(userId);
 }
 
 function uid() {
