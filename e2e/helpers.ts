@@ -192,4 +192,22 @@ export async function mockAdminRole(page: Page) {
       body: "true",
     });
   });
+  await page.route("**/rest/v1/rpc/get_my_admin_status**", async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({
+        is_admin: true,
+        admin_count: 1,
+        user_id: TEST_USER_ID,
+      }),
+    });
+  });
+  await page.route("**/rest/v1/rpc/get_admin_count**", async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: "1",
+    });
+  });
 }
