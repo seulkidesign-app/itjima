@@ -130,6 +130,7 @@ function migrateAllBuckets(userId: string | null) {
   if (userId) migrateLegacy("inbox", GUEST);
   if (userId) migrateLegacy("schedules", GUEST);
   if (userId) migrateLegacy("archive", GUEST);
+  ensureCanonicalMemoriesMigrated(userId);
 }
 
 function uid() {
@@ -460,22 +461,26 @@ function useLocalList<T extends { id: string; created_at: string }>(
         mergedMap.set(row.id, merged);
 
         if (local && table === "inbox") {
-          const ls = (local as InboxItem).status;
-          const cs = (row as InboxItem).status;
+          const localInbox = local as unknown as InboxItem;
+          const cloudInbox = row as unknown as InboxItem;
+          const ls = localInbox.status;
+          const cs = cloudInbox.status;
           if (shouldPreferLocalInboxStatus(ls, cs)) {
             statusPatches.push({
               id: row.id,
-              patch: { status: ls } as Partial<T>,
+              patch: { status: ls } as unknown as Partial<T>,
             });
           }
         }
         if (local && table === "schedules") {
-          const ls = (local as ScheduleItem).status;
-          const cs = (row as ScheduleItem).status;
+          const localSchedule = local as unknown as ScheduleItem;
+          const cloudSchedule = row as unknown as ScheduleItem;
+          const ls = localSchedule.status;
+          const cs = cloudSchedule.status;
           if (ls === "done" && cs !== "done") {
             statusPatches.push({
               id: row.id,
-              patch: { status: ls } as Partial<T>,
+              patch: { status: ls } as unknown as Partial<T>,
             });
           }
         }

@@ -189,7 +189,7 @@ export async function signInWithGoogle(returnPath?: string) {
 
   return {
     error: null,
-    redirected: !!data.url as const,
+    redirected: Boolean(data.url),
     url: data.url ?? null,
   };
 }

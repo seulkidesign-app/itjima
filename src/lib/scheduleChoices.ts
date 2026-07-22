@@ -22,8 +22,8 @@ const TIME_HOURS: Record<Exclude<TimeKey, "custom">, number> = {
   evening: 18,
 };
 
-export function snapMinute(m: number): number {
-  let best = MINUTE_STEPS[0];
+export function snapMinute(m: number): (typeof MINUTE_STEPS)[number] {
+  let best: (typeof MINUTE_STEPS)[number] = MINUTE_STEPS[0];
   let diff = Math.abs(m - best);
   for (const step of MINUTE_STEPS) {
     const d = Math.abs(m - step);

@@ -856,6 +856,25 @@ function ScheduleFeelHint() {
   );
 }
 
+type ScheduleCardProps = {
+  s: ScheduleItem;
+  pinned: boolean;
+  missed?: boolean;
+  done?: boolean;
+  emphasize?: boolean;
+  timer?: boolean;
+  onPin: () => void;
+  onEdit: () => void;
+  onComplete: () => void;
+  onMoveToArchive?: () => void;
+  onAlarm: () => void;
+  onTimer: () => void;
+  onDisarm: () => void;
+  onDelete: () => void;
+};
+
+type ScheduleCardBaseProps = Omit<ScheduleCardProps, "emphasize" | "timer">;
+
 function ScheduleCard({
   s,
   pinned,
@@ -871,22 +890,7 @@ function ScheduleCard({
   onTimer,
   onDisarm,
   onDelete,
-}: {
-  s: ScheduleItem;
-  pinned: boolean;
-  missed?: boolean;
-  done?: boolean;
-  emphasize?: boolean;
-  timer?: boolean;
-  onPin: () => void;
-  onEdit: () => void;
-  onComplete: () => void;
-  onMoveToArchive?: () => void;
-  onAlarm: () => void;
-  onTimer: () => void;
-  onDisarm: () => void;
-  onDelete: () => void;
-}) {
+}: ScheduleCardProps) {
   const t = useT();
   const { lang } = useLang();
   const locale = lang === "en" ? "en-US" : "ko-KR";
@@ -1265,11 +1269,11 @@ function ScheduleTodayPanel({
   activeItems: ScheduleItem[];
   archiveItems: import("@/lib/store").ArchiveItem[];
   doneCount: number;
-  ScheduleCard: ComponentType<Record<string, unknown>>;
-  cardProps: (s: ScheduleItem) => Record<string, unknown>;
+  ScheduleCard: ComponentType<ScheduleCardProps>;
+  cardProps: (s: ScheduleItem) => ScheduleCardBaseProps;
   DoneSection: ComponentType<{
     items: ScheduleItem[];
-    cardProps: (s: ScheduleItem) => Record<string, unknown>;
+    cardProps: (s: ScheduleItem) => ScheduleCardBaseProps;
     t: ReturnType<typeof useT>;
   }>;
   doneItems: ScheduleItem[];

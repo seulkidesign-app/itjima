@@ -34,14 +34,13 @@ export function resolveScheduleAllDayFlags(
     "start_time" | "end_time" | "all_day" | "start_all_day" | "end_all_day"
   >,
 ): { startAllDay: boolean; endAllDay: boolean } {
-  const hasStart = hasStoredAllDayFlag(item.start_all_day);
-  const hasEnd = hasStoredAllDayFlag(item.end_all_day);
-
-  if (hasStart || hasEnd) {
+  const startFlag = item.start_all_day;
+  const endFlag = item.end_all_day;
+  if (hasStoredAllDayFlag(startFlag) || hasStoredAllDayFlag(endFlag)) {
     const legacy = item.all_day === true;
     return {
-      startAllDay: hasStart ? item.start_all_day : legacy,
-      endAllDay: hasEnd ? item.end_all_day : legacy,
+      startAllDay: hasStoredAllDayFlag(startFlag) ? startFlag : legacy,
+      endAllDay: hasStoredAllDayFlag(endFlag) ? endFlag : legacy,
     };
   }
   return inferScheduleAllDayFlags(
@@ -69,7 +68,14 @@ export function scheduleAllDayFieldsFromConfirm(opts: {
 }
 
 export function scheduleAllDayFieldsFromItem(
-  item: Pick<ScheduleItem, "all_day" | "start_all_day" | "end_all_day">,
+  item: Pick<
+    ScheduleItem,
+    | "all_day"
+    | "start_all_day"
+    | "end_all_day"
+    | "start_time"
+    | "end_time"
+  >,
 ): ScheduleAllDayFields {
   const flags = resolveScheduleAllDayFlags(item);
   return scheduleAllDayFieldsFromConfirm({

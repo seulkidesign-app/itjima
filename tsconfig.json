@@ -6,6 +6,10 @@
     "eslint.config.js",
     "index.html"
   ],
+  "exclude": [
+    "src/integrations/supabase/auth-attacher.ts",
+    "src/integrations/supabase/auth-middleware.ts"
+  ],
   "compilerOptions": {
     "target": "ES2022",
     "jsx": "react-jsx",

@@ -642,7 +642,9 @@ export function ScheduleChoiceFlow({
                     <WheelPicker
                       columns={timeColDef}
                       value={startTime}
-                      onChange={handleStartTimeChange}
+                      onChange={(v) => {
+                        if (v.length >= 2) handleStartTimeChange([v[0], v[1]]);
+                      }}
                     />
                   </div>
                 )}
@@ -662,7 +664,9 @@ export function ScheduleChoiceFlow({
                     <WheelPicker
                       columns={timeColDef}
                       value={endTime}
-                      onChange={setEndTime}
+                      onChange={(v) => {
+                        if (v.length >= 2) setEndTime([v[0], v[1]]);
+                      }}
                     />
                   </div>
                 )}

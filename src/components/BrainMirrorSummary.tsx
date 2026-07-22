@@ -34,7 +34,10 @@ type Phase =
   | "organizing"
   | "hidden";
 
-type InboxHandle = Pick<ReturnType<typeof useInbox>, "update">;
+type InboxHandle = Pick<
+  ReturnType<typeof useInbox>,
+  "items" | "update" | "add" | "remove" | "softDelete" | "syncState" | "retrySync"
+>;
 
 export function BrainMirrorPanel({
   item,

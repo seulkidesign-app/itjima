@@ -1,3 +1,4 @@
+import type { Json } from "@/integrations/supabase/types";
 import { supabase } from "@/integrations/supabase/client";
 import {
   readArchiveMetaPayload,
@@ -99,7 +100,7 @@ export async function pushArchiveMeta(
   const { error } = await supabase.from("user_archive_meta").upsert(
     {
       user_id: userId,
-      data: body as unknown as Record<string, unknown>,
+      data: body as Json,
       updated_at: new Date().toISOString(),
     },
     { onConflict: "user_id" },

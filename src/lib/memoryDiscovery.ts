@@ -86,7 +86,7 @@ function lensLabel(
   members: ArchiveItem[],
 ): { labelKo: string; labelEn: string } {
   const theme = sharedThemeLabel(members);
-  if (theme) return theme;
+  if (theme) return { labelKo: theme.ko, labelEn: theme.en };
   const whisper = KIND_WHISPER[kind];
   return { labelKo: whisper.ko, labelEn: whisper.en };
 }

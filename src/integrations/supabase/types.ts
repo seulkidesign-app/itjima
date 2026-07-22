@@ -101,6 +101,63 @@ export type Database = {
         };
         Relationships: [];
       };
+      memories: {
+        Row: {
+          content: Json;
+          created_at: string;
+          id: string;
+          provenance: Json | null;
+          resolution_kind: string | null;
+          resurface_at: string | null;
+          resurface_on: string | null;
+          resurface_precision: string | null;
+          resurface_reason: string | null;
+          resurface_reason_source: string | null;
+          resurface_timezone: string;
+          snooze_count: number;
+          status: string;
+          timing_confidence: number | null;
+          updated_at: string;
+          user_id: string;
+        };
+        Insert: {
+          content?: Json;
+          created_at?: string;
+          id?: string;
+          provenance?: Json | null;
+          resolution_kind?: string | null;
+          resurface_at?: string | null;
+          resurface_on?: string | null;
+          resurface_precision?: string | null;
+          resurface_reason?: string | null;
+          resurface_reason_source?: string | null;
+          resurface_timezone?: string;
+          snooze_count?: number;
+          status: string;
+          timing_confidence?: number | null;
+          updated_at?: string;
+          user_id: string;
+        };
+        Update: {
+          content?: Json;
+          created_at?: string;
+          id?: string;
+          provenance?: Json | null;
+          resolution_kind?: string | null;
+          resurface_at?: string | null;
+          resurface_on?: string | null;
+          resurface_precision?: string | null;
+          resurface_reason?: string | null;
+          resurface_reason_source?: string | null;
+          resurface_timezone?: string;
+          snooze_count?: number;
+          status?: string;
+          timing_confidence?: number | null;
+          updated_at?: string;
+          user_id?: string;
+        };
+        Relationships: [];
+      };
       schedules: {
         Row: {
           alarm: boolean;
@@ -220,6 +277,10 @@ export type Database = {
       get_admin_count: {
         Args: Record<PropertyKey, never>;
         Returns: number;
+      };
+      get_my_admin_status: {
+        Args: Record<PropertyKey, never>;
+        Returns: Json;
       };
     };
     Enums: {

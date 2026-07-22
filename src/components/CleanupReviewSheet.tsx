@@ -18,6 +18,10 @@ type Props = {
 
 type Mode = "suggested" | "all";
 
+type CleanupListItem =
+  | JunkCandidate
+  | { item: InboxItem; reason: "all" };
+
 export function CleanupReviewSheet({
   items,
   open,
@@ -39,7 +43,7 @@ export function CleanupReviewSheet({
 
   if (!open) return null;
 
-  const listItems: JunkCandidate[] =
+  const listItems: CleanupListItem[] =
     mode === "suggested"
       ? candidates
       : items.map((item) => ({ item, reason: "all" as const }));
