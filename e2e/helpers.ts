@@ -25,7 +25,7 @@ export async function injectSignedInUser(page: Page) {
     { userId: TEST_USER_ID },
   );
   await page.reload();
-  await phone(page).getByRole("link", { name: /^Inbox/ }).waitFor({
+  await phone(page).getByRole("link", { name: /^Thoughts/ }).waitFor({
     state: "visible",
   });
 }
@@ -59,7 +59,7 @@ export async function resetAppState(page: Page) {
     sessionStorage.clear();
   });
   await page.reload();
-  await phone(page).getByRole("link", { name: /^Inbox/ }).waitFor({
+  await phone(page).getByRole("link", { name: /^Thoughts/ }).waitFor({
     state: "visible",
   });
 }
@@ -68,7 +68,7 @@ export async function gotoInbox(page: Page) {
   if (!page.url().includes("127.0.0.1")) {
     await page.goto("/");
   }
-  await phone(page).getByRole("link", { name: /^Inbox/ }).waitFor({
+  await phone(page).getByRole("link", { name: /^Thoughts/ }).waitFor({
     state: "visible",
   });
 }
@@ -92,7 +92,10 @@ export async function openContextMenu(page: Page, thoughtText: string) {
   });
 }
 
-export async function getTabCount(page: Page, tab: "Inbox" | "When" | "Saved") {
+export async function getTabCount(
+  page: Page,
+  tab: "Thoughts" | "Tasks" | "Thought map",
+) {
   const link = phone(page).getByRole("link", { name: new RegExp(`^${tab}`) });
   const text = (await link.first().textContent()) ?? "";
   const m = text.match(/(\d+)/);

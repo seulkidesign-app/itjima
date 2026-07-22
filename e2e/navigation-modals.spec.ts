@@ -21,13 +21,13 @@ test.describe("Navigation and modals", () => {
     });
     page.on("pageerror", (e) => errors.push(e.message));
 
-    await phone(page).getByRole("link", { name: /^When/ }).click();
-    await phone(page).getByRole("heading", { name: "When" }).waitFor();
-    await phone(page).getByRole("link", { name: /^Saved/ }).click();
+    await phone(page).getByRole("link", { name: /^Tasks/ }).click();
+    await phone(page).getByRole("heading", { name: "Tasks" }).waitFor();
+    await phone(page).getByRole("link", { name: /^Thought map/ }).click();
     await phone(page)
-      .getByRole("heading", { name: "It's here for you." })
+      .getByRole("heading", { name: "Thought map" })
       .waitFor();
-    await phone(page).getByRole("link", { name: /^Inbox/ }).click();
+    await phone(page).getByRole("link", { name: /^Thoughts/ }).click();
     await phone(page).getByText("Leave it here").waitFor();
 
     const ignorable = errors.filter(
@@ -65,7 +65,7 @@ test.describe("Navigation and modals", () => {
       .getByRole("button", { name: "Save", exact: true })
       .click();
 
-    await phone(page).getByRole("link", { name: /^Saved/ }).click();
+    await phone(page).getByRole("link", { name: /^Thought map/ }).click();
     await phone(page)
       .getByRole("button")
       .filter({ hasText: text })
@@ -78,12 +78,12 @@ test.describe("Navigation and modals", () => {
     await page.getByRole("dialog").getByRole("button", { name: "Save" }).click();
 
     await page.reload();
-    await phone(page).getByRole("link", { name: /^Saved/ }).click();
+    await phone(page).getByRole("link", { name: /^Thought map/ }).click();
     await phone(page).getByText(newTitle).first().waitFor({ state: "visible" });
   });
 
   test("schedule tabs switch without duplicate panels", async ({ page }) => {
-    await phone(page).getByRole("link", { name: /^When/ }).click();
+    await phone(page).getByRole("link", { name: /^Tasks/ }).click();
 
     await phone(page).getByRole("tab", { name: "Today" }).click();
     await expect(phone(page).getByRole("tabpanel")).toHaveCount(1);
@@ -137,7 +137,7 @@ test.describe("Navigation and modals", () => {
       .getByRole("button", { name: "Save", exact: true })
       .click();
 
-    await phone(page).getByRole("link", { name: /^Saved/ }).click();
+    await phone(page).getByRole("link", { name: /^Thought map/ }).click();
     await phone(page)
       .getByRole("button")
       .filter({ hasText: text })
@@ -149,7 +149,7 @@ test.describe("Navigation and modals", () => {
 
     await phone(page).getByRole("dialog").click({ position: { x: 20, y: 20 } });
     await expect(phone(page).getByRole("dialog")).toHaveCount(0);
-    await phone(page).getByRole("link", { name: /^Inbox/ }).click();
+    await phone(page).getByRole("link", { name: /^Thoughts/ }).click();
     await phone(page).getByText("Leave it here").waitFor();
   });
 
@@ -166,8 +166,8 @@ test.describe("Navigation and modals", () => {
     await phone(page).getByRole("dialog").click({ position: { x: 20, y: 20 } });
     await expect(phone(page).getByRole("dialog")).toHaveCount(0);
 
-    await phone(page).getByRole("link", { name: /^When/ }).click();
-    await phone(page).getByRole("heading", { name: "When" }).waitFor();
+    await phone(page).getByRole("link", { name: /^Tasks/ }).click();
+    await phone(page).getByRole("heading", { name: "Tasks" }).waitFor();
   });
 
   test("context menu closes when thought is removed", async ({ page }) => {
@@ -192,7 +192,7 @@ test.describe("Navigation and modals", () => {
     );
 
     await expect(phone(page).getByRole("dialog")).toHaveCount(0);
-    await phone(page).getByRole("link", { name: /^When/ }).click();
-    await phone(page).getByRole("heading", { name: "When" }).waitFor();
+    await phone(page).getByRole("link", { name: /^Tasks/ }).click();
+    await phone(page).getByRole("heading", { name: "Tasks" }).waitFor();
   });
 });

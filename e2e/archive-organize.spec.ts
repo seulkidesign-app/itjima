@@ -27,7 +27,7 @@ test.describe("Archive keyword organize", () => {
     await saveToArchive(page, `Todo item ${Date.now()}`);
     await saveToArchive(page, `Another note ${Date.now()}`);
 
-    await phone(page).getByRole("link", { name: /^Saved/ }).click();
+    await phone(page).getByRole("link", { name: /^Thought map/ }).click();
     await phone(page)
       .getByRole("button", { name: "Group by keywords", exact: true })
       .click();

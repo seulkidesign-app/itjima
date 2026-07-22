@@ -23,7 +23,7 @@ test.describe("CRUD flows (guest / offline)", () => {
     const text = `QA thought ${Date.now()}`;
     await addThought(page, text);
 
-    expect(await getTabCount(page, "Inbox")).toBe(1);
+    expect(await getTabCount(page, "Thoughts")).toBe(1);
 
     await page.reload();
     await phone(page).getByText(text, { exact: true }).waitFor({ state: "visible" });
@@ -46,10 +46,10 @@ test.describe("CRUD flows (guest / offline)", () => {
       .click();
 
     await expect(phone(page).getByText(text, { exact: true })).toHaveCount(0);
-    expect(await getTabCount(page, "Inbox")).toBe(0);
-    expect(await getTabCount(page, "Saved")).toBe(1);
+    expect(await getTabCount(page, "Thoughts")).toBe(0);
+    expect(await getTabCount(page, "Thought map")).toBe(1);
 
-    await phone(page).getByRole("link", { name: /^Saved/ }).click();
+    await phone(page).getByRole("link", { name: /^Thought map/ }).click();
     await phone(page).getByText(text, { exact: true }).first().waitFor({
       state: "visible",
     });
@@ -98,17 +98,17 @@ test.describe("CRUD flows (guest / offline)", () => {
     await phone(page).getByRole("button", { name: /Keep it/ }).click();
 
     await expect(phone(page).getByText(text, { exact: true })).toHaveCount(0);
-    expect(await getTabCount(page, "When")).toBeGreaterThan(0);
+    expect(await getTabCount(page, "Tasks")).toBeGreaterThan(0);
 
-    await phone(page).getByRole("link", { name: /^When/ }).click();
+    await phone(page).getByRole("link", { name: /^Tasks/ }).click();
     await phone(page).getByText(text).first().waitFor({ state: "visible" });
 
     const schedules = await readGuestList(page, GUEST_SCHEDULE_KEY);
     expect(schedules.length).toBeGreaterThan(0);
   });
 
-  test("create schedule from When FAB", async ({ page }) => {
-    await phone(page).getByRole("link", { name: /^When/ }).click();
+  test("create schedule from Tasks FAB", async ({ page }) => {
+    await phone(page).getByRole("link", { name: /^Tasks/ }).click();
     await phone(page)
       .getByRole("button", { name: "Remember something new" })
       .click();
@@ -120,6 +120,6 @@ test.describe("CRUD flows (guest / offline)", () => {
     await phone(page).getByRole("button", { name: /Keep it/ }).click();
 
     await phone(page).getByText(text).first().waitFor({ state: "visible" });
-    expect(await getTabCount(page, "When")).toBe(1);
+    expect(await getTabCount(page, "Tasks")).toBe(1);
   });
 });
