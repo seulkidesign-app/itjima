@@ -6,6 +6,8 @@ import {
   openContextMenu,
   openAbout,
   openFeedback,
+  gotoArchiveListView,
+  completeScheduleDialog,
   phone,
 } from "./helpers";
 
@@ -62,23 +64,23 @@ test.describe("Navigation and modals", () => {
     await openContextMenu(page, text);
     await phone(page)
       .getByRole("dialog")
-      .getByRole("button", { name: "Save", exact: true })
+      .getByRole("button", { name: "Save to thought map", exact: true })
       .click();
 
-    await phone(page).getByRole("link", { name: /^Thought map/ }).click();
+    await gotoArchiveListView(page);
     await phone(page)
       .getByRole("button")
       .filter({ hasText: text })
       .first()
       .click();
-    await phone(page).getByRole("button", { name: "Title", exact: true }).click();
+    await phone(page).getByRole("button", { name: "Name", exact: true }).click();
 
     const newTitle = `Renamed ${Date.now()}`;
     await page.getByRole("dialog").locator("input").fill(newTitle);
-    await page.getByRole("dialog").getByRole("button", { name: "Save" }).click();
+    await page.getByRole("dialog").getByRole("button", { name: "Refine" }).click();
 
     await page.reload();
-    await phone(page).getByRole("link", { name: /^Thought map/ }).click();
+    await gotoArchiveListView(page);
     await phone(page).getByText(newTitle).first().waitFor({ state: "visible" });
   });
 
@@ -91,7 +93,7 @@ test.describe("Navigation and modals", () => {
     await phone(page).getByRole("tab", { name: "Calendar" }).click();
     await expect(phone(page).getByRole("tabpanel")).toHaveCount(1);
 
-    await phone(page).getByRole("tab", { name: "List" }).click();
+    await phone(page).getByRole("tab", { name: "Upcoming" }).click();
     await expect(phone(page).getByRole("tabpanel")).toHaveCount(1);
   });
 
@@ -134,16 +136,16 @@ test.describe("Navigation and modals", () => {
     await openContextMenu(page, text);
     await phone(page)
       .getByRole("dialog")
-      .getByRole("button", { name: "Save", exact: true })
+      .getByRole("button", { name: "Save to thought map", exact: true })
       .click();
 
-    await phone(page).getByRole("link", { name: /^Thought map/ }).click();
+    await gotoArchiveListView(page);
     await phone(page)
       .getByRole("button")
       .filter({ hasText: text })
       .first()
       .click();
-    await phone(page).getByRole("button", { name: "Title", exact: true }).click();
+    await phone(page).getByRole("button", { name: "Name", exact: true }).click();
     await expect(page).toHaveURL(/\/archive/);
     await phone(page).getByRole("dialog").waitFor({ state: "visible" });
 

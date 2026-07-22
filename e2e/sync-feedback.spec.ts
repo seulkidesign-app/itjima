@@ -7,6 +7,7 @@ import {
   phone,
   injectSignedInUser,
   blockCloudMutations,
+  dismissReleaseOverlay,
   TEST_USER_ID,
 } from "./helpers";
 
@@ -36,14 +37,30 @@ test.describe("sync feedback", () => {
     page,
   }) => {
     await resetAppState(page);
+    await page.route("**/rest/v1/inbox**", async (route) => {
+      if (route.request().method() === "GET") {
+        await route.fulfill({
+          status: 200,
+          contentType: "application/json",
+          headers: { "content-range": "0--1/0" },
+          body: "[]",
+        });
+        return;
+      }
+      await route.continue();
+    });
     await blockCloudMutations(page);
     await injectSignedInUser(page);
-    await page.waitForLoadState("networkidle");
+    await page.waitForFunction(
+      ({ userId }) => localStorage.getItem("itjima.__e2e_user_id__") === userId,
+      { userId: TEST_USER_ID },
+    );
 
     const text = `Cloud write ${Date.now()}`;
     const frame = phone(page);
     await frame.locator("textarea").first().fill(text);
     await frame.getByRole("button", { name: "Leave it", exact: true }).click();
+    await dismissReleaseOverlay(page);
     await page.waitForFunction(
       ({ userId, thoughtText }) => {
         const key = `itjima.${userId}.inbox`;
@@ -57,7 +74,7 @@ test.describe("sync feedback", () => {
 
     await phone(page)
       .getByRole("alert")
-      .getByText("Saving paused for a moment")
+      .getByText("Keeping safe paused for a moment")
       .waitFor({ state: "visible" });
   });
 });

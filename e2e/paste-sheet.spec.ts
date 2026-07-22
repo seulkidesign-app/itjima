@@ -75,7 +75,7 @@ test.describe("Paste sheet", () => {
       .getByRole("button", { name: "Keep as one", exact: true })
       .click();
 
-    await page.getByText("Couldn't save").waitFor({ state: "visible" });
+    await page.getByText("Couldn't keep it").waitFor({ state: "visible" });
     await phone(page)
       .getByText("How should we keep this pasted text?")
       .waitFor({ state: "visible" });

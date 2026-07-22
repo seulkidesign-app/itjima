@@ -1,5 +1,5 @@
 import { test, expect } from "@playwright/test";
-import { resetAppState, addThought, phone } from "./helpers";
+import { resetAppState, phone } from "./helpers";
 
 test.describe("Brain Mirror API failures", () => {
   test.beforeEach(async ({ page }) => {
@@ -13,29 +13,33 @@ test.describe("Brain Mirror API failures", () => {
     });
   });
 
-  test("shows quiet feedback when API fails without a date hint", async ({
+  test("shows release card quietly when API fails without a date hint", async ({
     page,
   }) => {
     const text =
       "Quarterly planning merge roadmap hiring budget office move vendor contracts without clear next steps or dates anywhere in sight";
-    await addThought(page, text);
-
-    await page
-      .getByText("Couldn't load a reflection right now")
-      .waitFor({ state: "visible", timeout: 15_000 });
-    await expect(phone(page).getByText(text, { exact: true })).toBeVisible();
+    const frame = phone(page);
+    const input = frame.locator("textarea").first();
+    await input.fill(text);
+    await frame.getByRole("button", { name: "Leave it", exact: true }).click();
+    await frame.getByText(text, { exact: true }).waitFor({ state: "visible" });
+    await frame.getByText("Tasks →").waitFor({ state: "visible", timeout: 15_000 });
+    await expect(
+      page.getByText("Couldn't load a reflection right now"),
+    ).toHaveCount(0);
   });
 
-  test("still offers date schedule when API fails but date is detected", async ({
+  test("still offers task routing when API fails but date is detected", async ({
     page,
   }) => {
     const text =
       "Tomorrow hospital, pack documents, insurance cards, call clinic";
-    await addThought(page, text);
-
-    await page
-      .getByText("Remember this for then?")
-      .waitFor({ state: "visible", timeout: 15_000 });
+    const frame = phone(page);
+    const input = frame.locator("textarea").first();
+    await input.fill(text);
+    await frame.getByRole("button", { name: "Leave it", exact: true }).click();
+    await frame.getByText(text, { exact: true }).waitFor({ state: "visible" });
+    await frame.getByText("Tasks →").waitFor({ state: "visible", timeout: 15_000 });
     await expect(
       page.getByText("Couldn't load a reflection right now"),
     ).toHaveCount(0);

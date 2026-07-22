@@ -3,6 +3,7 @@ import {
   resetAppState,
   addThought,
   openContextMenu,
+  gotoArchiveListView,
   phone,
 } from "./helpers";
 
@@ -11,7 +12,7 @@ async function saveToArchive(page: import("@playwright/test").Page, text: string
   await openContextMenu(page, text);
   await phone(page)
     .getByRole("dialog")
-    .getByRole("button", { name: "Save", exact: true })
+    .getByRole("button", { name: "Save to thought map", exact: true })
     .click();
   await expect(phone(page).getByText(text, { exact: true })).toHaveCount(0);
 }
@@ -27,9 +28,9 @@ test.describe("Archive keyword organize", () => {
     await saveToArchive(page, `Todo item ${Date.now()}`);
     await saveToArchive(page, `Another note ${Date.now()}`);
 
-    await phone(page).getByRole("link", { name: /^Thought map/ }).click();
+    await gotoArchiveListView(page);
     await phone(page)
-      .getByRole("button", { name: "Group by keywords", exact: true })
+      .getByRole("button", { name: "Gather by theme", exact: true })
       .click();
 
     const sheet = phone(page).getByRole("dialog");

@@ -73,33 +73,80 @@ export async function gotoInbox(page: Page) {
   });
 }
 
+export async function gotoArchiveListView(page: Page) {
+  await phone(page).getByRole("link", { name: /^Thought map/ }).click();
+  await phone(page)
+    .getByRole("heading", { name: "Thought map" })
+    .waitFor({ state: "visible" });
+  await phone(page).getByRole("button", { name: "List", exact: true }).click();
+}
+
+export async function completeScheduleDialog(page: Page) {
+  const sheet = page.getByRole("dialog");
+  await sheet.waitFor({ state: "visible" });
+  const pickTime = sheet.getByRole("button", { name: "Pick a time" });
+  if (await pickTime.isVisible()) {
+    await pickTime.click();
+  }
+  await sheet.getByRole("button", { name: "Set a reminder" }).click();
+  await sheet.getByRole("button", { name: "I'll leave it for then" }).click();
+}
+export async function dismissReleaseOverlay(page: Page) {
+  const frame = phone(page);
+  const hint = frame.getByText("Tasks →");
+  const backdrop = frame.locator(".bg-white\\/38").first();
+  const inRelease =
+    (await hint.isVisible().catch(() => false)) ||
+    (await backdrop.isVisible().catch(() => false));
+  if (!inRelease) return;
+
+  await page.keyboard.press("Escape");
+  try {
+    await hint.waitFor({ state: "hidden", timeout: 8000 });
+  } catch {
+    if (await backdrop.isVisible().catch(() => false)) {
+      await backdrop.click({ position: { x: 8, y: 8 } });
+      await backdrop.waitFor({ state: "hidden", timeout: 8000 });
+    }
+  }
+}
+
 export async function addThought(page: Page, text: string) {
   const frame = phone(page);
   const input = frame.locator("textarea").first();
   await input.fill(text);
   await frame.getByRole("button", { name: "Leave it", exact: true }).click();
   await frame.getByText(text, { exact: true }).waitFor({ state: "visible" });
+  await dismissReleaseOverlay(page);
 }
 
 export async function openContextMenu(page: Page, thoughtText: string) {
   const frame = phone(page);
+  await dismissReleaseOverlay(page);
   const bubble = frame.getByText(thoughtText, { exact: true }).first();
   await bubble.dispatchEvent("pointerdown", { button: 0, pointerId: 1 });
   await page.waitForTimeout(520);
   await bubble.dispatchEvent("pointerup", { button: 0, pointerId: 1 });
-  await frame.getByRole("dialog").getByRole("button", { name: "Save", exact: true }).waitFor({
-    state: "visible",
-  });
+  await frame
+    .getByRole("dialog")
+    .getByRole("button", { name: "Save to thought map", exact: true })
+    .waitFor({
+      state: "visible",
+    });
 }
 
 export async function getTabCount(
   page: Page,
   tab: "Thoughts" | "Tasks" | "Thought map",
 ) {
-  const link = phone(page).getByRole("link", { name: new RegExp(`^${tab}`) });
-  const text = (await link.first().textContent()) ?? "";
-  const m = text.match(/(\d+)/);
-  return m ? Number(m[1]) : 0;
+  const key =
+    tab === "Thoughts"
+      ? GUEST_INBOX_KEY
+      : tab === "Tasks"
+        ? GUEST_SCHEDULE_KEY
+        : GUEST_ARCHIVE_KEY;
+  const list = await readGuestList(page, key);
+  return list.length;
 }
 
 export async function readGuestList(page: Page, key: string): Promise<unknown[]> {
