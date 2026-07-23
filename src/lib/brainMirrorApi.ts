@@ -23,6 +23,7 @@ import {
   isGroundedScheduleReason,
   type MirrorTimingExtra,
 } from "@/lib/dateDetect";
+import { supabase } from "@/integrations/supabase/client";
 
 export type BrainMirrorFetchOutcome =
   | {
@@ -52,6 +53,19 @@ function inflightKey(text: string, mode: "classify" | "organize", force: boolean
 
 function classifyCacheKey(text: string): string {
   return aiCacheKeyText(text);
+}
+
+async function getAiRequestHeaders(): Promise<Record<string, string> | null> {
+  try {
+    const { data, error } = await supabase.auth.getSession();
+    if (error || !data.session?.access_token) return null;
+    return {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${data.session.access_token}`,
+    };
+  } catch {
+    return null;
+  }
 }
 
 function parseTimingFromRaw(
@@ -237,10 +251,12 @@ async function fetchBrainMirrorInner(
       mode === "classify" && !signal
         ? AbortSignal.timeout(CLASSIFY_TIMEOUT_MS)
         : signal;
+    const headers = await getAiRequestHeaders();
+    if (!headers) return { status: "unavailable" };
 
     const res = await fetch("/api/brain-mirror", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers,
       body: JSON.stringify({ text: trimmed, mode }),
       signal: timeout,
     });
@@ -286,6 +302,7 @@ async function fetchBrainMirrorInner(
       };
     }
 
+    if (res.status === 401) return { status: "unavailable" };
     if (import.meta.env.PROD) return { status: "unavailable" };
   } catch (err) {
     if (signal?.aborted) throw err;
