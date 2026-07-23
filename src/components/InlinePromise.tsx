@@ -12,6 +12,7 @@ import { EASE_OUT_APP } from "@/lib/motion";
 
 type Props = {
   item: InboxItem;
+  acknowledged?: boolean;
   onConfirmScheduleQuick: (item: InboxItem) => void | Promise<void>;
   onSchedule: (item: InboxItem) => void;
   onArchive: (item: InboxItem) => void | Promise<void>;
@@ -21,6 +22,7 @@ type Props = {
 
 export function InlinePromise({
   item,
+  acknowledged = false,
   onConfirmScheduleQuick,
   onSchedule,
   onArchive,
@@ -37,7 +39,7 @@ export function InlinePromise({
 
   const runPrimary = async (c: PromiseCard) => {
     confirmHaptic();
-    switch (c.primaryAction) {
+    switch (c.primaryAction as PromisePrimaryAction) {
       case "confirm_schedule":
         await onConfirmScheduleQuick(item);
         break;
@@ -67,47 +69,48 @@ export function InlinePromise({
 
   return (
     <motion.div
-      initial={{ opacity: 0, y: 8 }}
+      initial={{ opacity: 0, y: 6 }}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.45, ease: EASE_OUT_APP }}
-      className="mx-4 mb-3 rounded-[24px] border border-ink/[0.06] bg-white px-4 py-4 shadow-[0_2px_12px_-4px_rgba(0,0,0,0.08)]"
+      transition={{ duration: 0.35, ease: EASE_OUT_APP }}
+      className="flex w-full max-w-[min(300px,88%)] flex-col items-start"
       data-testid="inline-promise"
     >
-      <p className="text-[12px] font-semibold text-primary">
+      <span className="mb-1 px-0.5 text-[11px] font-semibold text-ink-soft">
         {t("잊지마", "Itjima")}
-      </p>
-      <p className="mt-2 text-[15px] font-semibold leading-snug text-ink">
-        {card.label}
-      </p>
-      <p className="mt-1.5 text-[14px] leading-relaxed text-ink-soft">
-        {card.promise}
-      </p>
-      <p className="mt-2 text-[12px] font-medium text-ink/70">
-        {t("저장됨", "Saved")}
-      </p>
-
-      <div className="mt-4 flex gap-2">
-        <button
-          type="button"
-          data-testid="promise-primary"
-          onClick={() => void runPrimary(card)}
-          className="pill-yellow touch-press min-h-[44px] flex-1 px-3 py-2.5 text-[13px] font-bold text-ink"
-        >
-          {card.primaryActionLabel}
-        </button>
-        <button
-          type="button"
-          data-testid="promise-edit"
-          onClick={() => runEdit(card)}
-          className="touch-press min-h-[44px] rounded-full border border-ink/12 bg-white px-4 py-2.5 text-[13px] font-semibold text-ink"
-        >
-          {card.editActionLabel}
-        </button>
+      </span>
+      <div className="itjima-reply-bubble w-full px-3.5 py-2.5">
+        <p className="line-clamp-1 text-[14px] font-semibold leading-snug text-ink">
+          {card.icon} {card.label}
+        </p>
+        <p className="mt-0.5 line-clamp-1 text-[13px] leading-snug text-ink-soft">
+          {card.promise}
+        </p>
       </div>
 
-      {editOpen && (
+      {!acknowledged && (
+        <div className="mt-2 flex w-full gap-2" data-testid="promise-actions">
+          <button
+            type="button"
+            data-testid="promise-primary"
+            onClick={() => void runPrimary(card)}
+            className="pill-yellow touch-press min-h-[40px] flex-1 px-2.5 py-2 text-[12px] font-bold text-ink"
+          >
+            {card.primaryActionLabel}
+          </button>
+          <button
+            type="button"
+            data-testid="promise-edit"
+            onClick={() => runEdit(card)}
+            className="touch-press min-h-[40px] shrink-0 rounded-full border border-ink/12 bg-white px-3.5 py-2 text-[12px] font-semibold text-ink"
+          >
+            {card.editActionLabel}
+          </button>
+        </div>
+      )}
+
+      {!acknowledged && editOpen && (
         <div
-          className="mt-2 rounded-[18px] border border-ink/8 bg-[#fafaf8] p-1"
+          className="mt-2 w-full rounded-[16px] border border-ink/8 bg-[#fafaf8] p-1"
           data-testid="promise-edit-menu"
         >
           <EditRow
@@ -144,7 +147,7 @@ function EditRow({
     <button
       type="button"
       onClick={onClick}
-      className="touch-press w-full rounded-[14px] px-3 py-3 text-left text-[13px] font-medium text-ink active:bg-white"
+      className="touch-press w-full rounded-[12px] px-3 py-2.5 text-left text-[13px] font-medium text-ink active:bg-white"
     >
       {label}
     </button>

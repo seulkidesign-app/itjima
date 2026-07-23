@@ -31,7 +31,9 @@ type Props = {
   releasing?: boolean;
   /** Fired when user is typing or input is focused (Capture idle → typing) */
   onActivityChange?: (active: boolean) => void;
-  /** Tap-to-fill example chips shown below the input */
+  /** Bottom composer bar (messenger-style). */
+  composer?: boolean;
+  /** Tap-to-fill example chips — typically only when chat is empty. */
   exampleChips?: { ko: string; en: string }[];
 };
 
@@ -41,6 +43,7 @@ export function InputBar({
   restoreText,
   onRestoreConsumed,
   hero = false,
+  composer = false,
   releasing = false,
   onActivityChange,
   exampleChips,
@@ -287,22 +290,31 @@ export function InputBar({
       }}
       transition={{ duration: 0.52, ease: [0.22, 1, 0.36, 1] }}
       style={{ pointerEvents: releasing ? "none" : undefined }}
-      className={`border-t border-ink/5 bg-white/95 backdrop-blur-xl shadow-[0_-8px_32px_-12px_rgba(0,0,0,0.08)] pb-[env(safe-area-inset-bottom)] ${
+      className={`border-t border-ink/8 bg-white/98 backdrop-blur-xl shadow-[0_-4px_24px_-8px_rgba(0,0,0,0.08)] pb-[env(safe-area-inset-bottom)] ${
         hero ? "border-t-0 shadow-none" : ""
-      }`}
+      } ${composer ? "border-ink/10" : ""}`}
     >
-      {hero && (
-        <motion.p
-          initial={{ opacity: 0, y: 6 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.35, ease: [0.32, 0.72, 0, 1] }}
-          className="px-5 pt-4 text-center text-[13px] font-medium leading-relaxed text-ink-soft/90"
-        >
-          {t(
-            "일정, 할 일, 링크, 떠오른 생각 모두 괜찮아요.",
-            "Schedules, tasks, links, passing thoughts — all welcome.",
-          )}
-        </motion.p>
+      {composer && exampleChips && exampleChips.length > 0 && (
+        <div className="flex flex-wrap gap-1.5 px-4 pb-2 pt-2.5">
+          {exampleChips.map((chip) => {
+            const label = lang === "en" ? chip.en : chip.ko;
+            return (
+              <button
+                key={label}
+                type="button"
+                onClick={() => {
+                  tap();
+                  setText(label);
+                  textRef.current = label;
+                  textareaRef.current?.focus();
+                }}
+                className="touch-press rounded-full border border-ink/10 bg-ink/[0.03] px-2.5 py-1 text-[11px] font-medium text-ink-soft"
+              >
+                {label}
+              </button>
+            );
+          })}
+        </div>
       )}
       {images.length > 0 && (
         <motion.div
@@ -339,13 +351,13 @@ export function InputBar({
           ))}
         </motion.div>
       )}
-      <div className={`px-5 ${hero ? "mt-3" : "mt-2"}`}>
+      <div className={`px-4 ${composer ? "pb-1 pt-1" : hero ? "mt-3" : "mt-2"}`}>
         <motion.div
           layout
           transition={SPRING_MICRO}
-          className={`input-shell px-4 input-focus-ring ${
+          className={`input-shell px-3 input-focus-ring ${
             focused ? "input-shell-focused" : ""
-          } ${hero ? "py-4 ring-1 ring-ink/5" : "py-3"}`}
+          } ${composer ? "py-2" : hero ? "py-4 ring-1 ring-ink/5" : "py-3"}`}
         >
           <textarea
             id="capture-input"
@@ -391,14 +403,18 @@ export function InputBar({
                 submitFromKeyboard(e.currentTarget);
               }
             }}
-            rows={hero ? 4 : 3}
+            rows={composer ? 1 : hero ? 4 : 3}
             placeholder={t("무엇이 떠오르나요?", "What's on your mind?")}
-            className={`block w-full resize-none bg-transparent leading-relaxed text-ink placeholder:text-ink-soft/55 placeholder:transition-opacity focus:outline-none max-h-40 ${
-              hero ? "min-h-[96px] text-[17px]" : "min-h-[72px] text-[16px]"
+            className={`block w-full resize-none bg-transparent leading-relaxed text-ink placeholder:text-ink-soft/55 placeholder:transition-opacity focus:outline-none ${
+              composer
+                ? "min-h-[24px] max-h-28 text-[15px]"
+                : hero
+                  ? "min-h-[96px] max-h-40 text-[17px]"
+                  : "min-h-[72px] max-h-40 text-[16px]"
             }`}
           />
         </motion.div>
-        {exampleChips && exampleChips.length > 0 && (
+        {!composer && exampleChips && exampleChips.length > 0 && (
           <div className="mt-3 flex flex-wrap gap-2">
             {exampleChips.map((chip) => {
               const label = lang === "en" ? chip.en : chip.ko;
@@ -421,7 +437,7 @@ export function InputBar({
           </div>
         )}
       </div>
-      <div className="flex items-center gap-1 px-5 pb-2 pt-2">
+      <div className={`flex items-center gap-1 ${composer ? "px-3 pb-2 pt-0" : "px-5 pb-2 pt-2"}`}>
         <motion.button
           type="button"
           whileTap={{ scale: 0.9 }}
@@ -531,7 +547,7 @@ export function InputBar({
         onClose={() => setScribbleOpen(false)}
         onDone={(dataUrl) => void addImage(dataUrl)}
       />
-      {!hero && (
+      {!hero && !composer && (
         <p className="px-5 pb-3 text-center text-[11px] text-ink-soft/75">
           {t(
             "잊어도 괜찮아요. ItJima가 기억할게요.",

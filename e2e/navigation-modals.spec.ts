@@ -31,7 +31,7 @@ test.describe("Navigation and modals", () => {
       .getByRole("heading", { name: "Vault" })
       .waitFor();
     await phone(page).getByRole("link", { name: /^Throw/ }).click();
-    await phone(page).getByText("Just throw it here.").waitFor();
+    await phone(page).getByPlaceholder("What's on your mind?").waitFor();
 
     const ignorable = errors.filter(
       (e) =>
@@ -164,7 +164,7 @@ test.describe("Navigation and modals", () => {
     await phone(page).getByRole("dialog").click({ position: { x: 20, y: 20 } });
     await expect(phone(page).getByRole("dialog")).toHaveCount(0);
     await phone(page).getByRole("link", { name: /^Throw/ }).click();
-    await phone(page).getByText("Just throw it here.").waitFor();
+    await phone(page).getByPlaceholder("What's on your mind?").waitFor();
   });
 
   test("context menu blocks tab navigation until dismissed", async ({

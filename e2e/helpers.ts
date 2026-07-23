@@ -93,21 +93,31 @@ export async function completeScheduleDialog(page: Page) {
 
 export async function dismissInlinePromise(page: Page) {
   const frame = phone(page);
-  const promise = frame.getByTestId("inline-promise");
+  const promise = frame.getByTestId("inline-promise").last();
   if (!(await promise.isVisible().catch(() => false))) return;
 
-  const primary = frame.getByTestId("promise-primary");
+  const actions = promise.getByTestId("promise-actions");
+  if (!(await actions.isVisible().catch(() => false))) return;
+
+  await promise.scrollIntoViewIfNeeded();
+  await page.waitForTimeout(350);
+
+  const latest = frame.getByTestId("inline-promise").last();
+  const latestActions = latest.getByTestId("promise-actions");
+  if (!(await latestActions.isVisible().catch(() => false))) return;
+
+  const primary = latest.getByTestId("promise-primary");
   const label = ((await primary.textContent()) ?? "").trim();
   if (/Keep here|그대로 두기/i.test(label)) {
-    await primary.click();
+    await primary.click({ force: true });
   } else {
-    await frame.getByTestId("promise-edit").click();
+    await latest.getByTestId("promise-edit").click({ force: true });
     const keep = frame
       .getByTestId("promise-edit-menu")
       .getByRole("button", { name: "Keep here", exact: true });
-    await keep.click();
+    await keep.click({ force: true });
   }
-  await promise.waitFor({ state: "hidden", timeout: 8000 }).catch(() => {});
+  await latestActions.waitFor({ state: "hidden", timeout: 8000 }).catch(() => {});
 }
 
 /** @deprecated use dismissInlinePromise */
@@ -120,7 +130,7 @@ export async function addThought(page: Page, text: string) {
   const input = frame.locator("textarea").first();
   await input.fill(text);
   await frame.getByRole("button", { name: "Leave it", exact: true }).click();
-  await frame.getByTestId("inline-promise").waitFor({ state: "visible" });
+  await frame.getByTestId("inline-promise").last().waitFor({ state: "visible" });
   await frame.getByText(text, { exact: true }).first().waitFor({ state: "visible" });
   await dismissInlinePromise(page);
 }

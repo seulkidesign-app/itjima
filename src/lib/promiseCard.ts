@@ -119,7 +119,7 @@ export function buildPromiseCard(
           ? "Set a time whenever you're ready."
           : "시간은 나중에 정해도 괜찮아요.",
       primaryActionLabel:
-        lang === "en" ? "Pick when to revisit" : "다시 볼 시점 정하기",
+        lang === "en" ? "Pick when to revisit" : "시점 정하기",
       primaryAction: "set_resurface",
       actualAction: "inbox_only",
       rediscoveryEligible: false,
@@ -159,9 +159,10 @@ export function buildPromiseCard(
     !analysis.isJunk
   ) {
     const topic = shortTopic(trimmed);
+    const travelLike = /여행|travel|trip|vacation/i.test(trimmed);
     return {
       ...base,
-      icon: "💭",
+      icon: travelLike ? "✈️" : "💭",
       label:
         lang === "en"
           ? `Saved "${topic}" as an idea`

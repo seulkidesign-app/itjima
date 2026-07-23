@@ -7,11 +7,14 @@ import { SPRING_DEFAULT } from "@/lib/motion";
 export function ChatBubble({
   item,
   isNewest,
+  showTime = false,
   children,
   wrapBubble,
 }: {
   item: InboxItem;
   isNewest?: boolean;
+  /** Show timestamp under the bubble (default: only newest). */
+  showTime?: boolean;
   children?: ReactNode;
   /** Wrap only the bubble card (e.g. swipe row) — keeps actions aligned to bubble height. */
   wrapBubble?: (bubble: ReactNode) => ReactNode;
@@ -58,7 +61,7 @@ export function ChatBubble({
           {children}
         </div>
       )}
-      {isNewest && (
+      {(showTime || isNewest) && (
         <p className="mt-1 pr-0.5 text-[10px] font-medium tabular-nums text-ink-soft/55">
           {new Date(item.created_at).toLocaleString(locale, {
             month: "numeric",

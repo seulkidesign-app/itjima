@@ -20,12 +20,10 @@ import { InputBar } from "@/components/InputBar";
 import { InlinePromise } from "@/components/InlinePromise";
 import { InstallPrompt } from "@/components/InstallPrompt";
 import { SyncIndicator } from "@/components/SyncIndicator";
-import { EmptyState } from "@/components/EmptyState";
 import { runUserOrganize } from "@/components/BrainMirrorSummary";
 import { archiveFromInbox, scheduleFromInbox } from "@/lib/thoughtProvenance";
 import { detectDate } from "@/lib/dateDetect";
 import { thoughtFirstLine } from "@/lib/brainMirror";
-import { buildRecentThoughts } from "@/lib/recentThoughts";
 import { setRevivalHint } from "@/lib/archiveMeta";
 import {
   buildRevivalHint,
@@ -43,7 +41,7 @@ import {
   type InboxItem,
 } from "@/lib/store";
 import { track } from "@/lib/analytics";
-import { useT, useLang } from "@/lib/i18n";
+import { useT } from "@/lib/i18n";
 import { haptic } from "@/lib/haptics";
 import { allCloudSynced } from "@/lib/syncFeedback";
 
@@ -56,7 +54,6 @@ const toastBtn =
 
 function Inbox() {
   const t = useT();
-  const { lang } = useLang();
   const navigate = useNavigate();
   const inbox = useInbox();
   const schedules = useSchedules();
@@ -85,9 +82,9 @@ function Inbox() {
   const [restorePasteText, setRestorePasteText] = useState<string | null>(null);
   const [swipeOpenId, setSwipeOpenId] = useState<string | null>(null);
   const [inboxRevival, setInboxRevival] = useState<RevivalHint | null>(null);
-  const [promiseItemId, setPromiseItemId] = useState<string | null>(null);
-  const promiseItemIdRef = useRef<string | null>(null);
-  promiseItemIdRef.current = promiseItemId;
+  const [acknowledgedIds, setAcknowledgedIds] = useState<Set<string>>(
+    () => new Set(),
+  );
   const items = inbox.items;
   const menuItem = menuFor
     ? items.find((x) => x.id === menuFor)
@@ -96,19 +93,6 @@ function Inbox() {
   const itemsAsc = useMemo(
     () => [...items].slice().reverse(),
     [items],
-  );
-  const promiseItem = promiseItemId
-    ? items.find((x) => x.id === promiseItemId)
-    : undefined;
-  const recentThoughts = useMemo(
-    () =>
-      buildRecentThoughts(
-        items,
-        archive.items,
-        schedules.items,
-        lang === "en" ? "en" : "ko",
-      ),
-    [items, archive.items, schedules.items, lang],
   );
   const exampleChips = useMemo(
     () => [
@@ -121,13 +105,12 @@ function Inbox() {
   const newestId = items[0]?.id;
   const listEndRef = useRef<HTMLDivElement | null>(null);
   const prevCountRef = useRef(items.length);
-  const [inboxJustCleared, setInboxJustCleared] = useState(false);
+
+  const acknowledgeItem = useCallback((id: string) => {
+    setAcknowledgedIds((prev) => new Set(prev).add(id));
+  }, []);
 
   useEffect(() => {
-    if (prevCountRef.current > 0 && items.length === 0) {
-      setInboxJustCleared(true);
-    }
-    if (items.length > 0) setInboxJustCleared(false);
     if (items.length > prevCountRef.current) {
       requestAnimationFrame(() => {
         listEndRef.current?.scrollIntoView({
@@ -138,10 +121,6 @@ function Inbox() {
     }
     prevCountRef.current = items.length;
   }, [items.length]);
-
-  const dismissPromise = useCallback(() => {
-    setPromiseItemId(null);
-  }, []);
 
   const openPromiseSchedule = useCallback((it: InboxItem) => {
     setFocusScheduleSheet({ open: true, item: it });
@@ -252,7 +231,6 @@ function Inbox() {
     });
     const inboxSynced = await inbox.remove(it.id);
     track("schedule_created", { source, text_length: text.length });
-    if (promiseItemIdRef.current === it.id) setPromiseItemId(null);
     if (allCloudSynced(scheduleSynced, inboxSynced)) {
       toast.success(t("일정으로 잡았어요", "Added to your schedule"));
     }
@@ -324,7 +302,6 @@ function Inbox() {
       if (related) {
         setRevivalHint(related);
       }
-      if (promiseItemIdRef.current === it.id) setPromiseItemId(null);
       if (inboxRevival?.sourceId === it.id) setInboxRevival(null);
 
       if (allCloudSynced(archiveSynced, inboxSynced)) {
@@ -381,8 +358,6 @@ function Inbox() {
         image_count: images.length,
       });
 
-      setPromiseItemId(created.id);
-
       const revival = buildRevivalHint(created, archive.items, "inbox");
       if (revival) setInboxRevival(revival);
     } catch {
@@ -436,32 +411,74 @@ function Inbox() {
   };
 
   return (
-    <div className="flex h-full min-h-0 flex-col bg-white">
+    <div className="flex min-h-full flex-col bg-white">
       <SyncIndicator
         syncing={syncing}
         error={inbox.syncState === "error"}
         onRetry={inbox.retrySync}
       />
-      <div className="shrink-0 px-5 pt-5 pb-1">
-        <p className="text-[13px] font-semibold text-primary">
-          {t("잊지마", "Itjima")}
-        </p>
-        <h1 className="mt-2 text-[22px] font-bold leading-snug tracking-[-0.02em] text-ink">
-          {t("대충 던져두세요.", "Just throw it here.")}
-        </h1>
-        <p className="mt-2 text-[14px] leading-relaxed text-ink-soft">
-          {t(
-            "일정, 할 일, 링크, 떠오른 생각 모두 괜찮아요.",
-            "Schedules, tasks, links, passing thoughts — all welcome.",
-          )}
-        </p>
+
+      <div className="chat-scroll flex min-h-0 flex-1 flex-col gap-4 px-3 pb-3 pt-2">
+        {itemsAsc.map((it) => {
+          const isNewest = it.id === newestId;
+          return (
+            <div key={it.id} className="flex flex-col gap-2.5" data-testid="chat-turn">
+              <ChatBubble
+                item={it}
+                isNewest={isNewest}
+                showTime
+                wrapBubble={(bubble) => (
+                  <ChatSwipeRow
+                    rowId={it.id}
+                    openRowId={swipeOpenId}
+                    onOpenRowChange={setSwipeOpenId}
+                    onSwipeRight={() => openHomeSchedule(it)}
+                    onSwipeLeft={() => moveToArchive(it)}
+                    onLongPress={() => setMenuFor(it.id)}
+                  >
+                    {bubble}
+                  </ChatSwipeRow>
+                )}
+              >
+                {inboxRevival?.sourceId === it.id && (
+                  <MemoryRevivalHint
+                    hint={inboxRevival}
+                    compact
+                    delayMs={900}
+                    onRevisit={revisitArchiveMemory}
+                    onDismiss={() => setInboxRevival(null)}
+                  />
+                )}
+              </ChatBubble>
+
+              <InlinePromise
+                item={it}
+                acknowledged={acknowledgedIds.has(it.id)}
+                onConfirmScheduleQuick={confirmReleaseScheduleQuick}
+                onSchedule={openPromiseSchedule}
+                onArchive={async (item) => {
+                  await moveToArchive(item);
+                  maybeNudgeLogin();
+                }}
+                onLetGo={async (item) => {
+                  await moveToDelete(item);
+                }}
+                onDismiss={() => {
+                  acknowledgeItem(it.id);
+                  maybeNudgeLogin();
+                }}
+              />
+            </div>
+          );
+        })}
+        <div ref={listEndRef} />
       </div>
 
-      <div className="shrink-0">
+      <div className="sticky bottom-0 z-20 shrink-0 bg-white">
         <InputBar
-          hero
+          composer
           onAdd={handleAdd}
-          exampleChips={exampleChips}
+          exampleChips={items.length === 0 ? exampleChips : undefined}
           onPasteMulti={(chunks, original) =>
             setPasteSheet({ chunks, original })
           }
@@ -469,106 +486,6 @@ function Inbox() {
           onRestoreConsumed={() => setRestorePasteText(null)}
         />
       </div>
-
-      {promiseItem && (
-        <InlinePromise
-          item={promiseItem}
-          onConfirmScheduleQuick={confirmReleaseScheduleQuick}
-          onSchedule={openPromiseSchedule}
-          onArchive={async (it) => {
-            await moveToArchive(it);
-            dismissPromise();
-            maybeNudgeLogin();
-          }}
-          onLetGo={async (it) => {
-            await moveToDelete(it);
-            dismissPromise();
-          }}
-          onDismiss={() => {
-            dismissPromise();
-            maybeNudgeLogin();
-          }}
-        />
-      )}
-
-      {recentThoughts.length > 0 && (
-        <section className="px-5 pb-3 pt-2">
-          <h2 className="text-[13px] font-semibold text-ink">
-            {t("최근 맡긴 생각", "Recently entrusted")}
-          </h2>
-          <ul className="mt-2 flex flex-col gap-1">
-            {recentThoughts.map((row) => (
-              <li
-                key={row.id}
-                className="flex items-baseline justify-between gap-3 py-1.5 text-[14px]"
-              >
-                <span className="min-w-0 truncate font-medium text-ink">
-                  {row.title}
-                </span>
-                <span className="shrink-0 text-[12px] text-ink-soft">
-                  {lang === "en" ? row.destinationEn : row.destinationKo}
-                </span>
-              </li>
-            ))}
-          </ul>
-        </section>
-      )}
-
-      {items.length > 0 && (
-        <div className="min-h-0 flex-1 overflow-x-hidden px-4 pb-4">
-          <div className="chat-scroll flex w-full flex-col gap-2">
-            {itemsAsc.map((it) => {
-              const isNewest = it.id === newestId;
-              return (
-                <ChatBubble
-                  key={it.id}
-                  item={it}
-                  isNewest={isNewest}
-                  wrapBubble={(bubble) => (
-                    <ChatSwipeRow
-                      rowId={it.id}
-                      openRowId={swipeOpenId}
-                      onOpenRowChange={setSwipeOpenId}
-                      onSwipeRight={() => openHomeSchedule(it)}
-                      onSwipeLeft={() => moveToArchive(it)}
-                      onLongPress={() => setMenuFor(it.id)}
-                    >
-                      {bubble}
-                    </ChatSwipeRow>
-                  )}
-                >
-                  {inboxRevival?.sourceId === it.id && (
-                    <MemoryRevivalHint
-                      hint={inboxRevival}
-                      compact
-                      delayMs={900}
-                      onRevisit={revisitArchiveMemory}
-                      onDismiss={() => setInboxRevival(null)}
-                    />
-                  )}
-                </ChatBubble>
-              );
-            })}
-            <div ref={listEndRef} />
-          </div>
-        </div>
-      )}
-
-      {items.length === 0 &&
-        !promiseItem &&
-        recentThoughts.length === 0 &&
-        inboxJustCleared && (
-          <div className="px-5 pb-8">
-            <EmptyState
-              variant="success"
-              emoji="✨"
-              titleKo="머리가 가벼워졌어요"
-              titleEn="Your mind feels lighter"
-              hintKo="오늘은 더 남길 게 없네요"
-              hintEn="Nothing left to leave here for now"
-            />
-          </div>
-        )}
 
       <InstallPrompt />
 
