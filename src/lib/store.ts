@@ -55,7 +55,57 @@ export type ArchiveItem = {
 type ListKind = "inbox" | "schedules" | "archive";
 type TableName = "inbox" | "schedules" | "archive";
 
+export type BulkUploadResult = {
+  ok: boolean;
+  succeededIds: string[];
+  failedIds: string[];
+};
+
+export type LocalTombstone = {
+  id: string;
+  table: TableName;
+  userId: string;
+  deletedAt: string;
+};
+
 const GUEST = "guest";
+
+function tombstonesKey(userId: string) {
+  return `itjima.${userId}.tombstones`;
+}
+
+function readTombstones(userId: string): LocalTombstone[] {
+  if (typeof window === "undefined") return [];
+  try {
+    return JSON.parse(
+      localStorage.getItem(tombstonesKey(userId)) || "[]",
+    ) as LocalTombstone[];
+  } catch {
+    return [];
+  }
+}
+
+function writeTombstones(userId: string, tombstones: LocalTombstone[]) {
+  if (typeof window === "undefined") return;
+  localStorage.setItem(tombstonesKey(userId), JSON.stringify(tombstones));
+}
+
+function addTombstone(userId: string, tombstone: LocalTombstone) {
+  const existing = readTombstones(userId);
+  if (
+    existing.some((t) => t.id === tombstone.id && t.table === tombstone.table)
+  ) {
+    return;
+  }
+  writeTombstones(userId, [...existing, tombstone]);
+}
+
+function removeTombstone(userId: string, id: string, table: TableName) {
+  writeTombstones(
+    userId,
+    readTombstones(userId).filter((t) => !(t.id === id && t.table === table)),
+  );
+}
 
 const LEGACY_KEYS: Record<ListKind, string> = {
   inbox: "itjima.inbox",
@@ -315,15 +365,47 @@ async function cloudMutate(
   return false;
 }
 
+async function cloudDelete(
+  table: TableName,
+  userId: string,
+  id: string,
+): Promise<boolean> {
+  const { error } = await supabase
+    .from(table)
+    .delete()
+    .eq("id", id)
+    .eq("user_id", userId);
+  if (error) {
+    console.error(`[sync] delete ${table}`, error.message);
+    return false;
+  }
+  return true;
+}
+
 async function cloudUpsertMany<T extends { id: string }>(
   table: TableName,
   userId: string,
   items: T[],
-) {
-  if (!items.length) return;
-  for (const it of items) {
-    await cloudMutate("upsert", table, userId, it as Record<string, unknown>);
+): Promise<BulkUploadResult> {
+  const succeededIds: string[] = [];
+  const failedIds: string[] = [];
+
+  for (const item of items) {
+    const ok = await cloudMutate(
+      "upsert",
+      table,
+      userId,
+      item as Record<string, unknown>,
+    );
+    if (ok) succeededIds.push(item.id);
+    else failedIds.push(item.id);
   }
+
+  return {
+    ok: failedIds.length === 0,
+    succeededIds,
+    failedIds,
+  };
 }
 
 const E2E_USER_LS_KEY = "itjima.__e2e_user_id__";
@@ -442,14 +524,52 @@ function useLocalList<T extends { id: string; created_at: string }>(
         return;
       }
 
-      const cloud = (data ?? []).map(
-        (row) => stripCloudFields(row as Record<string, unknown>, table) as T,
+      const tableTombstones = readTombstones(userId).filter(
+        (t) => t.table === table,
       );
-      const cloudIds = new Set(cloud.map((c) => c.id));
-      const toUpload = localAll.filter((item) => !cloudIds.has(item.id));
+      const syncTombstoneIds = new Set(tableTombstones.map((t) => t.id));
+      let tombstoneError = false;
+      for (const tombstone of tableTombstones) {
+        const deleted = await cloudDelete(table, userId, tombstone.id);
+        if (deleted) removeTombstone(userId, tombstone.id, table);
+        else tombstoneError = true;
+      }
 
+      const cloud = (data ?? [])
+        .map(
+          (row) => stripCloudFields(row as Record<string, unknown>, table) as T,
+        )
+        .filter((row) => !syncTombstoneIds.has(row.id));
+      const cloudIds = new Set(cloud.map((c) => c.id));
+      const toUpload = localAll.filter(
+        (item) => !cloudIds.has(item.id) && !syncTombstoneIds.has(item.id),
+      );
+
+      let uploadResult: BulkUploadResult = {
+        ok: true,
+        succeededIds: [],
+        failedIds: [],
+      };
       if (toUpload.length) {
-        await cloudUpsertMany(table, userId, toUpload);
+        uploadResult = await cloudUpsertMany(table, userId, toUpload);
+        if (!uploadResult.ok) {
+          writeLS(key, localAll);
+          writeErrorRef.current = true;
+          setSyncState("error");
+          syncingRef.current = false;
+          return;
+        }
+      }
+
+      const confirmedCloudIds = new Set(cloudIds);
+      for (const id of uploadResult.succeededIds) confirmedCloudIds.add(id);
+
+      const allGuestItemsConfirmed = guestItems.every((item) =>
+        confirmedCloudIds.has(item.id),
+      );
+
+      if (guestItems.length && allGuestItemsConfirmed) {
+        writeLS(guestKey, []);
       }
 
       const mergedMap = new Map<string, T>();
@@ -492,15 +612,18 @@ function useLocalList<T extends { id: string; created_at: string }>(
       writeLS(key, merged);
 
       for (const { id, patch } of statusPatches) {
-        await cloudMutate("update", table, userId, patch as Record<string, unknown>, id);
-      }
-
-      if (guestItems.length) {
-        writeLS(guestKey, []);
+        await cloudMutate(
+          "update",
+          table,
+          userId,
+          patch as Record<string, unknown>,
+          id,
+        );
       }
 
       if (!cancelled) {
-        setSyncState(writeErrorRef.current ? "error" : "ready");
+        const hasError = writeErrorRef.current || tombstoneError;
+        setSyncState(hasError ? "error" : "ready");
         syncingRef.current = false;
       }
     })();
@@ -571,16 +694,18 @@ function useLocalList<T extends { id: string; created_at: string }>(
       const next = readLS<T>(key, table).filter((it) => it.id !== id);
       writeLS(key, next);
       if (!userId) return true;
-      const { error } = await supabase
-        .from(table)
-        .delete()
-        .eq("id", id)
-        .eq("user_id", userId);
-      if (error) {
-        console.error(`[sync] delete ${table}`, error.message);
+      const deleted = await cloudDelete(table, userId, id);
+      if (!deleted) {
+        addTombstone(userId, {
+          id,
+          table,
+          userId,
+          deletedAt: new Date().toISOString(),
+        });
         markWriteError();
         return false;
       }
+      removeTombstone(userId, id, table);
       clearWriteError();
       return true;
     },
