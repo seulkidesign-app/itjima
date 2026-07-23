@@ -306,7 +306,9 @@ test.describe("data integrity (guest upload + tombstones)", () => {
     expect((tombstones[0] as { id: string; table: string }).id).toBe(archiveId);
 
     await page.reload();
-    await phone(page).getByRole("link", { name: /^Thought map/ }).click();
+    await phone(page)
+      .getByRole("link", { name: /^Thought map/ })
+      .click();
     await expect(
       phone(page).getByText(archiveText, { exact: true }),
     ).toHaveCount(0);
