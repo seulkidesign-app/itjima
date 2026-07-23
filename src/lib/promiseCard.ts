@@ -104,7 +104,6 @@ export function buildPromiseCard(
       promise: lang === "en" ? "Add it to your schedule?" : "일정으로 잡을까요?",
       primaryActionLabel: lang === "en" ? "Add to schedule" : "일정으로 잡기",
       primaryAction: "confirm_schedule",
-      editAction: "open_schedule_sheet",
       actualAction: "schedule_on_confirm",
       rediscoveryEligible: false,
     };

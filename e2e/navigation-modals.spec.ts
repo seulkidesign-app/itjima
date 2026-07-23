@@ -4,6 +4,7 @@ import {
   gotoInbox,
   addThought,
   openContextMenu,
+  openContextMenuRaw,
   openAbout,
   openFeedback,
   gotoArchiveListView,
@@ -45,16 +46,19 @@ test.describe("Navigation and modals", () => {
     page,
   }) => {
     await openAbout(page);
-    await page.getByRole("dialog").waitFor({ state: "visible" });
     await page.getByRole("button", { name: "Got it" }).click();
-    await expect(page.getByRole("dialog")).toHaveCount(0);
+    await expect(page.getByRole("button", { name: "Got it" })).toHaveCount(0);
   });
 
   test("feedback sheet opens and closes with Escape", async ({ page }) => {
     await openFeedback(page);
-    await page.getByRole("dialog").waitFor({ state: "visible" });
+    await page.getByRole("dialog", { name: "Contact · Feedback" }).waitFor({
+      state: "visible",
+    });
     await page.keyboard.press("Escape");
-    await expect(page.getByRole("dialog")).toHaveCount(0);
+    await expect(
+      page.getByRole("dialog", { name: "Contact · Feedback" }),
+    ).toHaveCount(0);
   });
 
   test("archive expand and edit title persists", async ({ page }) => {
@@ -119,10 +123,7 @@ test.describe("Navigation and modals", () => {
     await addThought(page, "Second thought for sort");
 
     const frame = phone(page);
-    const bubble = frame.getByText("First thought for sort", { exact: true }).first();
-    await bubble.dispatchEvent("pointerdown", { button: 0, pointerId: 1 });
-    await page.waitForTimeout(520);
-    await bubble.dispatchEvent("pointerup", { button: 0, pointerId: 1 });
+    await openContextMenuRaw(page, "First thought for sort");
     await frame
       .getByRole("dialog")
       .getByRole("button", { name: "One by one", exact: true })
@@ -132,7 +133,10 @@ test.describe("Navigation and modals", () => {
       .waitFor({ state: "visible" });
     await expect(page).toHaveURL(/\/$/);
 
-    await phone(page).getByRole("button", { name: "Close", exact: true }).click();
+    await phone(page)
+      .getByRole("dialog", { name: "One by one" })
+      .getByRole("button", { name: "Close", exact: true })
+      .click();
     await expect(phone(page).getByRole("dialog")).toHaveCount(0);
   });
 

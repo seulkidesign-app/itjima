@@ -317,12 +317,14 @@ test.describe("QA #2/#3 ChatSwipeRow tray", () => {
     await expect(page.getByRole("dialog")).toBeVisible();
 
     await page.getByRole("button", { name: "Close" }).first().click();
-    await expect(page.getByText("여행", { exact: true })).toBeVisible();
+    await expect(page.getByText("여행", { exact: true }).first()).toBeVisible();
 
     await dragRow(page, "여행", -OPEN_DISTANCE);
     await page.waitForTimeout(350);
     await archive.click();
-    await expect(page.getByText("여행", { exact: true })).toHaveCount(0);
+    await expect(
+      page.getByRole("paragraph").filter({ hasText: "여행" }),
+    ).toHaveCount(0);
     const archiveItems = await readGuestList(page, GUEST_ARCHIVE_KEY);
     expect(archiveItems.length).toBe(1);
     expect((archiveItems[0] as { text: string }).text).toBe("여행");

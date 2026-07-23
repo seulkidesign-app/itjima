@@ -28,7 +28,7 @@ test.describe("CRUD flows (guest / offline)", () => {
     expect(await getTabCount(page, "Throw")).toBe(1);
 
     await page.reload();
-    await phone(page).getByText(text, { exact: true }).waitFor({ state: "visible" });
+    await phone(page).getByText(text, { exact: true }).first().waitFor({ state: "visible" });
 
     const inbox = await readGuestList(page, GUEST_INBOX_KEY);
     expect(inbox.length).toBe(1);
@@ -47,7 +47,9 @@ test.describe("CRUD flows (guest / offline)", () => {
       .getByRole("button", { name: "Save to vault", exact: true })
       .click();
 
-    await expect(phone(page).getByText(text, { exact: true })).toHaveCount(0);
+    await expect(
+      phone(page).getByRole("paragraph").filter({ hasText: text }),
+    ).toHaveCount(0);
     expect(await getTabCount(page, "Throw")).toBe(0);
     expect(await getTabCount(page, "Vault")).toBe(1);
 
@@ -75,11 +77,13 @@ test.describe("CRUD flows (guest / offline)", () => {
       .getByRole("button", { name: "Delete", exact: true })
       .click();
 
-    await expect(phone(page).getByText(text, { exact: true })).toHaveCount(0);
+    await expect(
+      phone(page).getByRole("paragraph").filter({ hasText: text }),
+    ).toHaveCount(0);
     await page.getByText("Removed").waitFor({ state: "visible" });
 
     await page.getByRole("button", { name: "Undo" }).click();
-    await phone(page).getByText(text, { exact: true }).waitFor({ state: "visible" });
+    await phone(page).getByText(text, { exact: true }).first().waitFor({ state: "visible" });
   });
 
   test("schedule via context menu updates When tab without refresh", async ({
@@ -91,12 +95,14 @@ test.describe("CRUD flows (guest / offline)", () => {
     await openContextMenu(page, text);
     await phone(page)
       .getByRole("dialog")
-      .getByRole("button", { name: "Send to tasks", exact: true })
+      .getByRole("button", { name: "Send to schedule", exact: true })
       .click();
 
     await completeScheduleDialog(page);
 
-    await expect(phone(page).getByText(text, { exact: true })).toHaveCount(0);
+    await expect(
+      phone(page).getByRole("paragraph").filter({ hasText: text }),
+    ).toHaveCount(0);
     expect(await getTabCount(page, "Today")).toBeGreaterThan(0);
 
     await phone(page).getByRole("link", { name: /^Today/ }).click();

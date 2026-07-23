@@ -14,7 +14,9 @@ async function saveToArchive(page: import("@playwright/test").Page, text: string
     .getByRole("dialog")
     .getByRole("button", { name: "Save to vault", exact: true })
     .click();
-  await expect(phone(page).getByText(text, { exact: true })).toHaveCount(0);
+  await expect(
+    phone(page).getByRole("paragraph").filter({ hasText: text }),
+  ).toHaveCount(0);
 }
 
 test.describe("Archive keyword organize", () => {

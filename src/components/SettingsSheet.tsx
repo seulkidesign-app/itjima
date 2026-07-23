@@ -8,7 +8,7 @@ import { useT, LanguageToggle } from "@/lib/i18n";
 import { useUserId } from "@/lib/store";
 import { useIsAdmin } from "@/hooks/useIsAdmin";
 import { supabase } from "@/integrations/supabase/client";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { tap } from "@/lib/haptics";
 
 type Props = {
@@ -22,6 +22,16 @@ export function SettingsSheet({ open, onClose }: Props) {
   const isAdmin = useIsAdmin();
   const [aboutOpen, setAboutOpen] = useState(false);
   const [feedbackOpen, setFeedbackOpen] = useState(false);
+  const [pendingSheet, setPendingSheet] = useState<"about" | "feedback" | null>(
+    null,
+  );
+
+  useEffect(() => {
+    if (open || !pendingSheet) return;
+    if (pendingSheet === "about") setAboutOpen(true);
+    if (pendingSheet === "feedback") setFeedbackOpen(true);
+    setPendingSheet(null);
+  }, [open, pendingSheet]);
 
   return (
     <>
@@ -62,7 +72,8 @@ export function SettingsSheet({ open, onClose }: Props) {
               type="button"
               onClick={() => {
                 tap();
-                setAboutOpen(true);
+                onClose();
+                setPendingSheet("about");
               }}
               className="flex w-full items-center gap-3 rounded-[18px] px-3 py-3.5 text-left text-[14px] font-medium text-ink active:bg-ink/[0.04]"
             >
@@ -73,7 +84,8 @@ export function SettingsSheet({ open, onClose }: Props) {
               type="button"
               onClick={() => {
                 tap();
-                setFeedbackOpen(true);
+                onClose();
+                setPendingSheet("feedback");
               }}
               className="flex w-full items-center gap-3 rounded-[18px] px-3 py-3.5 text-left text-[14px] font-medium text-ink active:bg-ink/[0.04]"
             >

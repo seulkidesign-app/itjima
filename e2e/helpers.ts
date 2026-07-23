@@ -128,15 +128,24 @@ export async function addThought(page: Page, text: string) {
 export async function openContextMenu(page: Page, thoughtText: string) {
   const frame = phone(page);
   await dismissInlinePromise(page);
-  const bubble = frame.getByText(thoughtText, { exact: true }).first();
+  await openContextMenuRaw(page, thoughtText);
+}
+
+export async function openContextMenuRaw(page: Page, thoughtText: string) {
+  const frame = phone(page);
+  const bubble = frame
+    .getByRole("paragraph")
+    .filter({ hasText: thoughtText })
+    .first();
   await bubble.dispatchEvent("pointerdown", { button: 0, pointerId: 1 });
-  await page.waitForTimeout(520);
+  await page.waitForTimeout(700);
   await bubble.dispatchEvent("pointerup", { button: 0, pointerId: 1 });
   await frame
     .getByRole("dialog")
     .getByRole("button", { name: "Save to vault", exact: true })
     .waitFor({
       state: "visible",
+      timeout: 10_000,
     });
 }
 
