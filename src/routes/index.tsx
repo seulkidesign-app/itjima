@@ -16,12 +16,15 @@ import { LoginSheet } from "@/components/LoginSheet";
 import { CleanupReviewSheet } from "@/components/CleanupReviewSheet";
 import { ChatBubble } from "@/components/ChatBubble";
 import { InputBar } from "@/components/InputBar";
-import { CaptureRelease } from "@/components/CaptureRelease";
+import { InlinePromise } from "@/components/InlinePromise";
 import { InstallPrompt } from "@/components/InstallPrompt";
 import { SyncIndicator } from "@/components/SyncIndicator";
 import { EmptyState } from "@/components/EmptyState";
 import { runUserOrganize } from "@/components/BrainMirrorSummary";
 import { archiveFromInbox, scheduleFromInbox } from "@/lib/thoughtProvenance";
+import { detectDate } from "@/lib/dateDetect";
+import { thoughtFirstLine } from "@/lib/brainMirror";
+import { buildRecentThoughts } from "@/lib/recentThoughts";
 import { setRevivalHint } from "@/lib/archiveMeta";
 import {
   buildRevivalHint,
@@ -39,7 +42,7 @@ import {
   type InboxItem,
 } from "@/lib/store";
 import { track } from "@/lib/analytics";
-import { useT } from "@/lib/i18n";
+import { useT, useLang } from "@/lib/i18n";
 import { haptic } from "@/lib/haptics";
 import { allCloudSynced } from "@/lib/syncFeedback";
 
@@ -52,6 +55,7 @@ const toastBtn =
 
 function Inbox() {
   const t = useT();
+  const { lang } = useLang();
   const navigate = useNavigate();
   const inbox = useInbox();
   const schedules = useSchedules();
@@ -80,43 +84,50 @@ function Inbox() {
   const [restorePasteText, setRestorePasteText] = useState<string | null>(null);
   const [swipeOpenId, setSwipeOpenId] = useState<string | null>(null);
   const [inboxRevival, setInboxRevival] = useState<RevivalHint | null>(null);
-  const [releaseItem, setReleaseItem] = useState<InboxItem | null>(null);
-  const [releasePendingScheduleId, setReleasePendingScheduleId] = useState<
-    string | null
-  >(null);
-  const releaseItemRef = useRef<InboxItem | null>(null);
-  releaseItemRef.current = releaseItem;
-  const releasePendingScheduleIdRef = useRef(releasePendingScheduleId);
-  releasePendingScheduleIdRef.current = releasePendingScheduleId;
-  const focusScheduleOpenRef = useRef(focusScheduleSheet.open);
-  focusScheduleOpenRef.current = focusScheduleSheet.open;
-  const releaseSubmittingRef = useRef(false);
-  const ignoreReleasePopRef = useRef(false);
-  const releaseHistoryActiveRef = useRef(false);
-
+  const [promiseItemId, setPromiseItemId] = useState<string | null>(null);
+  const promiseItemIdRef = useRef<string | null>(null);
+  promiseItemIdRef.current = promiseItemId;
   const items = inbox.items;
   const menuItem = menuFor
     ? items.find((x) => x.id === menuFor)
     : undefined;
   const syncing = inbox.syncState === "syncing";
-  // KakaoTalk-style: oldest at top, newest at bottom
-  const itemsAsc = useMemo(() => {
-    const asc = [...items].slice().reverse();
-    if (!releaseItem) return asc;
-    return asc.filter((it) => it.id !== releaseItem.id);
-  }, [items, releaseItem]);
+  const itemsAsc = useMemo(
+    () => [...items].slice().reverse(),
+    [items],
+  );
+  const promiseItem = promiseItemId
+    ? items.find((x) => x.id === promiseItemId)
+    : undefined;
+  const recentThoughts = useMemo(
+    () =>
+      buildRecentThoughts(
+        items,
+        archive.items,
+        schedules.items,
+        lang === "en" ? "en" : "ko",
+      ),
+    [items, archive.items, schedules.items, lang],
+  );
+  const exampleChips = useMemo(
+    () => [
+      { ko: "내일 오후 3시 치과", en: "Dentist tomorrow at 3pm" },
+      { ko: "사고 싶은 것", en: "Things to buy" },
+      { ko: "나중에 볼 링크", en: "Link to read later" },
+    ],
+    [],
+  );
   const newestId = items[0]?.id;
   const listEndRef = useRef<HTMLDivElement | null>(null);
   const prevCountRef = useRef(items.length);
   const [inboxJustCleared, setInboxJustCleared] = useState(false);
-  const [captureTyping, setCaptureTyping] = useState(false);
 
   useEffect(() => {
     if (prevCountRef.current > 0 && items.length === 0) {
       setInboxJustCleared(true);
     }
     if (items.length > 0) setInboxJustCleared(false);
-    if (items.length > prevCountRef.current && !releaseItem) {
+    if (items.length > prevCountRef.current) {
       requestAnimationFrame(() => {
         listEndRef.current?.scrollIntoView({
           behavior: "smooth",
@@ -125,133 +136,17 @@ function Inbox() {
       });
     }
     prevCountRef.current = items.length;
-  }, [items.length, releaseItem]);
+  }, [items.length]);
 
-  // The scroll-on-new-item effect above is gated on `!releaseItem`, so if a
-  // release animation is still playing when the item count updates, that
-  // scroll gets skipped. Once the release animation finishes, catch up and
-  // reveal the newly landed item at the bottom (KakaoTalk-style).
-  const prevReleaseItemRef = useRef(releaseItem);
-  useEffect(() => {
-    if (prevReleaseItemRef.current && !releaseItem) {
-      requestAnimationFrame(() => {
-        listEndRef.current?.scrollIntoView({
-          behavior: "smooth",
-          block: "end",
-        });
-      });
-    }
-    prevReleaseItemRef.current = releaseItem;
-  }, [releaseItem]);
-
-  useEffect(() => {
-    if (!releaseItem) return;
-    const scroll = document.getElementById("phone-scroll");
-    const prevOverflow = scroll?.style.overflow ?? "";
-    const prevBody = document.body.style.overflow;
-    if (scroll) scroll.style.overflow = "hidden";
-    document.body.style.overflow = "hidden";
-    return () => {
-      if (scroll) scroll.style.overflow = prevOverflow;
-      document.body.style.overflow = prevBody;
-    };
-  }, [releaseItem]);
-
-  const clearReleaseHistory = useCallback(() => {
-    if (!releaseHistoryActiveRef.current) return;
-    releaseHistoryActiveRef.current = false;
-    ignoreReleasePopRef.current = true;
-    history.back();
+  const dismissPromise = useCallback(() => {
+    setPromiseItemId(null);
   }, []);
 
-  const completeRelease = useCallback(() => {
-    const releasingId = releaseItemRef.current?.id;
-    clearReleaseHistory();
-    setReleaseItem(null);
-    setReleasePendingScheduleId(null);
-    setFocusPendingScheduleId(null);
-    releaseSubmittingRef.current = false;
-    if (releasingId) {
-      setFocusScheduleSheet((prev) =>
-        prev.item?.id === releasingId ? { open: false } : prev,
-      );
-    }
-    maybeNudgeLogin();
-    requestAnimationFrame(() => {
-      if (window.matchMedia("(pointer: fine)").matches) {
-        document.getElementById("capture-input")?.focus();
-      }
-    });
-  }, [clearReleaseHistory]);
-
-  const cancelReleaseSchedule = useCallback(() => {
-    setReleasePendingScheduleId(null);
-    setFocusScheduleSheet({ open: false });
-    setFocusPendingScheduleId(null);
-  }, []);
-
-  const beginReleaseSchedule = useCallback((it: InboxItem) => {
-    setReleasePendingScheduleId(it.id);
+  const openPromiseSchedule = useCallback((it: InboxItem) => {
     setFocusScheduleSheet({ open: true, item: it });
   }, []);
 
-  const dismissReleaseOverlay = useCallback(() => {
-    if (
-      releasePendingScheduleIdRef.current ||
-      focusScheduleOpenRef.current
-    ) {
-      cancelReleaseSchedule();
-      return;
-    }
-    completeRelease();
-  }, [cancelReleaseSchedule, completeRelease]);
-
-  useEffect(() => {
-    if (!releaseItem) return;
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key !== "Escape") return;
-      dismissReleaseOverlay();
-    };
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [releaseItem, dismissReleaseOverlay]);
-
-  useEffect(() => {
-    if (!releaseItem) return;
-    history.pushState({ captureRelease: true }, "");
-    releaseHistoryActiveRef.current = true;
-
-    const onPopState = () => {
-      if (ignoreReleasePopRef.current) {
-        ignoreReleasePopRef.current = false;
-        return;
-      }
-      // If the schedule sub-sheet is open, the dedicated guard below owns
-      // this Back press (it calls cancelReleaseSchedule itself and manages
-      // its own history entry) — bail out here to avoid both handlers
-      // reacting to the same pop and pushing competing entries.
-      if (focusScheduleOpenRef.current) {
-        return;
-      }
-      if (releasePendingScheduleIdRef.current) {
-        cancelReleaseSchedule();
-        history.pushState({ captureRelease: true }, "");
-        releaseHistoryActiveRef.current = true;
-        return;
-      }
-      releaseHistoryActiveRef.current = false;
-      completeRelease();
-    };
-
-    window.addEventListener("popstate", onPopState);
-    return () => window.removeEventListener("popstate", onPopState);
-  }, [releaseItem, cancelReleaseSchedule, completeRelease]);
-
-  // The FocusScheduleSheet can also be opened directly from a ChatSwipeRow
-  // swipe in the default inbox list — a separate path from `releaseItem`
-  // above, which previously had no back-button guard at all. Without this,
-  // pressing Back while this sheet is open falls through to real browser
-  // history and can exit the app entirely (e.g. back to a search engine).
+  // FocusScheduleSheet back-button guard when opened from inbox swipe/promise.
   const ignoreFocusScheduleSheetPopRef = useRef(false);
   useEffect(() => {
     if (!focusScheduleSheet.open) return;
@@ -262,20 +157,13 @@ function Inbox() {
         ignoreFocusScheduleSheetPopRef.current = false;
         return;
       }
-      // If this sheet was opened mid-release-card-flow (swiping "그때 →"
-      // on the full card), cancelling must return to the card itself, not
-      // just generically close the sheet.
-      if (releaseItemRef.current) {
-        cancelReleaseSchedule();
-        return;
-      }
       setFocusScheduleSheet({ open: false });
       setFocusPendingScheduleId(null);
     };
 
     window.addEventListener("popstate", onPopState);
     return () => window.removeEventListener("popstate", onPopState);
-  }, [focusScheduleSheet.open, cancelReleaseSchedule]);
+  }, [focusScheduleSheet.open]);
 
   useEffect(() => {
     if (!menuItem && !pasteSheet) return;
@@ -333,6 +221,42 @@ function Inbox() {
     setFocusScheduleSheet({ open: true, item: it });
   };
 
+  const commitInboxSchedule = async (
+    it: InboxItem,
+    text: string,
+    start: Date,
+    end: Date,
+    options: ScheduleConfirmOptions,
+    source: string,
+  ) => {
+    const payload = scheduleFromInbox(it, {
+      text,
+      start_time: start.toISOString(),
+      end_time: end.toISOString(),
+      alarm: options.reminderMinutes !== null,
+      all_day: options.allDay,
+      start_all_day: options.startAllDay,
+      end_all_day: options.endAllDay,
+      repeat: options.repeat,
+    });
+    const { cloudSynced: scheduleSynced } = await schedules.add({
+      ...payload,
+      ...(options.reminderMinutes !== null
+        ? {
+            alarm_at: new Date(
+              start.getTime() - options.reminderMinutes * 60 * 1000,
+            ).toISOString(),
+          }
+        : {}),
+    });
+    const inboxSynced = await inbox.remove(it.id);
+    track("schedule_created", { source, text_length: text.length });
+    if (promiseItemIdRef.current === it.id) setPromiseItemId(null);
+    if (allCloudSynced(scheduleSynced, inboxSynced)) {
+      toast.success(t("일정으로 잡았어요", "Added to your schedule"));
+    }
+  };
+
   const saveHomeSchedule = async (
     text: string,
     start: Date,
@@ -342,44 +266,48 @@ function Inbox() {
     const it = focusScheduleSheet.item;
     if (!it) return;
     try {
-      const payload = scheduleFromInbox(it, {
+      await commitInboxSchedule(
+        it,
         text,
-        start_time: start.toISOString(),
-        end_time: end.toISOString(),
-        alarm: options.reminderMinutes !== null,
-        all_day: options.allDay,
-        start_all_day: options.startAllDay,
-        end_all_day: options.endAllDay,
-        repeat: options.repeat,
-      });
-      const { item: created, cloudSynced: scheduleSynced } = await schedules.add({
-        ...payload,
-        ...(options.reminderMinutes !== null
-          ? {
-              alarm_at: new Date(
-                start.getTime() - options.reminderMinutes * 60 * 1000,
-              ).toISOString(),
-            }
-          : {}),
-      });
-      const inboxSynced = await inbox.remove(it.id);
-      track("schedule_created", {
-        source:
-          focusSortOpen && focusPendingScheduleId === it.id
-            ? "focus_sort"
-            : "inbox_swipe",
-        text_length: text.length,
-      });
+        start,
+        end,
+        options,
+        focusSortOpen && focusPendingScheduleId === it.id
+          ? "focus_sort"
+          : "inbox_swipe",
+      );
       setFocusScheduleSheet({ open: false });
       setFocusPendingScheduleId(null);
-      if (releaseItemRef.current?.id === it.id) completeRelease();
       if (focusSortOpen) setScheduleCommittedId(it.id);
-      if (allCloudSynced(scheduleSynced, inboxSynced)) {
-        toast.success(t("그때 다시 떠올릴게요", "I'll remember this for then"));
-      }
     } catch {
       toast.error(t("일정을 남기지 못했어요", "Couldn't anchor it in time"));
-      if (releaseItemRef.current?.id === it.id) cancelReleaseSchedule();
+    }
+  };
+
+  const confirmReleaseScheduleQuick = async (it: InboxItem) => {
+    const det = detectDate(it.text);
+    if (!det) {
+      openPromiseSchedule(it);
+      return;
+    }
+    try {
+      await commitInboxSchedule(
+        it,
+        thoughtFirstLine(it.text),
+        det.start,
+        det.end,
+        {
+          reminderMinutes: null,
+          allDay: false,
+          startAllDay: false,
+          endAllDay: false,
+          repeat: null,
+        },
+        "promise_card",
+      );
+      setFocusScheduleSheet({ open: false });
+    } catch {
+      toast.error(t("일정을 남기지 못했어요", "Couldn't anchor it in time"));
     }
   };
 
@@ -395,6 +323,7 @@ function Inbox() {
       if (related) {
         setRevivalHint(related);
       }
+      if (promiseItemIdRef.current === it.id) setPromiseItemId(null);
       if (inboxRevival?.sourceId === it.id) setInboxRevival(null);
 
       if (allCloudSynced(archiveSynced, inboxSynced)) {
@@ -439,8 +368,6 @@ function Inbox() {
 
   const handleAdd = async (text: string, images: string[]) => {
     if (!text && !images.length) return;
-    if (releaseItem !== null || releaseSubmittingRef.current) return;
-    releaseSubmittingRef.current = true;
     haptic([6, 16, 10]);
     try {
       const { item: created } = await inbox.add({
@@ -453,12 +380,11 @@ function Inbox() {
         image_count: images.length,
       });
 
-      setReleaseItem(created);
+      setPromiseItemId(created.id);
 
       const revival = buildRevivalHint(created, archive.items, "inbox");
       if (revival) setInboxRevival(revival);
     } catch {
-      releaseSubmittingRef.current = false;
       toast.error(t("남기지 못했어요", "Couldn't keep it"));
     }
   };
@@ -515,149 +441,135 @@ function Inbox() {
         error={inbox.syncState === "error"}
         onRetry={inbox.retrySync}
       />
+      <div className="shrink-0 px-5 pt-5 pb-1">
+        <p className="text-[13px] font-semibold text-primary">
+          {t("잊지마", "Itjima")}
+        </p>
+        <h1 className="mt-2 text-[22px] font-bold leading-snug tracking-[-0.02em] text-ink">
+          {t("대충 던져두세요.", "Just throw it here.")}
+        </h1>
+        <p className="mt-2 text-[14px] leading-relaxed text-ink-soft">
+          {t(
+            "일정, 할 일, 링크, 떠오른 생각 모두 괜찮아요.",
+            "Schedules, tasks, links, passing thoughts — all welcome.",
+          )}
+        </p>
+      </div>
+
+      <div className="shrink-0">
+        <InputBar
+          hero
+          onAdd={handleAdd}
+          exampleChips={exampleChips}
+          onPasteMulti={(chunks, original) =>
+            setPasteSheet({ chunks, original })
+          }
+          restoreText={restorePasteText}
+          onRestoreConsumed={() => setRestorePasteText(null)}
+        />
+      </div>
+
+      {promiseItem && (
+        <InlinePromise
+          item={promiseItem}
+          onConfirmScheduleQuick={confirmReleaseScheduleQuick}
+          onSchedule={openPromiseSchedule}
+          onArchive={async (it) => {
+            await moveToArchive(it);
+            dismissPromise();
+            maybeNudgeLogin();
+          }}
+          onLetGo={async (it) => {
+            await moveToDelete(it);
+            dismissPromise();
+          }}
+          onDismiss={() => {
+            dismissPromise();
+            maybeNudgeLogin();
+          }}
+        />
+      )}
+
+      {recentThoughts.length > 0 && (
+        <section className="px-5 pb-3 pt-2">
+          <h2 className="text-[13px] font-semibold text-ink">
+            {t("최근 맡긴 생각", "Recently entrusted")}
+          </h2>
+          <ul className="mt-2 flex flex-col gap-1">
+            {recentThoughts.map((row) => (
+              <li
+                key={row.id}
+                className="flex items-baseline justify-between gap-3 py-1.5 text-[14px]"
+              >
+                <span className="min-w-0 truncate font-medium text-ink">
+                  {row.title}
+                </span>
+                <span className="shrink-0 text-[12px] text-ink-soft">
+                  {lang === "en" ? row.destinationEn : row.destinationKo}
+                </span>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
+
       {items.length > 0 && (
-        <div className="z-20 shrink-0 border-b border-ink/[0.06] bg-white/95 backdrop-blur-md">
-          <div className="flex gap-2 px-5 pb-2 pt-3">
-            <button
-              type="button"
-              onClick={() => setCleanupReviewOpen(true)}
-              className="touch-press flex-1 rounded-full border border-ink/8 bg-white py-2.5 text-[12px] font-semibold text-ink shadow-[0_1px_4px_oklch(0_0_0/0.04)]"
-            >
-              {t("가볍게", "Lighten")}
-            </button>
-            <button
-              type="button"
-              onClick={() => openFocusSort()}
-              className="pill-yellow touch-press flex-1 py-2.5 text-[12px]"
-            >
-              {t("하나씩", "One by one")}
-            </button>
+        <div className="min-h-0 flex-1 overflow-x-hidden px-4 pb-4">
+          <div className="chat-scroll flex w-full flex-col gap-2">
+            {itemsAsc.map((it) => {
+              const isNewest = it.id === newestId;
+              return (
+                <ChatBubble
+                  key={it.id}
+                  item={it}
+                  isNewest={isNewest}
+                  wrapBubble={(bubble) => (
+                    <ChatSwipeRow
+                      rowId={it.id}
+                      openRowId={swipeOpenId}
+                      onOpenRowChange={setSwipeOpenId}
+                      onSwipeRight={() => openHomeSchedule(it)}
+                      onSwipeLeft={() => moveToArchive(it)}
+                      onLongPress={() => setMenuFor(it.id)}
+                    >
+                      {bubble}
+                    </ChatSwipeRow>
+                  )}
+                >
+                  {inboxRevival?.sourceId === it.id && (
+                    <MemoryRevivalHint
+                      hint={inboxRevival}
+                      compact
+                      delayMs={900}
+                      onRevisit={revisitArchiveMemory}
+                      onDismiss={() => setInboxRevival(null)}
+                    />
+                  )}
+                </ChatBubble>
+              );
+            })}
+            <div ref={listEndRef} />
           </div>
         </div>
       )}
 
-      {items.length === 0 ? (
-        <>
-          <div className="shrink-0">
-            <InputBar
-              hero
-              releasing={!!releaseItem}
-              onActivityChange={setCaptureTyping}
-              onAdd={handleAdd}
-              onPasteMulti={(chunks, original) =>
-                setPasteSheet({ chunks, original })
-              }
-              restoreText={restorePasteText}
-              onRestoreConsumed={() => setRestorePasteText(null)}
+      {items.length === 0 &&
+        !promiseItem &&
+        recentThoughts.length === 0 &&
+        inboxJustCleared && (
+          <div className="px-5 pb-8">
+            <EmptyState
+              variant="success"
+              emoji="✨"
+              titleKo="머리가 가벼워졌어요"
+              titleEn="Your mind feels lighter"
+              hintKo="오늘은 더 남길 게 없네요"
+              hintEn="Nothing left to leave here for now"
             />
           </div>
-          {releaseItem ? (
-            <CaptureRelease
-              item={releaseItem}
-              variant="hero"
-              pendingSchedule={releasePendingScheduleId === releaseItem.id}
-              onArchive={(it) => moveToArchive(it)}
-              onSchedule={beginReleaseSchedule}
-              onLetGo={(it) => moveToDelete(it)}
-              onComplete={completeRelease}
-            />
-          ) : (
-            <div
-              className={`flex flex-1 flex-col justify-end pb-8 transition-opacity duration-300 ${
-                captureTyping ? "opacity-[0.35]" : ""
-              }`}
-            >
-              {inboxJustCleared ? (
-                <EmptyState
-                  variant="success"
-                  emoji="✨"
-                  titleKo="머리가 가벼워졌어요"
-                  titleEn="Your mind feels lighter"
-                  hintKo="오늘은 더 남길 게 없네요"
-                  hintEn="Nothing left to leave here for now"
-                />
-              ) : (
-                <EmptyState
-                  titleKo="여기에 맡겨두세요"
-                  titleEn="Leave it here"
-                  hintKo="적고 Enter — 더 이상 기억하지 않아도 돼요"
-                  hintEn="Type and Enter — you don't have to remember anymore"
-                />
-              )}
-            </div>
-          )}
-          <InstallPrompt />
-        </>
-      ) : (
-        <>
-          <div
-            className={`min-h-0 flex-1 overflow-y-auto overflow-x-hidden px-4 pb-2 transition-opacity duration-700 ease-out ${
-              releaseItem ? "opacity-[0.18] pointer-events-none" : ""
-            }`}
-          >
-            <div className="chat-scroll flex w-full flex-col gap-2 pb-4">
-              {itemsAsc.map((it) => {
-                const isNewest = it.id === newestId;
-                return (
-                  <ChatBubble
-                    key={it.id}
-                    item={it}
-                    isNewest={isNewest}
-                    wrapBubble={(bubble) => (
-                      <ChatSwipeRow
-                        rowId={it.id}
-                        openRowId={swipeOpenId}
-                        onOpenRowChange={setSwipeOpenId}
-                        onSwipeRight={() => openHomeSchedule(it)}
-                        onSwipeLeft={() => moveToArchive(it)}
-                        onLongPress={() => setMenuFor(it.id)}
-                      >
-                        {bubble}
-                      </ChatSwipeRow>
-                    )}
-                  >
-                    {inboxRevival?.sourceId === it.id && (
-                      <MemoryRevivalHint
-                        hint={inboxRevival}
-                        compact
-                        delayMs={900}
-                        onRevisit={revisitArchiveMemory}
-                        onDismiss={() => setInboxRevival(null)}
-                      />
-                    )}
-                  </ChatBubble>
-                );
-              })}
-              <div ref={listEndRef} />
-            </div>
-          </div>
+        )}
 
-          {releaseItem && (
-            <CaptureRelease
-              item={releaseItem}
-              variant="overlay"
-              pendingSchedule={releasePendingScheduleId === releaseItem.id}
-              onArchive={(it) => moveToArchive(it)}
-              onSchedule={beginReleaseSchedule}
-              onLetGo={(it) => moveToDelete(it)}
-              onComplete={completeRelease}
-            />
-          )}
-
-          <InstallPrompt />
-          <div className="z-20 shrink-0 border-t border-ink/[0.06] bg-white/95 pb-[env(safe-area-inset-bottom)] backdrop-blur-md">
-            <InputBar
-              releasing={!!releaseItem}
-              onAdd={handleAdd}
-              onPasteMulti={(chunks, original) =>
-                setPasteSheet({ chunks, original })
-              }
-              restoreText={restorePasteText}
-              onRestoreConsumed={() => setRestorePasteText(null)}
-            />
-          </div>
-        </>
-      )}
+      <InstallPrompt />
 
       {/* Context menu */}
       {menuItem && (
@@ -702,7 +614,7 @@ function Inbox() {
             />
             <MenuItem
               icon={<Calendar size={18} />}
-              label={t("할 일로 보내기", "Send to tasks")}
+              label={t("일정으로 보내기", "Send to schedule")}
               onClick={() => {
                 setMenuFor(null);
                 openHomeSchedule(menuItem);
@@ -710,7 +622,7 @@ function Inbox() {
             />
             <MenuItem
               icon={<ArchiveIcon size={18} />}
-              label={t("생각 지도에 남기기", "Save to thought map")}
+              label={t("생각 보관함에 보관", "Save to vault")}
               onClick={() => {
                 setMenuFor(null);
                 moveToArchive(menuItem);
@@ -824,20 +736,10 @@ function Inbox() {
         item={focusScheduleSheet.item ?? null}
         open={focusScheduleSheet.open}
         onClose={() => {
-          if (
-            releaseItemRef.current &&
-            focusScheduleSheet.item?.id === releaseItemRef.current.id
-          ) {
-            cancelReleaseSchedule();
-            return;
-          }
-          if (!releaseItem) {
-            ignoreFocusScheduleSheetPopRef.current = true;
-            history.back();
-          }
+          ignoreFocusScheduleSheetPopRef.current = true;
+          history.back();
           setFocusScheduleSheet({ open: false });
           setFocusPendingScheduleId(null);
-          setReleasePendingScheduleId(null);
         }}
         onConfirm={(text, start, end, options) => {
           void saveHomeSchedule(text, start, end, options);

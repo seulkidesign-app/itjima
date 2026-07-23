@@ -78,6 +78,13 @@ import {
   sectionLabel,
   classifySchedule,
 } from "@/lib/scheduleGroups";
+import { archiveDisplayTitle } from "@/lib/archiveMeta";
+import {
+  dismissRediscovery,
+  pickRediscoveryCandidate,
+} from "@/lib/rediscoveryPick";
+import { setRevivalJumpTarget } from "@/lib/memoryRevival";
+import { useNavigate } from "@tanstack/react-router";
 import { scheduleDisplayTitle, rawPreview } from "@/lib/thoughtProvenance";
 import { SPRING_TAB, SPRING_SNAP_BACK } from "@/lib/motion";
 import { toast } from "sonner";
@@ -427,7 +434,7 @@ function Schedule() {
       />
       <div className="sticky top-0 z-10 shrink-0 bg-white">
         <div className={`px-5 ${tab === "today" ? "pb-4 pt-6" : "pb-3 pt-5"}`}>
-          <h1 className="page-title">{t("할 일", "Tasks")}</h1>
+          <h1 className="page-title">{t("오늘", "Today")}</h1>
           <p
             className={`leading-relaxed text-ink-soft ${
               tab === "today"
@@ -436,8 +443,8 @@ function Schedule() {
             }`}
           >
             {t(
-              "해야 할 생각을 잊지 않도록",
-              "So you don't forget thoughts that need to be done",
+              "지금 필요한 기억만 꺼내드려요.",
+              "Only what you need today — brought back when it matters.",
             )}
           </p>
         </div>
@@ -1226,7 +1233,7 @@ function FlowedPastSection({
         onClick={() => setOpen((v) => !v)}
         className="flex w-full items-center justify-between px-1 py-1.5 text-[14px] text-ink-soft touch-press"
       >
-        <span>{t("흘러간 것", "Flowed past")}</span>
+        <span>{t("놓친 것", "Missed")}</span>
         <span className="text-[13px]">
           {items.length} {open ? "▴" : "▾"}
         </span>
@@ -1280,11 +1287,16 @@ function ScheduleTodayPanel({
 }) {
   const t = useT();
   const { lang } = useLang();
+  const navigate = useNavigate();
   const suggestion = pickTodaySuggestion(
     todayItems,
     activeItems,
     archiveItems,
     lang,
+  );
+  const rediscovery = useMemo(
+    () => pickRediscoveryCandidate(archiveItems, activeItems),
+    [archiveItems, activeItems],
   );
   const spotlight = todayItems[0] ?? null;
   const alsoToday = todayItems.slice(1);
@@ -1298,8 +1310,8 @@ function ScheduleTodayPanel({
           transition={MOTION_CRAFT}
           className="mx-1 rounded-[24px] border border-ink/[0.03] bg-primary/[0.08] px-[22px] py-5"
         >
-          <p className="text-[12px] text-ink-soft">
-            {t("다음에 떠올릴 것", "Next up")}
+          <p className="text-[12px] font-semibold text-ink-soft">
+            {t("지금", "Now")}
           </p>
           <p className="mt-2 text-[17px] font-bold leading-snug text-ink">
             {scheduleDisplayTitle(spotlight)}
@@ -1313,25 +1325,60 @@ function ScheduleTodayPanel({
         </motion.section>
       )}
 
+      {alsoToday.length > 0 && (
+        <section className="flex flex-col gap-3 px-0.5">
+          <p className="text-[13px] font-semibold text-ink">
+            {t("오늘", "Today")}
+          </p>
+          <div className="flex flex-col gap-3">
+            {alsoToday.map((s) => (
+              <ScheduleCard key={s.id} {...cardProps(s)} timer />
+            ))}
+          </div>
+        </section>
+      )}
+
+      {rediscovery && (
+        <section className="mx-0.5 rounded-[24px] border border-ink/[0.06] bg-white px-4 py-4 shadow-[0_2px_12px_-4px_rgba(0,0,0,0.08)]">
+          <p className="text-[13px] font-semibold text-ink">
+            {t("다시 꺼낸 생각", "Brought back")}
+          </p>
+          <p className="mt-2 text-[16px] font-bold text-ink">
+            {archiveDisplayTitle(rediscovery.memory.id, rediscovery.memory)}
+          </p>
+          <p className="mt-1.5 text-[13px] text-ink-soft">
+            {lang === "en"
+              ? `${rediscovery.ageEn} — a thought you entrusted`
+              : `${rediscovery.ageKo}에 맡긴 생각이에요.`}
+          </p>
+          <div className="mt-4 flex gap-2">
+            <button
+              type="button"
+              onClick={() => {
+                setRevivalJumpTarget(rediscovery.memory.id);
+                void navigate({ to: "/archive" });
+              }}
+              className="pill-yellow touch-press min-h-[44px] flex-1 px-3 py-2.5 text-[13px] font-bold text-ink"
+            >
+              {t("다시 보기", "View again")}
+            </button>
+            <button
+              type="button"
+              onClick={() => dismissRediscovery(rediscovery.memory.id)}
+              className="touch-press min-h-[44px] rounded-full border border-ink/12 bg-white px-4 py-2.5 text-[13px] font-semibold text-ink"
+            >
+              {t("며칠 더 맡기기", "Keep a few more days")}
+            </button>
+          </div>
+        </section>
+      )}
+
       {suggestion && (
         <div className="craft-suggestion mx-0.5 px-4 py-3.5">
           <p className="text-[14px] leading-[1.65] tracking-[0.005em] text-ink/88">
             {lang === "en" ? suggestion.messageEn : suggestion.messageKo}
           </p>
         </div>
-      )}
-
-      {alsoToday.length > 0 && (
-        <section className="flex flex-col gap-3 px-0.5">
-          <p className="text-[12px] font-medium tracking-[0.02em] text-ink-soft/65">
-            {t("오늘 더 있어요", "Also today")}
-          </p>
-          <div className="flex flex-col gap-3 opacity-[0.82]">
-            {alsoToday.map((s) => (
-              <ScheduleCard key={s.id} {...cardProps(s)} timer />
-            ))}
-          </div>
-        </section>
       )}
 
       <FlowedPastSection
@@ -1345,14 +1392,17 @@ function ScheduleTodayPanel({
         <DoneSection items={doneItems} cardProps={cardProps} t={t} />
       )}
 
-      {todayItems.length === 0 && doneCount === 0 && flowedItems.length === 0 && (
-        <p className="px-4 text-center text-[14px] leading-[1.7] text-ink-soft/85">
-          {t(
-            "오늘은 특별히 떠올릴 게 없어요. 괜찮아요.",
-            "Nothing needs your attention today — and that's okay.",
-          )}
-        </p>
-      )}
+      {todayItems.length === 0 &&
+        doneCount === 0 &&
+        flowedItems.length === 0 &&
+        !rediscovery && (
+          <p className="px-4 text-center text-[14px] leading-[1.7] text-ink-soft/85">
+            {t(
+              "오늘은 특별히 떠올릴 게 없어요. 괜찮아요.",
+              "Nothing needs your attention today — and that's okay.",
+            )}
+          </p>
+        )}
     </div>
   );
 }
@@ -1376,7 +1426,7 @@ function DoneSection({
         onClick={() => setOpen((v) => !v)}
         className="mb-2 w-full px-1 text-left text-[11px] font-semibold tracking-[-0.01em] text-ink-soft/80 touch-press"
       >
-        {t("다녀온 기억", "Memories you let go")} · {items.length}{" "}
+        {t("완료", "Done")} · {items.length}{" "}
         <motion.span
           animate={{ rotate: open ? 0 : -90 }}
           transition={{ duration: 0.2 }}

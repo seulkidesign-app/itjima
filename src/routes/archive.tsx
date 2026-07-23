@@ -15,6 +15,7 @@ import {
 } from "lucide-react";
 import { useArchive, useSchedules, type ArchiveItem } from "@/lib/store";
 import { archiveGroup, detectDate } from "@/lib/dateDetect";
+import { classifyLocally } from "@/lib/localClassifier";
 import { useT, useLang } from "@/lib/i18n";
 import { useScrollLock } from "@/hooks/useScrollLock";
 import { haptic, tap } from "@/lib/haptics";
@@ -76,6 +77,24 @@ const BUILTIN_GROUPS: GroupDef[] = [
   { key: "etc", ko: "기타", en: "Other", emoji: "🗂" },
 ];
 
+const VAULT_FILTERS = [
+  { key: "all", ko: "전체", en: "All" },
+  { key: "idea", ko: "아이디어", en: "Ideas" },
+  { key: "link", ko: "링크", en: "Links" },
+  { key: "shopping", ko: "구매", en: "Shopping" },
+  { key: "memory", ko: "기억", en: "Memories" },
+  { key: "etc", ko: "기타", en: "Other" },
+] as const;
+
+function vaultCategory(text: string): string {
+  const cat = classifyLocally(text)?.category;
+  if (cat === "link") return "link";
+  if (cat === "shopping") return "shopping";
+  if (cat === "idea") return "idea";
+  if (cat === "note" || cat === "place" || cat === "list") return "memory";
+  return "etc";
+}
+
 function Archive() {
   const t = useT();
   const { lang } = useLang();
@@ -113,7 +132,7 @@ function Archive() {
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [scrollToId, setScrollToId] = useState<string | null>(null);
   const [moveSheetOpen, setMoveSheetOpen] = useState(false);
-  const [layoutMode, setLayoutMode] = useState<"space" | "list">("space");
+  const [layoutMode, setLayoutMode] = useState<"space" | "list">("list");
   const [timelineMonth, setTimelineMonth] = useState<string | null>(null);
   const [detailItem, setDetailItem] = useState<ArchiveItem | null>(null);
   const [detailClusterIds, setDetailClusterIds] = useState<string[] | undefined>(
@@ -241,7 +260,7 @@ function Archive() {
     if (q.trim()) return [];
     let list = items.filter((it) => pins.has(it.id));
     if (groupFilter !== "all") {
-      list = list.filter((it) => groupOf(it.id, it.text) === groupFilter);
+      list = list.filter((it) => vaultCategory(it.text) === groupFilter);
     }
     return [...list].sort((a, b) => {
       const da = +new Date(a.created_at);
@@ -275,7 +294,7 @@ function Archive() {
     }
     let list = [...items];
     if (groupFilter !== "all") {
-      list = list.filter((it) => groupOf(it.id, it.text) === groupFilter);
+      list = list.filter((it) => vaultCategory(it.text) === groupFilter);
     }
     list = [...list].sort((a, b) => {
       const da = +new Date(a.created_at);
@@ -647,6 +666,11 @@ function Archive() {
         }`}
       >
         <div className="px-5 pb-3 pt-7">
+          {isSpaceView && (
+            <p className="mb-2 text-[12px] font-medium text-[color:var(--archive-text-soft)]">
+              {t("생각 보관함", "Vault")} › {t("생각 지도", "Thought map")}
+            </p>
+          )}
           <h1
             className={`font-bold tracking-[-0.02em] ${
               isSpaceView
@@ -654,7 +678,9 @@ function Archive() {
                 : "page-title"
             }`}
           >
-            {t("생각 지도", "Thought map")}
+            {isSpaceView
+              ? t("생각 지도", "Thought map")
+              : t("생각 보관함", "Vault")}
           </h1>
           <p
             className={`mt-2 leading-relaxed ${
@@ -663,19 +689,18 @@ function Archive() {
                 : "page-eyebrow text-ink-soft"
             }`}
           >
-            {t(
-              "남은 생각들이 서로 연결된 지도",
-              "A map where remaining thoughts connect to each other",
-            )}
+            {isSpaceView
+              ? t(
+                  "맡긴 생각들이 연결된 지도예요",
+                  "A map of the thoughts you entrusted",
+                )
+              : t(
+                  "맡겨둔 모든 생각을 찾고 다시 볼 수 있어요",
+                  "Search and revisit everything you entrusted",
+                )}
           </p>
-          {items.length > 0 && (
-            <p
-              className={`mt-3 text-[13px] ${
-                isSpaceView
-                  ? "text-[color:var(--archive-text-soft)]"
-                  : "page-eyebrow text-ink-soft/75"
-              }`}
-            >
+          {items.length > 0 && !isSpaceView && (
+            <p className="mt-3 text-[13px] page-eyebrow text-ink-soft/75">
               {t(
                 `${items.length}개의 생각을 맡아두고 있어요`,
                 `${items.length} thoughts you entrusted here`,
@@ -769,21 +794,6 @@ function Archive() {
                 >
                   <button
                     type="button"
-                    onClick={() => setLayoutMode("space")}
-                    className={`rounded-full px-3 py-1.5 text-[12px] font-semibold ${
-                      layoutMode === "space"
-                        ? isSpaceView
-                          ? "archive-space-toggle-active"
-                          : "bg-white text-ink shadow-card"
-                        : isSpaceView
-                          ? "text-[color:var(--archive-text-soft)]"
-                          : "text-ink-soft"
-                    }`}
-                  >
-                    {t("지도", "Map")}
-                  </button>
-                  <button
-                    type="button"
                     onClick={() => setLayoutMode("list")}
                     className={`rounded-full px-3 py-1.5 text-[12px] font-semibold ${
                       layoutMode === "list"
@@ -796,6 +806,21 @@ function Archive() {
                     }`}
                   >
                     {t("목록", "List")}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setLayoutMode("space")}
+                    className={`rounded-full px-3 py-1.5 text-[12px] font-semibold ${
+                      layoutMode === "space"
+                        ? isSpaceView
+                          ? "archive-space-toggle-active"
+                          : "bg-white text-ink shadow-card"
+                        : isSpaceView
+                          ? "text-[color:var(--archive-text-soft)]"
+                          : "text-ink-soft"
+                    }`}
+                  >
+                    {t("생각 지도", "Thought map")}
                   </button>
                   <Link
                     to="/rediscovery"
@@ -822,15 +847,15 @@ function Archive() {
                         : "bg-ink/[0.06] text-ink-soft"
                   }`}
                 >
-                  {t("모두", "Everything")}
+                  {t("전체", "All")}
                 </button>
-                {groupsWithItems.map((g) => (
+                {VAULT_FILTERS.filter((f) => f.key !== "all").map((f) => (
                   <button
-                    key={g.key}
+                    key={f.key}
                     type="button"
-                    onClick={() => setGroupFilter(g.key)}
+                    onClick={() => setGroupFilter(f.key)}
                     className={`rounded-full px-3 py-1.5 text-[12px] font-medium transition-colors ${
-                      groupFilter === g.key
+                      groupFilter === f.key
                         ? isSpaceView
                           ? "archive-space-chip-active font-semibold"
                           : "bg-ink text-white"
@@ -839,7 +864,7 @@ function Archive() {
                           : "bg-ink/[0.06] text-ink-soft"
                     }`}
                   >
-                    {g.emoji} {lang === "en" ? g.en : g.ko}
+                    {lang === "en" ? f.en : f.ko}
                   </button>
                 ))}
                 <select

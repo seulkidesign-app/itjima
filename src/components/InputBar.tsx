@@ -31,6 +31,8 @@ type Props = {
   releasing?: boolean;
   /** Fired when user is typing or input is focused (Capture idle → typing) */
   onActivityChange?: (active: boolean) => void;
+  /** Tap-to-fill example chips shown below the input */
+  exampleChips?: { ko: string; en: string }[];
 };
 
 export function InputBar({
@@ -41,6 +43,7 @@ export function InputBar({
   hero = false,
   releasing = false,
   onActivityChange,
+  exampleChips,
 }: Props) {
   const t = useT();
   const { lang } = useLang();
@@ -296,8 +299,8 @@ export function InputBar({
           className="px-5 pt-4 text-center text-[13px] font-medium leading-relaxed text-ink-soft/90"
         >
           {t(
-            "잊어도 괜찮아요. ItJima가 기억할게요.",
-            "It's okay to forget. ItJima will remember.",
+            "일정, 할 일, 링크, 떠오른 생각 모두 괜찮아요.",
+            "Schedules, tasks, links, passing thoughts — all welcome.",
           )}
         </motion.p>
       )}
@@ -389,12 +392,34 @@ export function InputBar({
               }
             }}
             rows={hero ? 4 : 3}
-            placeholder={t("생각을 남겨두세요", "Leave your thought here")}
+            placeholder={t("무엇이 떠오르나요?", "What's on your mind?")}
             className={`block w-full resize-none bg-transparent leading-relaxed text-ink placeholder:text-ink-soft/55 placeholder:transition-opacity focus:outline-none max-h-40 ${
               hero ? "min-h-[96px] text-[17px]" : "min-h-[72px] text-[16px]"
             }`}
           />
         </motion.div>
+        {exampleChips && exampleChips.length > 0 && (
+          <div className="mt-3 flex flex-wrap gap-2">
+            {exampleChips.map((chip) => {
+              const label = lang === "en" ? chip.en : chip.ko;
+              return (
+                <button
+                  key={label}
+                  type="button"
+                  onClick={() => {
+                    tap();
+                    setText(label);
+                    textRef.current = label;
+                    textareaRef.current?.focus();
+                  }}
+                  className="touch-press rounded-full border border-ink/10 bg-white px-3 py-1.5 text-[12px] font-medium text-ink-soft"
+                >
+                  {label}
+                </button>
+              );
+            })}
+          </div>
+        )}
       </div>
       <div className="flex items-center gap-1 px-5 pb-2 pt-2">
         <motion.button

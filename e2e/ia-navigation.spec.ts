@@ -16,7 +16,7 @@ async function resetForIa(page: Page) {
     sessionStorage.clear();
   });
   await page.reload();
-  await page.getByRole("link", { name: /^Thoughts/ }).waitFor({ state: "visible" });
+  await page.getByRole("link", { name: /^Throw/ }).waitFor({ state: "visible" });
 }
 
 async function seedGuestData(page: Page) {
@@ -61,30 +61,30 @@ async function seedGuestData(page: Page) {
   );
 }
 
-test.describe("IA navigation (Thoughts / Tasks / Thought map)", () => {
+test.describe("IA navigation (Throw / Today / Vault)", () => {
   test.beforeEach(async ({ page }) => {
     await resetForIa(page);
     await seedGuestData(page);
     await page.reload();
-    await page.getByRole("link", { name: /^Thoughts/ }).waitFor({ state: "visible" });
+    await page.getByRole("link", { name: /^Throw/ }).waitFor({ state: "visible" });
   });
 
   test("tabs, route labels, and guest data persist across navigation", async ({
     page,
   }) => {
-    await expect(page.getByRole("link", { name: /^Thoughts$/ })).toBeVisible();
-    await expect(page.getByRole("link", { name: /^Tasks$/ })).toBeVisible();
-    await expect(page.getByRole("link", { name: /^Thought map$/ })).toBeVisible();
+    await expect(page.getByRole("link", { name: /^Throw$/ })).toBeVisible();
+    await expect(page.getByRole("link", { name: /^Today$/ })).toBeVisible();
+    await expect(page.getByRole("link", { name: /^Vault$/ })).toBeVisible();
 
-    await page.screenshot({ path: "qa-ia/01-thoughts.png" });
+    await page.screenshot({ path: "qa-ia/01-throw.png" });
 
-    await page.getByRole("link", { name: /^Tasks$/ }).click();
+    await page.getByRole("link", { name: /^Today$/ }).click();
     await expect(page).toHaveURL(/\/schedule$/);
     await expect(
-      page.getByRole("heading", { name: "Tasks", exact: true }),
+      page.getByRole("heading", { name: "Today", exact: true }),
     ).toBeVisible();
     await expect(
-      page.getByText("So you don't forget thoughts that need to be done"),
+      page.getByText("Only what you need today — brought back when it matters."),
     ).toBeVisible();
     await expect(page.getByRole("tab", { name: "Today" })).toBeVisible();
     await expect(page.getByRole("tab", { name: "Upcoming" })).toBeVisible();
@@ -92,25 +92,24 @@ test.describe("IA navigation (Thoughts / Tasks / Thought map)", () => {
     await expect(page.getByRole("button", { name: "Add task" })).toBeVisible();
     await expect(page.getByText("Buy flowers for Mom")).toBeVisible();
 
-    await page.screenshot({ path: "qa-ia/02-tasks.png" });
+    await page.screenshot({ path: "qa-ia/02-today.png" });
 
-    await page.getByRole("link", { name: /^Thought map$/ }).click();
+    await page.getByRole("link", { name: /^Vault$/ }).click();
     await expect(page).toHaveURL(/\/archive$/);
     await expect(
-      page.getByRole("heading", { name: "Thought map", exact: true }),
+      page.getByRole("heading", { name: "Vault", exact: true }),
     ).toBeVisible();
     await expect(
-      page.getByText("A map where remaining thoughts connect to each other"),
+      page.getByText("Search and revisit everything you entrusted"),
     ).toBeVisible();
-    await expect(page.getByRole("button", { name: "Map" })).toBeVisible();
-    await expect(page.getByRole("button", { name: "List" })).toBeVisible();
+    await expect(page.getByRole("button", { name: "List", exact: true })).toBeVisible();
+    await expect(page.getByRole("button", { name: "Thought map" })).toBeVisible();
     await expect(page.getByRole("link", { name: "Revisit" })).toBeVisible();
-    await page.getByRole("button", { name: "List" }).click();
     await expect(page.getByText("Mom birthday idea").first()).toBeVisible();
 
-    await page.screenshot({ path: "qa-ia/03-thought-map-shell.png" });
+    await page.screenshot({ path: "qa-ia/03-vault-shell.png" });
 
-    await page.getByRole("link", { name: /^Thoughts$/ }).click();
+    await page.getByRole("link", { name: /^Throw$/ }).click();
     await expect(page).toHaveURL("/");
 
     const schedules = await readGuestList(page, GUEST_SCHEDULE_KEY);

@@ -25,7 +25,7 @@ export async function injectSignedInUser(page: Page) {
     { userId: TEST_USER_ID },
   );
   await page.reload();
-  await phone(page).getByRole("link", { name: /^Thoughts/ }).waitFor({
+  await phone(page).getByRole("link", { name: /^Throw/ }).waitFor({
     state: "visible",
   });
 }
@@ -59,7 +59,7 @@ export async function resetAppState(page: Page) {
     sessionStorage.clear();
   });
   await page.reload();
-  await phone(page).getByRole("link", { name: /^Thoughts/ }).waitFor({
+  await phone(page).getByRole("link", { name: /^Throw/ }).waitFor({
     state: "visible",
   });
 }
@@ -68,17 +68,16 @@ export async function gotoInbox(page: Page) {
   if (!page.url().includes("127.0.0.1")) {
     await page.goto("/");
   }
-  await phone(page).getByRole("link", { name: /^Thoughts/ }).waitFor({
+  await phone(page).getByRole("link", { name: /^Throw/ }).waitFor({
     state: "visible",
   });
 }
 
 export async function gotoArchiveListView(page: Page) {
-  await phone(page).getByRole("link", { name: /^Thought map/ }).click();
+  await phone(page).getByRole("link", { name: /^Vault/ }).click();
   await phone(page)
-    .getByRole("heading", { name: "Thought map" })
+    .getByRole("heading", { name: "Vault", exact: true })
     .waitFor({ state: "visible" });
-  await phone(page).getByRole("button", { name: "List", exact: true }).click();
 }
 
 export async function completeScheduleDialog(page: Page) {
@@ -91,24 +90,21 @@ export async function completeScheduleDialog(page: Page) {
   await sheet.getByRole("button", { name: "Set a reminder" }).click();
   await sheet.getByRole("button", { name: "I'll leave it for then" }).click();
 }
-export async function dismissReleaseOverlay(page: Page) {
-  const frame = phone(page);
-  const hint = frame.getByText("Tasks →");
-  const backdrop = frame.locator(".bg-white\\/38").first();
-  const inRelease =
-    (await hint.isVisible().catch(() => false)) ||
-    (await backdrop.isVisible().catch(() => false));
-  if (!inRelease) return;
 
-  await page.keyboard.press("Escape");
-  try {
-    await hint.waitFor({ state: "hidden", timeout: 8000 });
-  } catch {
-    if (await backdrop.isVisible().catch(() => false)) {
-      await backdrop.click({ position: { x: 8, y: 8 } });
-      await backdrop.waitFor({ state: "hidden", timeout: 8000 });
-    }
+export async function dismissInlinePromise(page: Page) {
+  const frame = phone(page);
+  const promise = frame.getByTestId("inline-promise");
+  if (!(await promise.isVisible().catch(() => false))) return;
+  const keep = frame.getByTestId("promise-primary");
+  if (await keep.isVisible()) {
+    await keep.click();
   }
+  await promise.waitFor({ state: "hidden", timeout: 8000 }).catch(() => {});
+}
+
+/** @deprecated use dismissInlinePromise */
+export async function dismissReleaseOverlay(page: Page) {
+  await dismissInlinePromise(page);
 }
 
 export async function addThought(page: Page, text: string) {
@@ -116,20 +112,21 @@ export async function addThought(page: Page, text: string) {
   const input = frame.locator("textarea").first();
   await input.fill(text);
   await frame.getByRole("button", { name: "Leave it", exact: true }).click();
-  await frame.getByText(text, { exact: true }).waitFor({ state: "visible" });
-  await dismissReleaseOverlay(page);
+  await frame.getByTestId("inline-promise").waitFor({ state: "visible" });
+  await frame.getByText(text, { exact: true }).first().waitFor({ state: "visible" });
+  await dismissInlinePromise(page);
 }
 
 export async function openContextMenu(page: Page, thoughtText: string) {
   const frame = phone(page);
-  await dismissReleaseOverlay(page);
+  await dismissInlinePromise(page);
   const bubble = frame.getByText(thoughtText, { exact: true }).first();
   await bubble.dispatchEvent("pointerdown", { button: 0, pointerId: 1 });
   await page.waitForTimeout(520);
   await bubble.dispatchEvent("pointerup", { button: 0, pointerId: 1 });
   await frame
     .getByRole("dialog")
-    .getByRole("button", { name: "Save to thought map", exact: true })
+    .getByRole("button", { name: "Save to vault", exact: true })
     .waitFor({
       state: "visible",
     });
@@ -137,12 +134,12 @@ export async function openContextMenu(page: Page, thoughtText: string) {
 
 export async function getTabCount(
   page: Page,
-  tab: "Thoughts" | "Tasks" | "Thought map",
+  tab: "Throw" | "Today" | "Vault",
 ) {
   const key =
-    tab === "Thoughts"
+    tab === "Throw"
       ? GUEST_INBOX_KEY
-      : tab === "Tasks"
+      : tab === "Today"
         ? GUEST_SCHEDULE_KEY
         : GUEST_ARCHIVE_KEY;
   const list = await readGuestList(page, key);
@@ -159,23 +156,21 @@ export async function readGuestList(page: Page, key: string): Promise<unknown[]>
   }, key);
 }
 
-/** About / Feedback on desktop live in SideNav; on mobile in TopNav. */
+export async function openSettings(page: Page) {
+  await phone(page).getByRole("button", { name: "Settings", exact: true }).click();
+}
+
+/** About / Feedback live in the settings sheet on mobile. */
 export async function openAbout(page: Page) {
-  const about = page.getByRole("button", { name: "About", exact: true });
-  if (await about.count()) {
-    await about.first().click();
-    return;
-  }
-  await phone(page).getByRole("button", { name: "About", exact: true }).click();
+  await openSettings(page);
+  await phone(page).getByRole("button", { name: "About Itjima", exact: true }).click();
 }
 
 export async function openFeedback(page: Page) {
-  const fb = page.getByRole("button", { name: "Contact · Feedback", exact: true });
-  if (await fb.count()) {
-    await fb.first().click();
-    return;
-  }
-  await phone(page).getByRole("button", { name: "Contact · Feedback", exact: true }).click();
+  await openSettings(page);
+  await phone(page)
+    .getByRole("button", { name: "Contact · Feedback", exact: true })
+    .click();
 }
 
 /** Stub Supabase admin role checks for signed-in E2E. */

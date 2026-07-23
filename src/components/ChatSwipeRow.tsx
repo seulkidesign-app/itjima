@@ -264,7 +264,7 @@ export function ChatSwipeRow({
                   pointerEvents: trayOpacity > 0.5 ? "auto" : "none",
                   transform: `scale(${0.88 + trayOpacity * 0.12})`,
                 }}
-                aria-label={t("생각 지도에 남기기", "Save to thought map")}
+                aria-label={t("생각 보관함에 보관", "Save to vault")}
               >
                 <Archive size={20} strokeWidth={2.25} />
               </button>

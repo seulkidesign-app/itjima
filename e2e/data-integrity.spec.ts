@@ -307,7 +307,7 @@ test.describe("data integrity (guest upload + tombstones)", () => {
 
     await page.reload();
     await phone(page)
-      .getByRole("link", { name: /^Thought map/ })
+      .getByRole("link", { name: /^Vault/ })
       .click();
     await expect(
       phone(page).getByText(archiveText, { exact: true }),

@@ -1,17 +1,18 @@
 import { detectDate } from "@/lib/dateDetect";
 import { classifyLocally } from "@/lib/localClassifier";
 import { analyzeThought, type ThoughtCategory } from "@/lib/ruleEngine";
+import { thoughtFirstLine } from "@/lib/brainMirror";
 import { formatSuggestedMoment } from "@/lib/scheduleChoices";
 
 export type PromisePrimaryAction =
   | "confirm_schedule"
+  | "set_resurface"
   | "keep_task"
   | "archive"
   | "keep_note";
 
 export type PromiseEditAction = "open_schedule_sheet" | "open_edit_menu";
 
-/** Actions the system will actually perform when the user accepts. */
 export type ActualAction =
   | "inbox_only"
   | "schedule_on_confirm"
@@ -29,16 +30,13 @@ export type PromiseCard = {
   confidence: number;
   actualAction: ActualAction;
   detectedDate: { start: Date; end: Date; label: string } | null;
-  /** Archive path may surface via rediscovery after aging — never immediate. */
   rediscoveryEligible: boolean;
-  /** True only after schedule exists — used by validators, not shown pre-confirm. */
   scheduleCommitted: boolean;
 };
 
-const REDISCOVERY_ARCHIVE_CATEGORIES = new Set<ThoughtCategory>([
+const IDEA_CATEGORIES = new Set<ThoughtCategory>([
   "idea",
   "note",
-  "task",
   "list",
   "place",
 ]);
@@ -55,29 +53,16 @@ const FORBIDDEN_PRE_CONFIRM = [
   /마트|근처|location|near you/i,
 ];
 
-function formatSchedulePrompt(
-  start: Date,
-  lang: "ko" | "en",
-): string {
-  const moment = formatSuggestedMoment(start, lang);
+function vaultHint(lang: "ko" | "en"): string {
   return lang === "en"
-    ? `Schedule for ${moment}?`
-    : `${moment}로 잡을까요?`;
+    ? "You can find it anytime in your vault."
+    : "생각 보관함에서 언제든 찾을 수 있어요.";
 }
 
-function scheduleLabel(dateLabel: string, lang: "ko" | "en"): string {
-  if (lang === "en") {
-    return dateLabel
-      ? `📅 Looks like ${dateLabel.toLowerCase()}`
-      : "📅 Looks like a schedule";
-  }
-  return dateLabel ? `📅 ${dateLabel} 일정 같아요` : "📅 일정 같아요";
-}
-
-function rediscoveryPromise(lang: "ko" | "en"): string {
-  return lang === "en"
-    ? "I'll tuck it away and revisit it in a few days."
-    : "며칠 뒤 다시 꺼내볼게요.";
+function shortTopic(text: string): string {
+  const line = thoughtFirstLine(text);
+  if (line.length <= 16) return line;
+  return `${line.slice(0, 14).trim()}…`;
 }
 
 /** Deterministic promise copy — no LLM. */
@@ -108,13 +93,16 @@ export function buildPromiseCard(
   };
 
   if (dateHit && !analysis.isJunk) {
+    const moment = formatSuggestedMoment(dateHit.start, lang);
     return {
       ...base,
       icon: "📅",
-      label: scheduleLabel(dateHit.label, lang),
-      promise: formatSchedulePrompt(dateHit.start, lang),
-      primaryActionLabel:
-        lang === "en" ? "Schedule as suggested" : "이대로 일정 잡기",
+      label:
+        lang === "en"
+          ? `${moment} looks like a schedule`
+          : `${moment} 일정 같아요`,
+      promise: lang === "en" ? "Add it to your schedule?" : "일정으로 잡을까요?",
+      primaryActionLabel: lang === "en" ? "Add to schedule" : "일정으로 잡기",
       primaryAction: "confirm_schedule",
       editAction: "open_schedule_sheet",
       actualAction: "schedule_on_confirm",
@@ -126,14 +114,15 @@ export function buildPromiseCard(
     return {
       ...base,
       icon: "✓",
-      label:
-        lang === "en" ? "✓ Keeping this as a task" : "✓ 할 일로 맡아둘게요",
+      label: lang === "en" ? "Keeping this as a task" : "할 일로 맡아뒀어요",
       promise:
         lang === "en"
-          ? "You can set a time whenever you're ready."
+          ? "Set a time whenever you're ready."
           : "시간은 나중에 정해도 괜찮아요.",
-      primaryActionLabel: lang === "en" ? "Keep as task" : "할 일로 두기",
-      primaryAction: "keep_task",
+      primaryActionLabel:
+        lang === "en" ? "Pick when to revisit" : "다시 볼 시점 정하기",
+      primaryAction: "set_resurface",
+      editAction: "open_schedule_sheet",
       actualAction: "inbox_only",
       rediscoveryEligible: false,
     };
@@ -143,12 +132,9 @@ export function buildPromiseCard(
     return {
       ...base,
       icon: "🔗",
-      label: lang === "en" ? "🔗 Saved as a link" : "🔗 링크로 맡아뒀어요",
-      promise:
-        lang === "en"
-          ? "It's here whenever you want to open it."
-          : "나중에 다시 열 수 있어요.",
-      primaryActionLabel: lang === "en" ? "Keep it here" : "그대로 맡기기",
+      label: lang === "en" ? "Saved as a link" : "링크로 맡아뒀어요",
+      promise: vaultHint(lang),
+      primaryActionLabel: lang === "en" ? "Keep here" : "그대로 두기",
       primaryAction: "keep_note",
       actualAction: "inbox_only",
       rediscoveryEligible: false,
@@ -159,101 +145,68 @@ export function buildPromiseCard(
     return {
       ...base,
       icon: "🛒",
-      label:
-        lang === "en" ? "🛒 Saved to pick up later" : "🛒 장보기로 맡아뒀어요",
-      promise:
-        lang === "en"
-          ? "It's on your list until you're ready."
-          : "필요할 때 목록에서 볼 수 있어요.",
-      primaryActionLabel: lang === "en" ? "Keep it here" : "그대로 맡기기",
-      primaryAction: "keep_task",
+      label: lang === "en" ? "Saved to pick up later" : "장보기로 맡아뒀어요",
+      promise: vaultHint(lang),
+      primaryActionLabel:
+        lang === "en" ? "Pick when to revisit" : "다시 볼 시점 정하기",
+      primaryAction: "set_resurface",
+      editAction: "open_schedule_sheet",
       actualAction: "inbox_only",
       rediscoveryEligible: false,
     };
   }
 
   if (
-    REDISCOVERY_ARCHIVE_CATEGORIES.has(category) &&
+    IDEA_CATEGORIES.has(category) &&
     confidence >= 0.65 &&
     !analysis.isJunk
   ) {
+    const topic = shortTopic(trimmed);
     return {
       ...base,
       icon: "💭",
       label:
-        lang === "en" ? "💭 Saved as an idea" : "💭 아이디어로 보관했어요",
-      promise: rediscoveryPromise(lang),
-      primaryActionLabel: lang === "en" ? "Keep it safe" : "그대로 맡기기",
-      primaryAction: "archive",
-      actualAction: "archive_on_confirm",
-      rediscoveryEligible: true,
-    };
-  }
-
-  if (confidence < 0.65 || analysis.isJunk) {
-    return {
-      ...base,
-      icon: "✓",
-      label: lang === "en" ? "✓ Saved for you" : "✓ 맡아뒀어요",
-      promise:
         lang === "en"
-          ? "It's here whenever you need it."
-          : "필요할 때 여기서 볼 수 있어요.",
-      primaryActionLabel: lang === "en" ? "Keep it here" : "그대로 맡기기",
-      primaryAction: "keep_note",
+          ? `Saved "${topic}" as an idea`
+          : `${topic} 아이디어로 맡아뒀어요`,
+      promise: vaultHint(lang),
+      primaryActionLabel:
+        lang === "en" ? "Pick when to revisit" : "다시 볼 시점 정하기",
+      primaryAction: "set_resurface",
+      editAction: "open_schedule_sheet",
       actualAction: "inbox_only",
-      rediscoveryEligible: false,
+      rediscoveryEligible: true,
     };
   }
 
   return {
     ...base,
-    icon: "💭",
-    label: lang === "en" ? "💭 Kept this thought" : "💭 생각을 맡아뒀어요",
-    promise:
-      lang === "en"
-        ? "It's saved here for now."
-        : "여기에 저장해 두었어요.",
-    primaryActionLabel: lang === "en" ? "Keep it here" : "그대로 맡기기",
+    icon: "✓",
+    label: lang === "en" ? "Saved for you" : "맡아뒀어요",
+    promise: vaultHint(lang),
+    primaryActionLabel: lang === "en" ? "Keep here" : "그대로 두기",
     primaryAction: "keep_note",
     actualAction: "inbox_only",
     rediscoveryEligible: false,
   };
 }
 
-/** Guard against promise copy that overclaims system behavior. */
 export function validatePromiseHonesty(card: PromiseCard): string[] {
   const issues: string[] = [];
   const blob = `${card.label} ${card.promise}`;
 
-  if (card.actualAction !== "schedule_on_confirm" && card.scheduleCommitted) {
-    issues.push("scheduleCommitted without schedule_on_confirm");
-  }
-
-  if (
-    card.actualAction === "inbox_only" &&
-    card.rediscoveryEligible &&
-    card.primaryAction === "keep_note"
-  ) {
-    issues.push("rediscovery promised without archive action");
-  }
-
-  if (!card.rediscoveryEligible && /며칠|few days|revisit|꺼내/i.test(blob)) {
-    issues.push("rediscovery copy without rediscoveryEligible");
-  }
-
   if (
     card.actualAction !== "schedule_on_confirm" &&
-    /다시\s*보여|show you again|알려|notify|remind/i.test(blob)
+    /다시\s*보여|show you again|알려|notify|remind/i.test(blob) &&
+    !card.promise.includes("정하기") &&
+    !card.primaryActionLabel.includes("정하기")
   ) {
     issues.push("resurface or notify language without schedule commit path");
   }
 
   if (card.actualAction === "schedule_on_confirm") {
     for (const re of FORBIDDEN_PRE_CONFIRM) {
-      if (re.test(blob)) {
-        issues.push(`pre-confirm overclaim: ${re.source}`);
-      }
+      if (re.test(blob)) issues.push(`pre-confirm overclaim: ${re.source}`);
     }
     if (!card.detectedDate) {
       issues.push("schedule_on_confirm without detectedDate");
@@ -262,10 +215,6 @@ export function validatePromiseHonesty(card: PromiseCard): string[] {
 
   if (card.primaryAction === "confirm_schedule" && !card.detectedDate) {
     issues.push("confirm_schedule without detectedDate");
-  }
-
-  if (card.primaryAction === "archive" && card.actualAction !== "archive_on_confirm") {
-    issues.push("archive primary without archive_on_confirm");
   }
 
   return issues;

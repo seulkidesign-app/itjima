@@ -25,7 +25,7 @@ async function seed(page: import("@playwright/test").Page, width: number) {
     },
   );
   await page.reload();
-  await page.getByRole("link", { name: /^Thoughts/ }).waitFor({ state: "visible" });
+  await page.getByRole("link", { name: /^Throw/ }).waitFor({ state: "visible" });
   const close = page.getByRole("button", { name: "Close" });
   if (await close.count()) await close.first().click();
 }

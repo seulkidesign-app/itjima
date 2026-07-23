@@ -28,9 +28,9 @@ export function SideNav() {
   const [feedbackOpen, setFeedbackOpen] = useState(false);
 
   const items = [
-    { to: "/", label: t("생각", "Thoughts"), Icon: Inbox },
-    { to: "/schedule", label: t("할 일", "Tasks"), Icon: Calendar },
-    { to: "/archive", label: t("생각 지도", "Thought map"), Icon: Archive },
+    { to: "/", label: t("던지기", "Throw"), Icon: Inbox },
+    { to: "/schedule", label: t("오늘", "Today"), Icon: Calendar },
+    { to: "/archive", label: t("생각 보관함", "Vault"), Icon: Archive },
   ] as const;
 
   return (
