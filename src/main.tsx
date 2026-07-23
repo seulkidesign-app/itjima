@@ -3,8 +3,11 @@ import { createRoot } from "react-dom/client";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { RouterProvider } from "@tanstack/react-router";
 import { supabase } from "./integrations/supabase/client";
+import { installGuestDataSafety } from "./lib/guestDataSafety";
 import { queryClient, router } from "./router";
 import "./styles.css";
+
+installGuestDataSafety();
 
 // Start PKCE exchange as early as possible on the OAuth callback route
 if (
