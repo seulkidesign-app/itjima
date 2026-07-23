@@ -122,7 +122,6 @@ export function buildPromiseCard(
       primaryActionLabel:
         lang === "en" ? "Pick when to revisit" : "다시 볼 시점 정하기",
       primaryAction: "set_resurface",
-      editAction: "open_schedule_sheet",
       actualAction: "inbox_only",
       rediscoveryEligible: false,
     };
@@ -150,7 +149,6 @@ export function buildPromiseCard(
       primaryActionLabel:
         lang === "en" ? "Pick when to revisit" : "다시 볼 시점 정하기",
       primaryAction: "set_resurface",
-      editAction: "open_schedule_sheet",
       actualAction: "inbox_only",
       rediscoveryEligible: false,
     };
@@ -173,7 +171,6 @@ export function buildPromiseCard(
       primaryActionLabel:
         lang === "en" ? "Pick when to revisit" : "다시 볼 시점 정하기",
       primaryAction: "set_resurface",
-      editAction: "open_schedule_sheet",
       actualAction: "inbox_only",
       rediscoveryEligible: true,
     };

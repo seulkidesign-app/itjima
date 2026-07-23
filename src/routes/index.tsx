@@ -7,6 +7,7 @@ import {
   Calendar,
   Archive as ArchiveIcon,
   Sparkles,
+  ListOrdered,
 } from "lucide-react";
 import { ChatSwipeRow } from "@/components/ChatSwipeRow";
 import { FocusSortMode } from "@/components/FocusSortMode";
@@ -590,6 +591,14 @@ function Inbox() {
               onClick={() => {
                 setMenuFor(null);
                 setCleanupReviewOpen(true);
+              }}
+            />
+            <MenuItem
+              icon={<ListOrdered size={18} />}
+              label={t("하나씩 정리", "One by one")}
+              onClick={() => {
+                setMenuFor(null);
+                openFocusSort();
               }}
             />
             <MenuItem

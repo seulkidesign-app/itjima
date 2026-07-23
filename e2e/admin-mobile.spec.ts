@@ -13,10 +13,11 @@ test.describe("Admin on mobile", () => {
     await injectSignedInUser(page);
   });
 
-  test("admin link appears in mobile top nav and opens admin page", async ({
+  test("admin link appears in settings and opens admin page", async ({
     page,
   }) => {
     const frame = phone(page);
+    await frame.getByRole("button", { name: "Settings", exact: true }).click();
     const adminLink = frame.getByRole("link", { name: "Admin", exact: true });
     await adminLink.waitFor({ state: "visible" });
     await adminLink.click();

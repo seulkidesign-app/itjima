@@ -118,7 +118,15 @@ test.describe("Navigation and modals", () => {
     await addThought(page, "First thought for sort");
     await addThought(page, "Second thought for sort");
 
-    await phone(page).getByRole("button", { name: "One by one" }).click();
+    const frame = phone(page);
+    const bubble = frame.getByText("First thought for sort", { exact: true }).first();
+    await bubble.dispatchEvent("pointerdown", { button: 0, pointerId: 1 });
+    await page.waitForTimeout(520);
+    await bubble.dispatchEvent("pointerup", { button: 0, pointerId: 1 });
+    await frame
+      .getByRole("dialog")
+      .getByRole("button", { name: "One by one", exact: true })
+      .click();
     await phone(page)
       .getByRole("dialog", { name: "One by one" })
       .waitFor({ state: "visible" });
@@ -152,7 +160,7 @@ test.describe("Navigation and modals", () => {
     await phone(page).getByRole("dialog").click({ position: { x: 20, y: 20 } });
     await expect(phone(page).getByRole("dialog")).toHaveCount(0);
     await phone(page).getByRole("link", { name: /^Throw/ }).click();
-    await phone(page).getByText("Leave it here").waitFor();
+    await phone(page).getByText("Just throw it here.").waitFor();
   });
 
   test("context menu blocks tab navigation until dismissed", async ({

@@ -95,8 +95,16 @@ export async function dismissInlinePromise(page: Page) {
   const frame = phone(page);
   const promise = frame.getByTestId("inline-promise");
   if (!(await promise.isVisible().catch(() => false))) return;
-  const keep = frame.getByTestId("promise-primary");
-  if (await keep.isVisible()) {
+
+  const primary = frame.getByTestId("promise-primary");
+  const label = ((await primary.textContent()) ?? "").trim();
+  if (/Keep here|그대로 두기/i.test(label)) {
+    await primary.click();
+  } else {
+    await frame.getByTestId("promise-edit").click();
+    const keep = frame
+      .getByTestId("promise-edit-menu")
+      .getByRole("button", { name: "Keep here", exact: true });
     await keep.click();
   }
   await promise.waitFor({ state: "hidden", timeout: 8000 }).catch(() => {});
