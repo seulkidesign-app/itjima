@@ -1,17 +1,13 @@
 import {
   useCallback,
   useEffect,
+  useMemo,
   useRef,
   useState,
-  type PointerEvent,
 } from "react";
-import { animate, motion, AnimatePresence } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import { useT, useLang } from "@/lib/i18n";
-import {
-  confirm as confirmHaptic,
-  haptic,
-  tickDebounced,
-} from "@/lib/haptics";
+import { confirm as confirmHaptic, haptic } from "@/lib/haptics";
 import {
   isBrainMirrorCandidate,
   type BrainMirrorResult,
@@ -20,44 +16,29 @@ import { fetchBrainMirror } from "@/lib/brainMirrorApi";
 import { isChatFiller } from "@/lib/junkDetect";
 import { buildCalmInterpretation } from "@/lib/mirrorSentence";
 import {
+  buildPromiseCard,
+  type PromiseCard,
+} from "@/lib/promiseCard";
+import {
   useInbox,
   setInboxBrainMirror,
   type InboxItem,
 } from "@/lib/store";
-import {
-  SWIPE_PREVIEW,
-  dragProgress,
-  cardShadowBlur,
-  EASE_OUT_APP,
-} from "@/lib/motion";
-import {
-  MOTION_ARCHIVE,
-  MOTION_SCHEDULE,
-  MOTION_DELETE,
-} from "@/lib/motionLanguage";
-import {
-  rubberBand,
-  swipeRotation,
-  swipeOpacity,
-} from "@/lib/swipePhysics";
+import { EASE_OUT_APP } from "@/lib/motion";
 
 type Phase = "emerge" | "understand" | "mirror" | "interactive" | "exit";
-type ExitDir = "left" | "right" | "up";
 
 type Props = {
   item: InboxItem;
   pendingSchedule?: boolean;
   onArchive: (item: InboxItem) => void | Promise<void>;
   onSchedule: (item: InboxItem) => void;
+  onConfirmScheduleQuick: (item: InboxItem) => void | Promise<void>;
   onLetGo: (item: InboxItem) => void | Promise<void>;
   onComplete: () => void;
-  /** Centered when inbox is empty; overlay when list exists */
   variant?: "hero" | "overlay";
 };
 
-const MAX_DRAG_X = 320;
-const MAX_DRAG_Y = 160;
-const COMMIT_PX = 88;
 const UNDERSTAND_MS = 1000;
 const MIRROR_TIMEOUT_MS = 8000;
 const PHASE_SAFETY_MS = 3500;
@@ -74,7 +55,7 @@ const MIRROR_REVEAL = {
 const HINT_REVEAL = {
   duration: 0.65,
   ease: EASE_OUT_APP,
-  delay: 1.05,
+  delay: 0.35,
 };
 
 function advancePhase(current: Phase, next: Phase): Phase {
@@ -85,37 +66,12 @@ function advancePhase(current: Phase, next: Phase): Phase {
   return next;
 }
 
-function SwipeStamp({
-  dir,
-  progress,
-  label,
-}: {
-  dir: ExitDir;
-  progress: number;
-  label: string;
-}) {
-  if (progress < 0.28) return null;
-  const opacity = Math.min(0.5, (progress - 0.28) * 1.6);
-  const base =
-    "pointer-events-none absolute z-[2] rounded-xl border px-3 py-1.5 text-[12px] font-semibold uppercase tracking-[0.06em]";
-  const pos =
-    dir === "left"
-      ? "left-5 top-1/2 -translate-y-1/2 -rotate-12 border-ink bg-ink/[0.06] text-ink"
-      : dir === "right"
-        ? "right-5 top-1/2 -translate-y-1/2 rotate-12 border-primary bg-primary/10 text-primary"
-        : "left-1/2 top-6 -translate-x-1/2 -rotate-3 border-meta/40 bg-meta/8 text-meta";
-  return (
-    <div className={`${base} ${pos}`} style={{ opacity }}>
-      {label}
-    </div>
-  );
-}
-
 export function CaptureRelease({
   item,
   pendingSchedule = false,
   onArchive,
   onSchedule,
+  onConfirmScheduleQuick,
   onLetGo,
   onComplete,
   variant = "overlay",
@@ -125,66 +81,20 @@ export function CaptureRelease({
   const inbox = useInbox();
   const inboxRef = useRef(inbox);
   inboxRef.current = inbox;
-  const cardRef = useRef<HTMLDivElement>(null);
+  const cardZoneRef = useRef<HTMLDivElement>(null);
   const actingRef = useRef(false);
   const completingRef = useRef(false);
-  const thresholdFired = useRef<ExitDir | null>(null);
-  const previewFired = useRef<ExitDir | null>(null);
-  const velocity = useRef({ x: 0, y: 0 });
-  const lastMove = useRef({ x: 0, y: 0, t: 0 });
-  const start = useRef({ x: 0, y: 0 });
-  const offsetRef = useRef({ x: 0, y: 0 });
   const abortRef = useRef<AbortController | null>(null);
-  const cardZoneRef = useRef<HTMLDivElement>(null);
 
   const [phase, setPhase] = useState<Phase>("emerge");
-  const [interpretation, setInterpretation] = useState<string | null>(null);
   const [emergeY, setEmergeY] = useState(0);
   const [emergeReady, setEmergeReady] = useState(false);
-  const [offset, setOffset] = useState({ x: 0, y: 0 });
-  const [dragging, setDragging] = useState(false);
-  const [exiting, setExiting] = useState(false);
-  const [cardOpacity, setCardOpacity] = useState(1);
+  const [editOpen, setEditOpen] = useState(false);
 
-  offsetRef.current = offset;
-
-  const interactive = phase === "interactive" || phase === "mirror";
-  const locked =
-    exiting ||
-    actingRef.current ||
-    pendingSchedule ||
-    phase === "emerge" ||
-    phase === "understand" ||
-    phase === "exit";
-
-  const cardW = useCallback(
-    () => cardRef.current?.offsetWidth ?? 300,
-    [],
+  const promiseCard = useMemo(
+    () => buildPromiseCard(item.text, lang === "en" ? "en" : "ko"),
+    [item.text, lang],
   );
-
-  const commitThreshold = useCallback(
-    () => Math.max(COMMIT_PX, cardW() * 0.28),
-    [cardW],
-  );
-
-  const springBack = useCallback(() => {
-    animate(0, 1, {
-      duration: 0.38,
-      ease: EASE_OUT_APP,
-      onUpdate: (p) => {
-        const ease = 1 - Math.pow(1 - p, 3);
-        setOffset({
-          x: offsetRef.current.x * (1 - ease),
-          y: offsetRef.current.y * (1 - ease),
-        });
-      },
-      onComplete: () => setOffset({ x: 0, y: 0 }),
-    });
-  }, []);
-
-  useEffect(() => {
-    if (!pendingSchedule) springBack();
-  }, [pendingSchedule, springBack]);
 
   const finishRelease = useCallback(() => {
     if (completingRef.current) return;
@@ -208,23 +118,14 @@ export function CaptureRelease({
     };
 
     setPhase("emerge");
-    setInterpretation(null);
+    setEditOpen(false);
     setEmergeReady(false);
-    setOffset({ x: 0, y: 0 });
-    setCardOpacity(1);
     completingRef.current = false;
     actingRef.current = false;
-    setExiting(false);
 
     schedule(() => setPhase((p) => advancePhase(p, "understand")), 320);
 
     void (async () => {
-      let mirror: BrainMirrorResult | null = null;
-      let sentence = buildCalmInterpretation(
-        item.text,
-        lang === "en" ? "en" : "ko",
-      );
-
       if (
         item.text.trim().length >= 2 &&
         !isChatFiller(item.text) &&
@@ -242,8 +143,8 @@ export function CaptureRelease({
             }),
           ]);
           if (outcome.status === "ok") {
-            mirror = outcome.result;
-            sentence = buildCalmInterpretation(
+            const mirror: BrainMirrorResult = outcome.result;
+            const sentence = buildCalmInterpretation(
               item.text,
               lang === "en" ? "en" : "ko",
               mirror,
@@ -260,25 +161,19 @@ export function CaptureRelease({
             }
           }
         } catch {
-          /* quiet — local sentence still shown */
+          /* quiet */
         }
       }
 
       const elapsed = performance.now() - t0;
       const wait = Math.max(0, UNDERSTAND_MS - elapsed);
       schedule(() => {
-        setInterpretation(sentence);
         setPhase((p) => advancePhase(p, "mirror"));
         schedule(() => setPhase((p) => advancePhase(p, "interactive")), 920);
       }, wait);
     })();
 
     schedule(() => {
-      setInterpretation(
-        (prev) =>
-          prev ??
-          buildCalmInterpretation(item.text, lang === "en" ? "en" : "ko"),
-      );
       setPhase((p) => advancePhase(p, "interactive"));
     }, PHASE_SAFETY_MS);
 
@@ -307,183 +202,47 @@ export function CaptureRelease({
     requestAnimationFrame(measure);
   }, [item.id, variant]);
 
-  const openScheduleSwipe = useCallback(async () => {
-    if (actingRef.current) return;
+  const runPrimary = async (card: PromiseCard) => {
+    if (actingRef.current || pendingSchedule) return;
     actingRef.current = true;
-    setExiting(true);
-    setDragging(false);
     confirmHaptic();
     try {
-      const w = cardW();
-      const from = offsetRef.current;
-      await animate(from.x, w * 0.42, {
-        ...MOTION_SCHEDULE,
-        velocity: velocity.current.x * 0.3,
-        onUpdate: (v) => setOffset((o) => ({ ...o, x: v })),
-      }).finished;
-      onSchedule(item);
+      switch (card.primaryAction) {
+        case "confirm_schedule":
+          await onConfirmScheduleQuick(item);
+          break;
+        case "archive":
+          await onArchive(item);
+          finishRelease();
+          break;
+        case "keep_task":
+        case "keep_note":
+          finishRelease();
+          break;
+      }
     } finally {
-      setExiting(false);
       actingRef.current = false;
     }
-  }, [cardW, item, onSchedule]);
+  };
 
-  const flyAway = useCallback(
-    async (dir: ExitDir) => {
-      if (actingRef.current) return;
-      if (dir === "right") {
-        await openScheduleSwipe();
-        return;
-      }
-
-      actingRef.current = true;
-      setExiting(true);
-      setDragging(false);
+  const runEdit = (card: PromiseCard) => {
+    if (actingRef.current || pendingSchedule) return;
+    if (card.editAction === "open_schedule_sheet") {
       confirmHaptic();
-      setPhase("exit");
-
-      const { x, y } = offsetRef.current;
-      const spring = dir === "left" ? MOTION_ARCHIVE : MOTION_DELETE;
-      const target =
-        dir === "left"
-          ? { x: x - 420, y: y - 40 }
-          : { x, y: y - 480 };
-
-      try {
-        await Promise.all([
-          animate(x, target.x, {
-            ...spring,
-            onUpdate: (v) => setOffset((o) => ({ ...o, x: v })),
-          }).finished,
-          animate(y, target.y, {
-            ...spring,
-            onUpdate: (v) => setOffset((o) => ({ ...o, y: v })),
-          }).finished,
-          animate(cardOpacity, 0, {
-            ...spring,
-            onUpdate: (v) => setCardOpacity(v),
-          }).finished,
-        ]);
-        if (dir === "left") await onArchive(item);
-        else await onLetGo(item);
-      } catch {
-        /* still exit release overlay */
-      } finally {
-        actingRef.current = false;
-        setExiting(false);
-        finishRelease();
-      }
-    },
-    [cardOpacity, finishRelease, item, onArchive, onLetGo, openScheduleSwipe],
-  );
-
-  const onDown = (e: PointerEvent<HTMLDivElement>) => {
-    if (locked || !interactive) return;
-    setDragging(true);
-    thresholdFired.current = null;
-    previewFired.current = null;
-    velocity.current = { x: 0, y: 0 };
-    lastMove.current = { x: e.clientX, y: e.clientY, t: performance.now() };
-    start.current = { x: e.clientX, y: e.clientY };
-    (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
-  };
-
-  const resolveDir = (x: number, y: number): ExitDir | null => {
-    const absX = Math.abs(x);
-    const absY = Math.abs(y);
-    if (absY > absX && y < 0) return "up";
-    if (absX > absY) return x < 0 ? "left" : "right";
-    return null;
-  };
-
-  const onMove = (e: PointerEvent) => {
-    if (!dragging || locked) return;
-    const now = performance.now();
-    const dt = Math.max(1, now - lastMove.current.t);
-    velocity.current = {
-      x: (e.clientX - lastMove.current.x) / dt,
-      y: (e.clientY - lastMove.current.y) / dt,
-    };
-    lastMove.current = { x: e.clientX, y: e.clientY, t: now };
-
-    const rawX = e.clientX - start.current.x;
-    const rawY = e.clientY - start.current.y;
-    const x = rubberBand(rawX, MAX_DRAG_X);
-    const y = rubberBand(rawY, MAX_DRAG_Y);
-    setOffset({ x, y });
-
-    const dir = resolveDir(x, y);
-    if (!dir) {
-      previewFired.current = null;
-      thresholdFired.current = null;
+      onSchedule(item);
       return;
     }
-
-    const mag =
-      dir === "up"
-        ? dragProgress(-y, commitThreshold())
-        : dragProgress(dir === "left" ? -x : x, commitThreshold());
-
-    if (mag >= SWIPE_PREVIEW && previewFired.current !== dir) {
-      previewFired.current = dir;
-      tickDebounced(48);
-    }
-    if (mag >= 0.85 && thresholdFired.current !== dir) {
-      thresholdFired.current = dir;
-      haptic([10, 18, 10]);
-    }
-    if (mag < SWIPE_PREVIEW) previewFired.current = null;
-    if (mag < 0.85) thresholdFired.current = null;
+    haptic(6);
+    setEditOpen(true);
   };
-
-  const onUp = () => {
-    if (!dragging) return;
-    setDragging(false);
-    const threshold = commitThreshold();
-    const { x, y } = offsetRef.current;
-    const absX = Math.abs(x);
-    const absY = Math.abs(y);
-    const vx = velocity.current.x;
-    const vy = velocity.current.y;
-
-    if (absY > absX && y < 0) {
-      if (absY > threshold || vy < -420) {
-        void flyAway("up");
-        return;
-      }
-    } else if (absX >= absY) {
-      if (x < 0 && (absX > threshold || vx < -450)) {
-        void flyAway("left");
-        return;
-      }
-      if (x > 0 && (absX > threshold || vx > 450)) {
-        void flyAway("right");
-        return;
-      }
-    }
-    springBack();
-  };
-
-  const memoryProgress =
-    offset.x < 0 ? Math.min(1, -offset.x / commitThreshold()) : 0;
-  const scheduleProgress =
-    offset.x > 0 ? Math.min(1, offset.x / commitThreshold()) : 0;
-  const letGoProgress =
-    offset.y < 0 ? Math.min(1, -offset.y / commitThreshold()) : 0;
-  const progressMag = Math.max(memoryProgress, scheduleProgress, letGoProgress);
-  const rotate = dragging ? swipeRotation(offset.x, cardW()) * 0.55 : 0;
-  const shadow = cardShadowBlur(progressMag);
-  const shadowHeld = phase === "understand" && !dragging;
 
   const shellClass =
     variant === "hero"
       ? "relative z-10 flex flex-1 flex-col items-center justify-center px-6 pb-8"
       : "pointer-events-auto fixed inset-0 z-[45] flex items-center justify-center px-6 pb-[116px] pt-16";
 
-  const cardShadowStyle =
-    dragging || exiting
-      ? `0 ${8 + shadow * 0.3}px ${shadow}px oklch(0 0 0 / ${0.08 + progressMag * 0.06})`
-      : undefined;
+  const showPromise = phase !== "emerge" && phase !== "understand";
+  const showActions = phase === "interactive" && !pendingSchedule;
 
   return (
     <div className={shellClass} aria-live="polite">
@@ -494,7 +253,7 @@ export function CaptureRelease({
           animate={{ opacity: 1 }}
           transition={{ duration: 0.72, ease: EASE_OUT_APP }}
           onClick={() => {
-            if (!pendingSchedule) finishRelease();
+            if (!pendingSchedule && !editOpen) finishRelease();
           }}
         />
       )}
@@ -511,48 +270,11 @@ export function CaptureRelease({
         animate={{ y: 0, opacity: 1 }}
         transition={EMERGE}
       >
-        <motion.div
-          className="relative w-full"
-          style={{
-            opacity:
-              swipeOpacity(
-                Math.abs(offset.x) + Math.abs(offset.y) * 0.4,
-                MAX_DRAG_X,
-              ) * cardOpacity,
-            rotate,
-            x: offset.x,
-            y: offset.y,
-          }}
+        <div
+          className={`relative w-full rounded-[32px] bg-white px-[26px] py-9 shadow-[0_2px_6px_rgba(0,0,0,0.035),0_10px_32px_-12px_rgba(0,0,0,0.08)] ring-1 ring-ink/[0.04] ${
+            phase === "understand" ? "capture-shadow-held" : ""
+          }`}
         >
-          <motion.div
-            ref={cardRef}
-            className={`relative touch-none select-none rounded-[32px] bg-white px-[26px] py-9 ${
-              shadowHeld
-                ? "capture-shadow-held"
-                : "shadow-[0_2px_6px_rgba(0,0,0,0.035),0_10px_32px_-12px_rgba(0,0,0,0.08)] ring-1 ring-ink/[0.04]"
-            }`}
-            style={{ boxShadow: cardShadowStyle }}
-            onPointerDown={onDown}
-            onPointerMove={onMove}
-            onPointerUp={onUp}
-            onPointerCancel={onUp}
-          >
-          <SwipeStamp
-            dir="left"
-            progress={memoryProgress}
-            label={t("생각 지도", "Thought map")}
-          />
-          <SwipeStamp
-            dir="right"
-            progress={scheduleProgress}
-            label={t("할 일", "Tasks")}
-          />
-          <SwipeStamp
-            dir="up"
-            progress={letGoProgress}
-            label={t("내려놓기", "Let go")}
-          />
-
           {item.images?.length > 0 && (
             <div className="mb-4 flex gap-2 overflow-x-auto">
               {item.images.map((src, i) => (
@@ -571,40 +293,122 @@ export function CaptureRelease({
           </p>
 
           <AnimatePresence>
-            {interpretation && phase !== "emerge" && phase !== "understand" && (
+            {showPromise && (
               <motion.div
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
+                initial={{ opacity: 0, y: 8 }}
+                animate={{ opacity: 1, y: 0 }}
                 transition={MIRROR_REVEAL}
-                className="mt-[40px]"
+                className="mt-8 border-t border-ink/[0.06] pt-7"
+                data-testid="promise-card"
               >
-                <p className="text-[15px] font-normal leading-[1.75] tracking-[0.015em] text-[rgba(154,154,144,0.62)]">
-                  {interpretation}
+                <p className="text-[15px] font-semibold leading-snug text-ink">
+                  {promiseCard.label}
+                </p>
+                <p className="mt-2.5 text-[15px] font-normal leading-[1.7] tracking-[0.01em] text-ink-soft">
+                  {promiseCard.promise}
+                </p>
+                <p className="mt-3 text-[12px] font-medium text-primary">
+                  {t("저장됨", "Saved")}
                 </p>
               </motion.div>
             )}
           </AnimatePresence>
-          </motion.div>
-        </motion.div>
+        </div>
 
         <AnimatePresence>
-          {phase === "interactive" && !pendingSchedule && (
+          {showActions && (
             <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 0.62 }}
-              exit={{ opacity: 0, transition: { duration: 0.32, ease: EASE_OUT_APP } }}
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0 }}
               transition={HINT_REVEAL}
-              className="mt-[38px] flex w-full items-center justify-between px-[10px] text-[11px] font-normal tracking-[0.015em] text-[rgba(154,154,144,0.34)]"
+              className="mt-6 flex w-full gap-2.5"
             >
-              <span>← {t("생각 지도", "Thought map")}</span>
-              <span>↑ {t("놓기", "Let go")}</span>
-              <span className="rounded-full bg-primary px-3 py-[5px] font-medium text-ink/75">
-                {t("할 일 →", "Tasks →")}
-              </span>
+              <button
+                type="button"
+                data-testid="promise-primary"
+                onClick={() => void runPrimary(promiseCard)}
+                className="pill-yellow touch-press min-h-[48px] flex-1 px-4 py-3 text-[14px] font-bold text-ink"
+              >
+                {promiseCard.primaryActionLabel}
+              </button>
+              <button
+                type="button"
+                data-testid="promise-edit"
+                onClick={() => runEdit(promiseCard)}
+                className="touch-press min-h-[48px] rounded-full border border-ink/12 bg-white px-5 py-3 text-[14px] font-semibold text-ink shadow-[0_1px_4px_oklch(0_0_0/0.04)]"
+              >
+                {promiseCard.editActionLabel}
+              </button>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        <AnimatePresence>
+          {editOpen && showActions && (
+            <motion.div
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0 }}
+              className="mt-3 w-full rounded-[24px] border border-ink/8 bg-white p-2 shadow-float"
+              data-testid="promise-edit-menu"
+            >
+              <EditMenuButton
+                label={t("할 일로 잡기", "Set a time")}
+                onClick={() => {
+                  setEditOpen(false);
+                  onSchedule(item);
+                }}
+              />
+              <EditMenuButton
+                label={t("생각 지도에 보관", "Save to thought map")}
+                onClick={() => {
+                  setEditOpen(false);
+                  void (async () => {
+                    await onArchive(item);
+                    finishRelease();
+                  })();
+                }}
+              />
+              <EditMenuButton
+                label={t("내려놓기", "Let go")}
+                onClick={() => {
+                  setEditOpen(false);
+                  void (async () => {
+                    await onLetGo(item);
+                    finishRelease();
+                  })();
+                }}
+              />
+              <EditMenuButton
+                label={t("여기에 두기", "Keep here")}
+                onClick={() => {
+                  setEditOpen(false);
+                  finishRelease();
+                }}
+              />
             </motion.div>
           )}
         </AnimatePresence>
       </motion.div>
     </div>
+  );
+}
+
+function EditMenuButton({
+  label,
+  onClick,
+}: {
+  label: string;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className="touch-press w-full rounded-[18px] px-4 py-3.5 text-left text-[14px] font-medium text-ink active:bg-ink/[0.04]"
+    >
+      {label}
+    </button>
   );
 }

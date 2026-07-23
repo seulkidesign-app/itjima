@@ -22,14 +22,14 @@ test.describe("Brain Mirror API failures", () => {
     const input = frame.locator("textarea").first();
     await input.fill(text);
     await frame.getByRole("button", { name: "Leave it", exact: true }).click();
-    await frame.getByText(text, { exact: true }).waitFor({ state: "visible" });
-    await frame.getByText("Tasks →").waitFor({ state: "visible", timeout: 15_000 });
+    await frame.getByTestId("promise-card").waitFor({ state: "visible", timeout: 15_000 });
+    await frame.getByTestId("promise-primary").waitFor({ state: "visible" });
     await expect(
       page.getByText("Couldn't load a reflection right now"),
     ).toHaveCount(0);
   });
 
-  test("still offers task routing when API fails but date is detected", async ({
+  test("still offers schedule routing when API fails but date is detected", async ({
     page,
   }) => {
     const text =
@@ -38,8 +38,10 @@ test.describe("Brain Mirror API failures", () => {
     const input = frame.locator("textarea").first();
     await input.fill(text);
     await frame.getByRole("button", { name: "Leave it", exact: true }).click();
-    await frame.getByText(text, { exact: true }).waitFor({ state: "visible" });
-    await frame.getByText("Tasks →").waitFor({ state: "visible", timeout: 15_000 });
+    await frame.getByTestId("promise-card").waitFor({ state: "visible", timeout: 15_000 });
+    await expect(frame.getByTestId("promise-primary")).toHaveText(
+      "Schedule as suggested",
+    );
     await expect(
       page.getByText("Couldn't load a reflection right now"),
     ).toHaveCount(0);

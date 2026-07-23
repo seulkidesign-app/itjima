@@ -21,6 +21,8 @@ import { InstallPrompt } from "@/components/InstallPrompt";
 import { SyncIndicator } from "@/components/SyncIndicator";
 import { EmptyState } from "@/components/EmptyState";
 import { runUserOrganize } from "@/components/BrainMirrorSummary";
+import { thoughtFirstLine } from "@/lib/brainMirror";
+import { detectDate } from "@/lib/dateDetect";
 import { archiveFromInbox, scheduleFromInbox } from "@/lib/thoughtProvenance";
 import { setRevivalHint } from "@/lib/archiveMeta";
 import {
@@ -333,6 +335,48 @@ function Inbox() {
     setFocusScheduleSheet({ open: true, item: it });
   };
 
+  const commitInboxSchedule = async (
+    it: InboxItem,
+    text: string,
+    start: Date,
+    end: Date,
+    options: ScheduleConfirmOptions,
+    source: string,
+  ) => {
+    const payload = scheduleFromInbox(it, {
+      text,
+      start_time: start.toISOString(),
+      end_time: end.toISOString(),
+      alarm: options.reminderMinutes !== null,
+      all_day: options.allDay,
+      start_all_day: options.startAllDay,
+      end_all_day: options.endAllDay,
+      repeat: options.repeat,
+    });
+    const { cloudSynced: scheduleSynced } = await schedules.add({
+      ...payload,
+      ...(options.reminderMinutes !== null
+        ? {
+            alarm_at: new Date(
+              start.getTime() - options.reminderMinutes * 60 * 1000,
+            ).toISOString(),
+          }
+        : {}),
+    });
+    const inboxSynced = await inbox.remove(it.id);
+    track("schedule_created", {
+      source,
+      text_length: text.length,
+    });
+    setFocusScheduleSheet({ open: false });
+    setFocusPendingScheduleId(null);
+    if (releaseItemRef.current?.id === it.id) completeRelease();
+    if (focusSortOpen) setScheduleCommittedId(it.id);
+    if (allCloudSynced(scheduleSynced, inboxSynced)) {
+      toast.success(t("그때 다시 떠올릴게요", "I'll remember this for then"));
+    }
+  };
+
   const saveHomeSchedule = async (
     text: string,
     start: Date,
@@ -342,44 +386,45 @@ function Inbox() {
     const it = focusScheduleSheet.item;
     if (!it) return;
     try {
-      const payload = scheduleFromInbox(it, {
+      await commitInboxSchedule(
+        it,
         text,
-        start_time: start.toISOString(),
-        end_time: end.toISOString(),
-        alarm: options.reminderMinutes !== null,
-        all_day: options.allDay,
-        start_all_day: options.startAllDay,
-        end_all_day: options.endAllDay,
-        repeat: options.repeat,
-      });
-      const { item: created, cloudSynced: scheduleSynced } = await schedules.add({
-        ...payload,
-        ...(options.reminderMinutes !== null
-          ? {
-              alarm_at: new Date(
-                start.getTime() - options.reminderMinutes * 60 * 1000,
-              ).toISOString(),
-            }
-          : {}),
-      });
-      const inboxSynced = await inbox.remove(it.id);
-      track("schedule_created", {
-        source:
-          focusSortOpen && focusPendingScheduleId === it.id
-            ? "focus_sort"
-            : "inbox_swipe",
-        text_length: text.length,
-      });
-      setFocusScheduleSheet({ open: false });
-      setFocusPendingScheduleId(null);
-      if (releaseItemRef.current?.id === it.id) completeRelease();
-      if (focusSortOpen) setScheduleCommittedId(it.id);
-      if (allCloudSynced(scheduleSynced, inboxSynced)) {
-        toast.success(t("그때 다시 떠올릴게요", "I'll remember this for then"));
-      }
+        start,
+        end,
+        options,
+        focusSortOpen && focusPendingScheduleId === it.id
+          ? "focus_sort"
+          : "inbox_swipe",
+      );
     } catch {
       toast.error(t("일정을 남기지 못했어요", "Couldn't anchor it in time"));
       if (releaseItemRef.current?.id === it.id) cancelReleaseSchedule();
+    }
+  };
+
+  const confirmReleaseScheduleQuick = async (it: InboxItem) => {
+    const det = detectDate(it.text);
+    if (!det) {
+      beginReleaseSchedule(it);
+      return;
+    }
+    try {
+      await commitInboxSchedule(
+        it,
+        thoughtFirstLine(it.text),
+        det.start,
+        det.end,
+        {
+          reminderMinutes: null,
+          allDay: false,
+          startAllDay: false,
+          endAllDay: false,
+          repeat: null,
+        },
+        "promise_card",
+      );
+    } catch {
+      toast.error(t("일정을 남기지 못했어요", "Couldn't anchor it in time"));
     }
   };
 
@@ -558,6 +603,7 @@ function Inbox() {
               pendingSchedule={releasePendingScheduleId === releaseItem.id}
               onArchive={(it) => moveToArchive(it)}
               onSchedule={beginReleaseSchedule}
+              onConfirmScheduleQuick={confirmReleaseScheduleQuick}
               onLetGo={(it) => moveToDelete(it)}
               onComplete={completeRelease}
             />
@@ -639,6 +685,7 @@ function Inbox() {
               pendingSchedule={releasePendingScheduleId === releaseItem.id}
               onArchive={(it) => moveToArchive(it)}
               onSchedule={beginReleaseSchedule}
+              onConfirmScheduleQuick={confirmReleaseScheduleQuick}
               onLetGo={(it) => moveToDelete(it)}
               onComplete={completeRelease}
             />

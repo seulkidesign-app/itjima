@@ -124,7 +124,10 @@ test.describe("Navigation and modals", () => {
       .waitFor({ state: "visible" });
     await expect(page).toHaveURL(/\/$/);
 
-    await phone(page).getByRole("button", { name: "Close", exact: true }).click();
+    await phone(page)
+      .getByRole("dialog", { name: "One by one" })
+      .getByRole("button", { name: "Close", exact: true })
+      .click();
     await expect(phone(page).getByRole("dialog")).toHaveCount(0);
   });
 

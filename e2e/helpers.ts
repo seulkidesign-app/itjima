@@ -93,22 +93,24 @@ export async function completeScheduleDialog(page: Page) {
 }
 export async function dismissReleaseOverlay(page: Page) {
   const frame = phone(page);
-  const hint = frame.getByText("Tasks →");
+  const promiseCard = frame.getByTestId("promise-card");
   const backdrop = frame.locator(".bg-white\\/38").first();
   const inRelease =
-    (await hint.isVisible().catch(() => false)) ||
+    (await promiseCard.isVisible().catch(() => false)) ||
     (await backdrop.isVisible().catch(() => false));
   if (!inRelease) return;
 
-  await page.keyboard.press("Escape");
-  try {
-    await hint.waitFor({ state: "hidden", timeout: 8000 });
-  } catch {
-    if (await backdrop.isVisible().catch(() => false)) {
-      await backdrop.click({ position: { x: 8, y: 8 } });
-      await backdrop.waitFor({ state: "hidden", timeout: 8000 });
-    }
+  await promiseCard.waitFor({ state: "visible", timeout: 15_000 }).catch(() => {});
+  await page.waitForTimeout(1_200);
+
+  if (await backdrop.isVisible().catch(() => false)) {
+    await backdrop.click({ position: { x: 8, y: 8 } });
+    await promiseCard.waitFor({ state: "hidden", timeout: 8000 }).catch(() => {});
+    return;
   }
+
+  await page.keyboard.press("Escape");
+  await promiseCard.waitFor({ state: "hidden", timeout: 8000 }).catch(() => {});
 }
 
 export async function addThought(page: Page, text: string) {
