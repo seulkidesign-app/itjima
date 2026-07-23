@@ -155,9 +155,47 @@ async function callAnthropicJson(
   return extractJson(block?.text ?? "");
 }
 
+function readBearerToken(req: VercelRequest): string | null {
+  const raw = req.headers.authorization;
+  const value = Array.isArray(raw) ? raw[0] : raw;
+  if (!value?.startsWith("Bearer ")) return null;
+  const token = value.slice(7).trim();
+  return token || null;
+}
+
+async function hasValidSupabaseSession(token: string): Promise<boolean> {
+  const supabaseUrl = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL;
+  const publishableKey =
+    process.env.SUPABASE_PUBLISHABLE_KEY ||
+    process.env.VITE_SUPABASE_PUBLISHABLE_KEY;
+
+  if (!supabaseUrl || !publishableKey) {
+    console.error("[brain-mirror] Missing Supabase server environment");
+    return false;
+  }
+
+  try {
+    const response = await fetch(`${supabaseUrl.replace(/\/$/, "")}/auth/v1/user`, {
+      headers: {
+        apikey: publishableKey,
+        Authorization: `Bearer ${token}`,
+      },
+    });
+    return response.ok;
+  } catch (error) {
+    console.error("[brain-mirror] Supabase session verification failed", error);
+    return false;
+  }
+}
+
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method !== "POST") {
     return res.status(405).json({ error: "Method not allowed" });
+  }
+
+  const bearerToken = readBearerToken(req);
+  if (!bearerToken || !(await hasValidSupabaseSession(bearerToken))) {
+    return res.status(401).json({ error: "Authentication required" });
   }
 
   const text = typeof req.body?.text === "string" ? req.body.text.trim() : "";
