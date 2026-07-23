@@ -94,6 +94,10 @@ test.describe("promise card (E2E)", () => {
     await expect(frame.getByTestId("promise-primary")).toHaveText(
       "Schedule as suggested",
     );
+    await page.screenshot({
+      path: "test-results/promise-card-schedule.png",
+      fullPage: false,
+    });
 
     let inbox = await readGuestList(page, GUEST_INBOX_KEY);
     expect(inbox.length).toBe(1);
