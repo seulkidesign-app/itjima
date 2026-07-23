@@ -527,6 +527,7 @@ function useLocalList<T extends { id: string; created_at: string }>(
       const tableTombstones = readTombstones(userId).filter(
         (t) => t.table === table,
       );
+      const syncTombstoneIds = new Set(tableTombstones.map((t) => t.id));
       let tombstoneError = false;
       for (const tombstone of tableTombstones) {
         const deleted = await cloudDelete(table, userId, tombstone.id);
@@ -534,20 +535,14 @@ function useLocalList<T extends { id: string; created_at: string }>(
         else tombstoneError = true;
       }
 
-      const activeTombstoneIds = new Set(
-        readTombstones(userId)
-          .filter((t) => t.table === table)
-          .map((t) => t.id),
-      );
-
       const cloud = (data ?? [])
         .map(
           (row) => stripCloudFields(row as Record<string, unknown>, table) as T,
         )
-        .filter((row) => !activeTombstoneIds.has(row.id));
+        .filter((row) => !syncTombstoneIds.has(row.id));
       const cloudIds = new Set(cloud.map((c) => c.id));
       const toUpload = localAll.filter(
-        (item) => !cloudIds.has(item.id) && !activeTombstoneIds.has(item.id),
+        (item) => !cloudIds.has(item.id) && !syncTombstoneIds.has(item.id),
       );
 
       let uploadResult: BulkUploadResult = {
