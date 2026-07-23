@@ -1,7 +1,8 @@
 {
-  "name": "ItJima — AI Memory",
-  "short_name": "ItJima",
-  "description": "Leave it here. You don't have to remember anymore.",
+  "name": "Itjima 잊지마",
+  "short_name": "잊지마",
+  "description": "생각을 빠르게 맡겨두고 필요한 순간 다시 만나는 모바일 기억 서비스.",
+  "lang": "ko",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",
@@ -13,7 +14,7 @@
       "src": "/favicon.svg",
       "sizes": "any",
       "type": "image/svg+xml",
-      "purpose": "any"
+      "purpose": "any maskable"
     }
   ]
 }
