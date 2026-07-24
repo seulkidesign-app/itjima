@@ -10,7 +10,7 @@ test.describe("Admin on mobile", () => {
   test.beforeEach(async ({ page }) => {
     await resetAppState(page);
     await mockAdminRole(page);
-    await injectSignedInUser(page);
+    await injectSignedInUser(page, { awaitAdminRole: true });
   });
 
   test("admin link appears in settings and opens admin page", async ({

@@ -1,8 +1,13 @@
-import { DecisionDeck } from "@/components/DecisionDeck";
+import {
+  DecisionDeck,
+  type DecisionMeta,
+  type DecisionResult,
+  type UndoSnapshot,
+} from "@/components/DecisionDeck";
 import { useLang, useT } from "@/lib/i18n";
 import { track } from "@/lib/analytics";
 import { tap } from "@/lib/haptics";
-import type { InboxItem } from "@/lib/store";
+import type { DecisionOutcome, InboxItem } from "@/lib/store";
 
 type CardProps = {
   itemCount: number;
@@ -65,36 +70,31 @@ type DeckProps = {
   open: boolean;
   startItemId: string | null;
   items: InboxItem[];
-  pendingScheduleId: string | null;
-  scheduleCommittedId: string | null;
-  onScheduleCommitHandled: () => void;
   onClose: () => void;
-  onScheduleRequest: (item: InboxItem) => void;
-  onArchive: (item: InboxItem) => void | Promise<void>;
+  onDecide: (
+    outcome: DecisionOutcome,
+    item: InboxItem,
+    meta: DecisionMeta,
+  ) => Promise<DecisionResult | void>;
+  onUndo: (snapshot: UndoSnapshot) => Promise<void>;
 };
 
 export function DecisionLauncher({
   open,
   startItemId,
   items,
-  pendingScheduleId,
-  scheduleCommittedId,
-  onScheduleCommitHandled,
   onClose,
-  onScheduleRequest,
-  onArchive,
+  onDecide,
+  onUndo,
 }: DeckProps) {
   return (
     <DecisionDeck
       open={open}
       startItemId={startItemId}
       items={items}
-      pendingScheduleId={pendingScheduleId}
-      scheduleCommittedId={scheduleCommittedId}
-      onScheduleCommitHandled={onScheduleCommitHandled}
       onClose={onClose}
-      onScheduleRequest={onScheduleRequest}
-      onArchive={onArchive}
+      onDecide={onDecide}
+      onUndo={onUndo}
     />
   );
 }

@@ -7,7 +7,6 @@ import {
   phone,
   injectSignedInUser,
   blockCloudMutations,
-  dismissReleaseOverlay,
   TEST_USER_ID,
 } from "./helpers";
 
@@ -57,20 +56,7 @@ test.describe("sync feedback", () => {
     );
 
     const text = `Cloud write ${Date.now()}`;
-    const frame = phone(page);
-    await frame.locator("textarea").first().fill(text);
-    await frame.getByRole("button", { name: "Leave it", exact: true }).click();
-    await dismissReleaseOverlay(page);
-    await page.waitForFunction(
-      ({ userId, thoughtText }) => {
-        const key = `itjima.${userId}.inbox`;
-        const items = JSON.parse(localStorage.getItem(key) || "[]") as {
-          text: string;
-        }[];
-        return items.some((item) => item.text === thoughtText);
-      },
-      { userId: TEST_USER_ID, thoughtText: text },
-    );
+    await addThought(page, text);
 
     await phone(page)
       .getByRole("alert")

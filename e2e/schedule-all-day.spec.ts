@@ -1,5 +1,5 @@
 import { test, expect, type Page } from "@playwright/test";
-import { readGuestList, GUEST_SCHEDULE_KEY, TEST_USER_ID } from "./helpers";
+import { readGuestList, GUEST_SCHEDULE_KEY, TEST_USER_ID, injectSignedInUser } from "./helpers";
 import {
   resolveScheduleAllDayFlags,
   scheduleAllDayFieldsFromConfirm,
@@ -119,14 +119,7 @@ async function openCreateTimeStep(
 }
 
 async function injectSignedInUserForQa7(page: Page) {
-  await page.evaluate(
-    ({ userId }) => {
-      localStorage.setItem("itjima.__e2e_user_id__", userId);
-    },
-    { userId: TEST_USER_ID },
-  );
-  await page.reload();
-  await page.getByRole("link", { name: /^Throw/ }).waitFor({ state: "visible" });
+  await injectSignedInUser(page);
 }
 
 async function expectToggleStates(

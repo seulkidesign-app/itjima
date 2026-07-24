@@ -14,6 +14,8 @@ import { DecisionLauncher, DecisionLauncherCard } from "@/components/home/Decisi
 import { ContextMenu } from "@/components/home/ContextMenu";
 import { PasteSheet } from "@/components/home/PasteSheet";
 import { archiveFromInbox, scheduleFromInbox } from "@/lib/thoughtProvenance";
+import { pendingDecisionItems } from "@/lib/decision";
+import { inboxScheduleDefaults } from "@/lib/inboxScheduleDefaults";
 import { detectDate } from "@/lib/dateDetect";
 import { thoughtFirstLine } from "@/lib/brainMirror";
 import { setRevivalHint } from "@/lib/archiveMeta";
@@ -22,6 +24,7 @@ import {
   setRevivalJumpTarget,
   type RevivalHint,
 } from "@/lib/memoryRevival";
+import type { UndoSnapshot } from "@/components/DecisionDeck";
 import {
   useInbox,
   useSchedules,
@@ -29,6 +32,8 @@ import {
   useUserId,
   getUsageCount,
   isLoginDismissed,
+  type DecisionOutcome,
+  type DecisionSource,
   type InboxItem,
 } from "@/lib/store";
 import { track } from "@/lib/analytics";
@@ -80,6 +85,7 @@ function Inbox() {
     () => new Set(),
   );
   const items = inbox.items;
+  const pendingItems = useMemo(() => pendingDecisionItems(items), [items]);
   const menuItem = menuFor
     ? items.find((x) => x.id === menuFor)
     : undefined;
@@ -96,7 +102,7 @@ function Inbox() {
     ],
     [],
   );
-  const newestId = items[0]?.id;
+  const newestId = pendingItems[0]?.id;
   const listEndRef = useRef<HTMLDivElement | null>(null);
   const prevCountRef = useRef(items.length);
 
@@ -186,9 +192,87 @@ function Inbox() {
     setDecisionDeckOpen(true);
   };
 
-  const openScheduleFromDecisionDeck = (it: InboxItem) => {
-    setFocusPendingScheduleId(it.id);
-    setFocusScheduleSheet({ open: true, item: it });
+  const handleDeckDecide = async (
+    outcome: DecisionOutcome,
+    it: InboxItem,
+    meta: { source: DecisionSource; position: number; total: number },
+  ) => {
+    if (outcome === "today") {
+      const { start, end, text, options } = inboxScheduleDefaults(it);
+      const payload = scheduleFromInbox(it, {
+        text,
+        start_time: start.toISOString(),
+        end_time: end.toISOString(),
+        alarm: options.reminderMinutes !== null,
+        all_day: options.allDay,
+        start_all_day: options.startAllDay,
+        end_all_day: options.endAllDay,
+        repeat: options.repeat,
+      });
+      const { item: created, cloudSynced: scheduleSynced } = await schedules.add({
+        ...payload,
+        ...(options.reminderMinutes !== null
+          ? {
+              alarm_at: new Date(
+                start.getTime() - options.reminderMinutes * 60 * 1000,
+              ).toISOString(),
+            }
+          : {}),
+      });
+      const inboxSynced = await inbox.remove(it.id);
+      track("schedule_created", { source: "decision_deck", text_length: text.length });
+      if (!allCloudSynced(scheduleSynced, inboxSynced)) {
+        throw new Error("sync failed");
+      }
+      return { scheduleId: created.id };
+    }
+
+    if (outcome === "later") {
+      const ok = await inbox.update(it.id, {
+        decision: "later",
+        decided_at: new Date().toISOString(),
+        decision_source: meta.source,
+      } as Partial<InboxItem>);
+      if (!ok) throw new Error("update failed");
+      return {};
+    }
+
+    const payload = archiveFromInbox(it);
+    const { item: created, cloudSynced: archiveSynced } = await archive.add(payload);
+    const inboxSynced = await inbox.remove(it.id);
+    track("thought_swiped_archive", { text_length: it.text.length });
+    if (!allCloudSynced(archiveSynced, inboxSynced)) {
+      throw new Error("sync failed");
+    }
+    return { archiveId: created.id };
+  };
+
+  const handleDeckUndo = async (snap: UndoSnapshot) => {
+    const base = {
+      text: snap.item.text,
+      images: snap.item.images,
+      brain_mirror: snap.item.brain_mirror,
+    };
+
+    if (snap.outcome === "today" && snap.scheduleId) {
+      await schedules.remove(snap.scheduleId);
+      await inbox.add(base);
+      return;
+    }
+
+    if (snap.outcome === "later") {
+      await inbox.update(snap.item.id, {
+        decision: undefined,
+        decided_at: undefined,
+        decision_source: undefined,
+      } as Partial<InboxItem>);
+      return;
+    }
+
+    if (snap.outcome === "archive" && snap.archiveId) {
+      await archive.remove(snap.archiveId);
+      await inbox.add(base);
+    }
   };
 
   const openHomeSchedule = (it: InboxItem) => {
@@ -458,7 +542,7 @@ function Inbox() {
 
       <div className="sticky bottom-0 z-20 shrink-0 bg-white">
         <DecisionLauncherCard
-          itemCount={items.length}
+          itemCount={pendingItems.length}
           newestItemId={newestId}
           onOpen={(startId) => openDecisionDeck(startId ?? undefined)}
         />
@@ -531,18 +615,15 @@ function Inbox() {
       <DecisionLauncher
         open={decisionDeckOpen}
         startItemId={decisionDeckStartId}
-        items={items}
-        pendingScheduleId={focusPendingScheduleId}
-        scheduleCommittedId={scheduleCommittedId}
-        onScheduleCommitHandled={() => setScheduleCommittedId(null)}
+        items={pendingItems}
         onClose={() => {
           setDecisionDeckOpen(false);
           setDecisionDeckStartId(null);
           setFocusPendingScheduleId(null);
           setFocusScheduleSheet({ open: false });
         }}
-        onScheduleRequest={openScheduleFromDecisionDeck}
-        onArchive={(it) => moveToArchive(it)}
+        onDecide={handleDeckDecide}
+        onUndo={handleDeckUndo}
       />
 
       {FEATURES.CLEANUP && (

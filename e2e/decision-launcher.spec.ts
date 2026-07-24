@@ -50,9 +50,9 @@ test.describe("Home Decision launcher", () => {
 
     const deck = phone(page).getByRole("dialog", { name: "One by one" });
     await deck.waitFor({ state: "visible" });
+    await expect(deck.getByLabel("1 / 2")).toBeVisible();
     await expect(
       deck.locator("p").filter({ hasText: newer }).first(),
     ).toBeVisible();
-    await expect(deck.locator("p").filter({ hasText: older })).toHaveCount(0);
   });
 });

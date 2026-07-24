@@ -8,6 +8,7 @@ import type { InboxItem } from "@/lib/store";
 import { thoughtFirstLine } from "@/lib/brainMirror";
 import { readCachedTimingExtra } from "@/lib/brainMirrorApi";
 import { detectDate, resolveScheduleGuidanceReason } from "@/lib/dateDetect";
+import { defaultScheduleStart } from "@/lib/inboxScheduleDefaults";
 
 type Props = {
   item: InboxItem | null;
@@ -21,23 +22,6 @@ type Props = {
   ) => void;
 };
 
-function defaultStart(item: InboxItem): Date {
-  const det =
-    detectDate(item.text) ??
-    (item.brain_mirror?.suggestedDateText
-      ? detectDate(item.brain_mirror.suggestedDateText)
-      : null);
-  if (det) return det.start;
-  const d = new Date();
-  d.setMinutes(0, 0, 0);
-  if (d.getHours() < 9) d.setHours(9, 0, 0, 0);
-  else if (d.getHours() >= 18) {
-    d.setDate(d.getDate() + 1);
-    d.setHours(9, 0, 0, 0);
-  } else d.setHours(d.getHours() + 1, 0, 0, 0);
-  return d;
-}
-
 export function FocusScheduleSheet({ item, open, onClose, onConfirm }: Props) {
   const [title, setTitle] = useState("");
 
@@ -47,7 +31,7 @@ export function FocusScheduleSheet({ item, open, onClose, onConfirm }: Props) {
   }, [item, open]);
 
   const initialStart = useMemo(
-    () => (item ? defaultStart(item) : undefined),
+    () => (item ? defaultScheduleStart(item) : undefined),
     [item],
   );
 

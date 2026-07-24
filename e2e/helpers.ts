@@ -17,7 +17,30 @@ export function getSupabaseProjectId(): string | null {
   }
 }
 
-export async function injectSignedInUser(page: Page) {
+export async function waitForE2eSignedIn(page: Page) {
+  await page.waitForFunction(
+    ({ userId }) => localStorage.getItem("itjima.__e2e_user_id__") === userId,
+    { userId: TEST_USER_ID },
+  );
+}
+
+/** Wait until mocked admin role checks finish (must start before page reload). */
+export function waitForAdminRole(page: Page) {
+  return page.waitForResponse(
+    (response) =>
+      response.url().includes("/rest/v1/user_roles") &&
+      response.request().method() === "GET" &&
+      response.ok(),
+  );
+}
+
+export async function injectSignedInUser(
+  page: Page,
+  options?: { awaitAdminRole?: boolean },
+) {
+  const adminRoleResponse = options?.awaitAdminRole
+    ? waitForAdminRole(page)
+    : null;
   await page.evaluate(
     ({ userId }) => {
       localStorage.setItem("itjima.__e2e_user_id__", userId);
@@ -28,6 +51,8 @@ export async function injectSignedInUser(page: Page) {
   await phone(page).getByRole("link", { name: /^Throw/ }).waitFor({
     state: "visible",
   });
+  await waitForE2eSignedIn(page);
+  if (adminRoleResponse) await adminRoleResponse;
 }
 
 export async function blockCloudMutations(page: Page) {
@@ -137,13 +162,17 @@ export async function addThought(page: Page, text: string) {
     .first()
     .waitFor({ state: "visible" });
   await page.waitForFunction(
-    ({ key, thoughtText }) => {
-      const items = JSON.parse(localStorage.getItem(key) || "[]") as {
-        text: string;
-      }[];
-      return items.some((item) => item.text === thoughtText);
+    ({ thoughtText }) => {
+      for (const key of Object.keys(localStorage)) {
+        if (!key.endsWith(".inbox")) continue;
+        const items = JSON.parse(localStorage.getItem(key) || "[]") as {
+          text: string;
+        }[];
+        if (items.some((item) => item.text === thoughtText)) return true;
+      }
+      return false;
     },
-    { key: GUEST_INBOX_KEY, thoughtText: text },
+    { thoughtText: text },
   );
   await dismissInlinePromise(page);
 }

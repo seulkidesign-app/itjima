@@ -5,19 +5,24 @@ import {
   useState,
   type PointerEvent,
 } from "react";
-import { Archive, Calendar, X } from "lucide-react";
+import { Archive, CalendarClock, Clock, X } from "lucide-react";
 import { animate, motion, AnimatePresence } from "framer-motion";
 import { useT } from "@/lib/i18n";
+import { track } from "@/lib/analytics";
 import {
   confirm as confirmHaptic,
   tap as tapHaptic,
   tickDebounced,
   haptic,
 } from "@/lib/haptics";
-import type { InboxItem } from "@/lib/store";
+import type { DecisionOutcome, DecisionSource, InboxItem } from "@/lib/store";
+import {
+  dragProgressForOutcome,
+  previewDragOutcome,
+  resolveDragOutcome,
+} from "@/lib/decision";
 import {
   SWIPE_PREVIEW,
-  dragProgress,
   cardShadowBlur,
   SPRING_SNAP_BACK,
 } from "@/lib/motion";
@@ -25,26 +30,47 @@ import { MOTION_ARCHIVE, MOTION_SCHEDULE, MOTION_SUCCESS } from "@/lib/motionLan
 import { rubberBand, swipeRotation, swipeOpacity } from "@/lib/swipePhysics";
 import { BrainMirrorReflectionBody } from "@/components/BrainMirrorReflection";
 
+export type DecisionMeta = {
+  source: DecisionSource;
+  position: number;
+  total: number;
+};
+
+export type DecisionResult = {
+  scheduleId?: string;
+  archiveId?: string;
+};
+
+export type UndoSnapshot = {
+  item: InboxItem;
+  cursor: number;
+  outcome: DecisionOutcome;
+  scheduleId?: string;
+  archiveId?: string;
+};
+
+type SessionCounts = Record<DecisionOutcome, number>;
+
 type Props = {
   open: boolean;
   items: InboxItem[];
   startItemId?: string | null;
-  pendingScheduleId?: string | null;
-  scheduleCommittedId?: string | null;
-  onScheduleCommitHandled?: () => void;
   onClose: () => void;
-  onScheduleRequest: (item: InboxItem) => void;
-  onArchive: (item: InboxItem) => void | Promise<void>;
+  onDecide: (
+    outcome: DecisionOutcome,
+    item: InboxItem,
+    meta: DecisionMeta,
+  ) => Promise<DecisionResult | void>;
+  onUndo: (snapshot: UndoSnapshot) => Promise<void>;
 };
-
-type ExitDir = "left" | "right";
 
 const MAX_DRAG_X = 340;
 const MAX_DRAG_Y = 140;
 const NAV_DRAG = 64;
-/** Easier commit than generic SwipeCard (~28% of card width). */
-const COMMIT_RATIO = 0.28;
-const COMMIT_PX = 88;
+const FLING_VX = 450;
+const FLING_VY = 420;
+
+const EMPTY_COUNTS: SessionCounts = { today: 0, later: 0, archive: 0 };
 
 function sortNewestFirst(list: InboxItem[]) {
   return [...list].sort(
@@ -54,6 +80,12 @@ function sortNewestFirst(list: InboxItem[]) {
 
 function isInteractiveTarget(node: EventTarget | null) {
   return (node as HTMLElement | null)?.closest?.("button,a,input,textarea");
+}
+
+function outcomeLabel(outcome: DecisionOutcome, t: ReturnType<typeof useT>) {
+  if (outcome === "today") return t("오늘", "Today");
+  if (outcome === "later") return t("나중", "Later");
+  return t("보관", "Archive");
 }
 
 function ProgressDots({ total, current }: { total: number; current: number }) {
@@ -128,23 +160,28 @@ function DeckCardBody({ item }: { item: InboxItem }) {
   );
 }
 
-function SwipeStamp({
-  side,
+function OutcomeStamp({
+  outcome,
   progress,
   label,
 }: {
-  side: "schedule" | "archive";
+  outcome: DecisionOutcome;
   progress: number;
   label: string;
 }) {
-  if (progress < 0.15) return null;
-  const opacity = Math.min(1, (progress - 0.15) * 2.2);
+  if (progress < 0.12) return null;
+  const opacity = Math.min(1, (progress - 0.12) * 2.4);
+  const isLeft = outcome === "today";
   return (
     <div
-      className={`pointer-events-none absolute top-8 z-[2] rounded-xl border-[3px] px-3 py-1.5 text-[14px] font-extrabold uppercase tracking-[0.12em] ${
-        side === "schedule"
-          ? "right-5 rotate-12 border-primary bg-primary/10 text-primary"
-          : "left-5 -rotate-12 border-ink bg-ink/[0.06] text-ink"
+      data-testid="decision-outcome-label"
+      data-outcome={outcome}
+      className={`pointer-events-none absolute top-8 z-[2] rounded-xl border-2 px-3 py-1.5 text-[14px] font-extrabold tracking-[0.08em] ${
+        isLeft
+          ? "left-5 -rotate-12 border-ink/25 bg-white/80 text-ink"
+          : outcome === "later"
+            ? "right-5 rotate-6 border-ink/20 bg-white/80 text-ink-soft"
+            : "right-5 rotate-12 border-ink/30 bg-ink/[0.05] text-ink"
       }`}
       style={{ opacity }}
     >
@@ -157,39 +194,42 @@ export function DecisionDeck({
   open,
   items,
   startItemId,
-  pendingScheduleId,
-  scheduleCommittedId,
-  onScheduleCommitHandled,
   onClose,
-  onScheduleRequest,
-  onArchive,
+  onDecide,
+  onUndo,
 }: Props) {
   const t = useT();
   const initialTotal = useRef(0);
   const wasOpen = useRef(false);
   const cardRef = useRef<HTMLDivElement>(null);
   const actingRef = useRef(false);
-  const thresholdFired = useRef<ExitDir | null>(null);
-  const previewFired = useRef<ExitDir | null>(null);
+  const previewFired = useRef<DecisionOutcome | null>(null);
+  const thresholdFired = useRef<DecisionOutcome | null>(null);
   const velocity = useRef({ x: 0, y: 0 });
   const lastMove = useRef({ x: 0, y: 0, t: 0 });
+  const start = useRef({ x: 0, y: 0 });
+  const offsetRef = useRef({ x: 0, y: 0 });
+
   const [deck, setDeck] = useState<InboxItem[]>([]);
   const [cursor, setCursor] = useState(0);
   const [offset, setOffset] = useState({ x: 0, y: 0 });
   const [dragging, setDragging] = useState(false);
   const [exiting, setExiting] = useState(false);
   const [cardOpacity, setCardOpacity] = useState(1);
-  const start = useRef({ x: 0, y: 0 });
-  const offsetRef = useRef({ x: 0, y: 0 });
+  const [sessionCounts, setSessionCounts] = useState<SessionCounts>(EMPTY_COUNTS);
+  const [undoSnapshot, setUndoSnapshot] = useState<UndoSnapshot | null>(null);
 
   offsetRef.current = offset;
 
   const current = deck[cursor] ?? null;
-  const finished = open && initialTotal.current > 0 && deck.length === 0;
+  const decidedCount =
+    sessionCounts.today + sessionCounts.later + sessionCounts.archive;
+  const finished =
+    open && initialTotal.current > 0 && deck.length === 0 && decidedCount > 0;
   const progress = current
     ? initialTotal.current - deck.length + cursor + 1
     : initialTotal.current;
-  const locked = exiting || actingRef.current || !!pendingScheduleId;
+  const locked = exiting || actingRef.current;
 
   useEffect(() => {
     if (!open) return;
@@ -214,12 +254,6 @@ export function DecisionDeck({
   }, [open, onClose, dragging]);
 
   useEffect(() => {
-    if (!finished) return;
-    const id = window.setTimeout(() => onClose(), 2800);
-    return () => window.clearTimeout(id);
-  }, [finished, onClose]);
-
-  useEffect(() => {
     if (open && !wasOpen.current) {
       const ordered = sortNewestFirst(items);
       initialTotal.current = ordered.length;
@@ -232,6 +266,9 @@ export function DecisionDeck({
       setCardOpacity(1);
       setExiting(false);
       actingRef.current = false;
+      setSessionCounts(EMPTY_COUNTS);
+      setUndoSnapshot(null);
+      previewFired.current = null;
       thresholdFired.current = null;
     }
     wasOpen.current = open;
@@ -242,6 +279,8 @@ export function DecisionDeck({
       setOffset({ x: 0, y: 0 });
       setExiting(false);
       actingRef.current = false;
+      setSessionCounts(EMPTY_COUNTS);
+      setUndoSnapshot(null);
     }
   }, [open, items, startItemId]);
 
@@ -263,14 +302,9 @@ export function DecisionDeck({
 
   const cardW = useCallback(() => cardRef.current?.offsetWidth ?? 320, []);
 
-  const commitThreshold = useCallback(
-    () => Math.min(COMMIT_PX, cardW() * COMMIT_RATIO),
-    [cardW],
-  );
-
   const springBack = useCallback(() => {
-    thresholdFired.current = null;
     previewFired.current = null;
+    thresholdFired.current = null;
     const from = offsetRef.current;
     animate(from.x, 0, {
       ...SPRING_SNAP_BACK,
@@ -288,79 +322,106 @@ export function DecisionDeck({
 
   const removeAtCursor = useCallback(() => {
     setDeck((d) => d.filter((_, i) => i !== cursor));
+    previewFired.current = null;
     thresholdFired.current = null;
   }, [cursor]);
 
-  const openSchedule = useCallback(async () => {
-    if (!current || actingRef.current) return;
-    actingRef.current = true;
-    setExiting(true);
-    confirmHaptic();
-    const w = cardW();
-    const from = offsetRef.current;
-    await animate(from.x, w * 0.45, {
-      ...MOTION_SCHEDULE,
-      velocity: velocity.current.x * 0.3,
-      onUpdate: (v) => setOffset((o) => ({ ...o, x: v })),
-    }).finished;
-    onScheduleRequest(current);
-    setExiting(false);
-    actingRef.current = false;
-  }, [cardW, current, onScheduleRequest]);
+  const flyOffsetFor = (outcome: DecisionOutcome, w: number) => {
+    if (outcome === "today") return -w * 1.6;
+    if (outcome === "later") return w * 0.95;
+    return w * 1.6;
+  };
 
-  const flyAwayCommit = useCallback(async () => {
-    if (actingRef.current) return;
-    actingRef.current = true;
-    setExiting(true);
-    confirmHaptic();
-    const w = cardW();
-    const from = offsetRef.current;
-    await animate(from.x, w * 1.6, {
-      ...MOTION_SCHEDULE,
-      velocity: velocity.current.x * 0.4,
-      onUpdate: (v) => {
-        setOffset((o) => ({ ...o, x: v }));
-        setCardOpacity(swipeOpacity(Math.abs(v), MAX_DRAG_X));
-      },
-    }).finished;
-    removeAtCursor();
-    setOffset({ x: 0, y: 0 });
-    setCardOpacity(1);
-    setExiting(false);
-    actingRef.current = false;
-  }, [cardW, removeAtCursor]);
-
-  const flyAway = useCallback(
-    async (dir: ExitDir) => {
-      if (!current || actingRef.current) return;
-      if (dir === "right") {
-        await openSchedule();
-        return;
-      }
+  const applyDecision = useCallback(
+    async (outcome: DecisionOutcome, source: DecisionSource) => {
+      if (!current || actingRef.current || locked) return;
       actingRef.current = true;
       setExiting(true);
       confirmHaptic();
+
+      const snapshot: UndoSnapshot = {
+        item: { ...current },
+        cursor,
+        outcome,
+      };
+
       const w = cardW();
       const from = offsetRef.current;
-      await animate(from.x, -w * 1.6, {
-        ...MOTION_ARCHIVE,
-        velocity: velocity.current.x * 0.45,
+      const targetX = flyOffsetFor(outcome, w);
+      const motion =
+        outcome === "archive" ? MOTION_ARCHIVE : MOTION_SCHEDULE;
+
+      await animate(from.x, targetX, {
+        ...motion,
+        velocity: velocity.current.x * 0.4,
         onUpdate: (v) => {
           setOffset((o) => ({ ...o, x: v }));
           setCardOpacity(swipeOpacity(Math.abs(v), MAX_DRAG_X));
         },
       }).finished;
 
-      const item = current;
-      await onArchive(item);
-      removeAtCursor();
+      try {
+        const meta: DecisionMeta = {
+          source,
+          position: progress,
+          total: initialTotal.current,
+        };
+        track(`decision_${outcome}`, {
+          item_id: current.id,
+          source,
+          position: progress,
+          total: initialTotal.current,
+        });
+        const result = await onDecide(outcome, current, meta);
+        if (result?.scheduleId) snapshot.scheduleId = result.scheduleId;
+        if (result?.archiveId) snapshot.archiveId = result.archiveId;
+        setUndoSnapshot(snapshot);
+        setSessionCounts((c) => ({ ...c, [outcome]: c[outcome] + 1 }));
+        removeAtCursor();
+      } catch {
+        springBack();
+      } finally {
+        setOffset({ x: 0, y: 0 });
+        setCardOpacity(1);
+        setExiting(false);
+        actingRef.current = false;
+      }
+    },
+    [
+      cardW,
+      current,
+      cursor,
+      locked,
+      onDecide,
+      progress,
+      removeAtCursor,
+      springBack,
+    ],
+  );
+
+  const handleUndo = useCallback(async () => {
+    if (!undoSnapshot || actingRef.current) return;
+    actingRef.current = true;
+    tapHaptic();
+    try {
+      await onUndo(undoSnapshot);
+      setDeck((d) => {
+        const next = [...d];
+        next.splice(undoSnapshot.cursor, 0, undoSnapshot.item);
+        return next;
+      });
+      setCursor(undoSnapshot.cursor);
+      setSessionCounts((c) => ({
+        ...c,
+        [undoSnapshot.outcome]: Math.max(0, c[undoSnapshot.outcome] - 1),
+      }));
+      setUndoSnapshot(null);
       setOffset({ x: 0, y: 0 });
       setCardOpacity(1);
-      setExiting(false);
+    } finally {
       actingRef.current = false;
-    },
-    [cardW, current, onArchive, openSchedule, removeAtCursor],
-  );
+    }
+  }, [onUndo, undoSnapshot]);
 
   const goNext = useCallback(() => {
     if (cursor >= deck.length - 1) {
@@ -386,67 +447,56 @@ export function DecisionDeck({
     setCardOpacity(1);
   }, [cursor, springBack]);
 
-  const handleScheduleTap = useCallback(() => {
-    if (locked) return;
-    tapHaptic();
-    void flyAway("right");
-  }, [flyAway, locked]);
+  const commitFromRelease = useCallback(
+    (x: number, y: number, vx: number, vy: number) => {
+      const w = cardW();
+      const absX = Math.abs(x);
+      const absY = Math.abs(y);
 
-  const handleArchiveTap = useCallback(() => {
-    if (locked) return;
-    tapHaptic();
-    void flyAway("left");
-  }, [flyAway, locked]);
+      if (absX <= absY) {
+        if (y > NAV_DRAG || vy > FLING_VY) {
+          goNext();
+          return true;
+        }
+        if (y < -NAV_DRAG || vy < -FLING_VY) {
+          goPrev();
+          return true;
+        }
+        return false;
+      }
 
-  const prevPending = useRef<string | null>(null);
-  useEffect(() => {
-    if (prevPending.current && !pendingScheduleId) springBack();
-    prevPending.current = pendingScheduleId ?? null;
-  }, [pendingScheduleId, springBack]);
+      const outcome = resolveDragOutcome(x, w);
+      if (!outcome) return false;
 
-  const commitHandled = useRef<string | null>(null);
-  useEffect(() => {
-    if (!open) commitHandled.current = null;
-  }, [open]);
+      const committed =
+        (outcome === "today" &&
+          (x <= -w * 0.25 || vx < -FLING_VX || absX >= w * 0.25)) ||
+        (outcome === "later" &&
+          x >= w * 0.25 &&
+          x < w * 0.65 &&
+          (absX >= w * 0.25 || vx > FLING_VX * 0.7)) ||
+        (outcome === "archive" &&
+          (x >= w * 0.65 || vx > FLING_VX || absX >= w * 0.65));
 
-  useEffect(() => {
-    if (!scheduleCommittedId || !open) return;
-    if (commitHandled.current === scheduleCommittedId) return;
-    const idx = deck.findIndex((i) => i.id === scheduleCommittedId);
-    if (idx < 0) {
-      onScheduleCommitHandled?.();
-      return;
-    }
-    commitHandled.current = scheduleCommittedId;
-    void (async () => {
-      if (idx !== cursor) setCursor(idx);
-      await flyAwayCommit();
-      onScheduleCommitHandled?.();
-    })();
-  }, [
-    scheduleCommittedId,
-    open,
-    deck,
-    cursor,
-    flyAwayCommit,
-    onScheduleCommitHandled,
-  ]);
+      if (committed) {
+        void applyDecision(outcome, "swipe");
+        return true;
+      }
+      return false;
+    },
+    [applyDecision, cardW, goNext, goPrev],
+  );
 
   const onDown = (e: PointerEvent<HTMLDivElement>) => {
     if (locked || !current) return;
     if (isInteractiveTarget(e.target)) return;
     setDragging(true);
-    thresholdFired.current = null;
     previewFired.current = null;
+    thresholdFired.current = null;
     velocity.current = { x: 0, y: 0 };
     lastMove.current = { x: e.clientX, y: e.clientY, t: performance.now() };
     start.current = { x: e.clientX, y: e.clientY };
     (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
-  };
-
-  const horizontalDir = (x: number, y: number): ExitDir | null => {
-    if (Math.abs(x) <= Math.abs(y)) return null;
-    return x < 0 ? "left" : "right";
   };
 
   const onMove = (e: PointerEvent) => {
@@ -466,66 +516,46 @@ export function DecisionDeck({
     setOffset({ x, y });
 
     const w = cardW();
-    const dir = horizontalDir(x, y);
-    if (!dir) {
+    const preview = previewDragOutcome(x, y, w);
+    if (!preview) {
       previewFired.current = null;
       thresholdFired.current = null;
       return;
     }
 
-    const mag = dragProgress(dir === "left" ? -x : x, w * COMMIT_RATIO * 2.2);
-    if (mag >= SWIPE_PREVIEW && previewFired.current !== dir) {
-      previewFired.current = dir;
+    const mag = dragProgressForOutcome(x, preview, w);
+    if (mag >= SWIPE_PREVIEW && previewFired.current !== preview) {
+      previewFired.current = preview;
       tickDebounced(48);
     }
-    if (mag >= 0.85 && thresholdFired.current !== dir) {
-      thresholdFired.current = dir;
+    if (mag >= 0.92 && thresholdFired.current !== preview) {
+      thresholdFired.current = preview;
       haptic([10, 18, 10]);
     }
     if (mag < SWIPE_PREVIEW) previewFired.current = null;
-    if (mag < 0.85) thresholdFired.current = null;
+    if (mag < 0.92) thresholdFired.current = null;
   };
 
   const onUp = () => {
     if (!dragging) return;
     setDragging(false);
-    const threshold = commitThreshold();
     const { x, y } = offsetRef.current;
-    const absX = Math.abs(x);
-    const absY = Math.abs(y);
-    const vx = velocity.current.x;
-    const vy = velocity.current.y;
-
-    if (absX > absY) {
-      if (x < 0 && (absX > threshold || vx < -450)) {
-        void flyAway("left");
-        return;
-      }
-      if (x > 0 && (absX > threshold || vx > 450)) {
-        void flyAway("right");
-        return;
-      }
-    } else {
-      if (y > NAV_DRAG || vy > 420) {
-        goNext();
-        return;
-      }
-      if (y < -NAV_DRAG || vy < -420) {
-        goPrev();
-        return;
-      }
+    if (!commitFromRelease(x, y, velocity.current.x, velocity.current.y)) {
+      springBack();
     }
-    springBack();
   };
 
-  const scheduleProgress =
-    offset.x > 0 ? Math.min(1, offset.x / commitThreshold()) : 0;
-  const archiveProgress =
-    offset.x < 0 ? Math.min(1, -offset.x / commitThreshold()) : 0;
-  const progressMag = Math.max(scheduleProgress, archiveProgress);
+  const previewOutcome = previewDragOutcome(offset.x, offset.y, cardW());
+  const previewProgress = previewOutcome
+    ? dragProgressForOutcome(offset.x, previewOutcome, cardW())
+    : 0;
   const rotate = dragging ? swipeRotation(offset.x, cardW()) * 0.65 : 0;
-  const shadow = cardShadowBlur(progressMag);
+  const scale = dragging ? 1 - previewProgress * 0.025 : 1;
+  const shadow = cardShadowBlur(previewProgress);
   const stackPeek = deck.slice(cursor + 1, cursor + 3);
+
+  const actionBtn =
+    "touch-press flex h-11 min-w-[5.5rem] flex-1 items-center justify-center gap-1.5 rounded-full border border-ink/10 bg-white/90 text-[13px] font-bold text-ink shadow-card transition-transform active:scale-[0.97] disabled:opacity-40";
 
   return (
     <AnimatePresence>
@@ -590,112 +620,125 @@ export function DecisionDeck({
 
                   <div
                     key={current.id}
+                    data-testid="decision-deck-active-card"
                     onPointerDown={onDown}
                     onPointerMove={onMove}
                     onPointerUp={onUp}
                     onPointerCancel={onUp}
-                    className={`focus-sort-card relative z-10 mx-auto flex min-h-[340px] w-full touch-none select-none flex-col overflow-hidden will-change-transform ${
-                      pendingScheduleId === current.id
-                        ? "ring-2 ring-primary/45 ring-offset-2"
-                        : ""
-                    }`}
+                    className="focus-sort-card relative z-10 mx-auto flex min-h-[340px] w-full touch-none select-none flex-col overflow-hidden will-change-transform"
                     style={{
-                      transform: `translate3d(${offset.x}px, ${offset.y}px, 0) rotate(${rotate}deg)`,
+                      transform: `translate3d(${offset.x}px, ${offset.y}px, 0) rotate(${rotate}deg) scale(${scale})`,
                       opacity: cardOpacity,
-                      boxShadow: `0 ${shadow}px ${shadow * 1.6}px -${shadow * 0.3}px rgba(0,0,0,${0.08 + progressMag * 0.1})`,
+                      boxShadow: `0 ${shadow}px ${shadow * 1.6}px -${shadow * 0.3}px rgba(0,0,0,${0.08 + previewProgress * 0.1})`,
                     }}
                   >
-                    <SwipeStamp
-                      side="schedule"
-                      progress={scheduleProgress}
-                      label={t("할 일", "Tasks")}
-                    />
-                    <SwipeStamp
-                      side="archive"
-                      progress={archiveProgress}
-                      label={t("생각 지도", "Thought map")}
-                    />
+                    {previewOutcome && (
+                      <OutcomeStamp
+                        outcome={previewOutcome}
+                        progress={previewProgress}
+                        label={outcomeLabel(previewOutcome, t)}
+                      />
+                    )}
 
                     <div className="flex-1 px-7 pb-4 pt-8">
                       <DeckCardBody item={current} />
                     </div>
-
-                    <div className="flex shrink-0 gap-2.5 border-t border-ink/[0.06] bg-white px-5 py-4">
-                      <button
-                        type="button"
-                        disabled={locked}
-                        onClick={handleScheduleTap}
-                        className="touch-press flex-1 rounded-full bg-primary py-3.5 text-[15px] font-bold text-ink shadow-card transition-transform active:scale-[0.97] disabled:opacity-40"
-                      >
-                        {t("할 일로 보내기", "Send to tasks")}
-                      </button>
-                      <button
-                        type="button"
-                        disabled={locked}
-                        onClick={handleArchiveTap}
-                        className="touch-press flex-1 rounded-full bg-ink py-3.5 text-[15px] font-bold text-white shadow-card transition-transform active:scale-[0.97] disabled:opacity-40"
-                      >
-                        {t("생각 지도에 남기기", "Save to thought map")}
-                      </button>
-                    </div>
                   </div>
                 </div>
 
-                <div className="mt-7 flex items-center justify-center gap-10">
+                <div className="mt-6 flex w-full max-w-[340px] gap-2">
                   <button
                     type="button"
                     disabled={locked}
-                    onClick={handleArchiveTap}
-                    className="swipe-pill-btn swipe-pill-archive h-14 w-14 transition-transform active:scale-90 disabled:opacity-40"
-                    aria-label={t("생각 지도에 남기기", "Save to thought map")}
+                    data-testid="decision-btn-today"
+                    aria-label={t("오늘로 결정", "Decide for today")}
+                    className={actionBtn}
+                    onClick={() => void applyDecision("today", "button")}
                   >
-                    <Archive size={22} strokeWidth={2.25} />
+                    <CalendarClock size={16} strokeWidth={2.25} />
+                    {t("오늘", "Today")}
                   </button>
                   <button
                     type="button"
                     disabled={locked}
-                    onClick={handleScheduleTap}
-                    className="swipe-pill-btn swipe-pill-schedule h-14 w-14 transition-transform active:scale-90 disabled:opacity-40"
-                    aria-label={t("할 일로 보내기", "Send to tasks")}
+                    data-testid="decision-btn-later"
+                    aria-label={t("나중으로 결정", "Decide for later")}
+                    className={actionBtn}
+                    onClick={() => void applyDecision("later", "button")}
                   >
-                    <Calendar size={22} strokeWidth={2.25} />
+                    <Clock size={16} strokeWidth={2.25} />
+                    {t("나중", "Later")}
+                  </button>
+                  <button
+                    type="button"
+                    disabled={locked}
+                    data-testid="decision-btn-archive"
+                    aria-label={t("보관함으로 보관", "Archive thought")}
+                    className={actionBtn}
+                    onClick={() => void applyDecision("archive", "button")}
+                  >
+                    <Archive size={16} strokeWidth={2.25} />
+                    {t("보관", "Archive")}
                   </button>
                 </div>
 
                 <p className="mt-4 text-center text-[11px] font-medium text-ink-soft/70">
                   {t(
-                    "← 생각 지도 · → 할 일 · ↓ 다음 · ↑ 이전",
-                    "← Thought map · → Tasks · ↓ next · ↑ previous",
+                    "← 오늘 · → 나중 · →→ 보관 · ↓ 다음 · ↑ 이전",
+                    "← Today · → Later · →→ Archive · ↓ next · ↑ previous",
                   )}
                 </p>
               </>
             ) : (
               <motion.div
-                className="max-w-[300px] px-6 text-center"
-                initial={{ opacity: 0, scale: 0.94, y: 8 }}
+                data-testid="decision-deck-complete"
+                className="max-w-[320px] px-6 text-center"
+                initial={{ opacity: 0, scale: 0.96, y: 8 }}
                 animate={{ opacity: 1, scale: 1, y: 0 }}
                 transition={MOTION_SUCCESS}
               >
-                <motion.div
-                  className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-primary/20"
-                  initial={{ scale: 0.8 }}
-                  animate={{ scale: 1 }}
-                  transition={MOTION_SUCCESS}
-                >
-                  <span className="text-2xl" aria-hidden>
-                    ✨
-                  </span>
-                </motion.div>
-                <p className="mt-6 text-[22px] font-bold tracking-[-0.03em] text-ink">
-                  {t("머리가 가벼워졌어요", "Your mind feels lighter")}
+                <p className="text-[22px] font-bold tracking-[-0.03em] text-ink">
+                  {t("정리 끝", "All sorted")}
                 </p>
                 <p className="mt-2 text-[15px] leading-relaxed text-ink-soft">
                   {t(
-                    "오늘은 더 남길 게 없네요",
-                    "Nothing left to leave here for now",
+                    `${decidedCount}개의 생각을 결정했어요`,
+                    `You decided ${decidedCount} thoughts`,
                   )}
                 </p>
+                <dl className="mt-6 space-y-2 text-left text-[14px] text-ink">
+                  <div className="flex justify-between gap-4">
+                    <dt>{t("오늘", "Today")}</dt>
+                    <dd className="font-semibold tabular-nums">
+                      {sessionCounts.today}
+                    </dd>
+                  </div>
+                  <div className="flex justify-between gap-4">
+                    <dt>{t("나중", "Later")}</dt>
+                    <dd className="font-semibold tabular-nums">
+                      {sessionCounts.later}
+                    </dd>
+                  </div>
+                  <div className="flex justify-between gap-4">
+                    <dt>{t("보관", "Archive")}</dt>
+                    <dd className="font-semibold tabular-nums">
+                      {sessionCounts.archive}
+                    </dd>
+                  </div>
+                </dl>
               </motion.div>
+            )}
+
+            {undoSnapshot && (
+              <button
+                type="button"
+                data-testid="decision-undo"
+                disabled={locked}
+                onClick={() => void handleUndo()}
+                className="mt-4 text-[13px] font-semibold text-ink-soft underline-offset-2 hover:text-ink hover:underline disabled:opacity-40"
+              >
+                {t("마지막 결정 되돌리기", "Undo last decision")}
+              </button>
             )}
           </div>
         </motion.div>

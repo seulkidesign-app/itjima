@@ -13,6 +13,9 @@ export type { BrainMirrorResult };
 
 export type ThoughtStatus = "active" | "done" | "archived" | "deleted";
 
+export type DecisionOutcome = "today" | "later" | "archive";
+export type DecisionSource = "swipe" | "button";
+
 export type InboxItem = {
   id: string;
   text: string;
@@ -20,6 +23,9 @@ export type InboxItem = {
   created_at: string;
   status?: ThoughtStatus;
   brain_mirror?: BrainMirrorResult | null;
+  decision?: DecisionOutcome;
+  decided_at?: string;
+  decision_source?: DecisionSource;
 };
 export type RepeatRule = "daily" | "weekly" | "monthly" | "yearly";
 
