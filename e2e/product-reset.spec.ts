@@ -3,6 +3,8 @@ import {
   resetAppState,
   phone,
   readGuestList,
+  openContextMenu,
+  completeScheduleDialog,
   GUEST_INBOX_KEY,
   GUEST_ARCHIVE_KEY,
   GUEST_SCHEDULE_KEY,
@@ -12,7 +14,7 @@ async function submitThought(page: Page, text: string) {
   const frame = phone(page);
   await frame.locator("textarea").first().fill(text);
   await frame.getByRole("button", { name: "Leave it", exact: true }).click();
-  await frame.getByTestId("inline-promise").waitFor({ state: "visible" });
+  await frame.getByText(text, { exact: true }).first().waitFor({ state: "visible" });
 }
 
 test.describe("Product reset IA", () => {
@@ -20,15 +22,14 @@ test.describe("Product reset IA", () => {
     await resetAppState(page);
   });
 
-  test("throw → inline promise → vault shows original text", async ({
-    page,
-  }) => {
+  test("throw → context menu → vault shows original text", async ({ page }) => {
     await submitThought(page, "Travel");
-    await expect(phone(page).getByTestId("inline-promise")).toContainText(
-      /idea|Saved/i,
-    );
-    await phone(page).getByTestId("promise-edit").click();
-    await phone(page).getByRole("button", { name: "Save to vault" }).click();
+    await expect(phone(page).getByTestId("inline-promise")).toHaveCount(0);
+    await openContextMenu(page, "Travel");
+    await phone(page)
+      .getByRole("dialog")
+      .getByRole("button", { name: "Save to vault", exact: true })
+      .click();
 
     await phone(page).getByRole("link", { name: /^Vault/ }).click();
     await expect(
@@ -42,18 +43,22 @@ test.describe("Product reset IA", () => {
     expect(archive.length).toBe(1);
   });
 
-  test("schedule promise keeps inbox until confirmed, then shows on Today", async ({
+  test("context menu schedule keeps inbox until confirmed, then shows on Today", async ({
     page,
   }) => {
     await submitThought(page, "Dentist tomorrow at 3pm");
-    await expect(phone(page).getByTestId("inline-promise")).toContainText(
-      /schedule/i,
-    );
+    await expect(phone(page).getByTestId("inline-promise")).toHaveCount(0);
 
     let inbox = await readGuestList(page, GUEST_INBOX_KEY);
     expect(inbox.length).toBe(1);
 
-    await phone(page).getByTestId("promise-primary").click();
+    await openContextMenu(page, "Dentist tomorrow at 3pm");
+    await phone(page)
+      .getByRole("dialog")
+      .getByRole("button", { name: "Send to schedule", exact: true })
+      .click();
+    await completeScheduleDialog(page);
+
     inbox = await readGuestList(page, GUEST_INBOX_KEY);
     expect(inbox.length).toBe(0);
 

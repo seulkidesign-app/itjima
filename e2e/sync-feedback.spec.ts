@@ -60,7 +60,6 @@ test.describe("sync feedback", () => {
     const frame = phone(page);
     await frame.locator("textarea").first().fill(text);
     await frame.getByRole("button", { name: "Leave it", exact: true }).click();
-    await frame.getByTestId("inline-promise").last().waitFor({ state: "visible" });
     await dismissReleaseOverlay(page);
     await page.waitForFunction(
       ({ userId, thoughtText }) => {

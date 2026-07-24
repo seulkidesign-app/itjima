@@ -153,7 +153,7 @@ function SwipeStamp({
   );
 }
 
-export function FocusSortMode({
+export function DecisionDeck({
   open,
   items,
   startItemId,

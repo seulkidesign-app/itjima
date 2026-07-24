@@ -1,26 +1,18 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useRef, useState, useMemo, useCallback } from "react";
 import { toast } from "sonner";
-import {
-  Wind,
-  Trash2,
-  Calendar,
-  Archive as ArchiveIcon,
-  Sparkles,
-  ListOrdered,
-} from "lucide-react";
-import { ChatSwipeRow } from "@/components/ChatSwipeRow";
-import { FocusSortMode } from "@/components/FocusSortMode";
 import { FocusScheduleSheet } from "@/components/FocusScheduleSheet";
 import type { ScheduleConfirmOptions } from "@/components/ScheduleChoiceFlow";
 import { LoginSheet } from "@/components/LoginSheet";
 import { CleanupReviewSheet } from "@/components/CleanupReviewSheet";
-import { ChatBubble } from "@/components/ChatBubble";
 import { InputBar } from "@/components/InputBar";
-import { InlinePromise } from "@/components/InlinePromise";
 import { InstallPrompt } from "@/components/InstallPrompt";
 import { SyncIndicator } from "@/components/SyncIndicator";
 import { runUserOrganize } from "@/components/BrainMirrorSummary";
+import { InboxChat } from "@/components/home/InboxChat";
+import { DecisionLauncher, DecisionLauncherCard } from "@/components/home/DecisionLauncher";
+import { ContextMenu } from "@/components/home/ContextMenu";
+import { PasteSheet } from "@/components/home/PasteSheet";
 import { archiveFromInbox, scheduleFromInbox } from "@/lib/thoughtProvenance";
 import { detectDate } from "@/lib/dateDetect";
 import { thoughtFirstLine } from "@/lib/brainMirror";
@@ -30,7 +22,6 @@ import {
   setRevivalJumpTarget,
   type RevivalHint,
 } from "@/lib/memoryRevival";
-import { MemoryRevivalHint } from "@/components/MemoryRevivalHint";
 import {
   useInbox,
   useSchedules,
@@ -44,6 +35,7 @@ import { track } from "@/lib/analytics";
 import { useT } from "@/lib/i18n";
 import { haptic } from "@/lib/haptics";
 import { allCloudSynced } from "@/lib/syncFeedback";
+import { FEATURES } from "@/lib/features";
 
 export const Route = createFileRoute("/")({
   component: Inbox,
@@ -61,8 +53,10 @@ function Inbox() {
   const userId = useUserId();
 
   const [loginOpen, setLoginOpen] = useState(false);
-  const [focusSortOpen, setFocusSortOpen] = useState(false);
-  const [focusStartId, setFocusStartId] = useState<string | null>(null);
+  const [decisionDeckOpen, setDecisionDeckOpen] = useState(false);
+  const [decisionDeckStartId, setDecisionDeckStartId] = useState<string | null>(
+    null,
+  );
   const [focusScheduleSheet, setFocusScheduleSheet] = useState<{
     open: boolean;
     item?: InboxItem;
@@ -187,12 +181,12 @@ function Inbox() {
     );
   };
 
-  const openFocusSort = (fromId?: string) => {
-    setFocusStartId(fromId ?? null);
-    setFocusSortOpen(true);
+  const openDecisionDeck = (fromId?: string) => {
+    setDecisionDeckStartId(fromId ?? null);
+    setDecisionDeckOpen(true);
   };
 
-  const openScheduleFromFocus = (it: InboxItem) => {
+  const openScheduleFromDecisionDeck = (it: InboxItem) => {
     setFocusPendingScheduleId(it.id);
     setFocusScheduleSheet({ open: true, item: it });
   };
@@ -251,13 +245,13 @@ function Inbox() {
         start,
         end,
         options,
-        focusSortOpen && focusPendingScheduleId === it.id
+        decisionDeckOpen && focusPendingScheduleId === it.id
           ? "focus_sort"
           : "inbox_swipe",
       );
       setFocusScheduleSheet({ open: false });
       setFocusPendingScheduleId(null);
-      if (focusSortOpen) setScheduleCommittedId(it.id);
+      if (decisionDeckOpen) setScheduleCommittedId(it.id);
     } catch {
       toast.error(t("일정을 남기지 못했어요", "Couldn't anchor it in time"));
     }
@@ -298,11 +292,16 @@ function Inbox() {
       const inboxSynced = await inbox.remove(it.id);
       track("thought_swiped_archive", { text_length: it.text.length });
 
-      const related = buildRevivalHint(created, existing, "archive");
+      const related =
+        FEATURES.REDISCOVERY
+          ? buildRevivalHint(created, existing, "archive")
+          : null;
       if (related) {
         setRevivalHint(related);
       }
-      if (inboxRevival?.sourceId === it.id) setInboxRevival(null);
+      if (FEATURES.REDISCOVERY && inboxRevival?.sourceId === it.id) {
+        setInboxRevival(null);
+      }
 
       if (allCloudSynced(archiveSynced, inboxSynced)) {
         showUndoToast(t("기억함에 뒀어요", "Kept safe"), async () => {
@@ -358,10 +357,24 @@ function Inbox() {
         image_count: images.length,
       });
 
-      const revival = buildRevivalHint(created, archive.items, "inbox");
-      if (revival) setInboxRevival(revival);
+      if (FEATURES.REDISCOVERY) {
+        const revival = buildRevivalHint(created, archive.items, "inbox");
+        if (revival) setInboxRevival(revival);
+      }
     } catch {
       toast.error(t("남기지 못했어요", "Couldn't keep it"));
+    }
+  };
+
+  const handleUnderstandAgain = async (target: InboxItem) => {
+    const mirror = await runUserOrganize(target, inbox);
+    if (mirror) {
+      haptic([4, 8, 5]);
+    } else {
+      toast.message(
+        t("지금은 정리하지 못했어요", "Couldn't organize right now"),
+        { duration: 2800 },
+      );
     }
   };
 
@@ -410,6 +423,11 @@ function Inbox() {
     }
   };
 
+  const handlePasteMulti = useCallback((chunks: string[], original: string) => {
+    if (!FEATURES.PASTE_SPLIT) return;
+    setPasteSheet({ chunks, original });
+  }, []);
+
   return (
     <div className="flex min-h-full flex-col bg-white">
       <SyncIndicator
@@ -418,70 +436,37 @@ function Inbox() {
         onRetry={inbox.retrySync}
       />
 
-      <div className="chat-scroll flex min-h-0 flex-1 flex-col gap-4 px-3 pb-3 pt-2">
-        {itemsAsc.map((it) => {
-          const isNewest = it.id === newestId;
-          return (
-            <div key={it.id} className="flex flex-col gap-2.5" data-testid="chat-turn">
-              <ChatBubble
-                item={it}
-                isNewest={isNewest}
-                showTime
-                wrapBubble={(bubble) => (
-                  <ChatSwipeRow
-                    rowId={it.id}
-                    openRowId={swipeOpenId}
-                    onOpenRowChange={setSwipeOpenId}
-                    onSwipeRight={() => openHomeSchedule(it)}
-                    onSwipeLeft={() => moveToArchive(it)}
-                    onLongPress={() => setMenuFor(it.id)}
-                  >
-                    {bubble}
-                  </ChatSwipeRow>
-                )}
-              >
-                {inboxRevival?.sourceId === it.id && (
-                  <MemoryRevivalHint
-                    hint={inboxRevival}
-                    compact
-                    delayMs={900}
-                    onRevisit={revisitArchiveMemory}
-                    onDismiss={() => setInboxRevival(null)}
-                  />
-                )}
-              </ChatBubble>
-
-              <InlinePromise
-                item={it}
-                acknowledged={acknowledgedIds.has(it.id)}
-                onConfirmScheduleQuick={confirmReleaseScheduleQuick}
-                onSchedule={openPromiseSchedule}
-                onArchive={async (item) => {
-                  await moveToArchive(item);
-                  maybeNudgeLogin();
-                }}
-                onLetGo={async (item) => {
-                  await moveToDelete(item);
-                }}
-                onDismiss={() => {
-                  acknowledgeItem(it.id);
-                  maybeNudgeLogin();
-                }}
-              />
-            </div>
-          );
-        })}
-        <div ref={listEndRef} />
-      </div>
+      <InboxChat
+        itemsAsc={itemsAsc}
+        newestId={newestId}
+        swipeOpenId={swipeOpenId}
+        onSwipeOpenIdChange={setSwipeOpenId}
+        inboxRevival={inboxRevival}
+        onInboxRevivalDismiss={() => setInboxRevival(null)}
+        onRevisitArchiveMemory={revisitArchiveMemory}
+        acknowledgedIds={acknowledgedIds}
+        listEndRef={listEndRef}
+        onOpenHomeSchedule={openHomeSchedule}
+        onMoveToArchive={moveToArchive}
+        onOpenContextMenu={setMenuFor}
+        onConfirmScheduleQuick={confirmReleaseScheduleQuick}
+        onOpenPromiseSchedule={openPromiseSchedule}
+        onMoveToDelete={moveToDelete}
+        onAcknowledgeItem={acknowledgeItem}
+        onMaybeNudgeLogin={maybeNudgeLogin}
+      />
 
       <div className="sticky bottom-0 z-20 shrink-0 bg-white">
+        <DecisionLauncherCard
+          itemCount={items.length}
+          newestItemId={newestId}
+          onOpen={(startId) => openDecisionDeck(startId ?? undefined)}
+        />
         <InputBar
           composer
           onAdd={handleAdd}
           exampleChips={items.length === 0 ? exampleChips : undefined}
-          onPasteMulti={(chunks, original) =>
-            setPasteSheet({ chunks, original })
-          }
+          onPasteMulti={handlePasteMulti}
           restoreText={restorePasteText}
           onRestoreConsumed={() => setRestorePasteText(null)}
         />
@@ -489,174 +474,85 @@ function Inbox() {
 
       <InstallPrompt />
 
-      {/* Context menu */}
       {menuItem && (
-        <div
-          className="fixed inset-0 z-50 flex flex-col"
-          role="dialog"
-          aria-modal="true"
-          onClick={() => setMenuFor(null)}
-        >
-          <div className="flex-1 bg-ink/30 backdrop-blur-sm animate-fade-in" />
-          <div
-            className="glass-strong animate-slide-up mx-5 mb-[100px] rounded-[24px] p-2 shadow-float"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <MenuItem
-              icon={<Wind size={18} />}
-              label={t("가볍게 비우기", "Lighten up")}
-              onClick={() => {
-                setMenuFor(null);
-                setCleanupReviewOpen(true);
-              }}
-            />
-            <MenuItem
-              icon={<ListOrdered size={18} />}
-              label={t("하나씩 정리", "One by one")}
-              onClick={() => {
-                setMenuFor(null);
-                openFocusSort();
-              }}
-            />
-            <MenuItem
-              icon={<Sparkles size={18} />}
-              label={t("다시 이해하기", "Understand again")}
-              onClick={() => {
-                const target = menuItem;
-                setMenuFor(null);
-                if (!target) return;
-                void (async () => {
-                  const mirror = await runUserOrganize(target, inbox);
-                  if (mirror) {
-                    haptic([4, 8, 5]);
-                  } else {
-                    toast.message(
-                      t("지금은 정리하지 못했어요", "Couldn't organize right now"),
-                      { duration: 2800 },
-                    );
-                  }
-                })();
-              }}
-            />
-            <MenuItem
-              icon={<Calendar size={18} />}
-              label={t("일정으로 보내기", "Send to schedule")}
-              onClick={() => {
-                setMenuFor(null);
-                openHomeSchedule(menuItem);
-              }}
-            />
-            <MenuItem
-              icon={<ArchiveIcon size={18} />}
-              label={t("생각 보관함에 보관", "Save to vault")}
-              onClick={() => {
-                setMenuFor(null);
-                moveToArchive(menuItem);
-              }}
-            />
-            <MenuItem
-              icon={<Trash2 size={18} />}
-              label={t("삭제하기", "Delete")}
-              danger
-              onClick={() => {
-                setMenuFor(null);
-                void moveToDelete(menuItem);
-              }}
-            />
-          </div>
-        </div>
+        <ContextMenu
+          menuItem={menuItem}
+          onClose={() => setMenuFor(null)}
+          onOpenCleanup={() => setCleanupReviewOpen(true)}
+          onOpenDecisionDeck={() => openDecisionDeck()}
+          onUnderstandAgain={handleUnderstandAgain}
+          onOpenHomeSchedule={openHomeSchedule}
+          onMoveToArchive={moveToArchive}
+          onMoveToDelete={moveToDelete}
+        />
       )}
 
-      {/* Paste sheet */}
-      {pasteSheet && (
-        <div
-          className="fixed inset-0 z-50 flex flex-col"
-          role="dialog"
-          aria-modal="true"
-          onClick={() => {
+      {FEATURES.PASTE_SPLIT && pasteSheet && (
+        <PasteSheet
+          pasteSheet={pasteSheet}
+          onDismiss={() => {
             setRestorePasteText(pasteSheet.original);
             setPasteSheet(null);
           }}
-        >
-          <div className="flex-1 bg-ink/30 backdrop-blur-sm animate-fade-in" />
-          <div
-            className="glass-strong animate-slide-up rounded-t-[28px] px-5 pb-[calc(env(safe-area-inset-bottom)+1.25rem)] pt-3"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="mx-auto mb-3 h-1.5 w-10 rounded-full bg-ink/15" />
-            <div className="text-[17px] font-bold text-ink">
-              {t(
-                "붙여넣은 글, 어떻게 남길까요?",
-                "How should we keep this pasted text?",
-              )}
-            </div>
-            <div className="mt-1 text-sm text-ink-soft">
-              {t(
-                `${pasteSheet.chunks.length}줄이에요.`,
-                `${pasteSheet.chunks.length} lines here.`,
-              )}
-            </div>
-            <button
-              onClick={async () => {
-                try {
-                  for (const c of pasteSheet.chunks) {
-                    await inbox.add({
-                      text: c,
-                      images: [],
-                    });
-                  }
-                  setPasteSheet(null);
-                  toast.success(
-                    t(
-                      `${pasteSheet.chunks.length}개로 나눠 남겼어요`,
-                      `Kept as ${pasteSheet.chunks.length} separate thoughts`,
-                    ),
-                  );
-                } catch {
-                  toast.error(t("남기지 못했어요", "Couldn't keep it"));
-                }
-              }}
-              className="mt-4 w-full rounded-full bg-primary py-3.5 text-[15px] font-bold text-ink"
-            >
-              {t("나눠서 남기기", "Keep separately")}
-            </button>
-            <button
-              onClick={async () => {
-                const original = pasteSheet.original;
-                try {
-                  await inbox.add({
-                    text: original,
-                    images: [],
-                  });
-                  setPasteSheet(null);
-                } catch {
-                  toast.error(t("남기지 못했어요", "Couldn't keep it"));
-                }
-              }}
-              className="mt-2 w-full rounded-full bg-white/70 py-3.5 text-[15px] font-semibold text-ink"
-            >
-              {t("한 덩어리로 남기기", "Keep as one")}
-            </button>
-          </div>
-        </div>
+          onKeepSeparately={async () => {
+            try {
+              for (const c of pasteSheet.chunks) {
+                await inbox.add({
+                  text: c,
+                  images: [],
+                });
+              }
+              setPasteSheet(null);
+              toast.success(
+                t(
+                  `${pasteSheet.chunks.length}개로 나눠 남겼어요`,
+                  `Kept as ${pasteSheet.chunks.length} separate thoughts`,
+                ),
+              );
+            } catch {
+              toast.error(t("남기지 못했어요", "Couldn't keep it"));
+            }
+          }}
+          onKeepAsOne={async () => {
+            const original = pasteSheet.original;
+            try {
+              await inbox.add({
+                text: original,
+                images: [],
+              });
+              setPasteSheet(null);
+            } catch {
+              toast.error(t("남기지 못했어요", "Couldn't keep it"));
+            }
+          }}
+        />
       )}
 
-      <FocusSortMode
-        open={focusSortOpen}
-        startItemId={focusStartId}
+      <DecisionLauncher
+        open={decisionDeckOpen}
+        startItemId={decisionDeckStartId}
         items={items}
         pendingScheduleId={focusPendingScheduleId}
         scheduleCommittedId={scheduleCommittedId}
         onScheduleCommitHandled={() => setScheduleCommittedId(null)}
         onClose={() => {
-          setFocusSortOpen(false);
-          setFocusStartId(null);
+          setDecisionDeckOpen(false);
+          setDecisionDeckStartId(null);
           setFocusPendingScheduleId(null);
           setFocusScheduleSheet({ open: false });
         }}
-        onScheduleRequest={openScheduleFromFocus}
+        onScheduleRequest={openScheduleFromDecisionDeck}
         onArchive={(it) => moveToArchive(it)}
       />
+
+      {FEATURES.CLEANUP && (
+        <CleanupReviewSheet
+          open={cleanupReviewOpen}
+          items={items}
+          onClose={() => setCleanupReviewOpen(false)}
+          onConfirmDelete={confirmCleanupDelete}
+        />
+      )}
 
       <FocusScheduleSheet
         item={focusScheduleSheet.item ?? null}
@@ -672,38 +568,7 @@ function Inbox() {
         }}
       />
 
-      <CleanupReviewSheet
-        open={cleanupReviewOpen}
-        items={items}
-        onClose={() => setCleanupReviewOpen(false)}
-        onConfirmDelete={confirmCleanupDelete}
-      />
-
       <LoginSheet open={loginOpen} onClose={() => setLoginOpen(false)} />
     </div>
-  );
-}
-
-function MenuItem({
-  icon,
-  label,
-  onClick,
-  danger,
-}: {
-  icon: React.ReactNode;
-  label: string;
-  onClick: () => void;
-  danger?: boolean;
-}) {
-  return (
-    <button
-      onClick={onClick}
-      className={`flex w-full items-center gap-3 rounded-full px-4 py-3 text-[15px] font-medium min-h-11 ${
-        danger ? "text-meta" : "text-ink"
-      } hover:bg-white/60`}
-    >
-      {icon}
-      {label}
-    </button>
   );
 }

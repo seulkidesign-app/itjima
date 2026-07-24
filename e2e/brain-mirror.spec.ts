@@ -23,7 +23,7 @@ test.describe("Brain Mirror API failures", () => {
     await input.fill(text);
     await frame.getByRole("button", { name: "Leave it", exact: true }).click();
     await frame.getByText(text, { exact: true }).first().waitFor({ state: "visible" });
-    await frame.getByTestId("inline-promise").waitFor({ state: "visible", timeout: 15_000 });
+    await expect(frame.getByTestId("inline-promise")).toHaveCount(0);
     await expect(
       page.getByText("Couldn't load a reflection right now"),
     ).toHaveCount(0);
@@ -39,7 +39,7 @@ test.describe("Brain Mirror API failures", () => {
     await input.fill(text);
     await frame.getByRole("button", { name: "Leave it", exact: true }).click();
     await frame.getByText(text, { exact: true }).first().waitFor({ state: "visible" });
-    await frame.getByTestId("inline-promise").waitFor({ state: "visible", timeout: 15_000 });
+    await expect(frame.getByTestId("inline-promise")).toHaveCount(0);
     await expect(
       page.getByText("Couldn't load a reflection right now"),
     ).toHaveCount(0);

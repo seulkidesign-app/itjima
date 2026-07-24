@@ -30,7 +30,7 @@ test.describe("Chat home mobile screenshots", () => {
       const frame = phone(page);
       await frame.locator("textarea").first().fill(text);
       await frame.getByRole("button", { name: "남기기", exact: true }).click();
-      await frame.getByTestId("inline-promise").last().waitFor({
+      await frame.getByTestId("chat-turn").last().waitFor({
         state: "visible",
       });
       await page.waitForTimeout(350);

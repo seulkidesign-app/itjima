@@ -16,6 +16,7 @@ import {
   compressImageFile,
   MAX_IMAGES,
 } from "@/lib/imageCompress";
+import { FEATURES } from "@/lib/features";
 import { confirm, light, tap } from "@/lib/haptics";
 import { SPRING_MICRO } from "@/lib/motion";
 
@@ -274,7 +275,7 @@ export function InputBar({
       .map((l) => l.trim())
       .filter(Boolean);
     const bullety = /^[-•*·\u25AA]\s/.test(lines[0] ?? "");
-    if (lines.length >= 3 || bullety) {
+    if (FEATURES.PASTE_SPLIT && (lines.length >= 3 || bullety)) {
       e.preventDefault();
       onPasteMulti(lines, pasted);
     }

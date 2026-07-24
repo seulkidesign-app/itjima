@@ -53,6 +53,7 @@ import { useThinkingInsights } from "@/hooks/useThinkingInsights";
 import { MemoryJourneySection } from "@/components/MemoryJourneySection";
 import { useMemoryJourney } from "@/hooks/useMemoryJourney";
 import { MemoryRevivalHint } from "@/components/MemoryRevivalHint";
+import { FEATURES } from "@/lib/features";
 import { consumeRevivalJumpTarget } from "@/lib/memoryRevival";
 import { ArchiveGridSkeleton } from "@/components/Skeleton";
 import { EmptyState } from "@/components/EmptyState";
@@ -939,7 +940,9 @@ function Archive() {
               </section>
             ) : layoutMode === "space" && groupFilter === "all" ? (
               <>
-                {revival && revival.sourceKind === "archive" && (
+                {FEATURES.REDISCOVERY &&
+                  revival &&
+                  revival.sourceKind === "archive" && (
                   <div className="px-5">
                     <MemoryRevivalHint
                       hint={revival}
@@ -969,7 +972,10 @@ function Archive() {
               </>
             ) : (
               <>
-            {revival && !isSearching && revival.sourceKind === "archive" && (
+            {FEATURES.REDISCOVERY &&
+              revival &&
+              !isSearching &&
+              revival.sourceKind === "archive" && (
               <MemoryRevivalHint
                 hint={revival}
                 onRevisit={(id) => {
