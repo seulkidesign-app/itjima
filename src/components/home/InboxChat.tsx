@@ -1,4 +1,4 @@
-import { ChatSwipeRow } from "@/components/ChatSwipeRow";
+import { ChatLongPressRow } from "@/components/ChatLongPressRow";
 import { ChatBubble } from "@/components/ChatBubble";
 import { InlinePromise } from "@/components/InlinePromise";
 import { MemoryRevivalHint } from "@/components/MemoryRevivalHint";
@@ -9,14 +9,11 @@ import type { RevivalHint } from "@/lib/memoryRevival";
 type Props = {
   itemsAsc: InboxItem[];
   newestId: string | undefined;
-  swipeOpenId: string | null;
-  onSwipeOpenIdChange: (id: string | null) => void;
   inboxRevival: RevivalHint | null;
   onInboxRevivalDismiss: () => void;
   onRevisitArchiveMemory: (memoryId: string) => void;
   acknowledgedIds: Set<string>;
   listEndRef: React.RefObject<HTMLDivElement | null>;
-  onOpenHomeSchedule: (item: InboxItem) => void;
   onMoveToArchive: (item: InboxItem) => void | Promise<void>;
   onOpenContextMenu: (id: string) => void;
   onConfirmScheduleQuick: (item: InboxItem) => void | Promise<void>;
@@ -29,14 +26,11 @@ type Props = {
 export function InboxChat({
   itemsAsc,
   newestId,
-  swipeOpenId,
-  onSwipeOpenIdChange,
   inboxRevival,
   onInboxRevivalDismiss,
   onRevisitArchiveMemory,
   acknowledgedIds,
   listEndRef,
-  onOpenHomeSchedule,
   onMoveToArchive,
   onOpenContextMenu,
   onConfirmScheduleQuick,
@@ -46,7 +40,7 @@ export function InboxChat({
   onMaybeNudgeLogin,
 }: Props) {
   return (
-    <div className="chat-scroll flex min-h-0 flex-1 flex-col gap-4 px-3 pb-3 pt-2">
+    <div className="chat-scroll flex min-h-0 flex-1 flex-col gap-4 px-3 pb-[calc(7.5rem+env(safe-area-inset-bottom))] pt-2">
       {itemsAsc.map((it) => {
         const isNewest = it.id === newestId;
         return (
@@ -56,16 +50,9 @@ export function InboxChat({
               isNewest={isNewest}
               showTime
               wrapBubble={(bubble) => (
-                <ChatSwipeRow
-                  rowId={it.id}
-                  openRowId={swipeOpenId}
-                  onOpenRowChange={onSwipeOpenIdChange}
-                  onSwipeRight={() => onOpenHomeSchedule(it)}
-                  onSwipeLeft={() => void onMoveToArchive(it)}
-                  onLongPress={() => onOpenContextMenu(it.id)}
-                >
+                <ChatLongPressRow onLongPress={() => onOpenContextMenu(it.id)}>
                   {bubble}
-                </ChatSwipeRow>
+                </ChatLongPressRow>
               )}
             >
               {FEATURES.REDISCOVERY && inboxRevival?.sourceId === it.id && (
@@ -101,7 +88,12 @@ export function InboxChat({
           </div>
         );
       })}
-      <div ref={listEndRef} />
+      <div
+        ref={listEndRef}
+        data-testid="chat-scroll-sentinel"
+        className="h-px w-full shrink-0 scroll-mt-3"
+        aria-hidden
+      />
     </div>
   );
 }

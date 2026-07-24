@@ -40,6 +40,7 @@ import { track } from "@/lib/analytics";
 import { useT } from "@/lib/i18n";
 import { haptic } from "@/lib/haptics";
 import { allCloudSynced } from "@/lib/syncFeedback";
+import { useHomeChatScroll } from "@/hooks/useHomeChatScroll";
 import { FEATURES } from "@/lib/features";
 
 export const Route = createFileRoute("/")({
@@ -79,7 +80,6 @@ function Inbox() {
     original: string;
   } | null>(null);
   const [restorePasteText, setRestorePasteText] = useState<string | null>(null);
-  const [swipeOpenId, setSwipeOpenId] = useState<string | null>(null);
   const [inboxRevival, setInboxRevival] = useState<RevivalHint | null>(null);
   const [acknowledgedIds, setAcknowledgedIds] = useState<Set<string>>(
     () => new Set(),
@@ -104,23 +104,11 @@ function Inbox() {
   );
   const newestId = pendingItems[0]?.id;
   const listEndRef = useRef<HTMLDivElement | null>(null);
-  const prevCountRef = useRef(items.length);
+  const { notifyThoughtSubmitted } = useHomeChatScroll(items.length);
 
   const acknowledgeItem = useCallback((id: string) => {
     setAcknowledgedIds((prev) => new Set(prev).add(id));
   }, []);
-
-  useEffect(() => {
-    if (items.length > prevCountRef.current) {
-      requestAnimationFrame(() => {
-        listEndRef.current?.scrollIntoView({
-          behavior: "smooth",
-          block: "end",
-        });
-      });
-    }
-    prevCountRef.current = items.length;
-  }, [items.length]);
 
   const openPromiseSchedule = useCallback((it: InboxItem) => {
     setFocusScheduleSheet({ open: true, item: it });
@@ -445,6 +433,7 @@ function Inbox() {
         const revival = buildRevivalHint(created, archive.items, "inbox");
         if (revival) setInboxRevival(revival);
       }
+      notifyThoughtSubmitted();
     } catch {
       toast.error(t("남기지 못했어요", "Couldn't keep it"));
     }
@@ -523,14 +512,11 @@ function Inbox() {
       <InboxChat
         itemsAsc={itemsAsc}
         newestId={newestId}
-        swipeOpenId={swipeOpenId}
-        onSwipeOpenIdChange={setSwipeOpenId}
         inboxRevival={inboxRevival}
         onInboxRevivalDismiss={() => setInboxRevival(null)}
         onRevisitArchiveMemory={revisitArchiveMemory}
         acknowledgedIds={acknowledgedIds}
         listEndRef={listEndRef}
-        onOpenHomeSchedule={openHomeSchedule}
         onMoveToArchive={moveToArchive}
         onOpenContextMenu={setMenuFor}
         onConfirmScheduleQuick={confirmReleaseScheduleQuick}

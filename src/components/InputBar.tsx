@@ -51,13 +51,14 @@ export function InputBar({
 }: Props) {
   const t = useT();
   const { lang } = useLang();
-  const [text, setText] = useState("");
+  const [committedText, setCommittedText] = useState("");
+  const [interimText, setInterimText] = useState("");
   const [images, setImages] = useState<string[]>([]);
   const [listening, setListening] = useState(false);
   const [focused, setFocused] = useState(false);
   const [scribbleOpen, setScribbleOpen] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
-  const textRef = useRef(text);
+  const textRef = useRef("");
   const imagesRef = useRef(images);
   const onAddRef = useRef(onAdd);
   const commandSnapshotRef = useRef("");
@@ -68,6 +69,11 @@ export function InputBar({
   const submitQueueRef = useRef(Promise.resolve());
   const fileRef = useRef<HTMLInputElement>(null);
   const recogRef = useRef<SpeechRecognition | null>(null);
+  const speechFinalIndexRef = useRef(0);
+
+  const text = interimText
+    ? `${committedText}${committedText ? " " : ""}${interimText} […]`
+    : committedText;
 
   textRef.current = text;
   imagesRef.current = images;
@@ -86,11 +92,26 @@ export function InputBar({
 
   useEffect(() => {
     if (!restoreText) return;
-    setText(restoreText);
+    setCommittedText(restoreText);
+    setInterimText("");
     textRef.current = restoreText;
     onRestoreConsumed?.();
     textareaRef.current?.focus();
   }, [restoreText, onRestoreConsumed]);
+
+  const appendFinalSpeech = (prev: string, segment: string) => {
+    const trimmed = segment.trim();
+    if (!trimmed) return prev;
+    if (prev.endsWith(trimmed)) return prev;
+    return prev ? `${prev} ${trimmed}` : trimmed;
+  };
+
+  const setUserText = (value: string) => {
+    setCommittedText(value);
+    setInterimText("");
+    speechFinalIndexRef.current = 0;
+    textRef.current = value;
+  };
 
   const addImage = async (dataUrl: string) => {
     if (imagesRef.current.length >= MAX_IMAGES) {
@@ -110,8 +131,14 @@ export function InputBar({
     textRef.current = "";
     imagesRef.current = [];
     commandSnapshotRef.current = "";
-    setText("");
+    setCommittedText("");
+    setInterimText("");
+    speechFinalIndexRef.current = 0;
     setImages([]);
+  };
+
+  const clearInterimSpeech = () => {
+    setInterimText("");
   };
 
   const primeCommandSubmit = (target: HTMLTextAreaElement) => {
@@ -123,8 +150,10 @@ export function InputBar({
   const handleAdd = (textSnapshot?: string) => {
     const currentImages = [...imagesRef.current];
     const currentText =
-      textSnapshot ?? textareaRef.current?.value ?? textRef.current;
-    const trimmedText = currentText.replace(/\s*\[…\]\s*$/, "").trim();
+      textSnapshot ??
+      textareaRef.current?.value.replace(/\s*\[…\]\s*$/, "") ??
+      committedText;
+    const trimmedText = currentText.trim();
     if (!trimmedText && currentImages.length === 0) {
       light();
       textareaRef.current?.focus();
@@ -218,31 +247,44 @@ export function InputBar({
       return;
     }
     if (listening) {
+      clearInterimSpeech();
       recogRef.current?.stop();
       tap();
       return;
     }
     tap();
+    speechFinalIndexRef.current = 0;
+    clearInterimSpeech();
     const r = new SR();
     r.lang = lang === "en" ? "en-US" : "ko-KR";
     r.interimResults = true;
     r.continuous = false;
     r.onresult = (e: SpeechRecognitionEvent) => {
-      const last = e.results[e.results.length - 1];
-      const transcript = last[0].transcript as string;
-      if (last.isFinal)
-        setText((prev) => (prev ? prev + " " : "") + transcript);
-      else
-        setText((prev) => {
-          const base = prev.replace(/\s*\[…\]$/, "");
-          return (base ? base + " " : "") + transcript + " […]";
-        });
+      let nextInterim = "";
+      for (let i = 0; i < e.results.length; i += 1) {
+        const result = e.results[i];
+        const transcript = (result[0].transcript as string).trim();
+        if (!transcript) continue;
+        if (result.isFinal) {
+          if (i >= speechFinalIndexRef.current) {
+            setCommittedText((prev) => appendFinalSpeech(prev, transcript));
+            speechFinalIndexRef.current = i + 1;
+          }
+        } else if (i === e.results.length - 1) {
+          nextInterim = transcript;
+        }
+      }
+      setInterimText(nextInterim);
     };
     r.onerror = () => {
+      clearInterimSpeech();
       setListening(false);
       toast.error(t("음성 입력에 실패했어요", "Voice input failed"));
     };
-    r.onend = () => setListening(false);
+    r.onend = () => {
+      clearInterimSpeech();
+      setListening(false);
+    };
     r.start();
     recogRef.current = r;
     setListening(true);
@@ -320,8 +362,7 @@ export function InputBar({
                 type="button"
                 onClick={() => {
                   tap();
-                  setText(label);
-                  textRef.current = label;
+                  setUserText(label);
                   textareaRef.current?.focus();
                 }}
                 className="touch-press rounded-full border border-ink/10 bg-ink/[0.03] px-2.5 py-1 text-[11px] font-medium text-ink-soft"
@@ -379,7 +420,7 @@ export function InputBar({
             id="capture-input"
             ref={textareaRef}
             value={text}
-            onChange={(e) => setText(e.target.value)}
+            onChange={(e) => setUserText(e.target.value)}
             onFocus={() => setFocused(true)}
             onBlur={() => setFocused(false)}
             onCompositionStart={() => {
@@ -440,8 +481,7 @@ export function InputBar({
                   type="button"
                   onClick={() => {
                     tap();
-                    setText(label);
-                    textRef.current = label;
+                    setUserText(label);
                     textareaRef.current?.focus();
                   }}
                   className="touch-press rounded-full border border-ink/10 bg-white px-3 py-1.5 text-[12px] font-medium text-ink-soft"

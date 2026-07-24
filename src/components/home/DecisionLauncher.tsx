@@ -25,11 +25,14 @@ export function DecisionLauncherCard({
 
   if (itemCount < 1) return null;
 
-  const countLabel = lang === "en" ? String(itemCount) : `${itemCount}개`;
+  const label =
+    lang === "en"
+      ? `${itemCount} thoughts to decide`
+      : `결정할 생각 ${itemCount}개`;
   const ariaLabel =
     lang === "en"
-      ? `Decide one by one, ${itemCount} thoughts`
-      : `하나씩 결정하기, ${itemCount}개`;
+      ? `Decide, ${itemCount} thoughts`
+      : `결정하기, ${itemCount}개`;
 
   const handleClick = () => {
     tap();
@@ -46,21 +49,16 @@ export function DecisionLauncherCard({
       data-testid="decision-launcher"
       aria-label={ariaLabel}
       onClick={handleClick}
-      className="touch-press mx-3 mb-2 mt-2 flex w-[calc(100%-1.5rem)] items-center justify-between gap-3 rounded-[20px] border border-ink/8 bg-[#fafaf8] px-4 py-3 text-left shadow-card transition-transform active:scale-[0.99]"
+      className="touch-press mx-3 mb-1.5 mt-1.5 flex w-[calc(100%-1.5rem)] items-center justify-between gap-3 rounded-[16px] border border-ink/8 bg-[#fafaf8] px-3.5 py-2 text-left shadow-card transition-transform active:scale-[0.99]"
     >
-      <div className="min-w-0">
-        <p className="text-[11px] font-semibold tracking-[-0.01em] text-ink-soft">
-          {t("결정할 생각", "Thoughts to decide")}
-        </p>
-        <p
-          className="mt-0.5 text-[17px] font-bold tabular-nums tracking-[-0.02em] text-ink"
-          data-testid="decision-launcher-count"
-        >
-          {countLabel}
-        </p>
-      </div>
-      <span className="pill-yellow shrink-0 px-3.5 py-2 text-[12px] font-bold text-ink">
-        {t("하나씩 결정하기", "Decide one by one")}
+      <p
+        className="min-w-0 truncate text-[13px] font-semibold tracking-[-0.01em] text-ink"
+        data-testid="decision-launcher-count"
+      >
+        {label}
+      </p>
+      <span className="pill-yellow shrink-0 px-3 py-1.5 text-[11px] font-bold text-ink">
+        {t("결정하기", "Decide")}
       </span>
     </button>
   );
