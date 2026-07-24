@@ -8,7 +8,7 @@ import {
   GUEST_SCHEDULE_KEY,
   GUEST_ARCHIVE_KEY,
 } from "./helpers";
-import { resolveDragOutcome } from "../src/lib/decision";
+import { resolveDragOutcome, previewDragOutcome } from "../src/lib/decision";
 
 async function installAnalyticsSpy(page: Page) {
   await page.addInitScript(() => {
@@ -54,6 +54,9 @@ test.describe("Decision deck 3-state swipe", () => {
     expect(resolveDragOutcome(-50, 320)).toBeNull();
     expect(resolveDragOutcome(120, 320)).toBe("later");
     expect(resolveDragOutcome(220, 320)).toBe("archive");
+    expect(previewDragOutcome(-80, 0, 320)).toBe("today");
+    expect(previewDragOutcome(120, 0, 320)).toBe("later");
+    expect(previewDragOutcome(220, 0, 320)).toBe("archive");
   });
 
   test("legacy inbox rows without decision fields still open in deck", async ({
@@ -137,6 +140,55 @@ test.describe("Decision deck 3-state swipe", () => {
     expect(inbox.length).toBe(0);
   });
 
+  test("outcome label updates during drag across thresholds", async ({ page }) => {
+    await addThought(page, `Label drag ${Date.now()}`);
+    await openDeck(page);
+    const card = phone(page).getByTestId("decision-deck-active-card");
+    const box = await card.boundingBox();
+    expect(box).toBeTruthy();
+    const width = box!.width;
+    const startX = box!.x + box!.width / 2;
+    const y = box!.y + box!.height / 2;
+    const label = card.locator('[data-testid="decision-outcome-label"]');
+
+    await page.mouse.move(startX, y);
+    await page.mouse.down();
+
+    await page.mouse.move(startX - width * 0.26, y, { steps: 8 });
+    await expect.poll(async () => label.getAttribute("data-outcome")).toBe("today");
+
+    await page.mouse.move(startX + width * 0.35, y, { steps: 12 });
+    await expect.poll(async () => label.getAttribute("data-outcome")).toBe("later");
+
+    await page.mouse.move(startX + width * 0.7, y, { steps: 12 });
+    await expect.poll(async () => label.getAttribute("data-outcome")).toBe("archive");
+
+    await page.mouse.move(startX, y, { steps: 10 });
+    await page.mouse.up();
+    await expect(card).toBeVisible();
+    await expect(phone(page).getByTestId("decision-deck-complete")).toHaveCount(0);
+  });
+
+  test("later item does not reappear in the same deck session", async ({ page }) => {
+    const stamp = Date.now();
+    const older = `Older ${stamp}`;
+    const newer = `Newer ${stamp}`;
+    await addThought(page, older);
+    await addThought(page, newer);
+    await openDeck(page);
+
+    const activeCard = phone(page).getByTestId("decision-deck-active-card");
+    await expect(activeCard.getByText(newer)).toBeVisible();
+    await phone(page).getByTestId("decision-btn-later").click();
+    await expect(activeCard.getByText(older)).toBeVisible();
+    await expect(activeCard.getByText(newer)).toHaveCount(0);
+
+    await phone(page).getByRole("button", { name: "Close" }).click();
+    await openDeck(page);
+    await expect(activeCard.getByText(newer)).toHaveCount(0);
+    await expect(activeCard.getByText(older)).toBeVisible();
+  });
+
   test("action buttons mirror swipe outcomes", async ({ page }) => {
     const first = `Button today ${Date.now()}`;
     const second = `Button later ${Date.now()}`;
@@ -180,7 +232,36 @@ test.describe("Decision deck 3-state swipe", () => {
     const events = await readAnalytics(page);
     const serialized = JSON.stringify(events);
     expect(serialized).toContain("decision_archive");
+    expect(serialized).toContain("decision_completed");
     expect(serialized).not.toContain(text);
+  });
+
+  test("undo restores the latest decision and counts", async ({ page }) => {
+    const a = `Undo A ${Date.now()}`;
+    const b = `Undo B ${Date.now()}`;
+    await addThought(page, a);
+    await addThought(page, b);
+    await openDeck(page);
+    await phone(page).getByTestId("decision-btn-today").click();
+    await phone(page).getByTestId("decision-btn-later").click();
+    const complete = phone(page).getByTestId("decision-deck-complete");
+    await complete.waitFor({ state: "visible" });
+    await expect(complete.locator("dd").nth(0)).toHaveText("1");
+    await expect(complete.locator("dd").nth(1)).toHaveText("1");
+
+    await phone(page).getByTestId("decision-undo").click();
+    await expect(phone(page).getByTestId("decision-deck-active-card")).toBeVisible();
+    await phone(page).getByTestId("decision-btn-archive").click();
+    await complete.waitFor({ state: "visible" });
+    await expect(complete.locator("dd").nth(0)).toHaveText("1");
+    await expect(complete.locator("dd").nth(1)).toHaveText("0");
+    await expect(complete.locator("dd").nth(2)).toHaveText("1");
+
+    const events = await readAnalytics(page);
+    const serialized = JSON.stringify(events);
+    expect(serialized).toContain("decision_undo");
+    expect(serialized).not.toContain(a);
+    expect(serialized).not.toContain(b);
   });
 
   test("undo restores the latest decision", async ({ page }) => {

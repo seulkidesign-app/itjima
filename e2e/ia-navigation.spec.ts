@@ -3,6 +3,8 @@ import {
   GUEST_ARCHIVE_KEY,
   GUEST_SCHEDULE_KEY,
   readGuestList,
+  addThought,
+  phone,
 } from "./helpers";
 
 async function resetForIa(page: Page) {
@@ -61,7 +63,7 @@ async function seedGuestData(page: Page) {
   );
 }
 
-test.describe("IA navigation (Throw / Today / Vault)", () => {
+test.describe("IA navigation (Throw / Schedule / Archive)", () => {
   test.beforeEach(async ({ page }) => {
     await resetForIa(page);
     await seedGuestData(page);
@@ -73,12 +75,12 @@ test.describe("IA navigation (Throw / Today / Vault)", () => {
     page,
   }) => {
     await expect(page.getByRole("link", { name: /^Throw$/ })).toBeVisible();
-    await expect(page.getByRole("link", { name: /^Today$/ })).toBeVisible();
-    await expect(page.getByRole("link", { name: /^Vault$/ })).toBeVisible();
+    await expect(page.getByRole("link", { name: /^Schedule$/ })).toBeVisible();
+    await expect(page.getByRole("link", { name: /^Archive$/ })).toBeVisible();
 
     await page.screenshot({ path: "qa-ia/01-throw.png" });
 
-    await page.getByRole("link", { name: /^Today$/ }).click();
+    await page.getByRole("link", { name: /^Schedule$/ }).click();
     await expect(page).toHaveURL(/\/schedule$/);
     await expect(
       page.getByRole("heading", { name: "Today", exact: true }),
@@ -92,9 +94,9 @@ test.describe("IA navigation (Throw / Today / Vault)", () => {
     await expect(page.getByRole("button", { name: "Add task" })).toBeVisible();
     await expect(page.getByText("Buy flowers for Mom")).toBeVisible();
 
-    await page.screenshot({ path: "qa-ia/02-today.png" });
+    await page.screenshot({ path: "qa-ia/02-schedule.png" });
 
-    await page.getByRole("link", { name: /^Vault$/ }).click();
+    await page.getByRole("link", { name: /^Archive$/ }).click();
     await expect(page).toHaveURL(/\/archive$/);
     await expect(
       page.getByRole("heading", { name: "Vault", exact: true }),
@@ -107,7 +109,7 @@ test.describe("IA navigation (Throw / Today / Vault)", () => {
     await expect(page.getByRole("link", { name: "Revisit" })).toBeVisible();
     await expect(page.getByText("Mom birthday idea").first()).toBeVisible();
 
-    await page.screenshot({ path: "qa-ia/03-vault-shell.png" });
+    await page.screenshot({ path: "qa-ia/03-archive-shell.png" });
 
     await page.getByRole("link", { name: /^Throw$/ }).click();
     await expect(page).toHaveURL("/");
@@ -119,4 +121,68 @@ test.describe("IA navigation (Throw / Today / Vault)", () => {
     expect(archive.length).toBe(1);
     expect((archive[0] as { text: string }).text).toBe("Mom birthday idea");
   });
+});
+
+test.describe("IA visual QA viewports", () => {
+  for (const width of [320, 375, 390, 430]) {
+    test(`Korean nav and home fit at ${width}px`, async ({ page }) => {
+      await page.setViewportSize({ width, height: 844 });
+      await page.goto("/");
+      await page.evaluate(() => {
+        for (const k of Object.keys(localStorage)) {
+          if (k.startsWith("itjima.")) localStorage.removeItem(k);
+        }
+        localStorage.setItem("itjima_lang", "ko");
+        sessionStorage.clear();
+      });
+      await page.reload();
+      await phone(page).getByRole("link", { name: /^던지기$/ }).waitFor();
+
+      await expect(phone(page).getByRole("link", { name: /^던지기$/ })).toBeVisible();
+      await expect(phone(page).getByRole("link", { name: /^일정$/ })).toBeVisible();
+      await expect(phone(page).getByRole("link", { name: /^보관함$/ })).toBeVisible();
+
+      const metrics = await page.evaluate(() => ({
+        scrollWidth: document.documentElement.scrollWidth,
+        clientWidth: document.documentElement.clientWidth,
+      }));
+      expect(metrics.scrollWidth).toBeLessThanOrEqual(metrics.clientWidth + 1);
+
+      await phone(page).screenshot({
+        path: `qa-ia/ko-nav-${width}.png`,
+      });
+    });
+
+    test(`decision deck controls fit at ${width}px`, async ({ page }) => {
+      await page.setViewportSize({ width, height: 844 });
+      await page.goto("/");
+      await page.evaluate(() => {
+        for (const k of Object.keys(localStorage)) {
+          if (k.startsWith("itjima.")) localStorage.removeItem(k);
+        }
+        localStorage.setItem("itjima_lang", "en");
+        sessionStorage.clear();
+      });
+      await page.reload();
+      await addThought(page, `Deck layout ${width}`);
+      await phone(page).getByTestId("decision-launcher").click();
+      await phone(page)
+        .getByRole("dialog", { name: "One by one" })
+        .waitFor({ state: "visible" });
+
+      await expect(phone(page).getByTestId("decision-btn-today")).toBeVisible();
+      await expect(phone(page).getByTestId("decision-btn-later")).toBeVisible();
+      await expect(phone(page).getByTestId("decision-btn-archive")).toBeVisible();
+
+      const metrics = await page.evaluate(() => ({
+        scrollWidth: document.documentElement.scrollWidth,
+        clientWidth: document.documentElement.clientWidth,
+      }));
+      expect(metrics.scrollWidth).toBeLessThanOrEqual(metrics.clientWidth + 1);
+
+      await phone(page).screenshot({
+        path: `qa-ia/deck-${width}.png`,
+      });
+    });
+  }
 });

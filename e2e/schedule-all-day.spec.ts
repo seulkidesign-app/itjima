@@ -78,7 +78,7 @@ async function openEditTimeStep(
   opts?: { upcoming?: boolean },
 ) {
   const ui = await app(page);
-  await ui.getByRole("link", { name: /^Today/ }).click();
+  await ui.getByRole("link", { name: /^Schedule/ }).click();
   if (opts?.upcoming) {
     await ui.getByRole("tab", { name: "Upcoming" }).click();
   }
@@ -102,7 +102,7 @@ async function openCreateTimeStep(
   opts?: { tomorrow?: boolean; title?: string },
 ) {
   const ui = await app(page);
-  await ui.getByRole("link", { name: /^Today/ }).click();
+  await ui.getByRole("link", { name: /^Schedule/ }).click();
   await ui.getByRole("button", { name: "Add task" }).click();
   const sheet = page.getByRole("dialog");
   if (opts?.tomorrow) {

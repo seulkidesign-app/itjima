@@ -99,7 +99,7 @@ export async function gotoInbox(page: Page) {
 }
 
 export async function gotoArchiveListView(page: Page) {
-  await phone(page).getByRole("link", { name: /^Vault/ }).click();
+  await phone(page).getByRole("link", { name: /^Archive/ }).click();
   await phone(page)
     .getByRole("heading", { name: "Vault", exact: true })
     .waitFor({ state: "visible" });
@@ -203,12 +203,12 @@ export async function openContextMenuRaw(page: Page, thoughtText: string) {
 
 export async function getTabCount(
   page: Page,
-  tab: "Throw" | "Today" | "Vault",
+  tab: "Throw" | "Schedule" | "Archive",
 ) {
   const key =
     tab === "Throw"
       ? GUEST_INBOX_KEY
-      : tab === "Today"
+      : tab === "Schedule"
         ? GUEST_SCHEDULE_KEY
         : GUEST_ARCHIVE_KEY;
   const list = await readGuestList(page, key);

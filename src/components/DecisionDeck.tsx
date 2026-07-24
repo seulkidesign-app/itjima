@@ -47,6 +47,9 @@ export type UndoSnapshot = {
   outcome: DecisionOutcome;
   scheduleId?: string;
   archiveId?: string;
+  source: DecisionSource;
+  position: number;
+  total: number;
 };
 
 type SessionCounts = Record<DecisionOutcome, number>;
@@ -201,6 +204,8 @@ export function DecisionDeck({
   const t = useT();
   const initialTotal = useRef(0);
   const wasOpen = useRef(false);
+  const sessionStartedAt = useRef<number | null>(null);
+  const completionTrackedRef = useRef(false);
   const cardRef = useRef<HTMLDivElement>(null);
   const actingRef = useRef(false);
   const previewFired = useRef<DecisionOutcome | null>(null);
@@ -270,10 +275,14 @@ export function DecisionDeck({
       setUndoSnapshot(null);
       previewFired.current = null;
       thresholdFired.current = null;
+      sessionStartedAt.current = Date.now();
+      completionTrackedRef.current = false;
     }
     wasOpen.current = open;
     if (!open) {
       initialTotal.current = 0;
+      sessionStartedAt.current = null;
+      completionTrackedRef.current = false;
       setDeck([]);
       setCursor(0);
       setOffset({ x: 0, y: 0 });
@@ -299,6 +308,21 @@ export function DecisionDeck({
       setCursor(deck.length - 1);
     }
   }, [deck.length, cursor]);
+
+  useEffect(() => {
+    if (!finished || completionTrackedRef.current) return;
+    completionTrackedRef.current = true;
+    track("decision_completed", {
+      total: decidedCount,
+      today_count: sessionCounts.today,
+      later_count: sessionCounts.later,
+      archive_count: sessionCounts.archive,
+      duration_ms: Math.max(
+        0,
+        Date.now() - (sessionStartedAt.current ?? Date.now()),
+      ),
+    });
+  }, [finished, decidedCount, sessionCounts]);
 
   const cardW = useCallback(() => cardRef.current?.offsetWidth ?? 320, []);
 
@@ -343,6 +367,9 @@ export function DecisionDeck({
         item: { ...current },
         cursor,
         outcome,
+        source,
+        position: progress,
+        total: initialTotal.current,
       };
 
       const w = cardW();
@@ -404,6 +431,12 @@ export function DecisionDeck({
     actingRef.current = true;
     tapHaptic();
     try {
+      track("decision_undo", {
+        item_id: undoSnapshot.item.id,
+        source: undoSnapshot.source,
+        position: undoSnapshot.position,
+        total: undoSnapshot.total,
+      });
       await onUndo(undoSnapshot);
       setDeck((d) => {
         const next = [...d];
@@ -555,7 +588,7 @@ export function DecisionDeck({
   const stackPeek = deck.slice(cursor + 1, cursor + 3);
 
   const actionBtn =
-    "touch-press flex h-11 min-w-[5.5rem] flex-1 items-center justify-center gap-1.5 rounded-full border border-ink/10 bg-white/90 text-[13px] font-bold text-ink shadow-card transition-transform active:scale-[0.97] disabled:opacity-40";
+    "touch-press flex h-10 min-w-0 flex-1 items-center justify-center gap-1 rounded-full border border-ink/10 bg-white/90 px-2 text-[11px] font-bold text-ink shadow-card transition-transform active:scale-[0.97] disabled:opacity-40 sm:text-[12px]";
 
   return (
     <AnimatePresence>
@@ -591,7 +624,7 @@ export function DecisionDeck({
             <ProgressDots total={initialTotal.current} current={progress} />
           </div>
 
-          <div className="relative flex flex-1 flex-col items-center px-6 pb-[max(1.5rem,env(safe-area-inset-bottom))] pt-2">
+          <div className="relative flex flex-1 flex-col items-center px-4 pb-[max(1.5rem,env(safe-area-inset-bottom))] pt-2 sm:px-6">
             {!finished && current ? (
               <>
                 <div
@@ -646,7 +679,7 @@ export function DecisionDeck({
                   </div>
                 </div>
 
-                <div className="mt-6 flex w-full max-w-[340px] gap-2">
+                <div className="mt-5 flex w-full max-w-[340px] gap-1.5">
                   <button
                     type="button"
                     disabled={locked}
@@ -655,7 +688,7 @@ export function DecisionDeck({
                     className={actionBtn}
                     onClick={() => void applyDecision("today", "button")}
                   >
-                    <CalendarClock size={16} strokeWidth={2.25} />
+                    <CalendarClock size={14} strokeWidth={2.25} className="shrink-0" />
                     {t("오늘", "Today")}
                   </button>
                   <button
@@ -666,7 +699,7 @@ export function DecisionDeck({
                     className={actionBtn}
                     onClick={() => void applyDecision("later", "button")}
                   >
-                    <Clock size={16} strokeWidth={2.25} />
+                    <Clock size={14} strokeWidth={2.25} className="shrink-0" />
                     {t("나중", "Later")}
                   </button>
                   <button
@@ -677,7 +710,7 @@ export function DecisionDeck({
                     className={actionBtn}
                     onClick={() => void applyDecision("archive", "button")}
                   >
-                    <Archive size={16} strokeWidth={2.25} />
+                    <Archive size={14} strokeWidth={2.25} className="shrink-0" />
                     {t("보관", "Archive")}
                   </button>
                 </div>
@@ -692,7 +725,7 @@ export function DecisionDeck({
             ) : (
               <motion.div
                 data-testid="decision-deck-complete"
-                className="max-w-[320px] px-6 text-center"
+                className="w-full max-w-[320px] px-4 pb-2 text-center"
                 initial={{ opacity: 0, scale: 0.96, y: 8 }}
                 animate={{ opacity: 1, scale: 1, y: 0 }}
                 transition={MOTION_SUCCESS}

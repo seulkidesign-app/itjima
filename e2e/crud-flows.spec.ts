@@ -51,7 +51,7 @@ test.describe("CRUD flows (guest / offline)", () => {
       phone(page).getByRole("paragraph").filter({ hasText: text }),
     ).toHaveCount(0);
     expect(await getTabCount(page, "Throw")).toBe(0);
-    expect(await getTabCount(page, "Vault")).toBe(1);
+    expect(await getTabCount(page, "Archive")).toBe(1);
 
     await gotoArchiveListView(page);
     await phone(page).getByText(text, { exact: true }).first().waitFor({
@@ -103,9 +103,9 @@ test.describe("CRUD flows (guest / offline)", () => {
     await expect(
       phone(page).getByRole("paragraph").filter({ hasText: text }),
     ).toHaveCount(0);
-    expect(await getTabCount(page, "Today")).toBeGreaterThan(0);
+    expect(await getTabCount(page, "Schedule")).toBeGreaterThan(0);
 
-    await phone(page).getByRole("link", { name: /^Today/ }).click();
+    await phone(page).getByRole("link", { name: /^Schedule/ }).click();
     await phone(page).getByText(text).first().waitFor({ state: "visible" });
 
     const schedules = await readGuestList(page, GUEST_SCHEDULE_KEY);
@@ -113,7 +113,7 @@ test.describe("CRUD flows (guest / offline)", () => {
   });
 
   test("create schedule from Today FAB", async ({ page }) => {
-    await phone(page).getByRole("link", { name: /^Today/ }).click();
+    await phone(page).getByRole("link", { name: /^Schedule/ }).click();
     await phone(page).getByRole("button", { name: "Add task", exact: true }).click();
 
     const text = `FAB schedule ${Date.now()}`;
@@ -124,6 +124,6 @@ test.describe("CRUD flows (guest / offline)", () => {
     await completeScheduleDialog(page);
 
     await phone(page).getByText(text).first().waitFor({ state: "visible" });
-    expect(await getTabCount(page, "Today")).toBe(1);
+    expect(await getTabCount(page, "Schedule")).toBe(1);
   });
 });

@@ -31,7 +31,7 @@ test.describe("Product reset IA", () => {
       .getByRole("button", { name: "Save to vault", exact: true })
       .click();
 
-    await phone(page).getByRole("link", { name: /^Vault/ }).click();
+    await phone(page).getByRole("link", { name: /^Archive/ }).click();
     await expect(
       phone(page).getByRole("heading", { name: "Vault", exact: true }),
     ).toBeVisible();
@@ -65,7 +65,7 @@ test.describe("Product reset IA", () => {
     const schedules = await readGuestList(page, GUEST_SCHEDULE_KEY);
     expect(schedules.length).toBe(1);
 
-    await phone(page).getByRole("link", { name: /^Today/ }).click();
+    await phone(page).getByRole("link", { name: /^Schedule/ }).click();
     await expect(phone(page).getByText(/Dentist/i).first()).toBeVisible();
   });
 
@@ -86,9 +86,9 @@ test.describe("Product reset IA", () => {
       );
     }, { ak: GUEST_ARCHIVE_KEY });
     await page.reload();
-    await phone(page).getByRole("link", { name: /^Vault/ }).waitFor();
+    await phone(page).getByRole("link", { name: /^Archive/ }).waitFor();
 
-    await phone(page).getByRole("link", { name: /^Vault/ }).click();
+    await phone(page).getByRole("link", { name: /^Archive/ }).click();
     await expect(phone(page).getByText("Map memory seed").first()).toBeVisible();
 
     await phone(page).getByRole("button", { name: "Thought map" }).click();

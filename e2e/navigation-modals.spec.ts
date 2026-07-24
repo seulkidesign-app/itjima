@@ -24,9 +24,9 @@ test.describe("Navigation and modals", () => {
     });
     page.on("pageerror", (e) => errors.push(e.message));
 
-    await phone(page).getByRole("link", { name: /^Today/ }).click();
+    await phone(page).getByRole("link", { name: /^Schedule/ }).click();
     await phone(page).getByRole("heading", { name: "Today" }).waitFor();
-    await phone(page).getByRole("link", { name: /^Vault/ }).click();
+    await phone(page).getByRole("link", { name: /^Archive/ }).click();
     await phone(page)
       .getByRole("heading", { name: "Vault" })
       .waitFor();
@@ -89,7 +89,7 @@ test.describe("Navigation and modals", () => {
   });
 
   test("schedule tabs switch without duplicate panels", async ({ page }) => {
-    await phone(page).getByRole("link", { name: /^Today/ }).click();
+    await phone(page).getByRole("link", { name: /^Schedule/ }).click();
 
     await phone(page).getByRole("tab", { name: "Today" }).click();
     await expect(phone(page).getByRole("tabpanel")).toHaveCount(1);
@@ -180,7 +180,7 @@ test.describe("Navigation and modals", () => {
     await phone(page).getByRole("dialog").click({ position: { x: 20, y: 20 } });
     await expect(phone(page).getByRole("dialog")).toHaveCount(0);
 
-    await phone(page).getByRole("link", { name: /^Today/ }).click();
+    await phone(page).getByRole("link", { name: /^Schedule/ }).click();
     await phone(page).getByRole("heading", { name: "Today" }).waitFor();
   });
 
@@ -206,7 +206,7 @@ test.describe("Navigation and modals", () => {
     );
 
     await expect(phone(page).getByRole("dialog")).toHaveCount(0);
-    await phone(page).getByRole("link", { name: /^Today/ }).click();
+    await phone(page).getByRole("link", { name: /^Schedule/ }).click();
     await phone(page).getByRole("heading", { name: "Today" }).waitFor();
   });
 });
