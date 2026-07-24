@@ -127,20 +127,24 @@ export async function dismissReleaseOverlay(page: Page) {
 
 export async function addThought(page: Page, text: string) {
   const frame = phone(page);
-  const beforeCount = await readGuestList(page, GUEST_INBOX_KEY).then(
-    (list) => list.length,
-  );
   const input = frame.locator("textarea").first();
   await input.fill(text);
-  await frame.getByRole("button", { name: "Leave it", exact: true }).click();
+  await input.focus();
+  await input.press("Control+Enter");
+  await frame
+    .getByRole("paragraph")
+    .filter({ hasText: text })
+    .first()
+    .waitFor({ state: "visible" });
   await page.waitForFunction(
-    ({ key, minCount }) => {
-      const items = JSON.parse(localStorage.getItem(key) || "[]") as unknown[];
-      return items.length >= minCount;
+    ({ key, thoughtText }) => {
+      const items = JSON.parse(localStorage.getItem(key) || "[]") as {
+        text: string;
+      }[];
+      return items.some((item) => item.text === thoughtText);
     },
-    { key: GUEST_INBOX_KEY, minCount: beforeCount + 1 },
+    { key: GUEST_INBOX_KEY, thoughtText: text },
   );
-  await frame.getByText(text, { exact: true }).first().waitFor({ state: "visible" });
   await dismissInlinePromise(page);
 }
 

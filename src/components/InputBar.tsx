@@ -21,7 +21,7 @@ import { confirm, light, tap } from "@/lib/haptics";
 import { SPRING_MICRO } from "@/lib/motion";
 
 type Props = {
-  onAdd: (text: string, images: string[]) => void;
+  onAdd: (text: string, images: string[]) => void | Promise<void>;
   onPasteMulti: (chunks: string[], original: string) => void;
   /** Restores pasted text when the split sheet is dismissed. */
   restoreText?: string | null;
@@ -64,6 +64,8 @@ export function InputBar({
   const composingRef = useRef(false);
   const keySubmitRef = useRef(false);
   const buttonSubmitRef = useRef(false);
+  const submittingRef = useRef(false);
+  const submitQueueRef = useRef(Promise.resolve());
   const fileRef = useRef<HTMLInputElement>(null);
   const recogRef = useRef<SpeechRecognition | null>(null);
 
@@ -119,7 +121,7 @@ export function InputBar({
   };
 
   const handleAdd = (textSnapshot?: string) => {
-    const currentImages = imagesRef.current;
+    const currentImages = [...imagesRef.current];
     const currentText =
       textSnapshot ?? textareaRef.current?.value ?? textRef.current;
     const trimmedText = currentText.replace(/\s*\[…\]\s*$/, "").trim();
@@ -128,9 +130,22 @@ export function InputBar({
       textareaRef.current?.focus();
       return;
     }
+
+    const textToAdd = trimmedText;
+    const imagesToAdd = currentImages;
     confirm();
-    onAddRef.current(trimmedText, currentImages);
-    reset();
+
+    submitQueueRef.current = submitQueueRef.current
+      .catch(() => {})
+      .then(async () => {
+        submittingRef.current = true;
+        try {
+          await onAddRef.current(textToAdd, imagesToAdd);
+          reset();
+        } finally {
+          submittingRef.current = false;
+        }
+      });
   };
 
   const onSubmit = (e: FormEvent<HTMLFormElement>) => {
@@ -490,15 +505,6 @@ export function InputBar({
           layout
           whileTap={{ scale: 0.94 }}
           transition={SPRING_MICRO}
-          onPointerDown={(e) => {
-            e.preventDefault();
-            if (buttonSubmitRef.current) return;
-            buttonSubmitRef.current = true;
-            handleAdd();
-            window.setTimeout(() => {
-              buttonSubmitRef.current = false;
-            }, 250);
-          }}
           onClick={() => {
             if (buttonSubmitRef.current) return;
             buttonSubmitRef.current = true;
