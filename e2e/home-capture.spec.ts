@@ -200,16 +200,27 @@ test.describe("Home capture UX", () => {
       expect(value.match(/지금/g)?.length).toBe(1);
     });
 
-    test("restarting voice recognition does not duplicate prior text", async ({ page }) => {
+    test("repeated speech callbacks do not duplicate committed text", async ({
+      page,
+    }) => {
       await startVoice(page);
-      await mockSpeechEmit(page, "emitFinal", ["지금 하고 싶은 일"]);
-      await expect.poll(() => readComposerValue(page)).toBe("지금 하고 싶은 일");
+      await mockSpeechEmit(page, "emitFinal", ["안녕하세요"]);
+      await mockSpeechEmit(page, "emitFinal", ["안녕하세요"]);
+      await mockSpeechEmit(page, "emitFinal", ["안녕하세요"]);
+      await expect.poll(() => readComposerValue(page)).toBe("안녕하세요");
+    });
 
-      await phone(page).getByRole("button", { name: "Voice input" }).click();
-      await startVoice(page);
-      await mockSpeechEmit(page, "replayFinal", ["지금 하고 싶은 일"]);
-      await page.waitForTimeout(200);
-      expect(await readComposerValue(page)).toBe("지금 하고 싶은 일");
+    test("optimistic submit clears composer before item appears", async ({
+      page,
+    }) => {
+      await phone(page)
+        .getByPlaceholder("What's floating around?")
+        .fill("Optimistic capture test");
+      await phone(page).getByRole("button", { name: "Drop it" }).click();
+      await expect(phone(page).getByPlaceholder("What's floating around?")).toHaveValue(
+        "",
+      );
+      await expect(phone(page).getByText("Optimistic capture test")).toBeVisible();
     });
   });
 
@@ -330,11 +341,11 @@ test.describe("Home capture UX", () => {
     await expect(phone(page).getByTestId("decision-launcher-count")).toHaveText(
       "2 thoughts to decide",
     );
-    await expect(launcher.locator("span.pill-yellow")).toHaveText("Decide");
+    await expect(launcher.locator("span.pill-yellow")).toHaveText("Sort them");
 
     await launcher.click();
     await expect(
-      phone(page).getByRole("dialog", { name: "One by one" }),
+      phone(page).getByRole("dialog", { name: "Sort one by one" }),
     ).toBeVisible();
   });
 });

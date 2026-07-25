@@ -1092,7 +1092,7 @@ function CalendarGrid({
                     🌿
                   </span>
                   <p className="mt-3 text-[15px] font-semibold text-ink">
-                    {t("아무것도 없어요.", "Nothing planned.")}
+                    {t("이 달은 한가해요.", "A quiet month.")}
                   </p>
                   <p className="mt-1 text-[12px] text-ink-soft/80">
                     {t(
@@ -1256,7 +1256,7 @@ function CalendarGrid({
                 )}
                 {selectedEvents.length === 0 ? (
                   <p className="py-2 text-[12px] text-ink-soft/70">
-                    {t("이 날은 비어 있어요.", "Nothing on this day.")}
+                    {t("이 날은 비어 있어요.", "Nothing here yet.")}
                   </p>
                 ) : (
                   <ul className="space-y-1">
@@ -1537,10 +1537,10 @@ function Empty() {
   return (
     <EmptyState
       emoji="🌙"
-      titleKo="아직 그때가 없어요"
-      titleEn="Nothing anchored yet"
-      hintKo="오늘 할 일이 생기면 여기에 모여요."
-      hintEn="When something needs your day, it gathers here."
+      titleKo="아직 맡길 그때가 없어요"
+      titleEn="Nothing to bring back yet"
+      hintKo="그때가 되면 여기에 모여요."
+      hintEn="When the moment comes, it'll gather here."
     />
   );
 }

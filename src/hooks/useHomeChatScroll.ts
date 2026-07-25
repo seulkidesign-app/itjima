@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 const BOTTOM_THRESHOLD_PX = 120;
 
@@ -18,6 +18,7 @@ export function useHomeChatScroll(itemCount: number) {
   const prevCountRef = useRef(itemCount);
   const initialScrollDoneRef = useRef(false);
   const submitScrollRef = useRef(false);
+  const [unreadBelow, setUnreadBelow] = useState(0);
 
   const scrollToBottom = useCallback(
     (behavior: ScrollBehavior = "smooth") => {
@@ -27,10 +28,14 @@ export function useHomeChatScroll(itemCount: number) {
 
       if (behavior === "instant") {
         container.scrollTop = top;
+        nearBottomRef.current = true;
+        setUnreadBelow(0);
         return;
       }
 
       container.scrollTo({ top, behavior });
+      nearBottomRef.current = true;
+      setUnreadBelow(0);
     },
     [],
   );
@@ -41,6 +46,7 @@ export function useHomeChatScroll(itemCount: number) {
 
     const onScroll = () => {
       nearBottomRef.current = isNearBottom(container);
+      if (nearBottomRef.current) setUnreadBelow(0);
     };
 
     container.addEventListener("scroll", onScroll, { passive: true });
@@ -62,11 +68,14 @@ export function useHomeChatScroll(itemCount: number) {
   useEffect(() => {
     const prev = prevCountRef.current;
     if (itemCount > prev) {
+      const added = itemCount - prev;
       if (submitScrollRef.current || nearBottomRef.current) {
         requestAnimationFrame(() => {
           scrollToBottom(submitScrollRef.current ? "smooth" : "smooth");
           if (submitScrollRef.current) nearBottomRef.current = true;
         });
+      } else {
+        setUnreadBelow((n) => n + added);
       }
       submitScrollRef.current = false;
     }
@@ -76,11 +85,17 @@ export function useHomeChatScroll(itemCount: number) {
   const notifyThoughtSubmitted = useCallback(() => {
     submitScrollRef.current = true;
     nearBottomRef.current = true;
+    setUnreadBelow(0);
     requestAnimationFrame(() => {
       scrollToBottom("smooth");
       submitScrollRef.current = false;
     });
   }, [scrollToBottom]);
 
-  return { notifyThoughtSubmitted, scrollToBottom };
+  return {
+    notifyThoughtSubmitted,
+    scrollToBottom,
+    unreadBelow,
+    jumpToLatest: () => scrollToBottom("smooth"),
+  };
 }

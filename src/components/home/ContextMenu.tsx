@@ -81,7 +81,7 @@ export function ContextMenu({
         )}
         <MenuItem
           icon={<ListOrdered size={18} />}
-          label={t("하나씩 정리", "One by one")}
+          label={t("하나씩 정리하기", "Sort one by one")}
           onClick={() => {
             onClose();
             onOpenDecisionDeck();
@@ -90,7 +90,7 @@ export function ContextMenu({
         {FEATURES.BRAIN_MIRROR && (
           <MenuItem
             icon={<Sparkles size={18} />}
-            label={t("다시 이해하기", "Understand again")}
+            label={t("다시 살펴보기", "Look again")}
             onClick={() => {
               const target = menuItem;
               onClose();
@@ -100,7 +100,7 @@ export function ContextMenu({
         )}
         <MenuItem
           icon={<Calendar size={18} />}
-          label={t("일정으로 보내기", "Send to schedule")}
+          label={t("그때로 보내기", "Bring it back then")}
           onClick={() => {
             onClose();
             onOpenHomeSchedule(menuItem);
@@ -108,7 +108,7 @@ export function ContextMenu({
         />
         <MenuItem
           icon={<ArchiveIcon size={18} />}
-          label={t("생각 보관함에 보관", "Save to vault")}
+          label={t("보관함에 맡기기", "Save to vault")}
           onClick={() => {
             onClose();
             onMoveToArchive(menuItem);
@@ -116,7 +116,7 @@ export function ContextMenu({
         />
         <MenuItem
           icon={<Trash2 size={18} />}
-          label={t("삭제하기", "Delete")}
+          label={t("보내기", "Let it go")}
           danger
           onClick={() => {
             onClose();

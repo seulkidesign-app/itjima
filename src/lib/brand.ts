@@ -18,6 +18,8 @@ export const BRAND = {
     "https://www.instagram.com/itjima.app",
   ] as const,
   instagramUrl: "https://www.instagram.com/itjima.app",
+  privacyUrl: "https://itjima.app/about#privacy",
+  termsUrl: "https://itjima.app/about#terms",
   foundingDate: "2026",
   softwareVersion: "Beta",
   appVersionLabel: "Beta · 2026.07",

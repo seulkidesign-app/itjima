@@ -270,7 +270,7 @@ export async function openAbout(page: Page) {
 
 export async function openFeedback(page: Page) {
   await openBrandHub(page);
-  await phone(page).getByRole("button", { name: "Send feedback", exact: true }).click();
+  await phone(page).getByRole("button", { name: "Send feedback" }).click();
 }
 
 /** Stub Supabase admin role checks for signed-in E2E. */

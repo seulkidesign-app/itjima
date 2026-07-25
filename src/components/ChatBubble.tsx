@@ -10,6 +10,7 @@ export function ChatBubble({
   showTime = false,
   children,
   wrapBubble,
+  onRetryCapture,
 }: {
   item: InboxItem;
   isNewest?: boolean;
@@ -18,6 +19,7 @@ export function ChatBubble({
   children?: ReactNode;
   /** Wrap only the bubble card (e.g. swipe row) — keeps actions aligned to bubble height. */
   wrapBubble?: (bubble: ReactNode) => ReactNode;
+  onRetryCapture?: () => void;
 }) {
   const t = useT();
   const { lang } = useLang();
@@ -26,7 +28,7 @@ export function ChatBubble({
   const bubbleBody = (
     <div className="chat-bubble w-full text-left">
       <p className="whitespace-pre-wrap text-body">
-        {item.text.trim() || t("(이미지만)", "(image only)")}
+        {item.text.trim() || t("사진만 있어요", "Photo only")}
       </p>
       {children}
     </div>
@@ -56,14 +58,34 @@ export function ChatBubble({
         )}
         {wrapBubble ? wrapBubble(bubbleBody) : bubbleBody}
         {(showTime || isNewest) && (
-          <p className="mt-0.5 self-end pr-1 text-caption tabular-nums text-ink-soft/55">
-            {new Date(item.created_at).toLocaleString(locale, {
-              month: "numeric",
-              day: "numeric",
-              hour: "2-digit",
-              minute: "2-digit",
-            })}
-          </p>
+          <div className="mt-0.5 flex flex-col items-end gap-0.5 self-end pr-1">
+            {item.capture_state === "pending" && (
+              <p
+                className="text-caption text-ink-soft/70"
+                aria-live="polite"
+              >
+                {t("맡기는 중…", "Keeping it…")}
+              </p>
+            )}
+            {item.capture_state === "failed" && (
+              <button
+                type="button"
+                onClick={onRetryCapture}
+                className="text-caption font-semibold text-meta underline-offset-2 hover:underline"
+                aria-live="assertive"
+              >
+                {t("아직 안 됐어요 · 다시", "Not yet — tap to retry")}
+              </button>
+            )}
+            <p className="text-caption tabular-nums text-ink-soft/55">
+              {new Date(item.created_at).toLocaleString(locale, {
+                month: "numeric",
+                day: "numeric",
+                hour: "2-digit",
+                minute: "2-digit",
+              })}
+            </p>
+          </div>
         )}
       </div>
     </motion.div>

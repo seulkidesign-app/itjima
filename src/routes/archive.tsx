@@ -801,7 +801,7 @@ function Archive() {
                     )}
                   </>
                 ) : (
-                  t("검색 결과가 없어요", "No results")
+                  t("검색 결과가 없어요", "Nothing matched")
                 )}
               </p>
             )}
@@ -1435,10 +1435,10 @@ function Empty({ dark = false }: { dark?: boolean }) {
     <div className={dark ? "text-[color:var(--archive-text-soft)]" : undefined}>
       <EmptyState
         emoji="🗂"
-        titleKo="아직 맡겨둔 게 없어요"
-        titleEn="Nothing entrusted here yet"
-        hintKo="필요한 순간 다시 찾을 수 있어요."
-        hintEn="Find it again when you need it."
+        titleKo="아직 여기에 둔 게 없어요"
+        titleEn="Nothing tucked away yet"
+        hintKo="나중에 다시 꺼낼 때를 위해."
+        hintEn="For when you want it back later."
       />
     </div>
   );

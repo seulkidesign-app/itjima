@@ -72,8 +72,8 @@ export function IosInstallHint({
         </ol>
         <p className="mt-4 text-xs text-ink-soft">
           {t(
-            "※ Chrome이 아닌 Safari에서 열어야 추가할 수 있어요.",
-            "※ Must be opened in Safari (not Chrome) to install.",
+            "Safari에서 열면 홈 화면에 둘 수 있어요.",
+            "Open in Safari to add it to your Home Screen.",
           )}
         </p>
       </div>

@@ -22,6 +22,8 @@ type Props = {
   onMoveToDelete: (item: InboxItem) => void | Promise<void>;
   onAcknowledgeItem: (id: string) => void;
   onMaybeNudgeLogin: () => void;
+  onOpenDetail: (item: InboxItem) => void;
+  onRetryCapture: (item: InboxItem) => void;
 };
 
 export function InboxChat({
@@ -39,6 +41,8 @@ export function InboxChat({
   onMoveToDelete,
   onAcknowledgeItem,
   onMaybeNudgeLogin,
+  onOpenDetail,
+  onRetryCapture,
 }: Props) {
   const t = useT();
 
@@ -48,8 +52,8 @@ export function InboxChat({
         <div className="flex flex-1 flex-col items-center justify-end pb-2">
           <p className="max-w-[15rem] text-center text-secondary leading-relaxed">
             {t(
-              "생각이 떠오르면 바로 남겨보세요.",
-              "When a thought surfaces, leave it here.",
+              "머릿속에 맴도는 거, 여기에 던져 두세요.",
+              "Whatever's circling — drop it here.",
             )}
           </p>
         </div>
@@ -62,8 +66,12 @@ export function InboxChat({
                 item={it}
                 isNewest={isNewest}
                 showTime
+                onRetryCapture={() => onRetryCapture(it)}
                 wrapBubble={(bubble) => (
-                  <ChatLongPressRow onLongPress={() => onOpenContextMenu(it.id)}>
+                  <ChatLongPressRow
+                    onLongPress={() => onOpenContextMenu(it.id)}
+                    onTap={() => onOpenDetail(it)}
+                  >
                     {bubble}
                   </ChatLongPressRow>
                 )}

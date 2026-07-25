@@ -16,6 +16,8 @@ export type ThoughtStatus = "active" | "done" | "archived" | "deleted";
 export type DecisionOutcome = "today" | "later" | "archive";
 export type DecisionSource = "swipe" | "button";
 
+export type CaptureState = "pending" | "saved" | "failed";
+
 export type InboxItem = {
   id: string;
   text: string;
@@ -26,6 +28,8 @@ export type InboxItem = {
   decision?: DecisionOutcome;
   decided_at?: string;
   decision_source?: DecisionSource;
+  /** Local-only sync indicator — stripped before cloud writes. */
+  capture_state?: CaptureState;
 };
 export type RepeatRule = "daily" | "weekly" | "monthly" | "yearly";
 
@@ -640,13 +644,25 @@ function useLocalList<T extends { id: string; created_at: string }>(
     };
   }, [userId, key, kind, table, syncRetry]);
 
+  const patchLocal = useCallback((id: string, patch: Partial<T>) => {
+    const next = readLS<T>(key, table).map((it) =>
+      it.id === id ? { ...it, ...patch } : it,
+    );
+    writeLS(key, next);
+  }, [key, table]);
+
   const add = useCallback(
     async (partial: Partial<T> & { text: string }) => {
       const item = {
         id: uid(),
         created_at: new Date().toISOString(),
         images: [],
-        ...(table === "inbox" ? { status: "active" as ThoughtStatus } : {}),
+        ...(table === "inbox"
+          ? {
+              status: "active" as ThoughtStatus,
+              capture_state: (userId ? "pending" : "saved") as CaptureState,
+            }
+          : {}),
         ...partial,
       } as unknown as T;
 
@@ -655,13 +671,19 @@ function useLocalList<T extends { id: string; created_at: string }>(
 
       let cloudSynced = true;
       if (userId) {
-        cloudSynced = await cloudMutate(
-          "insert",
-          table,
-          userId,
-          item as Record<string, unknown>,
-        );
-        if (!cloudSynced) markWriteError();
+        cloudSynced = false;
+        const row = { ...(item as Record<string, unknown>) };
+        delete row.capture_state;
+        void cloudMutate("insert", table, userId, row).then((ok) => {
+          if (table !== "inbox") return;
+          if (ok) {
+            patchLocal(item.id, { capture_state: "saved" } as Partial<T>);
+            clearWriteError();
+          } else {
+            patchLocal(item.id, { capture_state: "failed" } as Partial<T>);
+            markWriteError();
+          }
+        });
       }
 
       if (table === "inbox") {
@@ -671,7 +693,7 @@ function useLocalList<T extends { id: string; created_at: string }>(
 
       return { item, cloudSynced };
     },
-    [key, userId, table],
+    [key, userId, table, patchLocal, markWriteError, clearWriteError],
   );
 
   const update = useCallback(
@@ -718,7 +740,7 @@ function useLocalList<T extends { id: string; created_at: string }>(
     [key, userId, table, markWriteError, clearWriteError],
   );
 
-  return { items, add, update, remove, syncState, retrySync };
+  return { items, add, update, remove, patchLocal, syncState, retrySync };
 }
 
 function useInboxList() {

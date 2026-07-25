@@ -345,9 +345,9 @@ export function ScheduleChoiceFlow({
       setPickedCalendarDate(dayStart);
       setCalendarView({ y: seed.getFullYear(), m: seed.getMonth() });
     } else {
-      setPickedCalendarDate(null);
-      const now = new Date();
-      setCalendarView({ y: now.getFullYear(), m: now.getMonth() });
+      const day = startOfDay(baseDateForWhen(seedWhen, seed));
+      setPickedCalendarDate(day);
+      setCalendarView({ y: day.getFullYear(), m: day.getMonth() });
     }
     const resolved =
       initialStartAllDay !== undefined || initialEndAllDay !== undefined
@@ -434,9 +434,21 @@ export function ScheduleChoiceFlow({
     { key: "today", label: t("오늘", "Today") },
     { key: "tomorrow", label: t("내일", "Tomorrow") },
     { key: "weekend", label: t("이번 주말", "This weekend") },
-    { key: "next_week", label: t("다음 주", "Next week") },
-    { key: "pick_date", label: t("날짜 선택", "Pick date") },
   ];
+
+  const quickPick = (key: WhenKey) => {
+    const day = startOfDay(baseDateForWhen(key));
+    setWhen(key);
+    setPickedCalendarDate(day);
+    setCalendarView({ y: day.getFullYear(), m: day.getMonth() });
+  };
+
+  const calendarSelected =
+    when === "pick_date" && pickedCalendarDate
+      ? pickedCalendarDate
+      : when !== "pick_date"
+        ? startOfDay(baseDateForWhen(when))
+        : pickedCalendarDate;
 
   const timeColDef = [
     {
@@ -453,13 +465,16 @@ export function ScheduleChoiceFlow({
       : t("알림 정하기", "Set a reminder");
 
   const canProceedWhen =
-    step !== "when" || when !== "pick_date" || pickedCalendarDate != null;
+    step !== "when" ||
+    when !== "pick_date" ||
+    pickedCalendarDate != null ||
+    calendarSelected != null;
 
   const whenStepCtaLabel =
     step === "when" && when === "pick_date" && pickedCalendarDate
       ? formatPickDateCta(pickedCalendarDate, lang === "en" ? "en" : "ko")
       : step === "when" && when === "pick_date"
-        ? t("날짜를 선택해 주세요", "Choose a date")
+        ? t("언제로 할까요?", "When should it come back?")
         : nextLabel;
 
   const goNext = () => {
@@ -537,7 +552,7 @@ export function ScheduleChoiceFlow({
           <input
             value={title}
             onChange={(e) => onTitleChange(e.target.value)}
-            placeholder={t("무엇을 기억할까요", "What to remember")}
+            placeholder={t("뭐였더라?", "What was this again?")}
             className="mb-4 w-full rounded-[18px] border-0 bg-ink/[0.035] px-4 py-3 text-[16px] font-medium tracking-[-0.01em] text-ink placeholder:text-ink-soft/50 input-focus-ring focus:bg-ink/[0.05]"
           />
         )}
@@ -551,61 +566,56 @@ export function ScheduleChoiceFlow({
               exit={{ opacity: 0 }}
               transition={STEP_FADE}
             >
-              <div className="flex flex-col gap-1.5">
+              <div className="mb-3 grid grid-cols-3 gap-2">
                 {whenOptions.map(({ key, label }) => (
-                  <Chip
+                  <button
                     key={key}
-                    large
-                    active={when === key}
-                    onClick={() => {
-                      if (key !== "pick_date") {
-                        setPickedCalendarDate(null);
-                      } else if (when !== "pick_date") {
-                        setPickedCalendarDate(null);
-                      }
-                      setWhen(key);
-                    }}
+                    type="button"
+                    onClick={() => quickPick(key)}
+                    className={`touch-press rounded-full px-2 py-2.5 text-center text-[13px] font-semibold transition-colors ${
+                      when === key
+                        ? "bg-primary text-ink"
+                        : "bg-ink/[0.03] text-ink-soft ring-1 ring-ink/[0.05]"
+                    }`}
                   >
                     {label}
-                  </Chip>
+                  </button>
                 ))}
               </div>
-              {when === "pick_date" && (
-                <SchedulePickCalendar
-                  viewYear={calendarView.y}
-                  viewMonth={calendarView.m}
-                  selected={pickedCalendarDate}
-                  lang={lang === "en" ? "en" : "ko"}
-                  onSelectDay={(day) => {
-                    tick();
-                    const picked = new Date(
-                      calendarView.y,
-                      calendarView.m,
-                      day,
-                      0,
-                      0,
-                      0,
-                      0,
-                    );
-                    setPickedCalendarDate(picked);
-                    setWhen("pick_date");
-                  }}
-                  onPrevMonth={() => {
-                    tick();
-                    setCalendarView((v) => {
-                      if (v.m === 0) return { y: v.y - 1, m: 11 };
-                      return { y: v.y, m: v.m - 1 };
-                    });
-                  }}
-                  onNextMonth={() => {
-                    tick();
-                    setCalendarView((v) => {
-                      if (v.m === 11) return { y: v.y + 1, m: 0 };
-                      return { y: v.y, m: v.m + 1 };
-                    });
-                  }}
-                />
-              )}
+              <SchedulePickCalendar
+                viewYear={calendarView.y}
+                viewMonth={calendarView.m}
+                selected={calendarSelected}
+                lang={lang === "en" ? "en" : "ko"}
+                onSelectDay={(day) => {
+                  tick();
+                  const picked = new Date(
+                    calendarView.y,
+                    calendarView.m,
+                    day,
+                    0,
+                    0,
+                    0,
+                    0,
+                  );
+                  setPickedCalendarDate(picked);
+                  setWhen("pick_date");
+                }}
+                onPrevMonth={() => {
+                  tick();
+                  setCalendarView((v) => {
+                    if (v.m === 0) return { y: v.y - 1, m: 11 };
+                    return { y: v.y, m: v.m - 1 };
+                  });
+                }}
+                onNextMonth={() => {
+                  tick();
+                  setCalendarView((v) => {
+                    if (v.m === 11) return { y: v.y + 1, m: 0 };
+                    return { y: v.y, m: v.m + 1 };
+                  });
+                }}
+              />
             </motion.div>
           )}
 

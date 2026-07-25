@@ -7,10 +7,16 @@ import {
 type Props = {
   children: ReactNode;
   onLongPress: () => void;
+  onTap?: () => void;
   disabled?: boolean;
 };
 
-export function ChatLongPressRow({ children, onLongPress, disabled }: Props) {
+export function ChatLongPressRow({
+  children,
+  onLongPress,
+  onTap,
+  disabled,
+}: Props) {
   const draggingRef = useRef(false);
   const longTimer = useRef<number | null>(null);
   const longFired = useRef(false);
@@ -54,6 +60,7 @@ export function ChatLongPressRow({ children, onLongPress, disabled }: Props) {
     if (!draggingRef.current) return;
     draggingRef.current = false;
     clearLongPress();
+    if (!longFired.current && !moved.current) onTap?.();
   };
 
   return (

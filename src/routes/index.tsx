@@ -35,8 +35,10 @@ import {
   type DecisionSource,
   type InboxItem,
 } from "@/lib/store";
+import { ThoughtDetailSheet } from "@/components/ThoughtDetailSheet";
 import { track } from "@/lib/analytics";
-import { useT } from "@/lib/i18n";
+import { showActionToast, showUndoActionToast, showUndoToast as showUndoToastBase } from "@/lib/undoToast";
+import { useT, useLang } from "@/lib/i18n";
 import { haptic } from "@/lib/haptics";
 import { allCloudSynced } from "@/lib/syncFeedback";
 import { useHomeChatScroll } from "@/hooks/useHomeChatScroll";
@@ -51,6 +53,7 @@ const toastBtn =
 
 function Inbox() {
   const t = useT();
+  const { lang } = useLang();
   const navigate = useNavigate();
   const inbox = useInbox();
   const schedules = useSchedules();
@@ -73,6 +76,7 @@ function Inbox() {
     null,
   );
   const [cleanupReviewOpen, setCleanupReviewOpen] = useState(false);
+  const [detailItem, setDetailItem] = useState<InboxItem | null>(null);
   const [menuFor, setMenuFor] = useState<string | null>(null);
   const [pasteSheet, setPasteSheet] = useState<{
     chunks: string[];
@@ -103,7 +107,18 @@ function Inbox() {
   );
   const newestId = pendingItems[0]?.id;
   const listEndRef = useRef<HTMLDivElement | null>(null);
-  const { notifyThoughtSubmitted } = useHomeChatScroll(items.length);
+  const { notifyThoughtSubmitted, unreadBelow, jumpToLatest } =
+    useHomeChatScroll(items.length);
+
+  const showUndoToast = (
+    message: string,
+    onUndo: () => void | Promise<void>,
+  ) => {
+    showUndoToastBase(message, async () => {
+      track("undo_used");
+      await onUndo();
+    }, { undoLabel: t("취소", "Take back") });
+  };
 
   const acknowledgeItem = useCallback((id: string) => {
     setAcknowledgedIds((prev) => new Set(prev).add(id));
@@ -151,28 +166,6 @@ function Inbox() {
     void navigate({ to: "/archive" });
   };
 
-  const showUndoToast = (
-    message: string,
-    onUndo: () => void | Promise<void>,
-  ) => {
-    toast.custom(
-      (toastId) => (
-        <div className="flex items-center gap-3 rounded-[24px] bg-ink px-4 py-3 text-white shadow-float">
-          <div className="text-sm">{message}</div>
-          <button
-            onClick={async () => {
-              await onUndo();
-              toast.dismiss(toastId);
-            }}
-            className={toastBtn}
-          >
-            {t("되돌리기", "Undo")}
-          </button>
-        </div>
-      ),
-      { duration: 10000 },
-    );
-  };
 
   const openDecisionDeck = (fromId?: string) => {
     setDecisionDeckStartId(fromId ?? null);
@@ -297,7 +290,20 @@ function Inbox() {
     const inboxSynced = await inbox.remove(it.id);
     track("schedule_created", { source, text_length: text.length });
     if (allCloudSynced(scheduleSynced, inboxSynced)) {
-      toast.success(t("일정으로 잡았어요", "Added to your schedule"));
+      track("thought_scheduled", { source, text_length: text.length });
+      const whenLabel =
+        lang === "en"
+          ? start.toLocaleDateString("en-US", {
+              month: "long",
+              day: "numeric",
+            })
+          : `${start.getMonth() + 1}월 ${start.getDate()}일`;
+      showActionToast(
+        t(`${whenLabel}에 맡겨뒀어요`, `I'll bring it back on ${whenLabel}`),
+        t("보러 가기", "Take a look"),
+        () => void navigate({ to: "/schedule" }),
+        { actionAriaLabel: t("일정 열기", "Open schedule") },
+      );
     }
   };
 
@@ -324,7 +330,7 @@ function Inbox() {
       setFocusPendingScheduleId(null);
       if (decisionDeckOpen) setScheduleCommittedId(it.id);
     } catch {
-      toast.error(t("일정을 남기지 못했어요", "Couldn't anchor it in time"));
+      toast.error(t("그때로 못 옮겼어요", "Couldn't set that moment — try again?"));
     }
   };
 
@@ -351,7 +357,7 @@ function Inbox() {
       );
       setFocusScheduleSheet({ open: false });
     } catch {
-      toast.error(t("일정을 남기지 못했어요", "Couldn't anchor it in time"));
+      toast.error(t("그때로 못 옮겼어요", "Couldn't set that moment — try again?"));
     }
   };
 
@@ -375,17 +381,28 @@ function Inbox() {
       }
 
       if (allCloudSynced(archiveSynced, inboxSynced)) {
-        showUndoToast(t("기억함에 뒀어요", "Kept safe"), async () => {
-          await archive.remove(created.id);
-          const { item: restored } = await inbox.add({
-            text: payload.text,
-            images: payload.images,
-            brain_mirror: payload.brain_mirror,
-          });
-        });
+        track("thought_archived", { text_length: it.text.length });
+        showUndoActionToast(
+          t("보관함에 맡겨뒀어요", "Tucked away in your vault"),
+          async () => {
+            track("undo_used");
+            await archive.remove(created.id);
+            await inbox.add({
+              text: payload.text,
+              images: payload.images,
+              brain_mirror: payload.brain_mirror,
+            });
+          },
+          t("보러 가기", "Take a look"),
+          () => void navigate({ to: "/archive" }),
+          {
+            undoLabel: t("취소", "Take back"),
+            actionAriaLabel: t("보관함 열기", "Open vault"),
+          },
+        );
       }
     } catch {
-      toast.error(t("남기지 못했어요", "Couldn't keep it here"));
+      toast.error(t("잠깐, 못 옮겼어요. 그대로 있어요", "Didn't move — still here"));
     }
   };
 
@@ -394,12 +411,13 @@ function Inbox() {
       const deleted = await inbox.softDelete(it.id);
       track("thought_swiped_delete", { text_length: it.text.length });
       if (deleted) {
-        showUndoToast(t("지웠어요", "Removed"), async () => {
+        track("thought_deleted", { text_length: it.text.length });
+        showUndoToast(t("지웠어요", "Let it go"), async () => {
           await inbox.update(it.id, { status: "active" } as Partial<InboxItem>);
         });
       }
     } catch {
-      toast.error(t("삭제하지 못했어요", "Couldn't delete"));
+      toast.error(t("못 지웠어요. 그대로 둘게요", "Couldn't let go — still here"));
     }
   };
 
@@ -434,8 +452,18 @@ function Inbox() {
       }
       notifyThoughtSubmitted();
     } catch {
-      toast.error(t("남기지 못했어요", "Couldn't keep it"));
+      track("thought_create_failed", {
+        text_length: text.length,
+        has_images: images.length > 0,
+      });
+      throw new Error("capture_failed");
     }
+  };
+
+  const retryCapture = (it: InboxItem) => {
+    track("thought_retried", { text_length: it.text.length });
+    inbox.patchLocal(it.id, { capture_state: "pending" });
+    void inbox.retrySync();
   };
 
   const handleUnderstandAgain = async (target: InboxItem) => {
@@ -444,7 +472,7 @@ function Inbox() {
       haptic([4, 8, 5]);
     } else {
       toast.message(
-        t("지금은 정리하지 못했어요", "Couldn't organize right now"),
+        t("지금은 정리가 어려워요", "Hard to sort right now — try in a bit"),
         { duration: 2800 },
       );
     }
@@ -475,8 +503,8 @@ function Inbox() {
             <div className="text-sm">
               💾{" "}
               {t(
-                "다른 기기에서도 이어가려면 로그인해 주세요",
-                "Sign in to keep your thoughts on every device",
+                "다른 기기에서도 이어가려면 로그인",
+                "Sign in to pick up on any device",
               )}
             </div>
             <button
@@ -523,9 +551,21 @@ function Inbox() {
         onMoveToDelete={moveToDelete}
         onAcknowledgeItem={acknowledgeItem}
         onMaybeNudgeLogin={maybeNudgeLogin}
+        onOpenDetail={setDetailItem}
+        onRetryCapture={retryCapture}
       />
 
-      <div className="composer-hero sticky bottom-0 z-20 shrink-0">
+      <div className="composer-hero relative sticky bottom-0 z-20 shrink-0">
+        {unreadBelow > 0 && (
+          <button
+            type="button"
+            onClick={jumpToLatest}
+            className="absolute -top-11 left-1/2 z-30 -translate-x-1/2 rounded-full bg-ink px-4 py-2 text-[12px] font-semibold text-white shadow-float"
+            aria-live="polite"
+          >
+            {t(`새로 ${unreadBelow}개`, `${unreadBelow} new below`)}
+          </button>
+        )}
         <DecisionLauncherCard
           itemCount={pendingItems.length}
           newestItemId={newestId}
@@ -540,6 +580,19 @@ function Inbox() {
           onRestoreConsumed={() => setRestorePasteText(null)}
         />
       </div>
+
+      <ThoughtDetailSheet
+        item={detailItem}
+        open={Boolean(detailItem)}
+        onClose={() => setDetailItem(null)}
+        onSchedule={openHomeSchedule}
+        onArchive={moveToArchive}
+        onDelete={moveToDelete}
+        onSaveEdit={async (item, text) => {
+          await inbox.update(item.id, { text });
+          toast.success(t("고쳤어요", "Saved your edit"));
+        }}
+      />
 
       {menuItem && (
         <ContextMenu

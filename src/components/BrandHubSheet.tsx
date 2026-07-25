@@ -3,11 +3,14 @@ import {
   ChevronRight,
   Download,
   ExternalLink,
+  FileText,
   Instagram,
   MessageSquarePlus,
+  Shield,
   Sparkles,
   Megaphone,
 } from "lucide-react";
+import { track } from "@/lib/analytics";
 import { useNavigate } from "@tanstack/react-router";
 import { BottomSheet } from "./BottomSheet";
 import { FeedbackSheet } from "./FeedbackSheet";
@@ -116,6 +119,11 @@ export function BrandHubSheet({
     t(ko, notes.highlights.en[i] ?? ko),
   );
 
+  useEffect(() => {
+    if (!open) return;
+    track("brand_hub_opened");
+  }, [open]);
+
   return (
     <>
       <BottomSheet
@@ -135,7 +143,7 @@ export function BrandHubSheet({
                   {t("Itjima (잊지마)", "Itjima (잊지마)")}
                 </h2>
                 <p className="text-[13px] text-ink-soft">
-                  {t("AI 기억 관리 · 생각 정리", "AI memory · thought organization")}
+                  {t("AI 기억 관리 · 생각 정리", "Offload now, resurface later")}
                 </p>
               </div>
             </div>
@@ -171,11 +179,13 @@ export function BrandHubSheet({
               icon={MessageSquarePlus}
               title={t("피드백 보내기", "Send feedback")}
               description={t(
-                "한 번 탭으로 의견 남기기",
-                "Share a thought in one tap",
+                "불편한 점, 아이디어 — 편하게",
+                "Pain points, ideas — say it plainly",
               )}
+              ariaLabel={t("피드백 보내기", "Send feedback")}
               onClick={() => {
                 tap();
+                track("feedback_opened");
                 onClose();
                 setPendingFeedback(true);
               }}
@@ -190,6 +200,7 @@ export function BrandHubSheet({
               )}
               onClick={() => {
                 tap();
+                track("landing_opened");
                 onClose();
                 void navigate({ to: "/about" });
               }}
@@ -206,7 +217,32 @@ export function BrandHubSheet({
               ariaLabel={t("Itjima Instagram 방문", "Visit Itjima Instagram")}
               onClick={() => {
                 tap();
+                track("instagram_opened");
                 window.open(BRAND.instagramUrl, "_blank", "noopener,noreferrer");
+              }}
+            />
+
+            <BrandHubRow
+              icon={FileText}
+              title={t("개인정보 처리방침", "Privacy policy")}
+              description={t("데이터를 어떻게 다루는지", "How we handle data")}
+              external
+              ariaLabel={t("개인정보 처리방침 보기", "View privacy policy")}
+              onClick={() => {
+                tap();
+                window.open(BRAND.privacyUrl, "_blank", "noopener,noreferrer");
+              }}
+            />
+
+            <BrandHubRow
+              icon={Shield}
+              title={t("이용약관", "Terms of use")}
+              description={t("서비스 이용 안내", "Service terms")}
+              external
+              ariaLabel={t("이용약관 보기", "View terms of use")}
+              onClick={() => {
+                tap();
+                window.open(BRAND.termsUrl, "_blank", "noopener,noreferrer");
               }}
             />
 

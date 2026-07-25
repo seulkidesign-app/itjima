@@ -14,7 +14,7 @@ import {
 async function submitThought(page: Page, text: string) {
   const frame = phone(page);
   await frame.locator("textarea").first().fill(text);
-  await frame.getByRole("button", { name: "Leave it", exact: true }).click();
+  await frame.getByRole("button", { name: "Drop it", exact: true }).click();
   await frame.getByText(text, { exact: true }).first().waitFor({ state: "visible" });
 }
 

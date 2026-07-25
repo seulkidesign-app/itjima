@@ -492,6 +492,43 @@ function AboutPage() {
         </div>
       </section>
 
+      <section className="sec legal-sec" aria-labelledby="privacy-heading">
+        <h2 id="privacy-heading" className="legal-h">
+          {t("개인정보 처리방침", "Privacy policy")}
+        </h2>
+        <div id="privacy" className="legal-body">
+          <p>
+            {t(
+              "잊지마(Itjima)는 생각·일정·보관 데이터를 서비스 제공 목적으로만 처리합니다. 계정 이메일은 로그인과 피드백 회신에만 사용합니다.",
+              "Itjima processes thoughts, schedules, and archive data only to provide the service. Account email is used for sign-in and feedback replies only.",
+            )}
+          </p>
+          <p>
+            {t(
+              "생각 본문은 분석·광고 목적으로 판매하지 않습니다. 피드백에 진단 정보를 포함할 경우에도 생각 내용은 포함되지 않습니다.",
+              "Thought content is never sold for ads or analytics. Feedback diagnostics never include your thoughts.",
+            )}
+          </p>
+        </div>
+        <h2 id="terms-heading" className="legal-h">
+          {t("이용약관", "Terms of use")}
+        </h2>
+        <div id="terms" className="legal-body">
+          <p>
+            {t(
+              "서비스는 있는 그대로 제공됩니다. 불법·유해 콘텐츠 업로드, 서비스 장애 유발, 타인 권리 침해는 금지됩니다.",
+              "The service is provided as-is. Illegal or harmful content, abuse, and rights violations are prohibited.",
+            )}
+          </p>
+          <p>
+            {t(
+              "중요한 일정은 앱과 별도로 확인해 주세요. 베타 기간 기능은 예고 없이 변경될 수 있습니다.",
+              "Verify critical schedules independently. Beta features may change without notice.",
+            )}
+          </p>
+        </div>
+      </section>
+
       <footer className="lfoot">
         <div className="lfoot-logo">
           ItJima {t("(잊지마)", "(잊지마)")}
@@ -521,6 +558,11 @@ function AboutPage() {
           </span>
         </a>
         <div className="lfoot-cp">© 2026 Itjima (잊지마)</div>
+        <nav className="lfoot-legal" aria-label={t("법적 고지", "Legal")}>
+          <a href="#privacy">{t("개인정보 처리방침", "Privacy")}</a>
+          <span aria-hidden="true">·</span>
+          <a href="#terms">{t("이용약관", "Terms")}</a>
+        </nav>
       </footer>
     </div>
   );
@@ -760,6 +802,22 @@ const LANDING_CSS = `
   overflow:hidden; clip:rect(0,0,0,0); white-space:nowrap; border:0;
 }
 .landing .lfoot-cp{font-size:12px; color:var(--soft)}
+.landing .lfoot-legal{
+  margin-top:10px; display:flex; align-items:center; justify-content:center; gap:10px;
+  font-size:11px;
+}
+.landing .lfoot-legal a{color:var(--soft); text-decoration:none; font-weight:600}
+.landing .lfoot-legal a:hover{color:var(--ink); text-decoration:underline}
+.landing .legal-sec{padding:80px 24px 40px; max-width:640px; margin:0 auto}
+.landing .legal-h{
+  font-size:clamp(20px,3vw,26px); font-weight:800; letter-spacing:-0.02em;
+  color:var(--ink); margin:0 0 12px; text-align:center;
+}
+.landing .legal-body{
+  font-size:14px; color:var(--muted); line-height:1.7; font-weight:500;
+  margin:0 0 40px; text-align:center;
+}
+.landing .legal-body p{margin:0 0 12px}
 
 .landing .reveal{opacity:0; transform:translateY(20px); transition:opacity .6s ease, transform .6s ease}
 .landing .reveal.in{opacity:1; transform:translateY(0)}

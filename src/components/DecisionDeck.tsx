@@ -144,7 +144,7 @@ function DeckCardBody({ item }: { item: InboxItem }) {
         </div>
       )}
       <p className="whitespace-pre-wrap text-[22px] font-semibold leading-[1.65] tracking-[-0.025em] text-ink">
-        {item.text || t("(이미지만)", "(image only)")}
+        {item.text || t("사진만 있어요", "Photo only")}
       </p>
       {bm?.title && bm.items.length > 0 && (
         <div
@@ -687,7 +687,7 @@ export function DecisionDeck({
                     type="button"
                     disabled={locked}
                     data-testid="decision-btn-today"
-                    aria-label={t("오늘로 결정", "Decide for today")}
+                    aria-label={t("오늘로", "For today")}
                     className={actionBtnToday}
                     onClick={() => void applyDecision("today", "button")}
                   >
@@ -698,7 +698,7 @@ export function DecisionDeck({
                     type="button"
                     disabled={locked}
                     data-testid="decision-btn-later"
-                    aria-label={t("나중으로 결정", "Decide for later")}
+                    aria-label={t("나중으로", "For later")}
                     className={actionBtnLater}
                     onClick={() => void applyDecision("later", "button")}
                   >
@@ -709,7 +709,7 @@ export function DecisionDeck({
                     type="button"
                     disabled={locked}
                     data-testid="decision-btn-archive"
-                    aria-label={t("보관함으로 보관", "Archive thought")}
+                    aria-label={t("보관함에 맡기기", "Tuck away")}
                     className={actionBtnArchive}
                     onClick={() => void applyDecision("archive", "button")}
                   >
@@ -720,8 +720,8 @@ export function DecisionDeck({
 
                 <p className="mt-3 text-center text-caption text-ink-soft/75">
                   {t(
-                    "← 오늘 · → 나중 · →→ 보관 · ↓ 다음 · ↑ 이전",
-                    "← Today · → Later · →→ Archive · ↓ next · ↑ previous",
+                    "← 오늘 · → 나중 · →→ 보관",
+                    "Swipe left, right, or far right",
                   )}
                 </p>
               </>
@@ -734,12 +734,12 @@ export function DecisionDeck({
                 transition={MOTION_SUCCESS}
               >
                 <p className="text-[22px] font-bold tracking-[-0.03em] text-ink">
-                  {t("정리 끝", "All sorted")}
+                  {t("다 정리했어요", "All clear")}
                 </p>
                 <p className="mt-2 text-[15px] leading-relaxed text-ink-soft">
                   {t(
-                    `${decidedCount}개의 생각을 결정했어요`,
-                    `You decided ${decidedCount} thoughts`,
+                    `${decidedCount}개, 맡겨뒀어요`,
+                    `${decidedCount} thoughts — sorted`,
                   )}
                 </p>
                 <dl className="mt-5 space-y-1.5 rounded-[var(--radius-md)] bg-ink/[0.03] px-4 py-3 text-left text-[14px] text-ink">
@@ -773,7 +773,7 @@ export function DecisionDeck({
                 onClick={() => void handleUndo()}
                 className="mt-4 text-[13px] font-semibold text-ink-soft underline-offset-2 hover:text-ink hover:underline disabled:opacity-40"
               >
-                {t("마지막 결정 되돌리기", "Undo last decision")}
+                {t("방금 걸 취소", "Undo last one")}
               </button>
             )}
           </div>

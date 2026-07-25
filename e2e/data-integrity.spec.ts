@@ -196,7 +196,7 @@ test.describe("data integrity (guest upload + tombstones)", () => {
     expect((await readGuestList(page, GUEST_INBOX_KEY)).length).toBe(2);
 
     failUpserts = false;
-    await page.getByRole("button", { name: "Retry", exact: true }).click();
+    await page.getByRole("button", { name: "Try again", exact: true }).click();
 
     await expect
       .poll(async () => (await readGuestList(page, GUEST_INBOX_KEY)).length)
@@ -314,7 +314,7 @@ test.describe("data integrity (guest upload + tombstones)", () => {
     ).toHaveCount(0);
 
     deleteShouldFail = false;
-    await page.getByRole("button", { name: "Retry", exact: true }).click();
+    await page.getByRole("button", { name: "Try again", exact: true }).click();
     await expect
       .poll(async () => (await readUserList(page, TOMBSTONES_KEY)).length)
       .toBe(0);
@@ -423,7 +423,7 @@ test.describe("data integrity (guest upload + tombstones)", () => {
     expect(localAfterDelete).toHaveLength(0);
 
     deleteShouldFail = false;
-    await page.getByRole("button", { name: "Retry", exact: true }).click();
+    await page.getByRole("button", { name: "Try again", exact: true }).click();
 
     await expect
       .poll(async () => (await readUserList(page, TOMBSTONES_KEY)).length)

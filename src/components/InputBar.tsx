@@ -19,6 +19,13 @@ import {
 import { FEATURES } from "@/lib/features";
 import { confirm, light, tap } from "@/lib/haptics";
 import { SPRING_MICRO } from "@/lib/motion";
+import { appendFinalSpeech } from "@/lib/speechInput";
+import {
+  clearComposerDraft,
+  readComposerDraft,
+  writeComposerDraft,
+} from "@/lib/composerDraft";
+import { track } from "@/lib/analytics";
 
 type Props = {
   onAdd: (text: string, images: string[]) => void | Promise<void>;
@@ -87,8 +94,30 @@ export function InputBar({
 
   useEffect(() => {
     if (!hero) return;
+    const draft = readComposerDraft();
+    if (draft) setUserText(draft);
     textareaRef.current?.focus();
   }, [hero]);
+
+  useEffect(() => {
+    if (hero) return;
+    const draft = readComposerDraft();
+    if (draft && !committedText) setUserText(draft);
+  }, [hero, committedText]);
+
+  useEffect(() => {
+    const timer = window.setTimeout(() => {
+      writeComposerDraft(committedText);
+    }, 400);
+    return () => window.clearTimeout(timer);
+  }, [committedText]);
+
+  useEffect(() => {
+    return () => {
+      recogRef.current?.stop();
+      recogRef.current = null;
+    };
+  }, []);
 
   useEffect(() => {
     if (!restoreText) return;
@@ -98,13 +127,6 @@ export function InputBar({
     onRestoreConsumed?.();
     textareaRef.current?.focus();
   }, [restoreText, onRestoreConsumed]);
-
-  const appendFinalSpeech = (prev: string, segment: string) => {
-    const trimmed = segment.trim();
-    if (!trimmed) return prev;
-    if (prev.endsWith(trimmed)) return prev;
-    return prev ? `${prev} ${trimmed}` : trimmed;
-  };
 
   const setUserText = (value: string) => {
     setCommittedText(value);
@@ -123,7 +145,7 @@ export function InputBar({
       setImages((p) => [...p, compressed]);
       light();
     } catch {
-      toast.error(t("이미지를 불러오지 못했어요", "Couldn't load image"));
+      toast.error(t("사진을 못 불러왔어요", "Couldn't bring that photo in"));
     }
   };
 
@@ -135,6 +157,7 @@ export function InputBar({
     setInterimText("");
     speechFinalIndexRef.current = 0;
     setImages([]);
+    clearComposerDraft();
   };
 
   const clearInterimSpeech = () => {
@@ -167,10 +190,26 @@ export function InputBar({
     submitQueueRef.current = submitQueueRef.current
       .catch(() => {})
       .then(async () => {
+        if (submittingRef.current) return;
         submittingRef.current = true;
+        const backup = { text: textToAdd, images: imagesToAdd };
+        reset();
         try {
           await onAddRef.current(textToAdd, imagesToAdd);
-          reset();
+        } catch {
+          setCommittedText(backup.text);
+          setInterimText("");
+          setImages(backup.images);
+          textRef.current = backup.text;
+          imagesRef.current = backup.images;
+          track("thought_create_failed", { text_length: backup.text.length });
+          toast.error(
+            t(
+              "잠깐, 못 남겼어요. 적은 건 그대로예요",
+              "Didn't stick — what you wrote is still here",
+            ),
+          );
+          textareaRef.current?.focus();
         } finally {
           submittingRef.current = false;
         }
@@ -240,8 +279,8 @@ export function InputBar({
     if (!SR) {
       toast.error(
         t(
-          "이 브라우저는 음성 입력을 지원하지 않아요.",
-          "This browser doesn't support voice input.",
+          "이 브라우저에선 말로는 못 남겨요",
+          "Voice isn't available in this browser",
         ),
       );
       return;
@@ -249,10 +288,13 @@ export function InputBar({
     if (listening) {
       clearInterimSpeech();
       recogRef.current?.stop();
+      recogRef.current = null;
+      setListening(false);
       tap();
       return;
     }
     tap();
+    track("voice_started");
     speechFinalIndexRef.current = 0;
     clearInterimSpeech();
     const r = new SR();
@@ -276,14 +318,28 @@ export function InputBar({
       }
       setInterimText(nextInterim);
     };
-    r.onerror = () => {
+    r.onerror = (event: SpeechRecognitionErrorEvent) => {
       clearInterimSpeech();
       setListening(false);
-      toast.error(t("음성 입력에 실패했어요", "Voice input failed"));
+      track("voice_failed", {
+        code: "error" in event ? String(event.error) : "unknown",
+      });
+      if (event.error === "not-allowed") {
+        toast.error(
+          t(
+            "마이크를 켜주면 말로 남길 수 있어요",
+            "Turn on the mic and you can speak your thought",
+          ),
+        );
+        return;
+      }
+      toast.error(t("목소리로 못 받았어요", "Couldn't catch that — try again?"));
     };
     r.onend = () => {
       clearInterimSpeech();
       setListening(false);
+      recogRef.current = null;
+      track("voice_completed");
     };
     r.start();
     recogRef.current = r;
@@ -303,7 +359,7 @@ export function InputBar({
         setImages((p) => [...p, compressed]);
         light();
       } catch {
-        toast.error(t("이미지를 불러오지 못했어요", "Couldn't load image"));
+        toast.error(t("사진을 못 불러왔어요", "Couldn't bring that photo in"));
       }
     }
     e.target.value = "";
@@ -461,7 +517,7 @@ export function InputBar({
               }
             }}
             rows={composer ? 1 : hero ? 4 : 3}
-            placeholder={t("생각이 떠오르면 바로 남겨보세요.", "What's on your mind?")}
+            placeholder={t("떠오른 대로 적어 보세요", "What's floating around?")}
             className={`block w-full resize-none bg-transparent leading-relaxed text-ink placeholder:text-ink-soft/55 placeholder:transition-opacity focus:outline-none ${
               composer
                 ? "min-h-[24px] max-h-28 text-[15px]"
@@ -554,12 +610,13 @@ export function InputBar({
               buttonSubmitRef.current = false;
             }, 250);
           }}
-          className={`flex h-10 min-w-[5.5rem] items-center justify-center gap-1 rounded-full text-button transition-shadow ${
+          disabled={submittingRef.current || !hasContent}
+          className={`flex h-10 min-w-[5.5rem] items-center justify-center gap-1 rounded-full text-button transition-shadow disabled:opacity-50 ${
             hasContent
               ? "bg-ink px-4 text-white shadow-card"
               : "bg-primary px-4 text-ink shadow-card"
           }`}
-          aria-label={t("남기기", "Leave it")}
+          aria-label={t("던지기", "Drop it")}
         >
           <AnimatePresence mode="wait" initial={false}>
             {hasContent ? (
@@ -572,7 +629,7 @@ export function InputBar({
                 className="flex items-center gap-1"
               >
                 <ArrowUp size={16} strokeWidth={3} />
-                {t("남기기", "Leave it")}
+                {t("던지기", "Drop it")}
               </motion.span>
             ) : (
               <motion.span
@@ -584,7 +641,7 @@ export function InputBar({
                 className="flex items-center gap-1"
               >
                 <Plus size={14} strokeWidth={3} />
-                {t("남기기", "Leave it")}
+                {t("던지기", "Drop it")}
               </motion.span>
             )}
           </AnimatePresence>

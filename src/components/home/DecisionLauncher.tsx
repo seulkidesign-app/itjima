@@ -27,12 +27,12 @@ export function DecisionLauncherCard({
 
   const label =
     lang === "en"
-      ? `${itemCount} thoughts to decide`
-      : `${itemCount}개의 생각이 기다리고 있어요`;
+      ? `${itemCount} thoughts waiting for you`
+      : `${itemCount}개, 정리해 줄까요?`;
   const ariaLabel =
     lang === "en"
-      ? `Decide, ${itemCount} thoughts`
-      : `결정하기, ${itemCount}개`;
+      ? `Sort ${itemCount} thoughts`
+      : `정리하기, ${itemCount}개`;
 
   const handleClick = () => {
     tap();
@@ -58,7 +58,7 @@ export function DecisionLauncherCard({
         {label}
       </p>
       <span className="pill-yellow shrink-0 px-3 py-1.5 text-[11px] font-bold text-ink">
-        {t("결정하기", "Decide")}
+        {t("정리하기", "Sort them")}
       </span>
     </button>
   );

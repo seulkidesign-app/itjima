@@ -33,7 +33,7 @@ test.describe("Navigation and modals", () => {
       .getByRole("heading", { name: "Archive" })
       .waitFor();
     await phone(page).getByRole("link", { name: /^Throw/ }).click();
-    await phone(page).getByPlaceholder("What's on your mind?").waitFor();
+    await phone(page).getByPlaceholder("What's floating around?").waitFor();
 
     const ignorable = errors.filter(
       (e) =>
@@ -59,12 +59,12 @@ test.describe("Navigation and modals", () => {
 
   test("feedback sheet opens and closes with Escape", async ({ page }) => {
     await openFeedback(page);
-    await page.getByRole("dialog", { name: "Contact · Feedback" }).waitFor({
+    await page.getByRole("dialog", { name: "Feedback" }).waitFor({
       state: "visible",
     });
     await page.keyboard.press("Escape");
     await expect(
-      page.getByRole("dialog", { name: "Contact · Feedback" }),
+      page.getByRole("dialog", { name: "Feedback" }),
     ).toHaveCount(0);
   });
 
@@ -106,9 +106,9 @@ test.describe("Navigation and modals", () => {
     page,
   }) => {
     await openAbout(page);
-    await page.getByRole("button", { name: "Send feedback", exact: true }).click();
+    await page.getByRole("button", { name: "Send feedback" }).click();
     await page
-      .getByRole("dialog", { name: /Contact · Feedback/ })
+      .getByRole("dialog", { name: /Feedback/ })
       .waitFor({ state: "visible" });
     await expect(
       page.getByRole("dialog", { name: "Itjima (잊지마)" }),
@@ -127,7 +127,7 @@ test.describe("Navigation and modals", () => {
     await openContextMenuRaw(page, "First thought for sort");
     await frame
       .getByRole("dialog")
-      .getByRole("button", { name: "One by one", exact: true })
+      .getByRole("button", { name: "Sort one by one", exact: true })
       .click();
     await phone(page)
       .getByRole("dialog", { name: "One by one" })
@@ -157,7 +157,7 @@ test.describe("Navigation and modals", () => {
 
     await dismissArchiveEditDialog(page);
     await phone(page).getByRole("link", { name: /^Throw/ }).click();
-    await phone(page).getByPlaceholder("What's on your mind?").waitFor();
+    await phone(page).getByPlaceholder("What's floating around?").waitFor();
   });
 
   test("context menu blocks tab navigation until dismissed", async ({
