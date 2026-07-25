@@ -8,6 +8,8 @@ import {
   openAbout,
   openFeedback,
   gotoArchiveListView,
+  openArchiveEditDialog,
+  dismissArchiveEditDialog,
   completeScheduleDialog,
   phone,
 } from "./helpers";
@@ -71,15 +73,11 @@ test.describe("Navigation and modals", () => {
       .getByRole("button", { name: "Save to vault", exact: true })
       .click();
 
-    await gotoArchiveListView(page);
-    const row = phone(page).getByRole("button").filter({ hasText: text }).first();
-    await row.dispatchEvent("pointerdown");
-    await page.waitForTimeout(550);
-    await row.dispatchEvent("pointerup");
+    await openArchiveEditDialog(page, text);
 
     const newTitle = `Renamed ${Date.now()}`;
-    await page.getByRole("dialog").locator("input").fill(newTitle);
-    await page.getByRole("dialog").getByRole("button", { name: "Refine" }).click();
+    await page.getByRole("dialog", { name: /Refine name/i }).locator("input").fill(newTitle);
+    await page.getByRole("dialog", { name: /Refine name/i }).getByRole("button", { name: "Refine" }).click();
 
     await page.reload();
     await gotoArchiveListView(page);
@@ -149,16 +147,10 @@ test.describe("Navigation and modals", () => {
       .getByRole("button", { name: "Save to vault", exact: true })
       .click();
 
-    await gotoArchiveListView(page);
-    const row = phone(page).getByRole("button").filter({ hasText: text }).first();
-    await row.dispatchEvent("pointerdown");
-    await page.waitForTimeout(550);
-    await row.dispatchEvent("pointerup");
+    await openArchiveEditDialog(page, text);
     await expect(page).toHaveURL(/\/archive/);
-    await phone(page).getByRole("dialog").waitFor({ state: "visible" });
 
-    await phone(page).getByRole("dialog").click({ position: { x: 20, y: 20 } });
-    await expect(phone(page).getByRole("dialog")).toHaveCount(0);
+    await dismissArchiveEditDialog(page);
     await phone(page).getByRole("link", { name: /^Throw/ }).click();
     await phone(page).getByPlaceholder("What's on your mind?").waitFor();
   });

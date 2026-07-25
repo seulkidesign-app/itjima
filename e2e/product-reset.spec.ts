@@ -5,6 +5,7 @@ import {
   readGuestList,
   openContextMenu,
   completeScheduleDialog,
+  gotoScheduleUpcoming,
   GUEST_INBOX_KEY,
   GUEST_ARCHIVE_KEY,
   GUEST_SCHEDULE_KEY,
@@ -65,7 +66,7 @@ test.describe("Product reset IA", () => {
     const schedules = await readGuestList(page, GUEST_SCHEDULE_KEY);
     expect(schedules.length).toBe(1);
 
-    await phone(page).getByRole("link", { name: /^Schedule/ }).click();
+    await gotoScheduleUpcoming(page);
     await expect(phone(page).getByText(/Dentist/i).first()).toBeVisible();
   });
 

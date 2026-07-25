@@ -1,4 +1,4 @@
-import type { Page, Locator } from "@playwright/test";
+import { expect, type Page, type Locator } from "@playwright/test";
 import { readFileSync } from "fs";
 import { resolve } from "path";
 
@@ -103,6 +103,33 @@ export async function gotoArchiveListView(page: Page) {
   await phone(page)
     .getByRole("heading", { name: "Archive", exact: true })
     .waitFor({ state: "visible" });
+}
+
+export async function gotoScheduleUpcoming(page: Page) {
+  await phone(page).getByRole("link", { name: /^Schedule/ }).click();
+  await phone(page).getByRole("tab", { name: "Upcoming" }).click();
+}
+
+export async function openArchiveEditDialog(page: Page, thoughtText: string) {
+  await gotoArchiveListView(page);
+  const row = phone(page)
+    .getByRole("button")
+    .filter({ hasText: thoughtText })
+    .first();
+  await row.dispatchEvent("pointerdown");
+  await page.waitForTimeout(550);
+  await row.dispatchEvent("pointerup");
+  await phone(page)
+    .getByRole("dialog", { name: /Refine name/i })
+    .waitFor({ state: "visible" });
+}
+
+export async function dismissArchiveEditDialog(page: Page) {
+  await phone(page).getByTestId("archive-edit-dialog").click({
+    position: { x: 8, y: 8 },
+    force: true,
+  });
+  await expect(phone(page).getByTestId("archive-edit-dialog")).toHaveCount(0);
 }
 
 export async function completeScheduleDialog(page: Page) {

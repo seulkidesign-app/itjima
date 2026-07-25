@@ -8,6 +8,7 @@ import {
   readGuestList,
   phone,
   gotoArchiveListView,
+  gotoScheduleUpcoming,
   completeScheduleDialog,
   GUEST_INBOX_KEY,
   GUEST_ARCHIVE_KEY,
@@ -86,7 +87,7 @@ test.describe("CRUD flows (guest / offline)", () => {
     await phone(page).getByText(text, { exact: true }).first().waitFor({ state: "visible" });
   });
 
-  test("schedule via context menu updates When tab without refresh", async ({
+  test("schedule via context menu updates Upcoming tab without refresh", async ({
     page,
   }) => {
     const text = `Tomorrow meeting ${Date.now()}`;
@@ -105,7 +106,7 @@ test.describe("CRUD flows (guest / offline)", () => {
     ).toHaveCount(0);
     expect(await getTabCount(page, "Schedule")).toBeGreaterThan(0);
 
-    await phone(page).getByRole("link", { name: /^Schedule/ }).click();
+    await gotoScheduleUpcoming(page);
     await phone(page).getByText(text).first().waitFor({ state: "visible" });
 
     const schedules = await readGuestList(page, GUEST_SCHEDULE_KEY);
@@ -118,7 +119,7 @@ test.describe("CRUD flows (guest / offline)", () => {
 
     const text = `FAB schedule ${Date.now()}`;
     const sheet = page.getByRole("dialog");
-    await sheet.getByRole("button", { name: "Tomorrow" }).click();
+    await sheet.getByRole("button", { name: "Today" }).click();
     await sheet.getByRole("button", { name: "Pick a time" }).click();
     await sheet.getByPlaceholder("What to remember").fill(text);
     await completeScheduleDialog(page);

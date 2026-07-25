@@ -13,6 +13,7 @@ type DetailProps = {
   dark?: boolean;
   onClose: () => void;
   onTogglePin: () => void;
+  onRemove?: () => void;
   onOpenRelated: (item: ArchiveItem) => void;
 };
 
@@ -36,6 +37,7 @@ export function ArchiveMemoryDetail({
   dark = false,
   onClose,
   onTogglePin,
+  onRemove,
   onOpenRelated,
 }: DetailProps) {
   const t = useT();
@@ -164,7 +166,7 @@ export function ArchiveMemoryDetail({
                 </div>
               </div>
             )}
-            <div className="mt-5 flex gap-2">
+            <div className="mt-5 flex flex-wrap gap-2">
               <button
                 type="button"
                 onClick={onTogglePin}
@@ -181,6 +183,19 @@ export function ArchiveMemoryDetail({
                 <Pin size={14} className={pinned ? "fill-current" : ""} />
                 {pinned ? t("핀 해제", "Unpin") : t("자주 보기", "Pin")}
               </button>
+              {onRemove && (
+                <button
+                  type="button"
+                  onClick={onRemove}
+                  className={`touch-press rounded-full px-4 py-2.5 text-[13px] font-semibold ${
+                    dark
+                      ? "archive-detail-chip text-[color:var(--archive-text-soft)]"
+                      : "bg-ink/[0.05] text-ink-soft"
+                  }`}
+                >
+                  {t("지우기", "Remove")}
+                </button>
+              )}
             </div>
           </motion.div>
         </motion.div>

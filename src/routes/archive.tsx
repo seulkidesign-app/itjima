@@ -1349,6 +1349,7 @@ function Archive() {
           role="dialog"
           aria-modal="true"
           aria-labelledby="archive-edit-title"
+          data-testid="archive-edit-dialog"
           onClick={() => setEditItem(null)}
         >
           <div className="flex-1 animate-fade-in bg-ink/30 backdrop-blur-sm" />
@@ -1393,6 +1394,15 @@ function Archive() {
           toggleArchivePin(detailItem.id);
           setPins(readArchivePins());
         }}
+        onRemove={
+          detailItem
+            ? () => {
+                void removeWithUndo(detailItem);
+                setDetailItem(null);
+                setDetailClusterIds(undefined);
+              }
+            : undefined
+        }
         onOpenRelated={(rel) => {
           recordArchiveVisit(rel.id);
           setDetailItem(rel);
