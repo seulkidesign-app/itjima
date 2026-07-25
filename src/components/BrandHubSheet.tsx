@@ -3,6 +3,7 @@ import {
   ChevronRight,
   Download,
   ExternalLink,
+  Instagram,
   MessageSquarePlus,
   Sparkles,
   Megaphone,
@@ -23,6 +24,8 @@ type RowProps = {
   onClick?: () => void;
   chevron?: boolean;
   expanded?: boolean;
+  external?: boolean;
+  ariaLabel?: string;
 };
 
 function BrandHubRow({
@@ -32,13 +35,23 @@ function BrandHubRow({
   onClick,
   chevron = true,
   expanded,
+  external,
+  ariaLabel,
 }: RowProps) {
+  const t = useT();
   const Tag = onClick ? "button" : "div";
+  const label =
+    ariaLabel ??
+    (external
+      ? `${title}. ${t("새 탭에서 열림", "Opens in new tab")}`
+      : undefined);
+
   return (
     <Tag
       type={onClick ? "button" : undefined}
       onClick={onClick}
-      className="flex w-full items-center gap-3.5 rounded-[20px] px-3 py-3.5 text-left active:bg-ink/[0.03]"
+      aria-label={label}
+      className="flex w-full items-center gap-3.5 rounded-[20px] px-3 py-3.5 text-left active:bg-ink/[0.03] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink/30"
     >
       <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-[14px] bg-ink/[0.04]">
         <Icon size={18} className="text-ink" strokeWidth={2} />
@@ -52,12 +65,22 @@ function BrandHubRow({
         </div>
       </div>
       {chevron && (
-        <ChevronRight
-          size={16}
-          className={`shrink-0 text-ink/25 transition-transform ${
-            expanded ? "rotate-90" : ""
-          }`}
-        />
+        <span className="flex shrink-0 items-center gap-0.5">
+          {external && (
+            <ExternalLink
+              size={14}
+              className="text-ink/20"
+              aria-hidden="true"
+            />
+          )}
+          <ChevronRight
+            size={16}
+            className={`text-ink/25 transition-transform ${
+              expanded ? "rotate-90" : ""
+            }`}
+            aria-hidden="true"
+          />
+        </span>
       )}
     </Tag>
   );
@@ -169,6 +192,21 @@ export function BrandHubSheet({
                 tap();
                 onClose();
                 void navigate({ to: "/about" });
+              }}
+            />
+
+            <BrandHubRow
+              icon={Instagram}
+              title="Instagram"
+              description={t(
+                "업데이트와 제품 여정을 따라가세요",
+                "Follow our updates and product journey.",
+              )}
+              external
+              ariaLabel={t("Itjima Instagram 방문", "Visit Itjima Instagram")}
+              onClick={() => {
+                tap();
+                window.open(BRAND.instagramUrl, "_blank", "noopener,noreferrer");
               }}
             />
 

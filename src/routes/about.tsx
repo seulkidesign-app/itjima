@@ -1,6 +1,8 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
+import { Instagram } from "lucide-react";
 import { useEffect, useMemo } from "react";
 import { useT, LanguageToggle } from "@/lib/i18n";
+import { BRAND } from "@/lib/brand";
 import {
   applyLandingSeo,
   injectJsonLd,
@@ -506,6 +508,18 @@ function AboutPage() {
           <span aria-hidden="true">·</span>
           <Link to="/about">{t("소개", "About")}</Link>
         </nav>
+        <a
+          href={BRAND.instagramUrl}
+          target="_blank"
+          rel="noopener noreferrer"
+          aria-label={t("Itjima Instagram 방문", "Visit Itjima Instagram")}
+          className="lfoot-social"
+        >
+          <Instagram size={18} strokeWidth={2} aria-hidden="true" />
+          <span className="sr-only">
+            {t("(새 탭에서 열림)", "(opens in new tab)")}
+          </span>
+        </a>
         <div className="lfoot-cp">© 2026 Itjima (잊지마)</div>
       </footer>
     </div>
@@ -731,6 +745,20 @@ const LANDING_CSS = `
 }
 .landing .lfoot-links a{color:var(--muted); font-weight:600; text-decoration:none}
 .landing .lfoot-links a:hover{color:var(--ink); text-decoration:underline}
+.landing .lfoot-social{
+  display:inline-flex; align-items:center; justify-content:center;
+  width:40px; height:40px; margin:10px auto 12px;
+  border-radius:999px; color:var(--muted); text-decoration:none;
+  transition:color .15s ease, background .15s ease;
+}
+.landing .lfoot-social:hover{color:var(--ink); background:rgba(10,10,10,0.04)}
+.landing .lfoot-social:focus-visible{
+  outline:2px solid var(--ink); outline-offset:2px;
+}
+.landing .sr-only{
+  position:absolute; width:1px; height:1px; padding:0; margin:-1px;
+  overflow:hidden; clip:rect(0,0,0,0); white-space:nowrap; border:0;
+}
 .landing .lfoot-cp{font-size:12px; color:var(--soft)}
 
 .landing .reveal{opacity:0; transform:translateY(20px); transition:opacity .6s ease, transform .6s ease}
