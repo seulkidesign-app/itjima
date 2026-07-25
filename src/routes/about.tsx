@@ -1,6 +1,12 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useMemo } from "react";
 import { useT, LanguageToggle } from "@/lib/i18n";
+import {
+  applyLandingSeo,
+  injectJsonLd,
+  landingStructuredDataGraph,
+  removeJsonLd,
+} from "@/lib/seo";
 
 export const Route = createFileRoute("/about")({
   component: AboutPage,
@@ -124,8 +130,8 @@ function AboutPage() {
         n: "02",
         t: t("스와이프로 0.5초 결정.", "Swipe to decide in half a second."),
         d: t(
-          "오른쪽 = 그때. 왼쪽 = 기억함. 틴더처럼. 그게 전부입니다.",
-          "Right = when. Left = saved. Like swiping cards. That's it.",
+          "오른쪽 = AI 일정. 왼쪽 = 기억함. 틴더처럼. 그게 전부입니다.",
+          "Right = schedule. Left = saved. Like swiping cards. That's it.",
         ),
       },
       {
@@ -174,6 +180,66 @@ function AboutPage() {
     [t],
   );
 
+  const FAQ = useMemo(
+    () => [
+      {
+        q: t(
+          "잊지마(Itjima)는 무엇인가요?",
+          "What is Itjima (잊지마)?",
+        ),
+        a: t(
+          "잊지마(Itjima)는 AI 메모와 일정으로 생각을 정리하는 기억 관리 앱입니다. 떠오른 생각을 던지고, 필요할 때 다시 꺼내보세요.",
+          "Itjima (잊지마) is a memory app that uses AI notes and schedules to organize your thoughts — drop ideas now, resurface them when you need them.",
+        ),
+      },
+      {
+        q: t("잊지마는 메모앱인가요?", "Is Itjima a notes app?"),
+        a: t(
+          "메모 기능이 있지만, 단순 메모앱은 아닙니다. AI가 생각을 정리하고 보관함에 남깁니다.",
+          "It has notes, but it's not just a notes app — AI helps organize thoughts and keeps them in your archive.",
+        ),
+      },
+      {
+        q: t("잊지마는 일정앱인가요?", "Is Itjima a calendar app?"),
+        a: t(
+          "일정 기능도 있지만, 일정만 관리하는 앱은 아닙니다. '그때'가 되면 다시 떠올려 드립니다.",
+          "It has scheduling, but it's not only a calendar — it resurfaces thoughts when the time comes.",
+        ),
+      },
+      {
+        q: t("왜 Itjima라는 이름인가요?", "Why is it called Itjima?"),
+        a: t(
+          "Itjima는 한국어 '잊지마'를 로마자로 표기한 이름입니다. 기억하지 말고 맡기라는 뜻을 담았습니다.",
+          "Itjima romanizes the Korean word 잊지마 — don't memorize, offload it.",
+        ),
+      },
+      {
+        q: t(
+          "잊지마 앱은 Brain Dump·Mental Inbox 방식인가요?",
+          "Is Itjima a brain dump or mental inbox app?",
+        ),
+        a: t(
+          "네. 잊지마(Itjima)는 떠오른 생각을 바로 던지는 Brain dump와, 나중에 꺼내는 Mental Inbox 방식의 생각 정리·기억 관리 앱입니다.",
+          "Yes — Itjima (잊지마) is a brain dump and mental inbox app for offloading thoughts and resurfacing them later.",
+        ),
+      },
+    ],
+    [t],
+  );
+
+  useEffect(() => {
+    applyLandingSeo();
+    injectJsonLd(
+      "ld-landing-graph",
+      landingStructuredDataGraph(
+        FAQ.map(({ q, a }) => ({ question: q, answer: a })),
+      ),
+    );
+    return () => {
+      removeJsonLd("ld-landing-graph");
+    };
+  }, [FAQ]);
+
   return (
     <div className="landing">
       <style>{LANDING_CSS}</style>
@@ -184,22 +250,33 @@ function AboutPage() {
         <div className="blob blob-y2" />
       </div>
 
-      <nav className="lnav">
-        <Link to="/about" className="lnav-logo">
-          It<span>Jima.</span>
+      <nav className="lnav" aria-label={t("잊지마(Itjima) 소개", "Itjima (잊지마) about")}>
+        <Link
+          to="/about"
+          className="lnav-logo"
+          aria-label={t("잊지마(Itjima) 홈", "Itjima (잊지마) home")}
+        >
+          It<span>Jima</span> {t("(잊지마)", "(잊지마)")}
         </Link>
         <div className="lnav-right">
           <LanguageToggle />
-          <Link to="/" className="lnav-cta">
-            {t("앱 열기 →", "Open app →")}
+          <Link
+            to="/"
+            className="lnav-cta"
+            aria-label={t("잊지마 앱 열기", "Open Itjima app")}
+          >
+            {t("잊지마 앱 열기 →", "Open Itjima app →")}
           </Link>
         </div>
       </nav>
 
       {/* HERO */}
       <section className="hero">
-        <div className="badge reveal">{t("생각함 · Beta", "Mental Inbox · Beta")}</div>
+        <div className="badge reveal">
+          {t("잊지마 (Itjima) · Beta", "Itjima (잊지마) · Beta")}
+        </div>
         <h1 className="reveal" style={{ transitionDelay: "70ms" }}>
+          <span className="h1-brand">{t("Itjima (잊지마)", "Itjima (잊지마)")}</span>
           {t("기억하지 말고", "Don't memorize.")}
           <br />
           <span className="hl">{t("맡겨라.", "Offload it.")}</span>
@@ -211,12 +288,16 @@ function AboutPage() {
           )}
           <br />
           {t(
-            "그냥 뇌가 저장공간이 아닌 거예요.",
-            "Your brain just isn't built for storage.",
+            "잊지마(Itjima)에 생각을 맡기고, 필요할 때 다시 꺼내보세요.",
+            "Offload thoughts to Itjima (잊지마) and resurface them when you need them.",
           )}
         </p>
         <div className="hero-btns reveal" style={{ transitionDelay: "210ms" }}>
-          <Link to="/" className="btn-yellow">
+          <Link
+            to="/"
+            className="btn-yellow"
+            aria-label={t("잊지마 앱에서 생각 남기기", "Leave a thought in Itjima")}
+          >
             {t("지금 던지러 가기 →", "Drop a thought now →")}
           </Link>
           <a href="#me" className="btn-ghost">
@@ -224,7 +305,10 @@ function AboutPage() {
           </a>
         </div>
         <div className="micro reveal" style={{ transitionDelay: "280ms" }}>
-          {t("무료 · 설치 없음 · 30초면 시작", "Free · no install · 30 seconds to start")}
+          {t(
+            "무료 · AI 메모 · AI 일정 · 설치 없음",
+            "Free · AI notes · AI schedule · no install",
+          )}
         </div>
       </section>
 
@@ -232,7 +316,7 @@ function AboutPage() {
 
       {/* STORY */}
       <section className="sec">
-        <div className="eyebrow reveal">{t("당신의 하루", "Your day")}</div>
+        <h2 className="eyebrow reveal">{t("당신의 하루", "Your day")}</h2>
         <div className="story">
           {STORY.map((s, i) => (
             <div key={i}>
@@ -253,7 +337,7 @@ function AboutPage() {
 
       {/* ME */}
       <section id="me" className="sec">
-        <div className="eyebrow reveal">{t("혹시 이런 사람?", "Sound like you?")}</div>
+        <h2 className="eyebrow reveal">{t("혹시 이런 사람?", "Sound like you?")}</h2>
         <ul className="me-list">
           {ME.map((m, i) => (
             <li
@@ -281,13 +365,13 @@ function AboutPage() {
         </h2>
         <p className="quote-sub reveal" style={{ transitionDelay: "140ms" }}>
           {t(
-            "ItJima는 뇌의 저장공간 문제를 해결합니다.",
-            "ItJima solves the storage problem in your head.",
+            "잊지마(Itjima)는 뇌의 저장공간 문제를 해결합니다.",
+            "Itjima (잊지마) solves the storage problem in your head.",
           )}
           <br />
           {t(
-            "메모앱도, 일정관리 앱도 아닌 — 기억 외주 서비스.",
-            "Not a notes app, not a planner — memory outsourcing.",
+            "AI 메모·일정·기억 관리 — 생각 정리를 한곳에서.",
+            "AI notes, schedules, and memory — thought organization in one place.",
           )}
         </p>
       </section>
@@ -296,7 +380,9 @@ function AboutPage() {
 
       {/* HOW */}
       <section className="sec">
-        <div className="eyebrow reveal">{t("어떻게 쓰나요", "How it works")}</div>
+        <h2 className="eyebrow reveal">
+          {t("잊지마(Itjima) 사용법", "How Itjima works")}
+        </h2>
         <div className="how">
           {HOW.map((h, i) => (
             <div key={h.n}>
@@ -305,7 +391,7 @@ function AboutPage() {
                 style={{ transitionDelay: `${i * 70}ms` }}
               >
                 <div className="how-n">{t("Step", "Step")} {h.n}</div>
-                <div className="how-t">{h.t}</div>
+                <h3 className="how-t">{h.t}</h3>
                 <div className="how-d">{h.d}</div>
               </div>
               {i < HOW.length - 1 && <div className="rule thin" />}
@@ -318,7 +404,9 @@ function AboutPage() {
 
       {/* PHILOSOPHY */}
       <section className="sec">
-        <div className="eyebrow reveal">{t("ItJima 철학", "ItJima philosophy")}</div>
+        <h2 className="eyebrow reveal">
+          {t("잊지마 (Itjima) 철학", "Itjima (잊지마) philosophy")}
+        </h2>
         <div className="phil">
           {PHIL.map((p, i) => (
             <div key={p.n}>
@@ -338,6 +426,29 @@ function AboutPage() {
 
       <div className="rule" />
 
+      {/* FAQ */}
+      <section className="sec faq-sec">
+        <h2 className="eyebrow reveal">
+          {t("잊지마(Itjima) 자주 묻는 질문", "Itjima (잊지마) FAQ")}
+        </h2>
+        <div className="faq">
+          {FAQ.map((item, i) => (
+            <div key={item.q}>
+              <div
+                className="faq-item reveal"
+                style={{ transitionDelay: `${i * 70}ms` }}
+              >
+                <h3 className="faq-q">{item.q}</h3>
+                <p className="faq-a">{item.a}</p>
+              </div>
+              {i < FAQ.length - 1 && <div className="rule thin" />}
+            </div>
+          ))}
+        </div>
+      </section>
+
+      <div className="rule" />
+
       {/* FINAL CTA */}
       <section className="sec cta">
         <h2 className="cta-h reveal">
@@ -348,12 +459,16 @@ function AboutPage() {
           <span className="hl">{t("있잖아요.", "right now.")}</span>
         </h2>
         <p className="cta-sub reveal" style={{ transitionDelay: "140ms" }}>
-          {t("그거 지금 던지세요. 30초면 됩니다.", "Drop it here. Thirty seconds.")}
+          {t(
+            "잊지마 앱에서 지금 던지세요. 30초면 됩니다.",
+            "Drop it in the Itjima app. Thirty seconds.",
+          )}
         </p>
         <Link
           to="/"
           className="btn-yellow big reveal"
           style={{ transitionDelay: "210ms" }}
+          aria-label={t("잊지마 앱에서 생각 정리 시작", "Start organizing thoughts in Itjima")}
         >
           {t("뇌 비우러 가기 →", "Empty your head →")}
         </Link>
@@ -367,10 +482,21 @@ function AboutPage() {
 
       <footer className="lfoot">
         <div className="lfoot-logo">
-          ItJima<span className="hl-dot">.</span>
+          ItJima {t("(잊지마)", "(잊지마)")}
+          <span className="hl-dot">.</span>
         </div>
-        <div className="lfoot-tag">{t("기억하지 말고 맡겨라.", "Don't memorize. Offload it.")}</div>
-        <div className="lfoot-cp">© 2026 ItJima</div>
+        <div className="lfoot-tag">
+          {t(
+            "잊지마(Itjima) — 기억하지 말고 맡겨라.",
+            "Itjima (잊지마) — don't memorize, offload it.",
+          )}
+        </div>
+        <nav className="lfoot-links" aria-label={t("사이트 링크", "Site links")}>
+          <Link to="/">{t("잊지마 앱", "Itjima app")}</Link>
+          <span aria-hidden="true">·</span>
+          <Link to="/about">{t("소개", "About")}</Link>
+        </nav>
+        <div className="lfoot-cp">© 2026 Itjima (잊지마)</div>
       </footer>
     </div>
   );
@@ -440,6 +566,14 @@ const LANDING_CSS = `
   line-height:1.02; color:var(--ink);
   margin:0 0 22px;
 }
+.landing .h1-brand{
+  display:block;
+  font-size:clamp(14px,2.4vw,18px);
+  font-weight:700;
+  letter-spacing:0.02em;
+  color:var(--muted);
+  margin-bottom:14px;
+}
 .landing .hl{
   background:linear-gradient(transparent 60%, var(--yellow) 60%);
   padding:0 0.05em;
@@ -474,8 +608,14 @@ const LANDING_CSS = `
 .landing .eyebrow{
   font-size:11px; font-weight:800; letter-spacing:0.18em;
   text-transform:uppercase; color:var(--ink);
-  margin-bottom:40px; opacity:0.6;
+  margin:0 0 40px; opacity:0.6;
 }
+.landing .how-t{
+  font-size:clamp(22px,3.6vw,30px);
+  font-weight:800; letter-spacing:-0.03em;
+  color:var(--ink); margin:0 0 10px;
+}
+.landing .faq-q{margin:0 0 12px}
 
 .landing .story{display:flex; flex-direction:column; gap:0}
 .landing .story-item{padding:32px 0; text-align:center}
@@ -524,11 +664,6 @@ const LANDING_CSS = `
   text-transform:uppercase; color:var(--soft);
   margin-bottom:10px;
 }
-.landing .how-t{
-  font-size:clamp(22px,3.6vw,30px);
-  font-weight:800; letter-spacing:-0.03em;
-  color:var(--ink); margin-bottom:10px;
-}
 .landing .how-d{
   font-size:15px; color:var(--muted); line-height:1.65; font-weight:500;
   max-width:480px; margin:0 auto;
@@ -547,6 +682,17 @@ const LANDING_CSS = `
 .landing .phil-t{
   font-size:clamp(17px,2.6vw,22px); font-weight:700;
   color:var(--ink); letter-spacing:-0.02em;
+}
+
+.landing .faq-item{padding:32px 0; text-align:center}
+.landing .faq-q{
+  font-size:clamp(18px,3vw,24px);
+  font-weight:800; letter-spacing:-0.02em;
+  color:var(--ink); margin:0 0 12px;
+}
+.landing .faq-a{
+  font-size:15px; color:var(--muted); line-height:1.65;
+  font-weight:500; max-width:520px; margin:0 auto;
 }
 
 .landing .cta{padding:120px 24px}
@@ -569,6 +715,12 @@ const LANDING_CSS = `
 }
 .landing .lfoot-logo{font-size:20px; font-weight:900; color:var(--ink); margin-bottom:8px; letter-spacing:-0.02em}
 .landing .lfoot-tag{color:var(--muted); font-weight:600; margin-bottom:14px}
+.landing .lfoot-links{
+  display:flex; align-items:center; justify-content:center; gap:10px;
+  margin-bottom:12px; font-size:12px;
+}
+.landing .lfoot-links a{color:var(--muted); font-weight:600; text-decoration:none}
+.landing .lfoot-links a:hover{color:var(--ink); text-decoration:underline}
 .landing .lfoot-cp{font-size:12px; color:var(--soft)}
 
 .landing .reveal{opacity:0; transform:translateY(20px); transition:opacity .6s ease, transform .6s ease}
