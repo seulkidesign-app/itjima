@@ -128,7 +128,7 @@ test.describe("data integrity (guest upload + tombstones)", () => {
       "Guest beta",
     ]);
     await page
-      .getByText("Keeping safe paused for a moment")
+      .getByText("Connection hiccup — your thoughts are safe")
       .waitFor({ state: "visible", timeout: 15_000 });
   });
 
@@ -191,7 +191,7 @@ test.describe("data integrity (guest upload + tombstones)", () => {
 
     await injectSignedInUser(page);
     await page
-      .getByText("Keeping safe paused for a moment")
+      .getByText("Connection hiccup — your thoughts are safe")
       .waitFor({ state: "visible", timeout: 15_000 });
     expect((await readGuestList(page, GUEST_INBOX_KEY)).length).toBe(2);
 

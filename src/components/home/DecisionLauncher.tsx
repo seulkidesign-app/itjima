@@ -27,7 +27,9 @@ export function DecisionLauncherCard({
 
   const label =
     lang === "en"
-      ? `${itemCount} thoughts waiting for you`
+      ? itemCount === 1
+        ? "1 thought waiting"
+        : `${itemCount} thoughts waiting for you`
       : `${itemCount}개, 정리해 줄까요?`;
   const ariaLabel =
     lang === "en"

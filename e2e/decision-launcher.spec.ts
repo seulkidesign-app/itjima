@@ -20,7 +20,7 @@ test.describe("Home Decision launcher", () => {
     await addThought(page, "Single thought");
     await expect(phone(page).getByTestId("decision-launcher")).toBeVisible();
     await expect(phone(page).getByTestId("decision-launcher-count")).toHaveText(
-      "1 thoughts to decide",
+      "1 thought waiting",
     );
   });
 
@@ -31,7 +31,7 @@ test.describe("Home Decision launcher", () => {
     await addThought(page, `Launcher third ${stamp}`);
 
     await expect(phone(page).getByTestId("decision-launcher-count")).toHaveText(
-      "3 thoughts to decide",
+      "3 thoughts waiting for you",
     );
     const inbox = await readGuestList(page, GUEST_INBOX_KEY);
     expect(inbox.length).toBe(3);

@@ -60,7 +60,7 @@ test.describe("sync feedback", () => {
 
     await phone(page)
       .getByRole("alert")
-      .getByText("Keeping safe paused for a moment")
+      .getByText("Connection hiccup — your thoughts are safe")
       .waitFor({ state: "visible" });
   });
 });

@@ -56,7 +56,7 @@ test.describe("Product reset IA", () => {
     await openContextMenu(page, "Dentist tomorrow at 3pm");
     await phone(page)
       .getByRole("dialog")
-      .getByRole("button", { name: "Send to schedule", exact: true })
+      .getByRole("button", { name: "Bring it back then", exact: true })
       .click();
     await completeScheduleDialog(page);
 

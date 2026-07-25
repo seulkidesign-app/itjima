@@ -110,7 +110,7 @@ async function openCreateTimeStep(
   }
   await sheet.getByRole("button", { name: "Pick a time" }).click();
   if (opts?.title) {
-    await sheet.getByPlaceholder("What to remember").fill(opts.title);
+    await sheet.getByPlaceholder("What was this again?").fill(opts.title);
   }
   await sheet
     .getByRole("switch", { name: "All-day" })

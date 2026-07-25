@@ -339,13 +339,13 @@ test.describe("Home capture UX", () => {
     const launcher = phone(page).getByTestId("decision-launcher");
     await expect(launcher).toBeVisible();
     await expect(phone(page).getByTestId("decision-launcher-count")).toHaveText(
-      "2 thoughts to decide",
+      "2 thoughts waiting for you",
     );
     await expect(launcher.locator("span.pill-yellow")).toHaveText("Sort them");
 
     await launcher.click();
     await expect(
-      phone(page).getByRole("dialog", { name: "Sort one by one" }),
+      phone(page).getByRole("dialog", { name: "One by one" }),
     ).toBeVisible();
   });
 });

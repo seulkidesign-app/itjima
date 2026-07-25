@@ -96,7 +96,7 @@ test.describe("CRUD flows (guest / offline)", () => {
     await openContextMenu(page, text);
     await phone(page)
       .getByRole("dialog")
-      .getByRole("button", { name: "Send to schedule", exact: true })
+      .getByRole("button", { name: "Bring it back then", exact: true })
       .click();
 
     await completeScheduleDialog(page);
@@ -121,7 +121,7 @@ test.describe("CRUD flows (guest / offline)", () => {
     const sheet = page.getByRole("dialog");
     await sheet.getByRole("button", { name: "Today" }).click();
     await sheet.getByRole("button", { name: "Pick a time" }).click();
-    await sheet.getByPlaceholder("What to remember").fill(text);
+    await sheet.getByPlaceholder("What was this again?").fill(text);
     await completeScheduleDialog(page);
 
     await phone(page).getByText(text).first().waitFor({ state: "visible" });

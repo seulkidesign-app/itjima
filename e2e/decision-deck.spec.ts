@@ -295,7 +295,7 @@ test.describe("Decision deck 3-state swipe", () => {
     const complete = phone(page).getByTestId("decision-deck-complete");
     await complete.waitFor({ state: "visible" });
     await expect(complete.getByText("All clear")).toBeVisible();
-    await expect(complete.getByText("You decided 3 thoughts")).toBeVisible();
+    await expect(complete.getByText("3 thoughts — sorted")).toBeVisible();
     const rows = complete.locator("dd");
     await expect(rows.nth(0)).toHaveText("1");
     await expect(rows.nth(1)).toHaveText("1");

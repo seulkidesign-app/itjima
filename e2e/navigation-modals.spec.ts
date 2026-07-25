@@ -59,12 +59,12 @@ test.describe("Navigation and modals", () => {
 
   test("feedback sheet opens and closes with Escape", async ({ page }) => {
     await openFeedback(page);
-    await page.getByRole("dialog", { name: "Feedback" }).waitFor({
+    await page.getByRole("dialog", { name: "Share your thoughts" }).waitFor({
       state: "visible",
     });
     await page.keyboard.press("Escape");
     await expect(
-      page.getByRole("dialog", { name: "Feedback" }),
+      page.getByRole("dialog", { name: "Share your thoughts" }),
     ).toHaveCount(0);
   });
 
@@ -108,7 +108,7 @@ test.describe("Navigation and modals", () => {
     await openAbout(page);
     await page.getByRole("button", { name: "Send feedback" }).click();
     await page
-      .getByRole("dialog", { name: /Feedback/ })
+      .getByRole("dialog", { name: /Share your thoughts/ })
       .waitFor({ state: "visible" });
     await expect(
       page.getByRole("dialog", { name: "Itjima (잊지마)" }),
