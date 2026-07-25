@@ -40,11 +40,11 @@ export function InboxChat({
   onMaybeNudgeLogin,
 }: Props) {
   return (
-    <div className="chat-scroll flex min-h-0 flex-1 flex-col gap-4 px-3 pb-[calc(7.5rem+env(safe-area-inset-bottom))] pt-2">
+    <div className="chat-scroll flex min-h-0 flex-1 flex-col gap-2.5 px-3 pb-[calc(6rem+env(safe-area-inset-bottom))] pt-1.5">
       {itemsAsc.map((it) => {
         const isNewest = it.id === newestId;
         return (
-          <div key={it.id} className="flex flex-col gap-2.5" data-testid="chat-turn">
+          <div key={it.id} className="flex flex-col gap-1" data-testid="chat-turn">
             <ChatBubble
               item={it}
               isNewest={isNewest}

@@ -80,7 +80,7 @@ import {
   classifySchedule,
 } from "@/lib/scheduleGroups";
 import { scheduleDisplayTitle, rawPreview } from "@/lib/thoughtProvenance";
-import { SPRING_TAB, SPRING_SNAP_BACK } from "@/lib/motion";
+import { SPRING_SNAP_BACK } from "@/lib/motion";
 import { toast } from "sonner";
 import { useT, useLang } from "@/lib/i18n";
 import { track } from "@/lib/analytics";
@@ -416,12 +416,9 @@ function Schedule() {
             )}
           </p>
         </div>
-        <div className="px-5 pb-3">
+        <div className="px-5 pb-2">
           <LayoutGroup>
-            <div
-              className="flex w-full items-end border-b border-ink/10"
-              role="tablist"
-            >
+            <div className="segment-nav" role="tablist">
               {(
                 [
                   ["today", t("오늘", "Today"), "schedule-panel-today"],
@@ -436,18 +433,11 @@ function Schedule() {
                   aria-selected={tab === k}
                   aria-controls={panelId}
                   onClick={() => setTab(k)}
-                  className={`relative min-h-11 px-4 py-2 text-[13px] font-semibold tracking-[-0.01em] transition-colors duration-200 ${
-                    tab === k ? "text-ink" : "text-ink-soft"
+                  className={`segment-nav-item ${
+                    tab === k ? "segment-nav-item-active" : "segment-nav-item-inactive"
                   }`}
                 >
                   {label}
-                  {tab === k && (
-                    <motion.span
-                      layoutId="schedule-tab-underline"
-                      className="absolute inset-x-1 -bottom-px h-[3px] rounded-full bg-ink"
-                      transition={SPRING_TAB}
-                    />
-                  )}
                 </button>
               ))}
               <button
@@ -457,18 +447,11 @@ function Schedule() {
                 aria-selected={tab === "cal"}
                 aria-controls="schedule-panel-cal"
                 onClick={() => setTab("cal")}
-                className={`relative ml-auto min-h-11 px-3 py-2 text-[12px] font-medium tracking-[-0.01em] transition-colors duration-200 ${
-                  tab === "cal" ? "text-ink-soft" : "text-ink-soft/45"
+                className={`segment-nav-item shrink-0 flex-none px-3 ${
+                  tab === "cal" ? "segment-nav-item-active" : "segment-nav-item-inactive"
                 }`}
               >
                 {t("달력", "Calendar")}
-                {tab === "cal" && (
-                  <motion.span
-                    layoutId="schedule-tab-underline-cal"
-                    className="absolute inset-x-1 -bottom-px h-[2px] rounded-full bg-ink/25"
-                    transition={SPRING_TAB}
-                  />
-                )}
               </button>
             </div>
           </LayoutGroup>
@@ -515,10 +498,10 @@ function Schedule() {
           doneItems.length === 0 ? (
             <Empty />
           ) : (
-            <div className="flex flex-col gap-6 animate-fade-in pb-2">
+            <div className="flex flex-col gap-5 animate-fade-in pb-2">
               {upcomingSections.map((sec) => (
                 <section key={sec.key} data-testid={`upcoming-section-${sec.key}`}>
-                  <h2 className="mb-2 px-0.5 text-[14px] font-bold text-ink">
+                  <h2 className="section-title mb-1.5 px-0.5">
                     {upcomingSectionLabel(sec.key, lang)}
                   </h2>
                   <ul className="flex flex-col">
@@ -535,8 +518,11 @@ function Schedule() {
                 </section>
               ))}
               {laterInboxItems.length > 0 && (
-                <section data-testid="upcoming-section-noDate">
-                  <h2 className="mb-2 px-0.5 text-[14px] font-bold text-ink">
+                <section
+                  data-testid="upcoming-section-noDate"
+                  className="rounded-[var(--radius-md)] bg-ink/[0.025] px-1 py-0.5"
+                >
+                  <h2 className="section-title mb-1.5 px-1.5 pt-1">
                     {upcomingSectionLabel("noDate", lang)}
                   </h2>
                   <ul className="flex flex-col">
@@ -601,11 +587,11 @@ function Schedule() {
           initial={{ scale: 0, opacity: 0 }}
           animate={{ scale: 1, opacity: 1 }}
           transition={{ ...SPRING_SNAP_BACK, delay: 0.15 }}
-          className="absolute right-5 z-30 flex h-14 w-14 items-center justify-center rounded-full bg-primary text-ink shadow-float touch-press"
-          style={{ bottom: "calc(env(safe-area-inset-bottom) + 1.25rem)" }}
+          className="absolute right-5 z-30 flex h-12 w-12 items-center justify-center rounded-full bg-primary text-ink shadow-float touch-press"
+          style={{ bottom: "calc(env(safe-area-inset-bottom) + 1.5rem)" }}
           aria-label={t("할 일 추가", "Add task")}
         >
-          <Plus size={26} strokeWidth={2.5} />
+          <Plus size={22} strokeWidth={2.5} />
         </motion.button>
       )}
 
@@ -1101,7 +1087,7 @@ function CalendarGrid({
               </div>
 
               {!monthHasEvents && (
-                <div className="mb-5 flex flex-col items-center py-6 text-center">
+                <div className="mb-4 flex flex-col items-center py-4 text-center">
                   <span className="text-[2.5rem]" aria-hidden>
                     🌿
                   </span>
@@ -1224,8 +1210,8 @@ function CalendarGrid({
                 {t("그때 남기기", "Remember for then")}
               </motion.button>
 
-              <div className="rounded-[16px] px-1">
-                <div className="mb-2 flex items-center justify-between gap-2">
+              <div className="rounded-[var(--radius-md)] border border-ink/[0.05] bg-ink/[0.015] px-1 py-1">
+                <div className="mb-1.5 flex items-center justify-between gap-2 px-1.5 pt-0.5">
                   <div className="text-[12px] font-semibold text-ink-soft">
                     {new Date(y, m, selected).toLocaleDateString(locale, {
                       month: "short",

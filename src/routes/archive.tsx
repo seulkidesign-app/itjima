@@ -691,7 +691,7 @@ function Archive() {
           isSpaceView ? "bg-transparent" : "bg-white"
         }`}
       >
-        <div className="px-5 pb-3 pt-7">
+        <div className="px-5 pb-2 pt-6">
           {isSpaceView && (
             <p className="mb-2 text-[12px] font-medium text-[color:var(--archive-text-soft)]">
               {t("생각 보관함", "Vault")} › {t("생각 지도", "Thought map")}
@@ -721,8 +721,8 @@ function Archive() {
                   "A map of the thoughts you entrusted",
                 )
               : t(
-                  "남겨둔 생각을 언제든 다시 찾아보세요.",
-                  "Find anything you chose to keep.",
+                  "필요할 때 다시 꺼내보세요.",
+                  "Find it again when you need it.",
                 )}
           </p>
         </div>
@@ -741,12 +741,12 @@ function Archive() {
         )}
 
         {items.length > 0 && (
-          <div className="px-5 pb-3">
+          <div className="space-y-2 px-5 pb-2">
             <div
-              className={`flex items-center gap-2 rounded-[26px] px-4 py-3 ${
+              className={`flex items-center gap-2 rounded-[var(--radius-lg)] px-3.5 py-2.5 ${
                 isSpaceView
                   ? "archive-space-search shadow-none"
-                  : "border border-ink/[0.04] bg-white shadow-card"
+                  : "border border-ink/[0.06] bg-white shadow-card"
               }`}
             >
               <Search
@@ -806,10 +806,10 @@ function Archive() {
               </p>
             )}
             {!isSearching && (
-              <div
-                className="mt-2 flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-none"
-                data-testid="archive-category-filters"
-              >
+            <div
+              className="flex items-center gap-1.5 overflow-x-auto pb-0.5 scrollbar-none"
+              data-testid="archive-category-filters"
+            >
                 {featureEnabled("ARCHIVE_THOUGHT_MAP") ||
                 featureEnabled("ARCHIVE_REVISIT") ? (
                   <div
@@ -871,14 +871,14 @@ function Archive() {
                     key={f.key}
                     type="button"
                     onClick={() => setGroupFilter(f.key)}
-                    className={`shrink-0 rounded-full px-3 py-1.5 text-[12px] font-medium transition-colors ${
+                    className={`filter-chip ${
                       groupFilter === f.key
                         ? isSpaceView
                           ? "archive-space-chip-active font-semibold"
-                          : "bg-ink text-white"
+                          : "filter-chip-active"
                         : isSpaceView
                           ? "archive-space-chip"
-                          : "bg-ink/[0.06] text-ink-soft"
+                          : "filter-chip-inactive"
                     }`}
                   >
                     {lang === "en" ? f.en : f.ko}

@@ -37,10 +37,10 @@ export function TopNav() {
         }`}
         style={{ paddingTop: "env(safe-area-inset-top)" }}
       >
-        <div className="flex items-center justify-between gap-2 px-4 pt-2 pb-1">
+        <div className="flex items-center justify-between gap-2 px-5 pb-1 pt-2">
           <Link
             to="/"
-            className="shrink-0 font-display text-[20px] uppercase leading-none tracking-wide text-ink"
+            className="shrink-0 font-display text-[19px] uppercase leading-none tracking-wide text-ink"
           >
             ITJIMA
             <span className="ml-1 inline-block h-1.5 w-1.5 -translate-y-1 rounded-full bg-primary align-middle" />
@@ -52,7 +52,7 @@ export function TopNav() {
               tap();
               setSettingsOpen(true);
             }}
-            className="touch-target flex shrink-0 items-center gap-1.5 rounded-full border border-ink/10 bg-white px-2 py-1.5 text-ink-soft shadow-[0_1px_3px_oklch(0_0_0/0.04)]"
+            className="touch-target flex h-9 shrink-0 items-center gap-1.5 rounded-full border border-ink/10 bg-white px-2.5 py-1.5 text-ink-soft shadow-card"
           >
             <User size={16} strokeWidth={2.25} />
             <span className="max-w-[4.5rem] truncate text-[11px] font-semibold">
@@ -61,7 +61,7 @@ export function TopNav() {
           </button>
         </div>
         <LayoutGroup>
-          <nav className="flex items-stretch px-3">
+          <nav className="flex items-stretch px-4">
             {tabs.map(({ to, label }) => {
               const active = path === to;
               return (
@@ -69,7 +69,7 @@ export function TopNav() {
                   key={to}
                   to={to}
                   onClick={tap}
-                  className={`relative flex min-w-0 flex-1 items-center justify-center whitespace-nowrap px-1 pt-1 pb-3 text-[13px] font-semibold tracking-[-0.01em] transition-colors duration-200 ${
+                  className={`relative flex min-w-0 flex-1 items-center justify-center whitespace-nowrap px-1 pb-2.5 pt-1 text-[13px] font-semibold tracking-[-0.01em] transition-colors duration-200 ${
                     active ? "text-ink" : "text-ink-soft"
                   }`}
                 >
@@ -77,7 +77,7 @@ export function TopNav() {
                   {active && (
                     <motion.span
                       layoutId="topnav-tab-underline"
-                      className="absolute inset-x-2 bottom-0 h-[3px] rounded-full bg-ink"
+                      className="absolute inset-x-3 bottom-0 h-[3px] rounded-full bg-ink"
                       transition={SPRING_TAB}
                     />
                   )}

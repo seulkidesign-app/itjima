@@ -31,14 +31,14 @@ export function ChatBubble({
       transition={SPRING_DEFAULT}
     >
       {item.images?.length > 0 && (
-        <div className="mb-2 flex max-w-full justify-end gap-2 overflow-x-auto">
+        <div className="mb-1 flex max-w-full justify-end gap-1.5 overflow-x-auto">
           {item.images.map((src, i) => (
             <img
               key={i}
               src={src}
               alt=""
-              className={`rounded-[16px] object-cover ring-1 ring-ink/10 ${
-                isNewest ? "h-28 w-28" : "h-20 w-20"
+              className={`rounded-[var(--radius-md)] object-cover ring-1 ring-ink/10 ${
+                isNewest ? "h-32 w-32" : "h-24 w-24"
               }`}
             />
           ))}
@@ -47,7 +47,7 @@ export function ChatBubble({
       {wrapBubble ? (
         wrapBubble(
           <div className="chat-bubble w-fit max-w-[min(340px,calc(100vw-2rem))] text-left">
-            <p className="whitespace-pre-wrap text-[16px] font-medium leading-[1.65] tracking-[-0.015em] text-ink">
+            <p className="whitespace-pre-wrap text-body">
               {item.text.trim() || t("(이미지만)", "(image only)")}
             </p>
             {children}
@@ -55,14 +55,14 @@ export function ChatBubble({
         )
       ) : (
         <div className="chat-bubble w-fit max-w-full text-left">
-          <p className="whitespace-pre-wrap text-[16px] font-medium leading-[1.65] tracking-[-0.015em] text-ink">
+          <p className="whitespace-pre-wrap text-body">
             {item.text.trim() || t("(이미지만)", "(image only)")}
           </p>
           {children}
         </div>
       )}
       {(showTime || isNewest) && (
-        <p className="mt-1 pr-0.5 text-[10px] font-medium tabular-nums text-ink-soft/55">
+        <p className="mt-0.5 pr-0.5 text-caption tabular-nums text-ink-soft/60">
           {new Date(item.created_at).toLocaleString(locale, {
             month: "numeric",
             day: "numeric",

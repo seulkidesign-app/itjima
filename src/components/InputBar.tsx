@@ -348,12 +348,12 @@ export function InputBar({
       }}
       transition={{ duration: 0.52, ease: [0.22, 1, 0.36, 1] }}
       style={{ pointerEvents: releasing ? "none" : undefined }}
-      className={`border-t border-ink/8 bg-white/98 backdrop-blur-xl shadow-[0_-4px_24px_-8px_rgba(0,0,0,0.08)] pb-[env(safe-area-inset-bottom)] ${
+      className={`border-t border-ink/8 bg-white/98 backdrop-blur-xl shadow-[0_-2px_16px_-6px_rgba(0,0,0,0.06)] pb-[env(safe-area-inset-bottom)] ${
         hero ? "border-t-0 shadow-none" : ""
       } ${composer ? "border-ink/10" : ""}`}
     >
       {composer && exampleChips && exampleChips.length > 0 && (
-        <div className="flex flex-wrap gap-1.5 px-4 pb-2 pt-2.5">
+        <div className="flex flex-wrap gap-1 px-4 pb-1.5 pt-2">
           {exampleChips.map((chip) => {
             const label = lang === "en" ? chip.en : chip.ko;
             return (
@@ -376,7 +376,7 @@ export function InputBar({
       {images.length > 0 && (
         <motion.div
           layout
-          className="flex gap-2 overflow-x-auto px-5 pt-3"
+          className="flex gap-2 overflow-x-auto px-4 pt-2"
           initial={{ opacity: 0, height: 0 }}
           animate={{ opacity: 1, height: "auto" }}
         >
@@ -391,7 +391,7 @@ export function InputBar({
               <img
                 src={src}
                 alt=""
-                className="h-16 w-16 rounded-[20px] object-cover shadow-card ring-1 ring-ink/8"
+                className="h-[4.5rem] w-[4.5rem] rounded-[var(--radius-md)] object-cover shadow-card ring-1 ring-ink/8"
               />
               <button
                 type="button"
@@ -408,13 +408,13 @@ export function InputBar({
           ))}
         </motion.div>
       )}
-      <div className={`px-4 ${composer ? "pb-1 pt-1" : hero ? "mt-3" : "mt-2"}`}>
+      <div className={`px-4 ${composer ? "pb-0.5 pt-0.5" : hero ? "mt-3" : "mt-2"}`}>
         <motion.div
           layout
           transition={SPRING_MICRO}
           className={`input-shell px-3 input-focus-ring ${
             focused ? "input-shell-focused" : ""
-          } ${composer ? "py-2" : hero ? "py-4 ring-1 ring-ink/5" : "py-3"}`}
+          } ${composer ? "py-1.5" : hero ? "py-4 ring-1 ring-ink/5" : "py-3"}`}
         >
           <textarea
             id="capture-input"
@@ -493,7 +493,7 @@ export function InputBar({
           </div>
         )}
       </div>
-      <div className={`flex items-center gap-1 ${composer ? "px-3 pb-2 pt-0" : "px-5 pb-2 pt-2"}`}>
+      <div className={`flex items-center gap-1 ${composer ? "px-3 pb-1.5 pt-0" : "px-5 pb-2 pt-2"}`}>
         <motion.button
           type="button"
           whileTap={{ scale: 0.9 }}

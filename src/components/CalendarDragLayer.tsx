@@ -445,20 +445,20 @@ export function CalendarDayCell({
             : "transparent",
       }}
       transition={{ duration: isHover ? 0.12 : 0.15, ...SPRING_SNAP_BACK }}
-      className={`relative flex min-h-[44px] flex-col items-stretch rounded-[14px] p-1.5 text-left transition-shadow ${
+      className={`relative flex min-h-[44px] flex-col items-stretch rounded-[var(--radius-sm)] p-1.5 text-left transition-shadow ${
         isHover
           ? "ring-1 ring-primary/40"
           : isSelected
-            ? "ring-1 ring-primary/30"
+            ? "ring-2 ring-ink/15 bg-primary/12"
             : isToday
-              ? "ring-1 ring-ink/10"
+              ? "ring-1 ring-ink/12"
               : "hover:bg-ink/[0.03]"
       }`}
     >
       <span
         className={`text-[11px] font-semibold leading-none tabular-nums ${
           isWeekend ? "text-ink-soft/55" : "text-ink-soft"
-        } ${isToday && !isSelected ? "text-ink" : ""}`}
+        } ${isToday || isSelected ? "font-bold text-ink" : ""}`}
       >
         {day}
       </span>

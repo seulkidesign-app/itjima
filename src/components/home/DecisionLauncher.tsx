@@ -49,7 +49,7 @@ export function DecisionLauncherCard({
       data-testid="decision-launcher"
       aria-label={ariaLabel}
       onClick={handleClick}
-      className="touch-press mx-3 mb-1.5 mt-1.5 flex w-[calc(100%-1.5rem)] items-center justify-between gap-3 rounded-[16px] border border-ink/8 bg-[#fafaf8] px-3.5 py-2 text-left shadow-card transition-transform active:scale-[0.99]"
+      className="touch-press mx-3 mb-1 mt-1 flex w-[calc(100%-1.5rem)] items-center justify-between gap-2 rounded-[var(--radius-md)] border border-ink/8 bg-[#fafaf8] px-3 py-1.5 text-left shadow-card transition-transform active:scale-[0.99]"
     >
       <p
         className="min-w-0 truncate text-[13px] font-semibold tracking-[-0.01em] text-ink"

@@ -102,7 +102,7 @@ test.describe("IA navigation (Throw / Schedule / Archive)", () => {
       page.getByRole("heading", { name: "Archive", exact: true }),
     ).toBeVisible();
     await expect(
-      page.getByText("Find anything you chose to keep."),
+      page.getByText("Find it again when you need it."),
     ).toBeVisible();
     await expect(page.getByRole("button", { name: "Thought map" })).toHaveCount(0);
     await expect(page.getByRole("link", { name: "Revisit" })).toHaveCount(0);

@@ -149,7 +149,7 @@ test.describe("Archive V1", () => {
       phone(page).getByRole("heading", { name: "Archive", exact: true }),
     ).toBeVisible();
     await expect(
-      phone(page).getByText("Find anything you chose to keep."),
+      phone(page).getByText("Find it again when you need it."),
     ).toBeVisible();
     await expect(phone(page).getByTestId("archive-v1-list")).toBeVisible();
     await expect(phone(page).getByRole("button", { name: "Thought map" })).toHaveCount(0);

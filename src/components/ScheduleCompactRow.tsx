@@ -86,7 +86,7 @@ export function ScheduleCompactRow({
 
   return (
     <li
-      className={`relative flex touch-none select-none items-center gap-3 rounded-[14px] border-b border-ink/[0.05] px-0.5 py-3 last:border-b-0 active:bg-ink/[0.03] ${
+      className={`relative flex min-h-[44px] touch-none select-none items-center gap-3 rounded-[var(--radius-sm)] border-b border-ink/[0.05] px-0.5 py-2.5 last:border-b-0 active:bg-ink/[0.03] ${
         done ? "opacity-55" : ""
       }`}
       role="button"
@@ -138,7 +138,7 @@ export function ScheduleCompactRow({
       </button>
       <span className="min-w-0 flex-1">
         <span
-          className={`block text-[16px] font-semibold leading-snug text-ink ${
+          className={`block text-[15px] font-semibold leading-snug text-ink ${
             done ? "line-through decoration-ink/30" : ""
           }`}
         >
@@ -173,7 +173,7 @@ export function LaterInboxRow({ text, onOpen }: LaterInboxRowProps) {
 
   return (
     <li
-      className="flex items-center gap-3 rounded-[14px] border-b border-ink/[0.05] px-0.5 py-3 last:border-b-0 active:bg-ink/[0.03]"
+      className="flex items-center gap-3 rounded-[var(--radius-sm)] border-b border-ink/[0.05] px-0.5 py-2.5 last:border-b-0 active:bg-ink/[0.03]"
       role="button"
       tabIndex={0}
       onClick={onOpen}
@@ -189,10 +189,10 @@ export function LaterInboxRow({ text, onOpen }: LaterInboxRowProps) {
         aria-hidden
       />
       <span className="min-w-0 flex-1">
-        <span className="block text-[16px] font-semibold leading-snug text-ink">
+        <span className="block text-[15px] font-semibold leading-snug text-ink">
           {preview}
         </span>
-        <span className="mt-0.5 block text-[12px] text-ink-soft">
+        <span className="mt-0.5 block text-caption text-ink-soft/80">
           {t("날짜 없음", "No date")}
         </span>
       </span>

@@ -179,12 +179,12 @@ function OutcomeStamp({
     <div
       data-testid="decision-outcome-label"
       data-outcome={outcome}
-      className={`pointer-events-none absolute top-8 z-[2] rounded-xl border-2 px-3 py-1.5 text-[14px] font-extrabold tracking-[0.08em] ${
+      className={`pointer-events-none absolute top-8 z-[2] rounded-[var(--radius-sm)] border-2 px-3 py-1.5 text-[13px] font-extrabold tracking-[0.06em] ${
         isLeft
-          ? "left-5 -rotate-12 border-ink/25 bg-white/80 text-ink"
+          ? "left-5 -rotate-12 border-ink/35 bg-white/95 text-ink shadow-card"
           : outcome === "later"
-            ? "right-5 rotate-6 border-ink/20 bg-white/80 text-ink-soft"
-            : "right-5 rotate-12 border-ink/30 bg-ink/[0.05] text-ink"
+            ? "right-5 rotate-6 border-ink/25 bg-white/95 text-ink-soft shadow-card"
+            : "right-5 rotate-12 border-ink/40 bg-ink/[0.06] text-ink shadow-card"
       }`}
       style={{ opacity }}
     >
@@ -587,8 +587,11 @@ export function DecisionDeck({
   const shadow = cardShadowBlur(previewProgress);
   const stackPeek = deck.slice(cursor + 1, cursor + 3);
 
-  const actionBtn =
-    "touch-press flex h-10 min-w-0 flex-1 items-center justify-center gap-1 rounded-full border border-ink/10 bg-white/90 px-2 text-[11px] font-bold text-ink shadow-card transition-transform active:scale-[0.97] disabled:opacity-40 sm:text-[12px]";
+  const actionBtnBase =
+    "touch-press flex h-10 min-w-0 flex-1 items-center justify-center gap-0.5 rounded-full border px-1.5 text-[11px] font-bold transition-transform active:scale-[0.97] disabled:opacity-40 sm:gap-1 sm:px-2 sm:text-[12px]";
+  const actionBtnToday = `${actionBtnBase} border-primary/35 bg-primary/20 text-ink shadow-card`;
+  const actionBtnLater = `${actionBtnBase} border-ink/10 bg-white/95 text-ink shadow-card`;
+  const actionBtnArchive = `${actionBtnBase} border-ink/15 bg-ink/[0.04] text-ink-soft shadow-card`;
 
   return (
     <AnimatePresence>
@@ -658,7 +661,7 @@ export function DecisionDeck({
                     onPointerMove={onMove}
                     onPointerUp={onUp}
                     onPointerCancel={onUp}
-                    className="focus-sort-card relative z-10 mx-auto flex min-h-[340px] w-full touch-none select-none flex-col overflow-hidden will-change-transform"
+                  className="focus-sort-card relative z-10 mx-auto flex min-h-[320px] w-full touch-none select-none flex-col overflow-hidden will-change-transform"
                     style={{
                       transform: `translate3d(${offset.x}px, ${offset.y}px, 0) rotate(${rotate}deg) scale(${scale})`,
                       opacity: cardOpacity,
@@ -673,19 +676,19 @@ export function DecisionDeck({
                       />
                     )}
 
-                    <div className="flex-1 px-7 pb-4 pt-8">
+                    <div className="flex-1 px-6 pb-3 pt-7">
                       <DeckCardBody item={current} />
                     </div>
                   </div>
                 </div>
 
-                <div className="mt-5 flex w-full max-w-[340px] gap-1.5">
+                <div className="mt-4 flex w-full max-w-[340px] gap-1">
                   <button
                     type="button"
                     disabled={locked}
                     data-testid="decision-btn-today"
                     aria-label={t("오늘로 결정", "Decide for today")}
-                    className={actionBtn}
+                    className={actionBtnToday}
                     onClick={() => void applyDecision("today", "button")}
                   >
                     <CalendarClock size={14} strokeWidth={2.25} className="shrink-0" />
@@ -696,7 +699,7 @@ export function DecisionDeck({
                     disabled={locked}
                     data-testid="decision-btn-later"
                     aria-label={t("나중으로 결정", "Decide for later")}
-                    className={actionBtn}
+                    className={actionBtnLater}
                     onClick={() => void applyDecision("later", "button")}
                   >
                     <Clock size={14} strokeWidth={2.25} className="shrink-0" />
@@ -707,7 +710,7 @@ export function DecisionDeck({
                     disabled={locked}
                     data-testid="decision-btn-archive"
                     aria-label={t("보관함으로 보관", "Archive thought")}
-                    className={actionBtn}
+                    className={actionBtnArchive}
                     onClick={() => void applyDecision("archive", "button")}
                   >
                     <Archive size={14} strokeWidth={2.25} className="shrink-0" />
@@ -715,7 +718,7 @@ export function DecisionDeck({
                   </button>
                 </div>
 
-                <p className="mt-4 text-center text-[11px] font-medium text-ink-soft/70">
+                <p className="mt-3 text-center text-caption text-ink-soft/75">
                   {t(
                     "← 오늘 · → 나중 · →→ 보관 · ↓ 다음 · ↑ 이전",
                     "← Today · → Later · →→ Archive · ↓ next · ↑ previous",
@@ -739,7 +742,7 @@ export function DecisionDeck({
                     `You decided ${decidedCount} thoughts`,
                   )}
                 </p>
-                <dl className="mt-6 space-y-2 text-left text-[14px] text-ink">
+                <dl className="mt-5 space-y-1.5 rounded-[var(--radius-md)] bg-ink/[0.03] px-4 py-3 text-left text-[14px] text-ink">
                   <div className="flex justify-between gap-4">
                     <dt>{t("오늘", "Today")}</dt>
                     <dd className="font-semibold tabular-nums">

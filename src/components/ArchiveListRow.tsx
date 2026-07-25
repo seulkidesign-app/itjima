@@ -55,7 +55,7 @@ export function ArchiveListRow({
       }}
       onPointerLeave={clearPress}
       onPointerCancel={clearPress}
-      className="w-full rounded-[18px] border border-ink/[0.05] bg-white px-4 py-3.5 text-left shadow-[0_1px_8px_-4px_rgba(0,0,0,0.08)] touch-press active:bg-ink/[0.02]"
+      className="w-full rounded-[var(--radius-md)] border border-ink/[0.04] bg-white px-4 py-3 text-left shadow-card touch-press active:bg-ink/[0.02]"
     >
       <div className="flex items-start gap-2">
         {pinned && (
@@ -66,10 +66,10 @@ export function ArchiveListRow({
           />
         )}
         <div className="min-w-0 flex-1">
-          <p className="whitespace-pre-wrap break-words text-[15px] font-semibold leading-snug text-ink">
+          <p className="whitespace-pre-wrap break-words text-[16px] font-semibold leading-snug text-ink">
             {title}
           </p>
-          <div className="mt-2 flex flex-wrap items-center gap-x-2 gap-y-1 text-[12px] text-ink-soft">
+          <div className="mt-1.5 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-caption text-ink-soft/85">
             <span className="rounded-full bg-ink/[0.05] px-2 py-0.5 font-medium">
               {categoryLabel}
             </span>
