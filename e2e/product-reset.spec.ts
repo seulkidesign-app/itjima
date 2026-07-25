@@ -48,7 +48,7 @@ test.describe("Product reset IA", () => {
     page,
   }) => {
     await submitThought(page, "Dentist tomorrow at 3pm");
-    await expect(phone(page).getByTestId("inline-promise")).toHaveCount(0);
+    await expect(phone(page).getByTestId("inline-promise")).toHaveCount(1);
 
     let inbox = await readGuestList(page, GUEST_INBOX_KEY);
     expect(inbox.length).toBe(1);

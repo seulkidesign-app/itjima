@@ -392,6 +392,17 @@
   box-shadow: 0 1px 2px oklch(0 0 0 / 0.04);
 }
 
+.brain-mirror-card {
+  border-radius: 18px 18px 18px 6px;
+  background: linear-gradient(
+    145deg,
+    oklch(0.99 0.02 95) 0%,
+    oklch(0.985 0.012 85) 100%
+  );
+  border: 1px solid oklch(0.82 0.08 95 / 0.35);
+  box-shadow: 0 1px 3px oklch(0 0 0 / 0.05);
+}
+
 .system-reply {
   max-width: 92%;
   border-radius: 16px 16px 16px 4px;

@@ -2,8 +2,10 @@ import { ChatLongPressRow } from "@/components/ChatLongPressRow";
 import { ChatBubble } from "@/components/ChatBubble";
 import { InlinePromise } from "@/components/InlinePromise";
 import { MemoryRevivalHint } from "@/components/MemoryRevivalHint";
-import { FEATURES } from "@/lib/features";
-import { useT } from "@/lib/i18n";
+import { featureEnabled } from "@/lib/features";
+import { useLang, useT } from "@/lib/i18n";
+import type { ClarifyPick } from "@/lib/nlSchedule";
+import { shouldShowInlinePromise } from "@/lib/promiseCard";
 import type { InboxItem } from "@/lib/store";
 import type { RevivalHint } from "@/lib/memoryRevival";
 
@@ -18,6 +20,11 @@ type Props = {
   onMoveToArchive: (item: InboxItem) => void | Promise<void>;
   onOpenContextMenu: (id: string) => void;
   onConfirmScheduleQuick: (item: InboxItem) => void | Promise<void>;
+  onConfirmClarifySchedule: (
+    item: InboxItem,
+    pick: ClarifyPick,
+  ) => void | Promise<void>;
+  onConfirmTaskLater: (item: InboxItem) => void | Promise<void>;
   onOpenPromiseSchedule: (item: InboxItem) => void;
   onMoveToDelete: (item: InboxItem) => void | Promise<void>;
   onAcknowledgeItem: (id: string) => void;
@@ -37,6 +44,8 @@ export function InboxChat({
   onMoveToArchive,
   onOpenContextMenu,
   onConfirmScheduleQuick,
+  onConfirmClarifySchedule,
+  onConfirmTaskLater,
   onOpenPromiseSchedule,
   onMoveToDelete,
   onAcknowledgeItem,
@@ -45,6 +54,8 @@ export function InboxChat({
   onRetryCapture,
 }: Props) {
   const t = useT();
+  const { lang } = useLang();
+  const uiLang = lang === "en" ? "en" : "ko";
 
   return (
     <div className="chat-scroll flex min-h-0 flex-1 flex-col gap-2 px-3 pb-[calc(5.75rem+env(safe-area-inset-bottom))] pt-1">
@@ -76,7 +87,7 @@ export function InboxChat({
                   </ChatLongPressRow>
                 )}
               >
-                {FEATURES.REDISCOVERY && inboxRevival?.sourceId === it.id && (
+                {featureEnabled("REDISCOVERY") && inboxRevival?.sourceId === it.id && (
                   <MemoryRevivalHint
                     hint={inboxRevival}
                     compact
@@ -87,11 +98,15 @@ export function InboxChat({
                 )}
               </ChatBubble>
 
-              {FEATURES.INLINE_PROMISE && (
+              {featureEnabled("INLINE_PROMISE") &&
+                !acknowledgedIds.has(it.id) &&
+                shouldShowInlinePromise(it.text, uiLang) && (
                 <InlinePromise
                   item={it}
                   acknowledged={acknowledgedIds.has(it.id)}
                   onConfirmScheduleQuick={onConfirmScheduleQuick}
+                  onConfirmClarify={onConfirmClarifySchedule}
+                  onConfirmTaskLater={onConfirmTaskLater}
                   onSchedule={onOpenPromiseSchedule}
                   onArchive={async (item) => {
                     await onMoveToArchive(item);

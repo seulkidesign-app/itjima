@@ -2,7 +2,7 @@ export const FEATURES = {
   BRAIN_MIRROR: false,
   REDISCOVERY: false,
   CLEANUP: false,
-  INLINE_PROMISE: false,
+  INLINE_PROMISE: true,
   PASTE_SPLIT: false,
   /** Archive: 생각 지도 / Thought map layout */
   ARCHIVE_THOUGHT_MAP: false,

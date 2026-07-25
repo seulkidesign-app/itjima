@@ -2,6 +2,7 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useRef, useState, useMemo, useCallback } from "react";
 import { toast } from "sonner";
 import { FocusScheduleSheet } from "@/components/FocusScheduleSheet";
+import { NlScheduleSheet } from "@/components/NlScheduleSheet";
 import type { ScheduleConfirmOptions } from "@/components/ScheduleChoiceFlow";
 import { LoginSheet } from "@/components/LoginSheet";
 import { CleanupReviewSheet } from "@/components/CleanupReviewSheet";
@@ -16,6 +17,11 @@ import { archiveFromInbox, scheduleFromInbox } from "@/lib/thoughtProvenance";
 import { pendingDecisionItems } from "@/lib/decision";
 import { inboxScheduleDefaults } from "@/lib/inboxScheduleDefaults";
 import { detectDate } from "@/lib/dateDetect";
+import {
+  dateFromClarifyPick,
+  understandNaturalLanguage,
+  type ClarifyPick,
+} from "@/lib/nlSchedule";
 import { thoughtFirstLine } from "@/lib/brainMirror";
 import { setRevivalHint } from "@/lib/archiveMeta";
 import {
@@ -66,6 +72,10 @@ function Inbox() {
     null,
   );
   const [focusScheduleSheet, setFocusScheduleSheet] = useState<{
+    open: boolean;
+    item?: InboxItem;
+  }>({ open: false });
+  const [nlScheduleSheet, setNlScheduleSheet] = useState<{
     open: boolean;
     item?: InboxItem;
   }>({ open: false });
@@ -256,6 +266,17 @@ function Inbox() {
   };
 
   const openHomeSchedule = (it: InboxItem) => {
+    const uiLang = lang === "en" ? "en" : "ko";
+    const nl = understandNaturalLanguage(it.text, uiLang);
+    track("nl_schedule_opened", { intent: nl.intent, confidence: nl.confidence });
+    if (nl.intent === "task") {
+      void confirmTaskLater(it);
+      return;
+    }
+    if (nl.intent === "schedule_exact" || nl.intent === "schedule_clarify") {
+      setNlScheduleSheet({ open: true, item: it });
+      return;
+    }
     setFocusScheduleSheet({ open: true, item: it });
   };
 
@@ -335,7 +356,9 @@ function Inbox() {
   };
 
   const confirmReleaseScheduleQuick = async (it: InboxItem) => {
-    const det = detectDate(it.text);
+    const uiLang = lang === "en" ? "en" : "ko";
+    const nl = understandNaturalLanguage(it.text, uiLang);
+    const det = nl.detectedDate ?? detectDate(it.text);
     if (!det) {
       openPromiseSchedule(it);
       return;
@@ -356,8 +379,56 @@ function Inbox() {
         "promise_card",
       );
       setFocusScheduleSheet({ open: false });
+      acknowledgeItem(it.id);
     } catch {
       toast.error(t("그때로 못 옮겼어요", "Couldn't set that moment — try again?"));
+    }
+  };
+
+  const confirmClarifySchedule = async (
+    it: InboxItem,
+    pick: ClarifyPick,
+  ) => {
+    const { start, end } = dateFromClarifyPick(pick);
+    try {
+      await commitInboxSchedule(
+        it,
+        thoughtFirstLine(it.text),
+        start,
+        end,
+        {
+          reminderMinutes: null,
+          allDay: false,
+          startAllDay: false,
+          endAllDay: false,
+          repeat: null,
+        },
+        "promise_clarify",
+      );
+      acknowledgeItem(it.id);
+    } catch {
+      toast.error(t("그때로 못 옮겼어요", "Couldn't set that moment — try again?"));
+    }
+  };
+
+  const confirmTaskLater = async (it: InboxItem) => {
+    try {
+      const ok = await inbox.update(it.id, {
+        decision: "later",
+        decided_at: new Date().toISOString(),
+        decision_source: "button",
+      } as Partial<InboxItem>);
+      if (!ok) throw new Error("update failed");
+      track("thought_task_later", { text_length: it.text.length });
+      acknowledgeItem(it.id);
+      showActionToast(
+        t("할 일로 넣었어요", "Added as a task"),
+        t("보러 가기", "Take a look"),
+        () => void navigate({ to: "/schedule" }),
+        { actionAriaLabel: t("일정 열기", "Open schedule") },
+      );
+    } catch {
+      toast.error(t("잠깐, 못 넣었어요", "Couldn't add that — try again?"));
     }
   };
 
@@ -547,6 +618,8 @@ function Inbox() {
         onMoveToArchive={moveToArchive}
         onOpenContextMenu={setMenuFor}
         onConfirmScheduleQuick={confirmReleaseScheduleQuick}
+        onConfirmClarifySchedule={confirmClarifySchedule}
+        onConfirmTaskLater={confirmTaskLater}
         onOpenPromiseSchedule={openPromiseSchedule}
         onMoveToDelete={moveToDelete}
         onAcknowledgeItem={acknowledgeItem}
@@ -670,6 +743,20 @@ function Inbox() {
           onConfirmDelete={confirmCleanupDelete}
         />
       )}
+
+      <NlScheduleSheet
+        item={nlScheduleSheet.item ?? null}
+        open={nlScheduleSheet.open}
+        onClose={() => setNlScheduleSheet({ open: false })}
+        onConfirmScheduleQuick={confirmReleaseScheduleQuick}
+        onConfirmClarify={confirmClarifySchedule}
+        onConfirmTaskLater={confirmTaskLater}
+        onOpenManualSchedule={(it) => {
+          setFocusScheduleSheet({ open: true, item: it });
+        }}
+        onArchive={moveToArchive}
+        onLetGo={moveToDelete}
+      />
 
       <FocusScheduleSheet
         item={focusScheduleSheet.item ?? null}

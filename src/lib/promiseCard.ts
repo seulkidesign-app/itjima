@@ -1,11 +1,14 @@
 import { detectDate } from "@/lib/dateDetect";
-import { classifyLocally } from "@/lib/localClassifier";
-import { analyzeThought, type ThoughtCategory } from "@/lib/ruleEngine";
-import { thoughtFirstLine } from "@/lib/brainMirror";
-import { formatSuggestedMoment } from "@/lib/scheduleChoices";
+import {
+  understandNaturalLanguage,
+  type NlIntent,
+} from "@/lib/nlSchedule";
+import type { ThoughtCategory } from "@/lib/ruleEngine";
 
 export type PromisePrimaryAction =
   | "confirm_schedule"
+  | "clarify_schedule"
+  | "confirm_task_later"
   | "set_resurface"
   | "keep_task"
   | "archive"
@@ -16,7 +19,8 @@ export type PromiseEditAction = "open_schedule_sheet" | "open_edit_menu";
 export type ActualAction =
   | "inbox_only"
   | "schedule_on_confirm"
-  | "archive_on_confirm";
+  | "archive_on_confirm"
+  | "task_later_on_confirm";
 
 export type PromiseCard = {
   icon: string;
@@ -28,18 +32,14 @@ export type PromiseCard = {
   editAction: PromiseEditAction;
   category: ThoughtCategory;
   confidence: number;
+  confidenceLevel: "high" | "low";
+  nlIntent: NlIntent;
   actualAction: ActualAction;
   detectedDate: { start: Date; end: Date; label: string } | null;
   rediscoveryEligible: boolean;
   scheduleCommitted: boolean;
+  showClarifyChips: boolean;
 };
-
-const IDEA_CATEGORIES = new Set<ThoughtCategory>([
-  "idea",
-  "note",
-  "list",
-  "place",
-]);
 
 const FORBIDDEN_PRE_CONFIRM = [
   /알려드릴/i,
@@ -53,138 +53,86 @@ const FORBIDDEN_PRE_CONFIRM = [
   /마트|근처|location|near you/i,
 ];
 
-function vaultHint(lang: "ko" | "en"): string {
-  return lang === "en"
-    ? "You can find it anytime in your vault."
-    : "생각 보관함에서 언제든 찾을 수 있어요.";
+function iconForIntent(intent: NlIntent): string {
+  switch (intent) {
+    case "schedule_exact":
+    case "schedule_clarify":
+      return "📅";
+    case "task":
+      return "✓";
+    case "archive":
+      return "🗂";
+    default:
+      return "💭";
+  }
 }
 
-function shortTopic(text: string): string {
-  const line = thoughtFirstLine(text);
-  if (line.length <= 16) return line;
-  return `${line.slice(0, 14).trim()}…`;
+function mapIntentToPrimary(intent: NlIntent): PromisePrimaryAction {
+  switch (intent) {
+    case "schedule_exact":
+      return "confirm_schedule";
+    case "schedule_clarify":
+      return "clarify_schedule";
+    case "task":
+      return "confirm_task_later";
+    case "archive":
+      return "archive";
+    default:
+      return "keep_note";
+  }
 }
 
-/** Deterministic promise copy — no LLM. */
+function mapIntentToActual(intent: NlIntent): ActualAction {
+  switch (intent) {
+    case "schedule_exact":
+      return "schedule_on_confirm";
+    case "archive":
+      return "archive_on_confirm";
+    case "task":
+      return "task_later_on_confirm";
+    default:
+      return "inbox_only";
+  }
+}
+
+/** Show inline promise only when NL suggests a concrete next step. */
+export function shouldShowInlinePromise(
+  text: string,
+  lang: "ko" | "en",
+): boolean {
+  return understandNaturalLanguage(text.trim(), lang).intent !== "keep";
+}
+
+/** Deterministic promise copy — NL understanding first, no LLM on the hot path. */
 export function buildPromiseCard(
   text: string,
   lang: "ko" | "en",
 ): PromiseCard {
   const trimmed = text.trim();
-  const analysis = analyzeThought(trimmed);
-  const resolution = classifyLocally(trimmed);
+  const nl = understandNaturalLanguage(trimmed, lang);
   const dateHit = detectDate(trimmed);
-  const category =
-    resolution?.category ??
-    analysis.category ??
-    (dateHit ? "schedule" : "note");
-  const confidence = Math.max(
-    resolution?.confidence ?? 0,
-    analysis.ruleConfidence,
-  );
 
-  const base = {
-    category,
-    confidence,
-    detectedDate: dateHit,
-    scheduleCommitted: false,
-    editActionLabel: lang === "en" ? "Edit" : "수정",
-    editAction: "open_edit_menu" as const,
-  };
-
-  if (dateHit && !analysis.isJunk) {
-    const moment = formatSuggestedMoment(dateHit.start, lang);
-    return {
-      ...base,
-      icon: "📅",
-      label:
-        lang === "en"
-          ? `${moment} looks like a schedule`
-          : `${moment} 일정 같아요`,
-      promise: lang === "en" ? "Add it to your schedule?" : "일정으로 잡을까요?",
-      primaryActionLabel: lang === "en" ? "Add to schedule" : "일정으로 잡기",
-      primaryAction: "confirm_schedule",
-      actualAction: "schedule_on_confirm",
-      rediscoveryEligible: false,
-    };
-  }
-
-  if (category === "task" || category === "reminder") {
-    return {
-      ...base,
-      icon: "✓",
-      label: lang === "en" ? "Keeping this as a task" : "할 일로 맡아뒀어요",
-      promise:
-        lang === "en"
-          ? "Set a time whenever you're ready."
-          : "시간은 나중에 정해도 괜찮아요.",
-      primaryActionLabel:
-        lang === "en" ? "Pick when to revisit" : "시점 정하기",
-      primaryAction: "set_resurface",
-      actualAction: "inbox_only",
-      rediscoveryEligible: false,
-    };
-  }
-
-  if (category === "link") {
-    return {
-      ...base,
-      icon: "🔗",
-      label: lang === "en" ? "Saved as a link" : "링크로 맡아뒀어요",
-      promise: vaultHint(lang),
-      primaryActionLabel: lang === "en" ? "Keep here" : "그대로 두기",
-      primaryAction: "keep_note",
-      actualAction: "inbox_only",
-      rediscoveryEligible: false,
-    };
-  }
-
-  if (category === "shopping") {
-    return {
-      ...base,
-      icon: "🛒",
-      label: lang === "en" ? "Saved to pick up later" : "장보기로 맡아뒀어요",
-      promise: vaultHint(lang),
-      primaryActionLabel:
-        lang === "en" ? "Pick when to revisit" : "다시 볼 시점 정하기",
-      primaryAction: "set_resurface",
-      actualAction: "inbox_only",
-      rediscoveryEligible: false,
-    };
-  }
-
-  if (
-    IDEA_CATEGORIES.has(category) &&
-    confidence >= 0.65 &&
-    !analysis.isJunk
-  ) {
-    const topic = shortTopic(trimmed);
-    const travelLike = /여행|travel|trip|vacation/i.test(trimmed);
-    return {
-      ...base,
-      icon: travelLike ? "✈️" : "💭",
-      label:
-        lang === "en"
-          ? `Saved "${topic}" as an idea`
-          : `${topic} 아이디어로 맡아뒀어요`,
-      promise: vaultHint(lang),
-      primaryActionLabel:
-        lang === "en" ? "Pick when to revisit" : "다시 볼 시점 정하기",
-      primaryAction: "set_resurface",
-      actualAction: "inbox_only",
-      rediscoveryEligible: true,
-    };
-  }
+  const primaryAction = mapIntentToPrimary(nl.intent);
+  const actualAction = mapIntentToActual(nl.intent);
 
   return {
-    ...base,
-    icon: "✓",
-    label: lang === "en" ? "Saved for you" : "맡아뒀어요",
-    promise: vaultHint(lang),
-    primaryActionLabel: lang === "en" ? "Keep here" : "그대로 두기",
-    primaryAction: "keep_note",
-    actualAction: "inbox_only",
+    icon: iconForIntent(nl.intent),
+    label: nl.mirrorLine,
+    promise: nl.mirrorDetail,
+    primaryActionLabel:
+      lang === "en" ? nl.primaryLabelEn : nl.primaryLabelKo,
+    editActionLabel: lang === "en" ? "Adjust" : "수정",
+    editAction: "open_edit_menu",
+    primaryAction,
+    category: nl.category,
+    confidence: nl.confidence === "high" ? 0.9 : 0.55,
+    confidenceLevel: nl.confidence,
+    nlIntent: nl.intent,
+    actualAction,
+    detectedDate: nl.detectedDate ?? dateHit,
+    scheduleCommitted: false,
     rediscoveryEligible: false,
+    showClarifyChips: nl.intent === "schedule_clarify",
   };
 }
 

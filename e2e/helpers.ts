@@ -133,8 +133,15 @@ export async function dismissArchiveEditDialog(page: Page) {
 }
 
 export async function completeScheduleDialog(page: Page) {
-  const sheet = page.getByRole("dialog");
+  const sheet = page.getByRole("dialog").last();
   await sheet.waitFor({ state: "visible" });
+
+  const nlPrimary = sheet.getByTestId("promise-primary");
+  if (await nlPrimary.isVisible().catch(() => false)) {
+    await nlPrimary.click();
+    return;
+  }
+
   const pickTime = sheet.getByRole("button", { name: "Pick a time" });
   if (await pickTime.isVisible()) {
     await pickTime.click();
@@ -159,11 +166,19 @@ export async function dismissInlinePromise(page: Page) {
   if (!(await latestActions.isVisible().catch(() => false))) return;
 
   const primary = latest.getByTestId("promise-primary");
-  const label = ((await primary.textContent()) ?? "").trim();
-  if (/Keep here|그대로 두기/i.test(label)) {
-    await primary.click({ force: true });
+  if (await primary.isVisible().catch(() => false)) {
+    const label = ((await primary.textContent()) ?? "").trim();
+    if (/Keep here|그대로 두기/i.test(label)) {
+      await primary.click({ force: true });
+    } else {
+      await latest.getByTestId("promise-manual").click({ force: true });
+      const keep = frame
+        .getByTestId("promise-edit-menu")
+        .getByRole("button", { name: "Keep here", exact: true });
+      await keep.click({ force: true });
+    }
   } else {
-    await latest.getByTestId("promise-edit").click({ force: true });
+    await latest.getByTestId("promise-manual").click({ force: true });
     const keep = frame
       .getByTestId("promise-edit-menu")
       .getByRole("button", { name: "Keep here", exact: true });
