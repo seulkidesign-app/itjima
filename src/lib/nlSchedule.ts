@@ -33,7 +33,7 @@ const TIME_RE =
   /(?:\d{1,2}\s*시|\d{1,2}:\d{2}|\d{1,2}\s*(?:am|pm)\b|오전|오후)/i;
 
 const VAGUE_WHEN_RE =
-  /(?:쯤|정도|무렵|경|around|about|or\s+so|sometime|roughly)/i;
+  /(?:쯤|정도|무렵|경|\baround\b|\babout\b|\bor\s+so\b|\bsometime\b|\broughly\b)/i;
 
 const REFERENCE_RE =
   /(?:번호|number|#|비밀번호|password|pin\s*code|여권|passport|account|계좌|카드\s*번호)/i;
@@ -42,7 +42,7 @@ const TASK_VERB_RE =
   /(?:하기|하자|해야|전화|연락|call|email|send|submit|buy|사기|구매|회의|미팅|병원|치과|dentist|appointment)/i;
 
 const WATCH_READ_RE =
-  /(?:보기|읽기|read|watch|see|볼\s)/i;
+  /(?:보기|읽기|\bread\b|\bwatch\b|\bsee\b|볼\s)/i;
 
 function hasExplicitTime(text: string): boolean {
   const det = detectDate(text);

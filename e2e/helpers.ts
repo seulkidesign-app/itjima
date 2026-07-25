@@ -178,11 +178,16 @@ export async function dismissInlinePromise(page: Page) {
       await keep.click({ force: true });
     }
   } else {
-    await latest.getByTestId("promise-manual").click({ force: true });
-    const keep = frame
-      .getByTestId("promise-edit-menu")
-      .getByRole("button", { name: "Keep here", exact: true });
-    await keep.click({ force: true });
+    const keepClarify = latest.getByTestId("promise-keep");
+    if (await keepClarify.isVisible().catch(() => false)) {
+      await keepClarify.click({ force: true });
+    } else {
+      await latest.getByTestId("promise-manual").click({ force: true });
+      const keep = frame
+        .getByTestId("promise-edit-menu")
+        .getByRole("button", { name: "Keep here", exact: true });
+      await keep.click({ force: true });
+    }
   }
   await latestActions.waitFor({ state: "hidden", timeout: 8000 }).catch(() => {});
 }

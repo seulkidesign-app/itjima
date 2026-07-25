@@ -147,6 +147,17 @@ export function NlSchedulePrompt({
         </div>
       )}
 
+      {!acknowledged && card.showClarifyChips && (
+        <button
+          type="button"
+          data-testid="promise-keep"
+          onClick={onDismiss}
+          className="mt-2 w-full py-1 text-center text-[12px] font-medium text-ink-soft"
+        >
+          {t("그대로 두기", "Keep here")}
+        </button>
+      )}
+
       {!acknowledged && (
         <div className="mt-2 flex w-full gap-2" data-testid="promise-actions">
           {!card.showClarifyChips && (
