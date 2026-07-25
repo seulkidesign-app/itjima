@@ -2,7 +2,7 @@ import type { ReactNode } from "react";
 import { motion } from "framer-motion";
 import { useT, useLang } from "@/lib/i18n";
 import type { InboxItem } from "@/lib/store";
-import { SPRING_DEFAULT } from "@/lib/motion";
+import { TRANSITION_CALM } from "@/lib/motion";
 
 export function ChatBubble({
   item,
@@ -23,54 +23,49 @@ export function ChatBubble({
   const { lang } = useLang();
   const locale = lang === "en" ? "en-US" : "ko-KR";
 
+  const bubbleBody = (
+    <div className="chat-bubble w-full text-left">
+      <p className="whitespace-pre-wrap text-body">
+        {item.text.trim() || t("(이미지만)", "(image only)")}
+      </p>
+      {children}
+    </div>
+  );
+
   return (
     <motion.div
       className="flex w-full flex-col items-end"
-      initial={isNewest ? { opacity: 0, y: 14, scale: 0.96 } : { opacity: 0, y: 8 }}
-      animate={{ opacity: 1, y: 0, scale: 1 }}
-      transition={SPRING_DEFAULT}
+      initial={isNewest ? { opacity: 0, y: 8 } : { opacity: 0, y: 4 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={TRANSITION_CALM}
     >
-      {item.images?.length > 0 && (
-        <div className="mb-1 flex max-w-full justify-end gap-1.5 overflow-x-auto">
-          {item.images.map((src, i) => (
-            <img
-              key={i}
-              src={src}
-              alt=""
-              className={`rounded-[var(--radius-md)] object-cover ring-1 ring-ink/10 ${
-                isNewest ? "h-32 w-32" : "h-24 w-24"
-              }`}
-            />
-          ))}
-        </div>
-      )}
-      {wrapBubble ? (
-        wrapBubble(
-          <div className="chat-bubble w-fit max-w-[min(340px,calc(100vw-2rem))] text-left">
-            <p className="whitespace-pre-wrap text-body">
-              {item.text.trim() || t("(이미지만)", "(image only)")}
-            </p>
-            {children}
-          </div>,
-        )
-      ) : (
-        <div className="chat-bubble w-fit max-w-full text-left">
-          <p className="whitespace-pre-wrap text-body">
-            {item.text.trim() || t("(이미지만)", "(image only)")}
+      <div className="chat-turn-group">
+        {item.images?.length > 0 && (
+          <div className="mb-1 flex w-full justify-end gap-1.5 overflow-x-auto">
+            {item.images.map((src, i) => (
+              <img
+                key={i}
+                src={src}
+                alt=""
+                className={`rounded-[var(--radius-md)] object-cover ring-1 ring-ink/10 ${
+                  isNewest ? "h-36 w-36" : "h-28 w-28"
+                }`}
+              />
+            ))}
+          </div>
+        )}
+        {wrapBubble ? wrapBubble(bubbleBody) : bubbleBody}
+        {(showTime || isNewest) && (
+          <p className="mt-0.5 self-end pr-1 text-caption tabular-nums text-ink-soft/55">
+            {new Date(item.created_at).toLocaleString(locale, {
+              month: "numeric",
+              day: "numeric",
+              hour: "2-digit",
+              minute: "2-digit",
+            })}
           </p>
-          {children}
-        </div>
-      )}
-      {(showTime || isNewest) && (
-        <p className="mt-0.5 pr-0.5 text-caption tabular-nums text-ink-soft/60">
-          {new Date(item.created_at).toLocaleString(locale, {
-            month: "numeric",
-            day: "numeric",
-            hour: "2-digit",
-            minute: "2-digit",
-          })}
-        </p>
-      )}
+        )}
+      </div>
     </motion.div>
   );
 }

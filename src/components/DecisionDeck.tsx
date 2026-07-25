@@ -597,14 +597,14 @@ export function DecisionDeck({
     <AnimatePresence>
       {open && (
         <motion.div
-          className="fixed inset-0 z-[60] flex flex-col bg-[#faf9f6]/92 backdrop-blur-[20px]"
+          className="fixed inset-0 z-[60] flex flex-col bg-[#fafaf8]/94 backdrop-blur-[16px]"
           role="dialog"
           aria-modal="true"
           aria-label={t("하나씩", "One by one")}
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
-          transition={{ duration: 0.24 }}
+          transition={{ duration: 0.2 }}
           onClick={(e) => {
             if (e.target === e.currentTarget && !dragging) onClose();
           }}

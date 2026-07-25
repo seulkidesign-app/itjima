@@ -471,10 +471,10 @@ function Schedule() {
             }
             role="tabpanel"
             aria-labelledby={`schedule-tab-${tab}`}
-            initial={{ opacity: 0, y: 10 }}
+            initial={{ opacity: 0, y: 6 }}
             animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -6 }}
-            transition={{ duration: 0.22, ease: [0.32, 0.72, 0, 1] }}
+            exit={{ opacity: 0, y: -4 }}
+            transition={{ duration: 0.2, ease: [0.32, 0.72, 0, 1] }}
           >
         {syncState === "syncing" && items.length === 0 ? (
           <ScheduleListSkeleton />
@@ -587,11 +587,11 @@ function Schedule() {
           initial={{ scale: 0, opacity: 0 }}
           animate={{ scale: 1, opacity: 1 }}
           transition={{ ...SPRING_SNAP_BACK, delay: 0.15 }}
-          className="absolute right-5 z-30 flex h-12 w-12 items-center justify-center rounded-full bg-primary text-ink shadow-float touch-press"
+          className="absolute right-5 z-30 flex h-11 w-11 items-center justify-center rounded-full bg-primary/95 text-ink shadow-card touch-press"
           style={{ bottom: "calc(env(safe-area-inset-bottom) + 1.5rem)" }}
           aria-label={t("할 일 추가", "Add task")}
         >
-          <Plus size={22} strokeWidth={2.5} />
+          <Plus size={20} strokeWidth={2.25} />
         </motion.button>
       )}
 
@@ -804,10 +804,10 @@ function ScheduleTodayPanel({
       ) : (
         doneCount === 0 &&
         flowedItems.length === 0 && (
-          <p className="px-1 py-6 text-center text-[14px] leading-[1.7] text-ink-soft/85">
+          <p className="px-1 py-5 text-center text-secondary leading-relaxed">
             {t(
-              "오늘은 특별히 떠올릴 게 없어요. 괜찮아요.",
-              "Nothing needs your attention today — and that's okay.",
+              "오늘 할 일이 생기면 여기에 모여요.",
+              "When something needs your day, it gathers here.",
             )}
           </p>
         )
@@ -1539,8 +1539,8 @@ function Empty() {
       emoji="🌙"
       titleKo="아직 그때가 없어요"
       titleEn="Nothing anchored yet"
-      hintKo="생각을 오른쪽으로 밀거나, 마음에 드는 날에 남겨 보세요"
-      hintEn="Swipe a thought right, or leave it on a day that feels right"
+      hintKo="오늘 할 일이 생기면 여기에 모여요."
+      hintEn="When something needs your day, it gathers here."
     />
   );
 }

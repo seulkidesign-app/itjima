@@ -743,10 +743,10 @@ function Archive() {
         {items.length > 0 && (
           <div className="space-y-2 px-5 pb-2">
             <div
-              className={`flex items-center gap-2 rounded-[var(--radius-lg)] px-3.5 py-2.5 ${
+              className={`flex items-center gap-2 rounded-[var(--radius-lg)] px-3.5 py-2 ${
                 isSpaceView
                   ? "archive-space-search shadow-none"
-                  : "border border-ink/[0.06] bg-white shadow-card"
+                  : "border border-ink/[0.08] bg-white shadow-card"
               }`}
             >
               <Search
@@ -767,7 +767,7 @@ function Archive() {
                   "기억하고 싶은 걸 찾아보세요",
                   "Find a thought you kept",
                 )}
-                className={`flex-1 bg-transparent text-[14px] focus:outline-none ${
+                className={`flex-1 bg-transparent text-[15px] font-medium focus:outline-none ${
                   isSpaceView
                     ? "text-[color:var(--archive-text)] placeholder:text-[color:var(--archive-text-soft)]"
                     : "text-ink placeholder:text-ink-soft/70"
@@ -1174,7 +1174,7 @@ function Archive() {
           </>
         ) : (
           <section
-            className="flex flex-col gap-3"
+            className="flex flex-col gap-2"
             data-testid="archive-v1-list"
           >
             {v1ListItems.map((it) => (
@@ -1437,8 +1437,8 @@ function Empty({ dark = false }: { dark?: boolean }) {
         emoji="🗂"
         titleKo="아직 맡겨둔 게 없어요"
         titleEn="Nothing entrusted here yet"
-        hintKo="마음에 남는 생각을 왼쪽으로 밀면, 여기서 다시 만날 수 있어요"
-        hintEn="Swipe left on a thought you want to keep — it'll wait here for you"
+        hintKo="필요한 순간 다시 찾을 수 있어요."
+        hintEn="Find it again when you need it."
       />
     </div>
   );

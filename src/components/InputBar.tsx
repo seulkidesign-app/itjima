@@ -346,11 +346,11 @@ export function InputBar({
         y: releasing ? -4 : 0,
         opacity: releasing ? 0 : 1,
       }}
-      transition={{ duration: 0.52, ease: [0.22, 1, 0.36, 1] }}
+      transition={{ duration: 0.2, ease: [0.32, 0.72, 0, 1] }}
       style={{ pointerEvents: releasing ? "none" : undefined }}
-      className={`border-t border-ink/8 bg-white/98 backdrop-blur-xl shadow-[0_-2px_16px_-6px_rgba(0,0,0,0.06)] pb-[env(safe-area-inset-bottom)] ${
-        hero ? "border-t-0 shadow-none" : ""
-      } ${composer ? "border-ink/10" : ""}`}
+      className={`composer-hero pb-[env(safe-area-inset-bottom)] ${
+        hero ? "" : ""
+      } ${composer ? "" : "border-t border-ink/8 bg-white/98 backdrop-blur-xl shadow-[0_-2px_16px_-6px_rgba(0,0,0,0.06)]"}`}
     >
       {composer && exampleChips && exampleChips.length > 0 && (
         <div className="flex flex-wrap gap-1 px-4 pb-1.5 pt-2">
@@ -461,7 +461,7 @@ export function InputBar({
               }
             }}
             rows={composer ? 1 : hero ? 4 : 3}
-            placeholder={t("무엇이 떠오르나요?", "What's on your mind?")}
+            placeholder={t("생각이 떠오르면 바로 남겨보세요.", "What's on your mind?")}
             className={`block w-full resize-none bg-transparent leading-relaxed text-ink placeholder:text-ink-soft/55 placeholder:transition-opacity focus:outline-none ${
               composer
                 ? "min-h-[24px] max-h-28 text-[15px]"
@@ -496,7 +496,8 @@ export function InputBar({
       <div className={`flex items-center gap-1 ${composer ? "px-3 pb-1.5 pt-0" : "px-5 pb-2 pt-2"}`}>
         <motion.button
           type="button"
-          whileTap={{ scale: 0.9 }}
+          whileTap={{ scale: 0.96 }}
+          transition={{ duration: 0.12 }}
           onClick={onMic}
           className={`touch-target rounded-full transition-colors ${
             listening
@@ -505,7 +506,7 @@ export function InputBar({
           }`}
           aria-label={t("음성 입력", "Voice input")}
         >
-          <Mic size={18} className={listening ? "animate-pulse" : ""} />
+          <Mic size={17} className={listening ? "animate-pulse" : ""} />
         </motion.button>
         <motion.button
           type="button"
@@ -517,7 +518,7 @@ export function InputBar({
           className="touch-target rounded-full text-ink-soft hover:bg-ink/[0.05]"
           aria-label={t("이미지 첨부", "Attach image")}
         >
-          <ImageIcon size={18} />
+          <ImageIcon size={17} />
         </motion.button>
         <input
           ref={fileRef}
@@ -537,7 +538,7 @@ export function InputBar({
           className="touch-target rounded-full text-ink-soft hover:bg-ink/[0.05]"
           aria-label={t("낙서", "Scribble")}
         >
-          <Pencil size={18} />
+          <Pencil size={17} />
         </motion.button>
         <div className="flex-1" />
         <motion.button
@@ -553,10 +554,10 @@ export function InputBar({
               buttonSubmitRef.current = false;
             }, 250);
           }}
-          className={`flex h-11 min-w-11 items-center justify-center gap-1.5 rounded-full font-extrabold text-[13px] uppercase tracking-[0.04em] transition-shadow ${
+          className={`flex h-10 min-w-[5.5rem] items-center justify-center gap-1 rounded-full text-button transition-shadow ${
             hasContent
-              ? "bg-ink px-4 text-white shadow-float"
-              : "bg-primary px-4 text-ink"
+              ? "bg-ink px-4 text-white shadow-card"
+              : "bg-primary px-4 text-ink shadow-card"
           }`}
           aria-label={t("남기기", "Leave it")}
         >

@@ -1,4 +1,19 @@
-/** Apple-style spring presets for ItJima interaction system v1.0 */
+/** Calm UI transitions — 180–240ms, no playful spring. */
+export const MOTION_EASE = [0.32, 0.72, 0, 1] as const;
+export const MOTION_DURATION = 0.2;
+export const MOTION_DURATION_SLOW = 0.24;
+
+export const TRANSITION_CALM = {
+  duration: MOTION_DURATION,
+  ease: MOTION_EASE,
+} as const;
+
+export const TRANSITION_CALM_SLOW = {
+  duration: MOTION_DURATION_SLOW,
+  ease: MOTION_EASE,
+} as const;
+
+/** @deprecated Prefer TRANSITION_CALM for chrome; kept for drag snap-back only. */
 export const SPRING_DEFAULT = {
   type: "spring" as const,
   stiffness: 320,

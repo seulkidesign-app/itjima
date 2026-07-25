@@ -3,6 +3,7 @@ import { ChatBubble } from "@/components/ChatBubble";
 import { InlinePromise } from "@/components/InlinePromise";
 import { MemoryRevivalHint } from "@/components/MemoryRevivalHint";
 import { FEATURES } from "@/lib/features";
+import { useT } from "@/lib/i18n";
 import type { InboxItem } from "@/lib/store";
 import type { RevivalHint } from "@/lib/memoryRevival";
 
@@ -39,23 +40,35 @@ export function InboxChat({
   onAcknowledgeItem,
   onMaybeNudgeLogin,
 }: Props) {
+  const t = useT();
+
   return (
-    <div className="chat-scroll flex min-h-0 flex-1 flex-col gap-2.5 px-3 pb-[calc(6rem+env(safe-area-inset-bottom))] pt-1.5">
-      {itemsAsc.map((it) => {
-        const isNewest = it.id === newestId;
-        return (
-          <div key={it.id} className="flex flex-col gap-1" data-testid="chat-turn">
-            <ChatBubble
-              item={it}
-              isNewest={isNewest}
-              showTime
-              wrapBubble={(bubble) => (
-                <ChatLongPressRow onLongPress={() => onOpenContextMenu(it.id)}>
-                  {bubble}
-                </ChatLongPressRow>
-              )}
-            >
-              {FEATURES.REDISCOVERY && inboxRevival?.sourceId === it.id && (
+    <div className="chat-scroll flex min-h-0 flex-1 flex-col gap-2 px-3 pb-[calc(5.75rem+env(safe-area-inset-bottom))] pt-1">
+      {itemsAsc.length === 0 ? (
+        <div className="flex flex-1 flex-col items-center justify-end pb-2">
+          <p className="max-w-[15rem] text-center text-secondary leading-relaxed">
+            {t(
+              "생각이 떠오르면 바로 남겨보세요.",
+              "When a thought surfaces, leave it here.",
+            )}
+          </p>
+        </div>
+      ) : (
+        itemsAsc.map((it) => {
+          const isNewest = it.id === newestId;
+          return (
+            <div key={it.id} className="flex flex-col gap-0.5" data-testid="chat-turn">
+              <ChatBubble
+                item={it}
+                isNewest={isNewest}
+                showTime
+                wrapBubble={(bubble) => (
+                  <ChatLongPressRow onLongPress={() => onOpenContextMenu(it.id)}>
+                    {bubble}
+                  </ChatLongPressRow>
+                )}
+              >
+                {FEATURES.REDISCOVERY && inboxRevival?.sourceId === it.id && (
                   <MemoryRevivalHint
                     hint={inboxRevival}
                     compact
@@ -64,30 +77,31 @@ export function InboxChat({
                     onDismiss={onInboxRevivalDismiss}
                   />
                 )}
-            </ChatBubble>
+              </ChatBubble>
 
-            {FEATURES.INLINE_PROMISE && (
-              <InlinePromise
-                item={it}
-                acknowledged={acknowledgedIds.has(it.id)}
-                onConfirmScheduleQuick={onConfirmScheduleQuick}
-                onSchedule={onOpenPromiseSchedule}
-                onArchive={async (item) => {
-                  await onMoveToArchive(item);
-                  onMaybeNudgeLogin();
-                }}
-                onLetGo={async (item) => {
-                  await onMoveToDelete(item);
-                }}
-                onDismiss={() => {
-                  onAcknowledgeItem(it.id);
-                  onMaybeNudgeLogin();
-                }}
-              />
-            )}
-          </div>
-        );
-      })}
+              {FEATURES.INLINE_PROMISE && (
+                <InlinePromise
+                  item={it}
+                  acknowledged={acknowledgedIds.has(it.id)}
+                  onConfirmScheduleQuick={onConfirmScheduleQuick}
+                  onSchedule={onOpenPromiseSchedule}
+                  onArchive={async (item) => {
+                    await onMoveToArchive(item);
+                    onMaybeNudgeLogin();
+                  }}
+                  onLetGo={async (item) => {
+                    await onMoveToDelete(item);
+                  }}
+                  onDismiss={() => {
+                    onAcknowledgeItem(it.id);
+                    onMaybeNudgeLogin();
+                  }}
+                />
+              )}
+            </div>
+          );
+        })
+      )}
       <div
         ref={listEndRef}
         data-testid="chat-scroll-sentinel"

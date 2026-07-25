@@ -1,71 +1,38 @@
 /**
- * Semantic motion personalities — each action communicates intention.
- * @see Interaction Redesign Sprint v2.0
+ * Semantic motion — calm confidence, 180–240ms.
  */
 
-export const MOTION_THINKING = {
-  type: "spring" as const,
-  stiffness: 180,
-  damping: 22,
-  mass: 1.15,
+export const MOTION_CALM = {
+  duration: 0.2,
+  ease: [0.32, 0.72, 0, 1] as const,
 };
+
+export const MOTION_CALM_SLOW = {
+  duration: 0.24,
+  ease: [0.32, 0.72, 0, 1] as const,
+};
+
+export const MOTION_THINKING = MOTION_CALM_SLOW;
 
 /** Calmer reveal for Today / Archive / Rediscovery — not Capture. */
-export const MOTION_CRAFT = {
-  type: "spring" as const,
-  stiffness: 118,
-  damping: 28,
-  mass: 1.28,
-};
+export const MOTION_CRAFT = MOTION_CALM_SLOW;
 
-export const MOTION_SCHEDULE = {
-  type: "spring" as const,
-  stiffness: 260,
-  damping: 26,
-  mass: 0.95,
-};
+export const MOTION_SCHEDULE = MOTION_CALM;
 
-export const MOTION_ARCHIVE = {
-  type: "spring" as const,
-  stiffness: 340,
-  damping: 30,
-  mass: 0.88,
-};
+export const MOTION_ARCHIVE = MOTION_CALM;
 
-export const MOTION_DELETE = {
-  type: "spring" as const,
-  stiffness: 480,
-  damping: 36,
-  mass: 0.42,
-};
+export const MOTION_DELETE = MOTION_CALM;
 
-export const MOTION_UNDO = {
-  type: "spring" as const,
-  stiffness: 240,
-  damping: 24,
-  mass: 1.05,
-};
+export const MOTION_UNDO = MOTION_CALM;
 
-export const MOTION_SUCCESS = {
-  type: "spring" as const,
-  stiffness: 200,
-  damping: 22,
-  mass: 1.1,
-};
+export const MOTION_SUCCESS = MOTION_CALM_SLOW;
 
 export const MOTION_SHEET = {
-  type: "spring" as const,
-  stiffness: 380,
-  damping: 34,
-  mass: 0.85,
+  duration: 0.24,
+  ease: [0.32, 0.72, 0, 1] as const,
 };
 
-export const MOTION_STEP = {
-  type: "spring" as const,
-  stiffness: 400,
-  damping: 32,
-  mass: 0.7,
-};
+export const MOTION_STEP = MOTION_CALM;
 
 /** Exit targets per swipe direction in Focus Mode */
 export function exitSpring(dir: "left" | "right" | "up") {

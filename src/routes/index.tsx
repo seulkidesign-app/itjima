@@ -526,7 +526,7 @@ function Inbox() {
         onMaybeNudgeLogin={maybeNudgeLogin}
       />
 
-      <div className="sticky bottom-0 z-20 shrink-0 bg-white">
+      <div className="composer-hero sticky bottom-0 z-20 shrink-0">
         <DecisionLauncherCard
           itemCount={pendingItems.length}
           newestItemId={newestId}
