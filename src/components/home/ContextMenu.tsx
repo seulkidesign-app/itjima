@@ -62,6 +62,7 @@ export function ContextMenu({
       className="fixed inset-0 z-50 flex flex-col"
       role="dialog"
       aria-modal="true"
+      data-testid="inbox-context-menu"
       onClick={onClose}
     >
       <div className="flex-1 bg-ink/30 backdrop-blur-sm animate-fade-in" />

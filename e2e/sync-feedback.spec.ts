@@ -9,6 +9,7 @@ import {
   blockCloudMutations,
   TEST_USER_ID,
   contextMenuDialog,
+  clickContextMenuItem,
 } from "./helpers";
 
 test.describe("sync feedback", () => {
@@ -24,9 +25,7 @@ test.describe("sync feedback", () => {
     await addThought(page, text);
 
     await openContextMenu(page, text);
-    await contextMenuDialog(page)
-      .getByRole("button", { name: "Delete", exact: true })
-      .click();
+    await clickContextMenuItem(page, "Delete");
 
     await page.getByText("Deleted").waitFor({ state: "visible" });
     await expect(phone(page).getByRole("alert")).toHaveCount(0);
