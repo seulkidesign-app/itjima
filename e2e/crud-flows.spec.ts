@@ -11,6 +11,7 @@ import {
   gotoScheduleUpcoming,
   completeScheduleDialog,
   contextMenuDialog,
+  clickContextMenuItem,
   GUEST_INBOX_KEY,
   GUEST_ARCHIVE_KEY,
   GUEST_SCHEDULE_KEY,
@@ -74,9 +75,7 @@ test.describe("CRUD flows (guest / offline)", () => {
     await addThought(page, text);
 
     await openContextMenu(page, text);
-    await contextMenuDialog(page)
-      .getByRole("button", { name: "Delete", exact: true })
-      .click();
+    await clickContextMenuItem(page, "Delete");
 
     await expect(
       phone(page).getByRole("paragraph").filter({ hasText: text }),
@@ -120,7 +119,7 @@ test.describe("CRUD flows (guest / offline)", () => {
     const text = `FAB schedule ${Date.now()}`;
     const sheet = page.getByRole("dialog");
     await sheet.getByRole("button", { name: "Today" }).click();
-    await sheet.getByRole("button", { name: "Pick a time" }).click();
+    await sheet.getByRole("button", { name: /Pick a time|Add time/i }).click();
     await sheet.getByPlaceholder("What was this again?").fill(text);
     await completeScheduleDialog(page);
 

@@ -91,13 +91,17 @@ export async function readAnalytics(page: Page) {
 
 export async function resetAppState(page: Page) {
   await page.goto("/");
-  await page.evaluate(() => {
+  await page.evaluate(async () => {
     for (const k of Object.keys(localStorage)) {
       if (k.startsWith("itjima.")) localStorage.removeItem(k);
     }
     localStorage.setItem("itjima_lang", "en");
     localStorage.setItem("itjima.swipe.tutorial.done", "1");
     sessionStorage.clear();
+    if ("serviceWorker" in navigator) {
+      const regs = await navigator.serviceWorker.getRegistrations();
+      await Promise.all(regs.map((r) => r.unregister()));
+    }
   });
   await page.reload();
   await phone(page).getByRole("link", { name: /^Throw/ }).waitFor({
@@ -158,7 +162,7 @@ export async function completeScheduleDialog(page: Page) {
     return;
   }
 
-  const pickTime = sheet.getByRole("button", { name: "Pick a time" });
+  const pickTime = sheet.getByRole("button", { name: /Pick a time|Add time/i });
   if (await pickTime.isVisible()) {
     await pickTime.click();
   }
@@ -166,49 +170,82 @@ export async function completeScheduleDialog(page: Page) {
   await sheet.getByRole("button", { name: "Add to schedule" }).click();
 }
 
+async function forceAcknowledgeInlinePromises(page: Page) {
+  await page.evaluate(() => {
+    const inboxKey = Object.keys(localStorage).find((k) => k.endsWith(".inbox"));
+    if (!inboxKey) return;
+    const items = JSON.parse(localStorage.getItem(inboxKey) || "[]") as {
+      id: string;
+    }[];
+    localStorage.setItem(
+      "itjima.nl.acknowledged.guest",
+      JSON.stringify(items.map((i) => i.id)),
+    );
+  });
+  await page.reload();
+  await phone(page).getByRole("link", { name: /^Throw/ }).waitFor({
+    state: "visible",
+  });
+}
+
 export async function dismissInlinePromise(page: Page) {
   const frame = phone(page);
-  const promise = frame.getByTestId("inline-promise").last();
-  if (!(await promise.isVisible().catch(() => false))) return;
+  for (let attempt = 0; attempt < 4; attempt += 1) {
+    const promise = frame.getByTestId("inline-promise").first();
+    if (!(await promise.isVisible().catch(() => false))) return;
 
-  await promise.scrollIntoViewIfNeeded();
-  await page.waitForTimeout(200);
+    await promise.scrollIntoViewIfNeeded();
+    await page.waitForTimeout(150);
 
-  const keepClarify = promise.getByTestId("promise-keep");
-  if (await keepClarify.isVisible().catch(() => false)) {
-    await keepClarify.click({ force: true });
-    return;
-  }
-
-  const primary = promise.getByTestId("promise-primary");
-  if (await primary.isVisible().catch(() => false)) {
-    const label = ((await primary.textContent()) ?? "").trim();
-    if (/Keep here|그대로 두기/i.test(label)) {
-      await primary.click({ force: true });
-      return;
+    const keepClarify = promise.getByTestId("promise-keep");
+    if (await keepClarify.isVisible().catch(() => false)) {
+      await keepClarify.click({ force: true });
+      await page.waitForTimeout(200);
+      continue;
     }
+
+    const primary = promise.getByTestId("promise-primary");
+    if (await primary.isVisible().catch(() => false)) {
+      const label = ((await primary.textContent()) ?? "").trim();
+      if (/Keep here|그대로 두기/i.test(label)) {
+        await primary.click({ force: true });
+        await page.waitForTimeout(200);
+        continue;
+      }
+    }
+
+    const manual = promise.getByTestId("promise-manual");
+    if (await manual.isVisible().catch(() => false)) {
+      await manual.click({ force: true });
+      await page.waitForTimeout(100);
+      const editMenu = promise.getByTestId("promise-edit-menu");
+      if (await editMenu.isVisible().catch(() => false)) {
+        await editMenu
+          .getByRole("button", { name: /Keep here|그대로 두기/ })
+          .click({ force: true });
+        await page.waitForTimeout(200);
+        continue;
+      }
+    }
+
+    const correct = promise.getByTestId("promise-correct");
+    if (await correct.isVisible().catch(() => false)) {
+      await correct.click({ force: true });
+      const menu = promise.getByTestId("promise-correct-menu");
+      if (await menu.isVisible().catch(() => false)) {
+        await menu
+          .getByRole("button", { name: /Keep here|그대로 두기/ })
+          .click({ force: true });
+        await page.waitForTimeout(200);
+        continue;
+      }
+    }
+
+    break;
   }
 
-  const manual = promise.getByTestId("promise-manual");
-  if (await manual.isVisible().catch(() => false)) {
-    await manual.click({ force: true });
-    const editMenu = frame.getByTestId("promise-edit-menu");
-    await editMenu.waitFor({ state: "visible", timeout: 5000 });
-    await editMenu
-      .getByRole("button", { name: /Keep here|그대로 두기/ })
-      .click({ force: true });
-    return;
-  }
-
-  const correct = promise.getByTestId("promise-correct");
-  if (await correct.isVisible().catch(() => false)) {
-    await correct.click({ force: true });
-    const menu = promise.getByTestId("promise-correct-menu");
-    await menu.waitFor({ state: "visible", timeout: 5000 });
-    await menu
-      .getByRole("button", { name: /Keep here|그대로 두기/ })
-      .click({ force: true });
-    return;
+  if (await frame.getByTestId("inline-promise").first().isVisible().catch(() => false)) {
+    await forceAcknowledgeInlinePromises(page);
   }
 }
 
@@ -245,8 +282,6 @@ export async function addThought(page: Page, text: string) {
 }
 
 export async function openContextMenu(page: Page, thoughtText: string) {
-  const frame = phone(page);
-  await dismissInlinePromise(page);
   await openContextMenuRaw(page, thoughtText);
 }
 
@@ -263,31 +298,38 @@ export async function closeDecisionDeckIfOpen(page: Page) {
 }
 
 export function contextMenuDialog(page: Page) {
-  return phone(page).getByRole("dialog").filter({
-    has: phone(page).getByRole("button", { name: "Save to vault", exact: true }),
-  });
+  return phone(page).getByTestId("inbox-context-menu");
+}
+
+export async function clickContextMenuItem(page: Page, label: string) {
+  const menu = contextMenuDialog(page);
+  await menu.waitFor({ state: "visible" });
+  await menu
+    .getByRole("button", { name: label, exact: true })
+    .click({ force: true });
 }
 
 export async function openContextMenuRaw(page: Page, thoughtText: string) {
   const frame = phone(page);
+  await dismissInlinePromise(page);
   await closeDecisionDeckIfOpen(page);
   const bubble = frame
     .getByRole("paragraph")
     .filter({ hasText: thoughtText })
     .first();
-  await bubble.dispatchEvent("pointerdown", { button: 0, pointerId: 1 });
-  await page.waitForTimeout(700);
-  await bubble.dispatchEvent("pointerup", { button: 0, pointerId: 1 });
-  await frame
-    .getByRole("dialog")
-    .filter({
-      has: frame.getByRole("button", { name: "Save to vault", exact: true }),
-    })
-    .getByRole("button", { name: "Save to vault", exact: true })
-    .waitFor({
-      state: "visible",
-      timeout: 10_000,
-    });
+  await bubble.scrollIntoViewIfNeeded();
+  const box = await bubble.boundingBox();
+  expect(box).toBeTruthy();
+  const x = box!.x + box!.width / 2;
+  const y = box!.y + box!.height / 2;
+  await page.mouse.move(x, y);
+  await page.mouse.down();
+  await page.waitForTimeout(550);
+  await page.mouse.up();
+  await frame.getByTestId("inbox-context-menu").waitFor({
+    state: "visible",
+    timeout: 10_000,
+  });
 }
 
 export async function getTabCount(

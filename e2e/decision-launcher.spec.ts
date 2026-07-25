@@ -5,6 +5,8 @@ import {
   phone,
   readGuestList,
   GUEST_INBOX_KEY,
+  dismissInlinePromise,
+  closeDecisionDeckIfOpen,
 } from "./helpers";
 
 test.describe("Home Decision launcher", () => {
@@ -45,6 +47,8 @@ test.describe("Home Decision launcher", () => {
     const newer = `Newer thought ${stamp}`;
     await addThought(page, older);
     await addThought(page, newer);
+    await dismissInlinePromise(page);
+    await closeDecisionDeckIfOpen(page);
 
     await phone(page).getByTestId("decision-launcher").click();
 

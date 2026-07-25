@@ -89,7 +89,7 @@ async function openEditTimeStep(
       ),
     })
     .click();
-  await page.getByRole("dialog").getByRole("button", { name: "Pick a time" }).click();
+  await page.getByRole("dialog").getByRole("button", { name: /Pick a time|Add time/i }).click();
   await page
     .getByRole("dialog")
     .getByRole("switch", { name: "All-day" })
@@ -108,7 +108,7 @@ async function openCreateTimeStep(
   if (opts?.tomorrow) {
     await sheet.getByRole("button", { name: "Tomorrow" }).click();
   }
-  await sheet.getByRole("button", { name: "Pick a time" }).click();
+  await sheet.getByRole("button", { name: /Pick a time|Add time/i }).click();
   if (opts?.title) {
     await sheet.getByPlaceholder("What was this again?").fill(opts.title);
   }

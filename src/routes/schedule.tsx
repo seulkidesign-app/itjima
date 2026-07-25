@@ -23,12 +23,7 @@ import {
   Archive,
 } from "lucide-react";
 import { animate, motion, AnimatePresence, LayoutGroup } from "framer-motion";
-import {
-  useArchive,
-  useInbox,
-  useSchedules,
-  type ScheduleItem,
-} from "@/lib/store";
+import { useSchedules, useArchive, useInbox, useUserId, type ScheduleItem } from "@/lib/store";
 import {
   ScheduleCompactRow,
   LaterInboxRow,
@@ -83,7 +78,14 @@ import { scheduleDisplayTitle, rawPreview } from "@/lib/thoughtProvenance";
 import { SPRING_SNAP_BACK, SHEET_BACKDROP_CLASS, SHEET_BACKDROP_FADE } from "@/lib/motion";
 import { toast } from "sonner";
 import { useT, useLang } from "@/lib/i18n";
-import { syncRemindersToServiceWorker } from "@/lib/swReminders";
+import {
+  cancelScheduleReminders,
+  syncScheduleReminder,
+} from "@/lib/push/scheduledRemindersSync";
+import {
+  ensurePushSubscription,
+  hasActivePushSubscription,
+} from "@/lib/push/pushSubscription";
 import { track } from "@/lib/analytics";
 import { haptic, confirm as hapticConfirm } from "@/lib/haptics";
 
@@ -158,6 +160,7 @@ function useTimerTick() {
 function Schedule() {
   const t = useT();
   const { lang } = useLang();
+  const userId = useUserId();
   const { items, update, remove, add, syncState, retrySync } = useSchedules();
   const archive = useArchive();
   const inbox = useInbox();
@@ -185,13 +188,19 @@ function Schedule() {
   );
 
   useEffect(() => {
-    void syncRemindersToServiceWorker(items);
     return bindInAppReminders(items, (title, body) => {
       if (Notification.permission === "granted") {
         new Notification(title, { body });
       }
     });
   }, [items]);
+
+  const closedAppReminderReady = async (): Promise<boolean> => {
+    if (!userId) return false;
+    const push = await ensurePushSubscription(userId);
+    if (!push.ok) return false;
+    return hasActivePushSubscription(userId);
+  };
 
   const armAlarmAt = async (s: ScheduleItem, at: Date) => {
     try {
@@ -204,18 +213,31 @@ function Schedule() {
       }
       clearReminderOffset(s.id);
       await update(s.id, { alarm: true, alarm_at: at.toISOString() });
-      if (perm === "granted") {
-        await syncRemindersToServiceWorker(
-          items.map((it) =>
-            it.id === s.id
-              ? { ...it, alarm: true, alarm_at: at.toISOString() }
-              : it,
-          ),
-        );
+      const updated: ScheduleItem = {
+        ...s,
+        alarm: true,
+        alarm_at: at.toISOString(),
+      };
+
+      if (userId) {
+        await syncScheduleReminder(userId, updated);
+      }
+
+      const closedApp = userId ? await closedAppReminderReady() : false;
+
+      if (closedApp) {
         toast.success(
           t(
             "설정한 시간에 알림을 보낼게요",
             "Reminder set for the time you chose",
+          ),
+          scheduleToast,
+        );
+      } else if (perm === "granted") {
+        toast.message(
+          t(
+            "앱을 열어두면 알려드릴게요",
+            "I'll notify you while the app is open",
           ),
           scheduleToast,
         );
@@ -242,6 +264,7 @@ function Schedule() {
   const disarmReminder = async (s: ScheduleItem) => {
     clearReminderOffset(s.id);
     await update(s.id, { alarm: false, alarm_at: null });
+    if (userId) await cancelScheduleReminders(userId, s.id);
   };
 
   const startTimer = async (s: ScheduleItem, preset: TimerPreset) => {
@@ -381,6 +404,7 @@ function Schedule() {
   const markDone = async (s: ScheduleItem) => {
     try {
       const done = await update(s.id, { status: "done" });
+      if (userId) await cancelScheduleReminders(userId, s.id);
       hapticConfirm();
       track("schedule_completed", { text_length: s.text.length });
       if (done) toast.success(t("다녀온 기억이에요", "You can let this go"), scheduleToast);
@@ -398,6 +422,7 @@ function Schedule() {
         raw_text: s.raw_text ?? s.text,
         brain_mirror: s.brain_mirror ?? null,
       });
+      if (userId) await cancelScheduleReminders(userId, s.id);
       const scheduleSynced = await remove(s.id);
       if (pins.has(s.id)) togglePin(s.id);
       if (allCloudSynced(archiveSynced, scheduleSynced)) {
@@ -574,6 +599,7 @@ function Schedule() {
             onQuickAdd={openQuickAdd}
             onDelete={async (s) => {
               try {
+                if (userId) await cancelScheduleReminders(userId, s.id);
                 const deleted = await remove(s.id);
                 if (pins.has(s.id)) togglePin(s.id);
                 if (deleted) toast(t("삭제했어요", "Deleted"));
@@ -697,9 +723,21 @@ function Schedule() {
                 repeat: opts?.repeat ?? null,
                 ...alarmPayload,
               });
+              if (userId) {
+                const edited: ScheduleItem = {
+                  ...sheet.edit,
+                  text,
+                  start_time: start.toISOString(),
+                  end_time: end.toISOString(),
+                  ...allDayFields,
+                  repeat: opts?.repeat ?? null,
+                  ...alarmPayload,
+                };
+                await syncScheduleReminder(userId, edited);
+              }
               toast.success(t("다듬었어요", "Refined"), scheduleToast);
             } else {
-              await add({
+              const { item } = await add({
                 text,
                 start_time: start.toISOString(),
                 end_time: end.toISOString(),
@@ -707,6 +745,9 @@ function Schedule() {
                 repeat: opts?.repeat ?? null,
                 ...alarmPayload,
               });
+              if (userId && alarmPayload.alarm) {
+                await syncScheduleReminder(userId, item as ScheduleItem);
+              }
               track("schedule_created", {
                 source: "manual",
                 text_length: text.length,

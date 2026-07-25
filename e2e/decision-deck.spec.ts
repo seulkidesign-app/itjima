@@ -7,6 +7,8 @@ import {
   GUEST_INBOX_KEY,
   GUEST_SCHEDULE_KEY,
   GUEST_ARCHIVE_KEY,
+  dismissInlinePromise,
+  closeDecisionDeckIfOpen,
 } from "./helpers";
 import {
   resolveDragOutcome,
@@ -31,10 +33,10 @@ async function readAnalytics(page: Page) {
 
 async function openDeck(page: Page) {
   const deck = phone(page);
+  await dismissInlinePromise(page);
+  await closeDecisionDeckIfOpen(page);
   const dialog = deck.getByRole("dialog", { name: "One by one" });
-  if (!(await dialog.isVisible())) {
-    await deck.getByTestId("decision-launcher").click();
-  }
+  await deck.getByTestId("decision-launcher").click();
   await dialog.waitFor({ state: "visible" });
   await waitForDeckReady(page);
 }
