@@ -449,9 +449,9 @@ export function CalendarDayCell({
         isHover
           ? "ring-1 ring-primary/40"
           : isSelected
-            ? "ring-[1.5px] ring-ink/12 bg-primary/10"
+            ? "ring-[1.5px] ring-ink/20 bg-primary/10 shadow-[inset_0_0_0_1px_rgba(0,0,0,0.04)]"
             : isToday
-              ? "ring-1 ring-ink/10"
+              ? "ring-1 ring-dashed ring-ink/18"
               : "hover:bg-ink/[0.03]"
       }`}
     >
@@ -464,16 +464,11 @@ export function CalendarDayCell({
       </span>
 
       {hasEvents && (
-        <div className="mt-auto flex items-center gap-1 px-0.5 pb-0.5">
-          {Array.from({ length: Math.min(eventCount, 2) }).map((_, i) => (
-            <span
-              key={i}
-              className={`rounded-full bg-primary/80 ${
-                eventCount === 1 ? "h-1.5 w-4" : "h-1.5 w-1.5"
-              }`}
-              aria-hidden
-            />
-          ))}
+        <div className="mt-auto flex items-center justify-center px-0.5 pb-0.5">
+          <span
+            className="h-1 w-1 rounded-full bg-primary/65"
+            aria-hidden
+          />
         </div>
       )}
     </motion.button>

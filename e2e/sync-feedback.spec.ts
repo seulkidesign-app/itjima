@@ -17,7 +17,7 @@ test.describe("sync feedback", () => {
     expect(allCloudSynced()).toBe(true);
   });
 
-  test("guest delete still shows removed toast", async ({ page }) => {
+  test("guest delete still shows deleted toast", async ({ page }) => {
     await resetAppState(page);
     const text = `Guest delete ${Date.now()}`;
     await addThought(page, text);
@@ -25,10 +25,10 @@ test.describe("sync feedback", () => {
     await openContextMenu(page, text);
     await phone(page)
       .getByRole("dialog")
-      .getByRole("button", { name: "Let it go", exact: true })
+      .getByRole("button", { name: "Delete", exact: true })
       .click();
 
-    await page.getByText("Let it go").waitFor({ state: "visible" });
+    await page.getByText("Deleted").waitFor({ state: "visible" });
     await expect(phone(page).getByRole("alert")).toHaveCount(0);
   });
 

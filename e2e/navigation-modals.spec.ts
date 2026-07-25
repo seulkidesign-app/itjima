@@ -33,7 +33,7 @@ test.describe("Navigation and modals", () => {
       .getByRole("heading", { name: "Archive" })
       .waitFor();
     await phone(page).getByRole("link", { name: /^Throw/ }).click();
-    await phone(page).getByPlaceholder("What's floating around?").waitFor();
+    await phone(page).getByPlaceholder("Write whatever comes to mind").waitFor();
 
     const ignorable = errors.filter(
       (e) =>
@@ -134,6 +134,11 @@ test.describe("Navigation and modals", () => {
       .waitFor({ state: "visible" });
     await expect(page).toHaveURL(/\/$/);
 
+    const tutorial = phone(page).getByTestId("swipe-tutorial");
+    if (await tutorial.isVisible().catch(() => false)) {
+      await tutorial.getByRole("button", { name: /Got it|알겠어요/ }).click();
+    }
+
     await phone(page)
       .getByRole("dialog", { name: "One by one" })
       .getByRole("button", { name: "Close", exact: true })
@@ -157,7 +162,7 @@ test.describe("Navigation and modals", () => {
 
     await dismissArchiveEditDialog(page);
     await phone(page).getByRole("link", { name: /^Throw/ }).click();
-    await phone(page).getByPlaceholder("What's floating around?").waitFor();
+    await phone(page).getByPlaceholder("Write whatever comes to mind").waitFor();
   });
 
   test("context menu blocks tab navigation until dismissed", async ({

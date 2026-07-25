@@ -35,7 +35,7 @@ function RediscoveryPage() {
     return (
       <div className="flex min-h-[60dvh] flex-col items-center justify-center px-8 text-center">
         <p className="text-[17px] font-semibold text-ink">
-          {t("지금은 다시 만날 기억이 없어요", "Nothing to revisit right now")}
+          {t("지금은 다시 만날 기억이 없어요", "Nothing asking to return yet")}
         </p>
         <p className="mt-2 text-[14px] text-ink-soft">
           {t("조용히 기다리고 있을게요.", "We'll wait quietly.")}

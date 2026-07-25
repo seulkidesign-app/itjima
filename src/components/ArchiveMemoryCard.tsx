@@ -193,7 +193,7 @@ export function ArchiveMemoryCard({
                   className="touch-press inline-flex items-center gap-1.5 rounded-full bg-ink/[0.05] px-3 py-2 text-[12px] font-semibold text-ink-soft"
                 >
                   <Trash2 size={13} />
-                  {t("지우기", "Remove")}
+                  {t("삭제하기", "Delete")}
                 </button>
               </div>
               <ArchiveRelatedStrip

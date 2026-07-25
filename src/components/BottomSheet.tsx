@@ -1,8 +1,18 @@
-import { type CSSProperties, type ReactNode, useEffect, useId, useState } from "react";
+import {
+  type CSSProperties,
+  type ReactNode,
+  useEffect,
+  useId,
+  useState,
+} from "react";
 import { motion, AnimatePresence, useDragControls } from "framer-motion";
 import { useT } from "@/lib/i18n";
 import { light } from "@/lib/haptics";
-import { SPRING_SHEET, EASE_OUT_APP } from "@/lib/motion";
+import {
+  SPRING_SHEET,
+  SHEET_BACKDROP_CLASS,
+  SHEET_BACKDROP_FADE,
+} from "@/lib/motion";
 
 type Props = {
   open: boolean;
@@ -74,11 +84,11 @@ export function BottomSheet({
           <motion.button
             type="button"
             aria-label={t("닫기", "Close")}
-            className="absolute inset-0 z-0 bg-ink/35 backdrop-blur-md backdrop-saturate-150"
+            className={`absolute inset-0 z-0 ${SHEET_BACKDROP_CLASS}`}
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            transition={{ duration: 0.28, ease: EASE_OUT_APP }}
+            transition={SHEET_BACKDROP_FADE}
             onClick={() => {
               light();
               onClose();

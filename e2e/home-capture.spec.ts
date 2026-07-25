@@ -214,10 +214,10 @@ test.describe("Home capture UX", () => {
       page,
     }) => {
       await phone(page)
-        .getByPlaceholder("What's floating around?")
+        .getByPlaceholder("Write whatever comes to mind")
         .fill("Optimistic capture test");
       await phone(page).getByRole("button", { name: "Drop it" }).click();
-      await expect(phone(page).getByPlaceholder("What's floating around?")).toHaveValue(
+      await expect(phone(page).getByPlaceholder("Write whatever comes to mind")).toHaveValue(
         "",
       );
       await expect(phone(page).getByText("Optimistic capture test")).toBeVisible();

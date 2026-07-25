@@ -93,7 +93,7 @@ test.describe("Schedule V1", () => {
       phone(page).getByRole("heading", { name: "Schedule", exact: true }),
     ).toBeVisible();
     await expect(
-      phone(page).getByText("See what needs your attention now and later."),
+      phone(page).getByText("Today and what's coming — in one place."),
     ).toBeVisible();
     await expect(phone(page).getByTestId("schedule-today-list")).toBeVisible();
     await expect(phone(page).getByText("Today compact row")).toBeVisible();
@@ -149,7 +149,7 @@ test.describe("Archive V1", () => {
       phone(page).getByRole("heading", { name: "Archive", exact: true }),
     ).toBeVisible();
     await expect(
-      phone(page).getByText("Find it again when you need it."),
+      phone(page).getByText("Find what you saved, when you need it."),
     ).toBeVisible();
     await expect(phone(page).getByTestId("archive-v1-list")).toBeVisible();
     await expect(phone(page).getByRole("button", { name: "Thought map" })).toHaveCount(0);

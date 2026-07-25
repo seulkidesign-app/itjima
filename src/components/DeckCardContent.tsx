@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
 import { useLang, useT } from "@/lib/i18n";
 import { buildMirrorDisplay } from "@/lib/nlMirrorCopy";
+import { warmMirrorLine } from "@/lib/warmMirrorCopy";
 import { shouldShowNlPrompt, understandNaturalLanguage } from "@/lib/nlSchedule";
 import type { InboxItem } from "@/lib/store";
 import { BrainMirrorReflectionBody } from "@/components/BrainMirrorReflection";
@@ -73,20 +74,13 @@ export function DeckCardContent({ item }: Props) {
           aria-label={t("Brain Mirror 해석", "Brain Mirror interpretation")}
           onPointerDown={(e) => e.stopPropagation()}
         >
-          <p className="text-[12px] font-semibold text-ink-soft">
-            {nl.intent === "schedule_exact" || nl.intent === "schedule_clarify"
-              ? t("🧠 일정으로 이해했어요", "🧠 Understood as schedule")
-              : nl.intent === "task"
-                ? t("🧠 할 일로 이해했어요", "🧠 Understood as task")
-                : nl.intent === "archive"
-                  ? t("🧠 보관할 내용 같아요", "🧠 Looks like vault material")
-                  : t("🧠 이렇게 이해했어요", "🧠 Here's what I understood")}
+          <p className="text-[13px] font-medium leading-snug text-ink-soft">
+            {warmMirrorLine(item.text, nl, uiLang)}
           </p>
           {mirror.when && (
-            <p className="mt-1 text-[15px] font-medium text-ink">{mirror.when}</p>
-          )}
-          {!mirror.when && mirror.title && nl.intent !== "archive" && (
-            <p className="mt-1 text-[14px] text-ink-soft">{mirror.title}</p>
+            <p className="mt-1.5 text-[15px] font-semibold tracking-[-0.01em] text-ink">
+              {mirror.when}
+            </p>
           )}
         </div>
       )}

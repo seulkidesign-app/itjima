@@ -4,6 +4,7 @@ import type { ArchiveItem } from "@/lib/store";
 import { archiveDisplayTitle } from "@/lib/archiveMeta";
 import { useT, useLang } from "@/lib/i18n";
 import { useScrollLock } from "@/hooks/useScrollLock";
+import { SHEET_BACKDROP_CLASS } from "@/lib/motion";
 
 type DetailProps = {
   item: ArchiveItem | null;
@@ -61,8 +62,8 @@ export function ArchiveMemoryDetail({
     : "max-h-[88vh] shrink-0 overflow-y-auto rounded-t-[30px] bg-white px-6 pb-[calc(env(safe-area-inset-bottom)+1.75rem)] pt-5 shadow-float";
 
   const backdropClass = dark
-    ? "flex-1 bg-black/50 backdrop-blur-sm"
-    : "flex-1 bg-ink/35 backdrop-blur-sm";
+    ? "flex-1 bg-black/50 backdrop-blur-md backdrop-saturate-150"
+    : `flex-1 ${SHEET_BACKDROP_CLASS}`;
 
   return (
     <AnimatePresence>
@@ -193,7 +194,7 @@ export function ArchiveMemoryDetail({
                       : "bg-ink/[0.05] text-ink-soft"
                   }`}
                 >
-                  {t("지우기", "Remove")}
+                  {t("삭제하기", "Delete")}
                 </button>
               )}
             </div>

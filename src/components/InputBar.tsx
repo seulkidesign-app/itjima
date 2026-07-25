@@ -525,7 +525,7 @@ export function InputBar({
               }
             }}
             rows={composer ? 1 : hero ? 4 : 3}
-            placeholder={t("떠오른 대로 적어 보세요", "What's floating around?")}
+            placeholder={t("떠오르는 대로 적어보세요", "Write whatever comes to mind")}
             className={`block w-full resize-none bg-transparent leading-relaxed text-ink placeholder:text-ink-soft/55 placeholder:transition-opacity focus:outline-none ${
               composer
                 ? "min-h-[24px] max-h-28 text-[15px]"

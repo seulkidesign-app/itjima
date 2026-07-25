@@ -296,7 +296,7 @@ test.describe("data integrity (guest upload + tombstones)", () => {
       .first()
       .click();
     await phone(page)
-      .getByRole("button", { name: "Remove", exact: true })
+      .getByRole("button", { name: "Delete", exact: true })
       .click();
 
     await expect
@@ -410,7 +410,7 @@ test.describe("data integrity (guest upload + tombstones)", () => {
       .first()
       .click();
     await phone(page)
-      .getByRole("button", { name: "Remove", exact: true })
+      .getByRole("button", { name: "Delete", exact: true })
       .click();
 
     await expect

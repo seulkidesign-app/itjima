@@ -141,7 +141,7 @@ async function expectToggleStates(
 async function saveEditSheet(page: Page) {
   const sheet = page.getByRole("dialog");
   await sheet.getByRole("button", { name: "Set a reminder" }).click();
-  await sheet.getByRole("button", { name: "I'll leave it for then" }).click();
+  await sheet.getByRole("button", { name: "Add to schedule" }).click();
 }
 
 test.describe("QA #7 resolveScheduleAllDayFlags (unit)", () => {

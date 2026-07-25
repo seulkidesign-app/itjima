@@ -16,7 +16,7 @@ export function showUndoToast(
       <div
         role="status"
         aria-live="polite"
-        className="flex items-center gap-3 rounded-[24px] bg-ink px-4 py-3 text-white shadow-float"
+        className="flex items-center gap-3 rounded-[22px] bg-ink/95 px-4 py-3.5 text-white shadow-float backdrop-blur-sm"
       >
         <div className="min-w-0 flex-1 text-sm">{message}</div>
         <button
@@ -48,7 +48,7 @@ export function showActionToast(
       <div
         role="status"
         aria-live="polite"
-        className="flex items-center gap-3 rounded-[24px] bg-ink px-4 py-3 text-white shadow-float"
+        className="flex items-center gap-3 rounded-[22px] bg-ink/95 px-4 py-3.5 text-white shadow-float backdrop-blur-sm"
       >
         <div className="min-w-0 flex-1 text-sm">{message}</div>
         <button

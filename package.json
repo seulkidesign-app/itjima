@@ -10,7 +10,7 @@
     "lint": "eslint .",
     "format": "prettier --write .",
     "test": "vitest run",
-    "test:nl": "vitest run tests/nl-ko-regression.test.ts tests/nl-regression.test.ts tests/nl-guards.test.ts tests/nl-analytics.test.ts tests/nl-beta-guards.test.ts tests/decision-swipe.test.ts",
+    "test:nl": "vitest run tests/nl-ko-regression.test.ts tests/nl-regression.test.ts tests/nl-guards.test.ts tests/nl-analytics.test.ts tests/nl-beta-guards.test.ts tests/decision-swipe.test.ts tests/itjima-voice.test.ts",
     "test:e2e": "playwright test",
     "test:e2e:ui": "playwright test --ui"
   },

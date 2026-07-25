@@ -63,6 +63,7 @@ import { SwipeCard } from "@/components/SwipeCard";
 import { ScheduleSheet, type ScheduleSaveOptions } from "@/components/ScheduleSheet";
 import { scheduleAllDayFieldsFromConfirm } from "@/lib/scheduleTime";
 import { track } from "@/lib/analytics";
+import { showUndoToast } from "@/lib/undoToast";
 import { SPRING_DEFAULT } from "@/lib/motion";
 
 export const Route = createFileRoute("/archive")({
@@ -499,29 +500,18 @@ function Archive() {
       const deleted = await remove(it.id);
       track("archive_deleted", { text_length: it.text.length });
       if (!deleted) return;
-      toast.custom(
-        (toastId) => (
-          <div className="flex items-center gap-3 rounded-[24px] bg-ink px-4 py-3 text-white shadow-float">
-            <div className="text-sm">{t("지웠어요", "Removed")}</div>
-            <button
-              type="button"
-              onClick={async () => {
-                await add({
-                  text: snapshot.text,
-                  images: snapshot.images,
-                  source_id: snapshot.source_id,
-                  raw_text: snapshot.raw_text,
-                  brain_mirror: snapshot.brain_mirror,
-                });
-                toast.dismiss(toastId);
-              }}
-              className="touch-target shrink-0 rounded-full bg-primary px-4 text-xs font-bold text-ink"
-            >
-              {t("되돌리기", "Undo")}
-            </button>
-          </div>
-        ),
-        { duration: 10000 },
+      showUndoToast(
+        t("삭제했어요", "Deleted"),
+        async () => {
+          await add({
+            text: snapshot.text,
+            images: snapshot.images,
+            source_id: snapshot.source_id,
+            raw_text: snapshot.raw_text,
+            brain_mirror: snapshot.brain_mirror,
+          });
+        },
+        { durationMs: 10000, undoLabel: t("되돌리기", "Undo") },
       );
     } catch {
       toast.error(t("삭제하지 못했어요", "Couldn't delete"));
@@ -608,7 +598,7 @@ function Archive() {
         mode="instant"
         softLabels
         disabled={swipeDisabled}
-        leftLabel={t("지우기", "Remove")}
+        leftLabel={t("삭제하기", "Delete")}
         rightLabel={t("할 일", "Tasks")}
         onLongPress={selecting ? undefined : () => enterSelection(it.id)}
         onSwipe={(dir) => {
@@ -721,8 +711,8 @@ function Archive() {
                   "A map of the thoughts you entrusted",
                 )
               : t(
-                  "필요할 때 다시 꺼내보세요.",
-                  "Find it again when you need it.",
+                  "저장한 생각을 다시 찾아보세요.",
+                  "Find what you saved, when you need it.",
                 )}
           </p>
         </div>
@@ -778,7 +768,7 @@ function Archive() {
                   type="button"
                   onClick={() => setQ("")}
                   className="touch-target shrink-0 rounded-full text-ink-soft"
-                  aria-label={t("지우기", "Clear")}
+                  aria-label={t("검색어 지우기", "Clear search")}
                 >
                   <X size={16} />
                 </button>
@@ -1437,8 +1427,8 @@ function Empty({ dark = false }: { dark?: boolean }) {
         emoji="🗂"
         titleKo="아직 여기에 둔 게 없어요"
         titleEn="Nothing tucked away yet"
-        hintKo="나중에 다시 꺼낼 때를 위해."
-        hintEn="For when you want it back later."
+        hintKo="나중에 꺼낼 때를 위해."
+        hintEn="For when you want it back."
       />
     </div>
   );

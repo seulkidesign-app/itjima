@@ -23,9 +23,9 @@ export const SPRING_DEFAULT = {
 
 export const SPRING_SNAP_BACK = {
   type: "spring" as const,
-  stiffness: 420,
-  damping: 32,
-  mass: 0.75,
+  stiffness: 360,
+  damping: 34,
+  mass: 0.82,
 };
 
 export const SPRING_SHEET = {
@@ -77,6 +77,15 @@ export const MOTION_INSTANT_MS = 120;
 export const MOTION_MICRO_MS = 180;
 export const MOTION_COMPONENT_MS = 250;
 export const MOTION_SHEET_MS = 320;
+
+/** Shared bottom-sheet backdrop — keep opacity/blur aligned across sheets. */
+export const SHEET_BACKDROP_CLASS =
+  "bg-ink/35 backdrop-blur-md backdrop-saturate-150";
+
+export const SHEET_BACKDROP_FADE = {
+  duration: 0.28,
+  ease: EASE_OUT_APP,
+} as const;
 
 /** Standard easing curves */
 export const EASE_STANDARD = [0.2, 0.8, 0.2, 1] as const;

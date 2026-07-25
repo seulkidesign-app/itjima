@@ -30,7 +30,9 @@ export function DecisionLauncherCard({
       ? itemCount === 1
         ? "1 thought waiting"
         : `${itemCount} thoughts waiting for you`
-      : `${itemCount}개, 정리해 줄까요?`;
+      : itemCount === 1
+        ? "하나, 정리해 볼까요?"
+        : `${itemCount}개, 정리해 볼까요?`;
   const ariaLabel =
     lang === "en"
       ? `Sort ${itemCount} thoughts`

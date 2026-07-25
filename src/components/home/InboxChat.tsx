@@ -8,6 +8,7 @@ import type { ClarifyPick } from "@/lib/nlSchedule";
 import { shouldShowInlinePromise } from "@/lib/promiseCard";
 import type { InboxItem } from "@/lib/store";
 import type { RevivalHint } from "@/lib/memoryRevival";
+import { HomeEmptyHero } from "@/components/home/HomeEmptyHero";
 
 type Props = {
   itemsAsc: InboxItem[];
@@ -60,14 +61,7 @@ export function InboxChat({
   return (
     <div className="chat-scroll flex min-h-0 flex-1 flex-col gap-2 px-3 pb-[calc(5.75rem+env(safe-area-inset-bottom))] pt-1">
       {itemsAsc.length === 0 ? (
-        <div className="flex flex-1 flex-col items-center justify-end pb-2">
-          <p className="max-w-[15rem] text-center text-secondary leading-relaxed">
-            {t(
-              "머릿속에 맴도는 거, 여기에 던져 두세요.",
-              "Whatever's circling — drop it here.",
-            )}
-          </p>
-        </div>
+        <HomeEmptyHero />
       ) : (
         itemsAsc.map((it) => {
           const isNewest = it.id === newestId;

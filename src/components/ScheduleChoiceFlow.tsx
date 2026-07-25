@@ -797,7 +797,7 @@ export function ScheduleChoiceFlow({
             className="touch-press flex w-full flex-col items-center justify-center gap-1 rounded-full bg-ink py-4 text-white shadow-[0_4px_20px_-4px_oklch(0_0_0/0.35)]"
           >
             <span className="text-[16px] font-semibold tracking-[-0.01em]">
-              {t("그때 맡겨둘게요", "I'll leave it for then")}
+              {t("일정에 추가", "Add to schedule")}
             </span>
             <span className="text-[12px] font-medium text-white/70">
               {momentPreview}

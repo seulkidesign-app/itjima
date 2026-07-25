@@ -86,7 +86,7 @@ test.describe("IA navigation (Throw / Schedule / Archive)", () => {
       page.getByRole("heading", { name: "Schedule", exact: true }),
     ).toBeVisible();
     await expect(
-      page.getByText("See what needs your attention now and later."),
+      page.getByText("Today and what's coming — in one place."),
     ).toBeVisible();
     await expect(page.getByRole("tab", { name: "Today" })).toBeVisible();
     await expect(page.getByRole("tab", { name: "Upcoming" })).toBeVisible();
@@ -102,7 +102,7 @@ test.describe("IA navigation (Throw / Schedule / Archive)", () => {
       page.getByRole("heading", { name: "Archive", exact: true }),
     ).toBeVisible();
     await expect(
-      page.getByText("Find it again when you need it."),
+      page.getByText("Find what you saved, when you need it."),
     ).toBeVisible();
     await expect(page.getByRole("button", { name: "Thought map" })).toHaveCount(0);
     await expect(page.getByRole("link", { name: "Revisit" })).toHaveCount(0);

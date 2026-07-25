@@ -25,11 +25,11 @@ export function EmptyState({
 
   return (
     <motion.div
-      className="flex min-h-[36dvh] flex-col items-center justify-center px-7 text-center"
+        className="flex min-h-[36dvh] flex-col items-center justify-center px-7 text-center"
       role="status"
-      initial={{ opacity: 0, y: 6 }}
+      initial={{ opacity: 0, y: 8 }}
       animate={{ opacity: 1, y: 0 }}
-      transition={transition}
+      transition={{ ...transition, duration: 0.32 }}
     >
       {showEmoji && (
         <motion.div
@@ -49,7 +49,7 @@ export function EmptyState({
         </motion.div>
       )}
       <motion.p
-        className={`${showEmoji ? "mt-4" : ""} text-[18px] font-semibold tracking-[-0.02em] text-ink`}
+        className={`${showEmoji ? "mt-4" : ""} text-[19px] font-semibold tracking-[-0.025em] text-ink`}
         initial={{ opacity: 0, y: 4 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ ...transition, delay: 0.08 }}

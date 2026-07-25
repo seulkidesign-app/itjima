@@ -1,13 +1,10 @@
-import {
-  Outlet,
-  createRootRoute,
-  useRouterState,
-} from "@tanstack/react-router";
+import { Outlet, createRootRoute, useRouterState } from "@tanstack/react-router";
 import { useEffect } from "react";
 import { Toaster } from "sonner";
 import { maybeRouteOAuthCallback } from "@/lib/oauth";
 import { SideNav } from "@/components/SideNav";
 import { TopNav } from "@/components/TopNav";
+import { PageTransition } from "@/components/PageTransition";
 import { LanguageProvider } from "@/lib/i18n";
 import { useArchiveMetaSync } from "@/hooks/useArchiveMetaSync";
 
@@ -33,6 +30,14 @@ function RootLayout() {
   const isFullPage = pathname.startsWith("/about");
   const isAdmin = pathname.startsWith("/admin");
   const isAuth = pathname.startsWith("/auth");
+  const mainRouteKey =
+    pathname.startsWith("/schedule")
+      ? "schedule"
+      : pathname.startsWith("/archive")
+        ? "archive"
+        : pathname === "/"
+          ? "home"
+          : pathname;
 
   useArchiveMetaSync();
 
@@ -87,7 +92,9 @@ function RootLayout() {
               id="phone-scroll"
               className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden"
             >
-              <Outlet />
+              <PageTransition routeKey={mainRouteKey}>
+                <Outlet />
+              </PageTransition>
             </div>
           </div>
           <Toaster

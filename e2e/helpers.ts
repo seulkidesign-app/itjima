@@ -162,7 +162,7 @@ export async function completeScheduleDialog(page: Page) {
     await pickTime.click();
   }
   await sheet.getByRole("button", { name: "Set a reminder" }).click();
-  await sheet.getByRole("button", { name: "I'll leave it for then" }).click();
+  await sheet.getByRole("button", { name: "Add to schedule" }).click();
 }
 
 export async function dismissInlinePromise(page: Page) {
@@ -188,23 +188,26 @@ export async function dismissInlinePromise(page: Page) {
     }
   }
 
-  const correct = promise.getByTestId("promise-correct");
-  if (await correct.isVisible().catch(() => false)) {
-    await correct.click({ force: true });
-    await promise
-      .getByTestId("promise-correct-menu")
+  const manual = promise.getByTestId("promise-manual");
+  if (await manual.isVisible().catch(() => false)) {
+    await manual.click({ force: true });
+    const editMenu = frame.getByTestId("promise-edit-menu");
+    await editMenu.waitFor({ state: "visible", timeout: 5000 });
+    await editMenu
       .getByRole("button", { name: /Keep here|그대로 두기/ })
       .click({ force: true });
     return;
   }
 
-  const manual = promise.getByTestId("promise-manual");
-  if (await manual.isVisible().catch(() => false)) {
-    await manual.click({ force: true });
-    await frame
-      .getByTestId("promise-edit-menu")
+  const correct = promise.getByTestId("promise-correct");
+  if (await correct.isVisible().catch(() => false)) {
+    await correct.click({ force: true });
+    const menu = promise.getByTestId("promise-correct-menu");
+    await menu.waitFor({ state: "visible", timeout: 5000 });
+    await menu
       .getByRole("button", { name: /Keep here|그대로 두기/ })
       .click({ force: true });
+    return;
   }
 }
 

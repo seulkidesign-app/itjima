@@ -21,6 +21,7 @@ export function ArchiveListRow({
 }) {
   const t = useT();
   const title = archiveDisplayTitle(item.id, item);
+  const hasLink = /https?:\/\//i.test(item.text ?? "");
   const saved = new Date(item.created_at).toLocaleDateString(locale, {
     year: "numeric",
     month: "short",
@@ -70,14 +71,20 @@ export function ArchiveListRow({
           />
         )}
         <div className="min-w-0 flex-1">
-          <p className="whitespace-pre-wrap break-words text-[15px] font-medium leading-snug text-ink">
+          <p
+            className={`whitespace-pre-wrap break-words text-[15px] font-medium leading-snug ${
+              hasLink ? "text-[#1a5fb4] underline decoration-[#1a5fb4]/25 underline-offset-2" : "text-ink"
+            }`}
+          >
             {title}
           </p>
-          <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-caption text-ink-soft/75">
-            <span className="rounded-full bg-ink/[0.05] px-2 py-0.5 font-medium">
-              {categoryLabel}
-            </span>
-            <span>{saved}</span>
+          <div className="mt-1.5 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[11px] text-ink-soft/70">
+            {!hasLink && (
+              <span className="rounded-full bg-ink/[0.04] px-2 py-0.5 font-medium">
+                {categoryLabel}
+              </span>
+            )}
+            <span className="tabular-nums">{saved}</span>
           </div>
         </div>
       </div>

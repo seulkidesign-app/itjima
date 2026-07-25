@@ -116,7 +116,7 @@ export function ContextMenu({
         />
         <MenuItem
           icon={<Trash2 size={18} />}
-          label={t("보내기", "Let it go")}
+          label={t("삭제하기", "Delete")}
           danger
           onClick={() => {
             onClose();

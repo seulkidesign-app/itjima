@@ -80,7 +80,7 @@ import {
   classifySchedule,
 } from "@/lib/scheduleGroups";
 import { scheduleDisplayTitle, rawPreview } from "@/lib/thoughtProvenance";
-import { SPRING_SNAP_BACK } from "@/lib/motion";
+import { SPRING_SNAP_BACK, SHEET_BACKDROP_CLASS, SHEET_BACKDROP_FADE } from "@/lib/motion";
 import { toast } from "sonner";
 import { useT, useLang } from "@/lib/i18n";
 import { track } from "@/lib/analytics";
@@ -411,8 +411,8 @@ function Schedule() {
           <h1 className="page-title">{t("일정", "Schedule")}</h1>
           <p className="page-eyebrow mt-2.5 max-w-[22rem] leading-relaxed text-ink-soft">
             {t(
-              "오늘 해야 할 것과 다가오는 일을 모아봐요.",
-              "See what needs your attention now and later.",
+              "오늘과 다가올 일을 한곳에서 볼 수 있어요.",
+              "Today and what's coming — in one place.",
             )}
           </p>
         </div>
@@ -567,9 +567,9 @@ function Schedule() {
               try {
                 const deleted = await remove(s.id);
                 if (pins.has(s.id)) togglePin(s.id);
-                if (deleted) toast(t("내려놨어요", "Let go"));
+                if (deleted) toast(t("삭제했어요", "Deleted"));
               } catch {
-                toast.error(t("내려놓지 못했어요", "Couldn't let go"));
+                toast.error(t("삭제하지 못했어요", "Couldn't delete"));
               }
             }}
             onDuplicate={duplicateSchedule}
@@ -1062,13 +1062,13 @@ function CalendarGrid({
               onPointerMove={onSwipeMove}
               onPointerUp={onSwipeUp}
               onPointerCancel={onSwipeUp}
-              className="touch-pan-y"
+              className="touch-pan-y rounded-[var(--radius-md)] border border-ink/[0.05] bg-ink/[0.015] p-3"
             >
-              <div className="mb-4 flex items-center justify-between px-0.5">
+              <div className="mb-3 flex items-center justify-between">
                 <button
                   type="button"
                   onClick={() => goMonth(-1)}
-                  className="touch-press rounded-full px-2 py-1 text-[15px] text-ink-soft/70 hover:text-ink"
+                  className="touch-target flex h-11 w-11 items-center justify-center rounded-full text-[20px] text-ink-soft/70 hover:bg-ink/[0.04] hover:text-ink touch-press"
                   aria-label={t("이전 달", "Previous month")}
                 >
                   ‹
@@ -1079,7 +1079,7 @@ function CalendarGrid({
                 <button
                   type="button"
                   onClick={() => goMonth(1)}
-                  className="touch-press rounded-full px-2 py-1 text-[15px] text-ink-soft/70 hover:text-ink"
+                  className="touch-target flex h-11 w-11 items-center justify-center rounded-full text-[20px] text-ink-soft/70 hover:bg-ink/[0.04] hover:text-ink touch-press"
                   aria-label={t("다음 달", "Next month")}
                 >
                   ›
@@ -1103,7 +1103,7 @@ function CalendarGrid({
                 </div>
               )}
 
-              <div className="grid grid-cols-7 gap-1 text-center text-[10px] font-semibold">
+              <div className="grid grid-cols-7 gap-1 text-center text-[11px] font-semibold tracking-[-0.01em]">
                 {weekdays.map((d, i) => (
                   <div
                     key={i}
@@ -1199,12 +1199,12 @@ function CalendarGrid({
           )}
 
           {selected !== null && (
-            <div className="space-y-3">
+            <div className="space-y-3 border-t-2 border-primary/15 pt-3">
               <motion.button
                 type="button"
                 whileTap={{ scale: 0.97 }}
                 onClick={() => onQuickAdd(defaultStartForDay(y, m, selected))}
-                className="flex w-full items-center justify-center gap-2 rounded-[16px] bg-primary/25 py-3 text-[14px] font-bold text-ink touch-press"
+                className="flex w-full items-center justify-center gap-2 rounded-[16px] bg-primary/20 py-3 text-[14px] font-bold text-ink touch-press"
               >
                 <Plus size={16} strokeWidth={2.5} />
                 {t("그때 남기기", "Remember for then")}
@@ -1255,7 +1255,7 @@ function CalendarGrid({
                   </motion.p>
                 )}
                 {selectedEvents.length === 0 ? (
-                  <p className="py-2 text-[12px] text-ink-soft/70">
+                  <p className="min-h-[72px] py-3 text-[13px] text-ink-soft/70">
                     {t("이 날은 비어 있어요.", "Nothing here yet.")}
                   </p>
                 ) : (
@@ -1386,10 +1386,11 @@ function ScheduleEventMenu({
           <motion.button
             type="button"
             aria-label={t("닫기", "Close")}
-            className="fixed inset-0 z-40 bg-ink/20"
+            className={`fixed inset-0 z-40 ${SHEET_BACKDROP_CLASS}`}
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
+            transition={SHEET_BACKDROP_FADE}
             onClick={onClose}
           />
           <motion.div
@@ -1499,7 +1500,7 @@ function DayEventChip({
       onPointerMove={onMove}
       onPointerUp={onUp}
       onPointerLeave={onUp}
-      className={`flex cursor-grab items-start gap-2 rounded-[14px] px-2 py-2 touch-none transition active:cursor-grabbing ${
+      className={`flex cursor-grab items-start gap-2 rounded-[var(--radius-sm)] border-b border-ink/[0.05] px-2 py-2.5 touch-none transition active:cursor-grabbing ${
         dragging
           ? "scale-[0.98] opacity-30"
           : selected
@@ -1537,9 +1538,9 @@ function Empty() {
   return (
     <EmptyState
       emoji="🌙"
-      titleKo="아직 맡길 그때가 없어요"
+      titleKo="아직 그때가 없어요"
       titleEn="Nothing to bring back yet"
-      hintKo="그때가 되면 여기에 모여요."
+      hintKo="그때가 되면, 여기에 모여요."
       hintEn="When the moment comes, it'll gather here."
     />
   );

@@ -9,6 +9,7 @@ import {
   trackNlPrimaryActionClicked,
 } from "@/lib/nlAnalytics";
 import { buildMirrorDisplay } from "@/lib/nlMirrorCopy";
+import { warmMirrorLine, warmResultHint } from "@/lib/warmMirrorCopy";
 import { isNlDebugEnabled } from "@/lib/nlDebug";
 import {
   buildPromiseCard,
@@ -218,10 +219,13 @@ export function NlSchedulePrompt({
       data-sensitive={card.isSensitive ? "true" : "false"}
     >
       <div className="mb-1.5 flex w-full items-center gap-2 px-0.5">
-        <span className="text-[11px] font-semibold text-ink-soft">
-          {t("🧠 이렇게 이해했어요", "🧠 Here's what I understood")}
+        <span className="text-[11px] font-semibold text-ink-soft/90">
+          {t("🧠", "🧠")}
         </span>
-        <span className="rounded-full bg-ink/[0.05] px-2 py-0.5 text-[10px] font-semibold text-ink-soft">
+        <span className="min-w-0 flex-1 truncate text-[12px] font-medium text-ink-soft">
+          {warmMirrorLine(item.text, nl, uiLang)}
+        </span>
+        <span className="shrink-0 rounded-full bg-ink/[0.05] px-2 py-0.5 text-[10px] font-semibold text-ink-soft">
           {t(badge.ko, badge.en)}
         </span>
         {!acknowledged && (
@@ -256,10 +260,10 @@ export function NlSchedulePrompt({
           </p>
         )}
         <p
-          className="mt-1 text-[12px] leading-snug text-ink-soft"
+          className="mt-1 text-[12px] leading-snug text-ink-soft/90"
           data-testid="promise-mirror-result"
         >
-          → {mirror.resultHint}
+          {warmResultHint(nl, uiLang)}
         </p>
       </div>
 
@@ -282,8 +286,8 @@ export function NlSchedulePrompt({
                 "Stays on your device only. Tap again to save to vault.",
               )
             : t(
-                "민감한 내용 같아요. 다른 곳으로 보내지 않고 기기에만 남겨요.",
-                "Looks sensitive. We won't send it anywhere — it stays on your device.",
+                "민감해 보여요. 다른 곳으로 보내지 않고, 이 기기에만 남겨요.",
+                "Looks personal. It stays on this device only.",
               )}
         </p>
       )}

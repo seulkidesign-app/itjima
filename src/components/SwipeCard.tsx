@@ -241,7 +241,7 @@ export function SwipeCard({
 
   const tone = pending ?? (dx > 30 ? "right" : dx < -30 ? "left" : null);
   const rightText = rightLabel ?? t("→ 일정", "→ Schedule");
-  const leftText = leftLabel ?? t("← 삭제", "← Delete");
+  const leftText = leftLabel ?? t("← 삭제하기", "← Delete");
   const labelOpacity = Math.min(1, dragProgress(Math.abs(dx), cardW()) * 1.4);
   const labelClass = softLabels
     ? "pointer-events-none absolute -top-2.5 rounded-full px-3 py-1 text-[12px] font-semibold shadow-card"
@@ -339,7 +339,7 @@ export function SwipeCard({
             className="pointer-events-auto touch-target gap-1.5 rounded-full bg-ink px-4 text-[13px] font-bold text-white shadow-float animate-pop"
           >
             <Check size={16} strokeWidth={3} />
-            {leftConfirmLabel ?? t("삭제", "Delete")}
+            {leftConfirmLabel ?? t("삭제하기", "Delete")}
           </button>
         </div>
       )}

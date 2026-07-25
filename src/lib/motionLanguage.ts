@@ -25,7 +25,17 @@ export const MOTION_DELETE = MOTION_CALM;
 
 export const MOTION_UNDO = MOTION_CALM;
 
-export const MOTION_SUCCESS = MOTION_CALM_SLOW;
+export const MOTION_SETTLE = {
+  type: "spring" as const,
+  stiffness: 380,
+  damping: 34,
+  mass: 0.8,
+};
+
+export const MOTION_SUCCESS = {
+  duration: 0.28,
+  ease: [0.2, 0.8, 0.2, 1] as const,
+};
 
 export const MOTION_SHEET = {
   duration: 0.24,

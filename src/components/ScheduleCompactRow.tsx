@@ -86,8 +86,8 @@ export function ScheduleCompactRow({
 
   return (
     <li
-      className={`relative flex min-h-[40px] touch-none select-none items-center gap-2.5 border-b border-ink/[0.04] px-0.5 py-2 last:border-b-0 active:bg-ink/[0.02] ${
-        done ? "opacity-55" : ""
+      className={`relative flex min-h-[44px] touch-none select-none items-center gap-3 border-b border-ink/[0.05] px-1 py-2.5 last:border-b-0 active:bg-ink/[0.02] ${
+        done ? "opacity-50" : ""
       }`}
       role="button"
       tabIndex={0}
@@ -125,7 +125,7 @@ export function ScheduleCompactRow({
           if (!done) onComplete();
         }}
         disabled={done}
-        className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full border-[1.5px] touch-press ${
+        className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full border-[1.5px] touch-press ${
           done
             ? "border-primary bg-primary text-ink"
             : pinned
@@ -138,14 +138,14 @@ export function ScheduleCompactRow({
       </button>
       <span className="min-w-0 flex-1">
         <span
-          className={`block text-[15px] font-medium leading-snug text-ink ${
-            done ? "line-through decoration-ink/25" : ""
+          className={`block text-[16px] font-semibold leading-snug tracking-[-0.01em] text-ink ${
+            done ? "line-through decoration-ink/20" : ""
           }`}
         >
           {title}
         </span>
         {(timeLabel || missed || pinned) && (
-          <span className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-caption text-ink-soft/80">
+          <span className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[12px] tabular-nums text-ink-soft/75">
             {timeLabel && <span>{timeLabel}</span>}
             {missed && (
               <span className="text-ink-soft/80">
@@ -173,7 +173,7 @@ export function LaterInboxRow({ text, onOpen }: LaterInboxRowProps) {
 
   return (
     <li
-      className="flex items-center gap-3 rounded-[var(--radius-sm)] border-b border-ink/[0.05] px-0.5 py-2.5 last:border-b-0 active:bg-ink/[0.03]"
+      className="flex min-h-[44px] items-center gap-3 rounded-[var(--radius-sm)] border-b border-ink/[0.05] px-1 py-2.5 last:border-b-0 active:bg-ink/[0.03]"
       role="button"
       tabIndex={0}
       onClick={onOpen}

@@ -58,7 +58,11 @@ import { ThoughtDetailSheet } from "@/components/ThoughtDetailSheet";
 import { track } from "@/lib/analytics";
 import { showActionToast, showUndoActionToast, showUndoToast as showUndoToastBase } from "@/lib/undoToast";
 import { useT, useLang } from "@/lib/i18n";
-import { haptic } from "@/lib/haptics";
+import { light as lightHaptic } from "@/lib/haptics";
+import {
+  isFirstCapturePending,
+  markFirstCaptureDone,
+} from "@/lib/firstCapture";
 import { allCloudSynced } from "@/lib/syncFeedback";
 import { useHomeChatScroll } from "@/hooks/useHomeChatScroll";
 import { FEATURES } from "@/lib/features";
@@ -126,9 +130,9 @@ function Inbox() {
   );
   const exampleChips = useMemo(
     () => [
-      { ko: "내일 오후 3시 치과", en: "Dentist tomorrow at 3pm" },
-      { ko: "사고 싶은 것", en: "Things to buy" },
-      { ko: "나중에 볼 링크", en: "Link to read later" },
+      { ko: "내일 3시 치과", en: "Dentist tomorrow at 3" },
+      { ko: "엄마한테 전화", en: "Call mom" },
+      { ko: "나중에 읽을 링크", en: "Link to read later" },
     ],
     [],
   );
@@ -144,7 +148,7 @@ function Inbox() {
     showUndoToastBase(message, async () => {
       track("undo_used");
       await onUndo();
-    }, { undoLabel: t("취소", "Take back") });
+    }, { undoLabel: t("되돌리기", "Undo") });
   };
 
   const acknowledgeItem = useCallback((id: string) => {
@@ -359,7 +363,7 @@ function Inbox() {
             })
           : `${start.getMonth() + 1}월 ${start.getDate()}일`;
       showActionToast(
-        t(`${whenLabel}에 맡겨뒀어요`, `I'll bring it back on ${whenLabel}`),
+        t(`${whenLabel}에 추가했어요`, `Added to schedule for ${whenLabel}`),
         t("보러 가기", "Take a look"),
         () => void navigate({ to: "/schedule" }),
         { actionAriaLabel: t("일정 열기", "Open schedule") },
@@ -513,7 +517,7 @@ function Inbox() {
       if (allCloudSynced(archiveSynced, inboxSynced)) {
         track("thought_archived", { text_length: it.text.length });
         showUndoActionToast(
-          t("보관함에 맡겨뒀어요", "Tucked away in your vault"),
+          t("보관함에 넣었어요", "Saved to vault"),
           async () => {
             track("undo_used");
             await archive.remove(created.id);
@@ -526,7 +530,7 @@ function Inbox() {
           t("보러 가기", "Take a look"),
           () => void navigate({ to: "/archive" }),
           {
-            undoLabel: t("취소", "Take back"),
+            undoLabel: t("되돌리기", "Undo"),
             actionAriaLabel: t("보관함 열기", "Open vault"),
           },
         );
@@ -543,12 +547,12 @@ function Inbox() {
       track("thought_swiped_delete", { text_length: it.text.length });
       if (deleted) {
         track("thought_deleted", { text_length: it.text.length });
-        showUndoToast(t("지웠어요", "Let it go"), async () => {
+        showUndoToast(t("삭제했어요", "Deleted"), async () => {
           await inbox.update(it.id, { status: "active" } as Partial<InboxItem>);
         });
       }
     } catch {
-      toast.error(t("못 지웠어요. 그대로 둘게요", "Couldn't let go — still here"));
+      toast.error(t("삭제하지 못했어요", "Couldn't delete"));
     }
   };
 
@@ -569,7 +573,8 @@ function Inbox() {
     source: "text" | "voice" = "text",
   ) => {
     if (!text && !images.length) return;
-    haptic([6, 16, 10]);
+    const isFirst = items.length === 0 && isFirstCapturePending();
+    lightHaptic();
     try {
       const { item: created } = await inbox.add({
         text,
@@ -585,6 +590,13 @@ function Inbox() {
         language: lang === "en" ? "en" : "ko",
         source,
       });
+
+      if (isFirst) {
+        markFirstCaptureDone();
+        toast.message(t("여기에 잘 두었어요.", "Saved here."), {
+          duration: 2200,
+        });
+      }
 
       if (FEATURES.REDISCOVERY) {
         const revival = buildRevivalHint(created, archive.items, "inbox");
@@ -609,7 +621,7 @@ function Inbox() {
   const handleUnderstandAgain = async (target: InboxItem) => {
     const mirror = await runUserOrganize(target, inbox);
     if (mirror) {
-      haptic([4, 8, 5]);
+      lightHaptic();
     } else {
       toast.message(
         t("지금은 정리가 어려워요", "Hard to sort right now — try in a bit"),

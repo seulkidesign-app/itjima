@@ -24,7 +24,7 @@ import {
 } from "@/lib/decision";
 import { understandNaturalLanguage } from "@/lib/nlSchedule";
 import { SPRING_SNAP_BACK } from "@/lib/motion";
-import { MOTION_ARCHIVE, MOTION_SCHEDULE, MOTION_SUCCESS } from "@/lib/motionLanguage";
+import { MOTION_ARCHIVE, MOTION_SCHEDULE } from "@/lib/motionLanguage";
 import {
   SWIPE_DRAG_START_PX,
   SWIPE_EDGE_EXCLUSION_PX,
@@ -56,6 +56,7 @@ import {
 } from "@/lib/swipeTutorial";
 import { showUndoToast } from "@/lib/undoToast";
 import { DeckCardContent } from "@/components/DeckCardContent";
+import { DeckCompletion } from "@/components/DeckCompletion";
 import { SwipeTutorial } from "@/components/SwipeTutorial";
 
 export type DecisionMeta = {
@@ -111,13 +112,13 @@ function isInteractiveTarget(node: EventTarget | null) {
 }
 
 function outcomeSwipeLabel(outcome: DecisionOutcome, t: ReturnType<typeof useT>) {
-  if (outcome === "today") return t("일정으로", "To schedule");
-  if (outcome === "archive") return t("보관함으로", "To vault");
-  return t("지금은 그대로", "Keep here");
+  if (outcome === "today") return t("일정으로", "Schedule");
+  if (outcome === "archive") return t("보관함으로", "Vault");
+  return t("그대로 둘게요", "Keep here");
 }
 
 function toastForOutcome(outcome: DecisionOutcome, t: ReturnType<typeof useT>) {
-  if (outcome === "today") return t("일정으로 보냈어요", "Moved to schedule");
+  if (outcome === "today") return t("일정에 추가했어요", "Added to schedule");
   if (outcome === "archive") return t("보관함에 넣었어요", "Saved to vault");
   return t("그대로 두었어요", "Kept here");
 }
@@ -766,12 +767,12 @@ export function DecisionDeck({
                 data-testid="decision-deck-empty"
               >
                 <p className="text-[20px] font-bold tracking-[-0.02em] text-ink">
-                  {t("정리할 생각이 아직 없어요.", "Nothing to sort yet.")}
+                  {t("정리할 생각이 아직 없어요", "Nothing to sort yet")}
                 </p>
                 <p className="mt-2 text-[15px] leading-relaxed text-ink-soft">
                   {t(
-                    "홈에서 떠오른 생각을 대충 던져보세요.",
-                    "Drop a thought on Home first.",
+                    "홈에서 떠오른 걸 가볍게 던져 보세요.",
+                    "Drop a thought on Home — even a messy one.",
                   )}
                 </p>
                 {onCapture && (
@@ -802,20 +803,25 @@ export function DecisionDeck({
                     .slice()
                     .reverse()
                     .map((item, i) => (
-                      <div
+                      <motion.div
                         key={item.id}
                         className="focus-sort-card focus-sort-card-stack pointer-events-none absolute inset-x-0 mx-auto w-full px-6 py-5"
-                        style={{
-                          top: STACK_OFFSET_Y[i] ?? 20,
-                          transform: `scale(${STACK_SCALE[i] ?? 0.94})`,
+                        initial={false}
+                        animate={{
+                          y: STACK_OFFSET_Y[i] ?? 20,
+                          scale: STACK_SCALE[i] ?? 0.94,
                           opacity: STACK_OPACITY[i] ?? 0.22,
-                          zIndex: 1 + i,
                         }}
+                        transition={{
+                          duration: 0.32,
+                          ease: [0.2, 0.8, 0.2, 1],
+                        }}
+                        style={{ zIndex: 1 + i }}
                       >
                         <p className="line-clamp-1 text-[14px] font-medium text-ink/45">
                           {item.text}
                         </p>
-                      </div>
+                      </motion.div>
                     ))}
 
                   <div
@@ -825,11 +831,13 @@ export function DecisionDeck({
                     onPointerMove={onMove}
                     onPointerUp={onUp}
                     onPointerCancel={onUp}
-                    className="focus-sort-card relative z-10 mx-auto flex min-h-[min(320px,48dvh)] w-full touch-pan-y select-none flex-col overflow-hidden will-change-transform"
+                    className={`focus-sort-card focus-sort-card-active relative z-10 mx-auto flex min-h-[min(320px,48dvh)] w-full touch-pan-y select-none flex-col overflow-hidden will-change-transform ${
+                      dragging || locked ? "is-dragging" : ""
+                    }`}
                     style={{
                       transform: `translate3d(${offset.x}px, ${offset.y}px, 0) rotate(${rotate}deg) scale(${scale})`,
                       opacity: cardOpacity,
-                      boxShadow: `0 ${8 + previewProgress * 16}px ${20 + previewProgress * 20}px -8px rgba(0,0,0,${0.06 + previewProgress * 0.08})`,
+                      boxShadow: `0 ${8 + previewProgress * 16}px ${24 + previewProgress * 28}px -10px rgba(0,0,0,${0.07 + previewProgress * 0.1})`,
                     }}
                   >
                     {previewOutcome && (
@@ -892,7 +900,7 @@ export function DecisionDeck({
                   </button>
                 </div>
 
-                <p className="mt-3 text-center text-caption text-ink-soft/75">
+                <p className="mt-3 text-center text-[12px] font-medium text-ink-soft/70">
                   {t(
                     "← 보관 · ↓ 그대로 · 일정 →",
                     "← Vault · ↓ Keep · Schedule →",
@@ -900,33 +908,13 @@ export function DecisionDeck({
                 </p>
               </>
             ) : (
-              <motion.div
-                data-testid="decision-deck-complete"
-                className="w-full max-w-[320px] px-4 pb-2 text-center"
-                initial={{ opacity: 0, scale: 0.98, y: 6 }}
-                animate={{ opacity: 1, scale: 1, y: 0 }}
-                transition={MOTION_SUCCESS}
-              >
-                <p className="text-[22px] font-bold tracking-[-0.03em] text-ink">
-                  {t("머릿속이 조금 가벼워졌어요.", "A little lighter now.")}
-                </p>
-                <p className="mt-3 text-[15px] font-medium tabular-nums text-ink-soft">
-                  {t(
-                    `일정 ${sessionCounts.today} · 보관 ${sessionCounts.archive} · 그대로 ${sessionCounts.later}`,
-                    `Schedule ${sessionCounts.today} · Vault ${sessionCounts.archive} · Kept ${sessionCounts.later}`,
-                  )}
-                </p>
-                <button
-                  type="button"
-                  className="pill-yellow mt-6 min-h-[44px] w-full px-6 py-2.5 text-[14px] font-bold text-ink"
-                  onClick={() => {
-                    tapHaptic();
-                    onClose();
-                  }}
-                >
-                  {t("홈으로 돌아가기", "Back to Home")}
-                </button>
-              </motion.div>
+              <DeckCompletion
+                counts={sessionCounts}
+                onClose={() => {
+                  tapHaptic();
+                  onClose();
+                }}
+              />
             )}
 
             {undoSnapshot && (
