@@ -22,6 +22,7 @@ import {
   understandNaturalLanguage,
   type ClarifyPick,
 } from "@/lib/nlSchedule";
+import { trackParseFailed } from "@/lib/nlAnalytics";
 import { thoughtFirstLine } from "@/lib/brainMirror";
 import { setRevivalHint } from "@/lib/archiveMeta";
 import {
@@ -268,7 +269,6 @@ function Inbox() {
   const openHomeSchedule = (it: InboxItem) => {
     const uiLang = lang === "en" ? "en" : "ko";
     const nl = understandNaturalLanguage(it.text, uiLang);
-    track("nl_schedule_opened", { intent: nl.intent, confidence: nl.confidence });
     if (nl.intent === "task") {
       void confirmTaskLater(it);
       return;
@@ -360,7 +360,14 @@ function Inbox() {
     const nl = understandNaturalLanguage(it.text, uiLang);
     const det = nl.detectedDate ?? detectDate(it.text);
     if (!det) {
-      openPromiseSchedule(it);
+      trackParseFailed(nl.intent);
+      toast.message(
+        t(
+          "날짜를 확실히 못 잡았어요. 그대로 두었어요.",
+          "Couldn't pin down the date — left it here for you.",
+        ),
+      );
+      acknowledgeItem(it.id);
       return;
     }
     try {

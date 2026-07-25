@@ -155,41 +155,42 @@ export async function dismissInlinePromise(page: Page) {
   const promise = frame.getByTestId("inline-promise").last();
   if (!(await promise.isVisible().catch(() => false))) return;
 
-  const actions = promise.getByTestId("promise-actions");
-  if (!(await actions.isVisible().catch(() => false))) return;
-
   await promise.scrollIntoViewIfNeeded();
-  await page.waitForTimeout(350);
+  await page.waitForTimeout(200);
 
-  const latest = frame.getByTestId("inline-promise").last();
-  const latestActions = latest.getByTestId("promise-actions");
-  if (!(await latestActions.isVisible().catch(() => false))) return;
+  const keepClarify = promise.getByTestId("promise-keep");
+  if (await keepClarify.isVisible().catch(() => false)) {
+    await keepClarify.click({ force: true });
+    return;
+  }
 
-  const primary = latest.getByTestId("promise-primary");
+  const primary = promise.getByTestId("promise-primary");
   if (await primary.isVisible().catch(() => false)) {
     const label = ((await primary.textContent()) ?? "").trim();
     if (/Keep here|그대로 두기/i.test(label)) {
       await primary.click({ force: true });
-    } else {
-      await latest.getByTestId("promise-manual").click({ force: true });
-      const keep = frame
-        .getByTestId("promise-edit-menu")
-        .getByRole("button", { name: "Keep here", exact: true });
-      await keep.click({ force: true });
-    }
-  } else {
-    const keepClarify = latest.getByTestId("promise-keep");
-    if (await keepClarify.isVisible().catch(() => false)) {
-      await keepClarify.click({ force: true });
-    } else {
-      await latest.getByTestId("promise-manual").click({ force: true });
-      const keep = frame
-        .getByTestId("promise-edit-menu")
-        .getByRole("button", { name: "Keep here", exact: true });
-      await keep.click({ force: true });
+      return;
     }
   }
-  await latestActions.waitFor({ state: "hidden", timeout: 8000 }).catch(() => {});
+
+  const correct = promise.getByTestId("promise-correct");
+  if (await correct.isVisible().catch(() => false)) {
+    await correct.click({ force: true });
+    await promise
+      .getByTestId("promise-correct-menu")
+      .getByRole("button", { name: /Keep here|그대로 두기/ })
+      .click({ force: true });
+    return;
+  }
+
+  const manual = promise.getByTestId("promise-manual");
+  if (await manual.isVisible().catch(() => false)) {
+    await manual.click({ force: true });
+    await frame
+      .getByTestId("promise-edit-menu")
+      .getByRole("button", { name: /Keep here|그대로 두기/ })
+      .click({ force: true });
+  }
 }
 
 /** @deprecated use dismissInlinePromise */

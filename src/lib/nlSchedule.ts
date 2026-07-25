@@ -4,7 +4,8 @@ import { analyzeThought, type ThoughtCategory } from "@/lib/ruleEngine";
 import { thoughtFirstLine } from "@/lib/brainMirror";
 import { formatSuggestedMoment } from "@/lib/scheduleChoices";
 
-export type ScheduleConfidence = "high" | "low";
+/** high = one-tap card · medium = one missing-field question · low = keep in inbox */
+export type ScheduleConfidence = "high" | "medium" | "low";
 
 export type NlIntent =
   | "schedule_exact"
@@ -17,20 +18,21 @@ export type NlScheduleUnderstanding = {
   intent: NlIntent;
   confidence: ScheduleConfidence;
   category: ThoughtCategory;
-  /** Parsed moment when intent is schedule_exact */
   detectedDate: { label: string; start: Date; end: Date } | null;
   hasExplicitTime: boolean;
-  /** Human-readable mirror line */
   mirrorLine: string;
   mirrorDetail: string;
   primaryLabelKo: string;
   primaryLabelEn: string;
-  /** What is missing for clarify flow */
   clarifyMissing?: "time" | "day";
+  /** Likely passport, ID, card, or password — show privacy note before archive */
+  isSensitive: boolean;
+  /** Date parse looked possible but failed on confirm */
+  parseFailed?: boolean;
 };
 
 const TIME_RE =
-  /(?:\d{1,2}\s*시|\d{1,2}:\d{2}|\d{1,2}\s*(?:am|pm)\b|오전|오후)/i;
+  /(?:\d{1,2}\s*시|\d{1,2}:\d{2}|\d{1,2}\s*(?:am|pm)\b|오전|오후|저녁|아침|점심|\bevening\b|\bmorning\b|\bafternoon\b)/i;
 
 const VAGUE_WHEN_RE =
   /(?:쯤|정도|무렵|경|\baround\b|\babout\b|\bor\s+so\b|\bsometime\b|\broughly\b)/i;
@@ -38,22 +40,30 @@ const VAGUE_WHEN_RE =
 const REFERENCE_RE =
   /(?:번호|number|#|비밀번호|password|pin\s*code|여권|passport|account|계좌|카드\s*번호)/i;
 
+const SENSITIVE_RE =
+  /(?:여권|passport|주민\s*등록|resident\s*registration|비밀번호|password|pin\s*code|카드\s*번호|card\s*number|\b\d{4}[\s-]?\d{4}[\s-]?\d{4}[\s-]?\d{4}\b|\b\d{6}[\s-]?\d{7}\b)/i;
+
 const TASK_VERB_RE =
-  /(?:하기|하자|해야|전화|연락|call|email|send|submit|buy|사기|구매|회의|미팅|병원|치과|dentist|appointment)/i;
+  /(?:하기|하자|해야|전화|연락|call|email|send|submit|buy|사기|구매|회의|미팅)/i;
 
 const WATCH_READ_RE =
   /(?:보기|읽기|\bread\b|\bwatch\b|\bsee\b|볼\s)/i;
 
+const NEXT_MONTH_EARLY_RE = /다음\s*달\s*초|early\s+next\s+month/i;
+
+const WEEKDAY_IN_TEXT_RE = /(일|월|화|수|목|금|토)요일|\b(?:monday|tuesday|wednesday|thursday|friday|saturday|sunday)\b/i;
+
+export function isSensitiveContent(text: string): boolean {
+  return SENSITIVE_RE.test(text.trim());
+}
+
 function hasExplicitTime(text: string): boolean {
-  const det = detectDate(text);
-  if (!det) return false;
+  if (!detectDate(text)) return false;
   return TIME_RE.test(text);
 }
 
-function isReferenceNote(text: string, category: ThoughtCategory): boolean {
-  const trimmed = text.trim();
-  if (REFERENCE_RE.test(trimmed)) return true;
-  return false;
+function isReferenceNote(text: string): boolean {
+  return REFERENCE_RE.test(text.trim()) || isSensitiveContent(text);
 }
 
 function isTaskWithoutSchedule(text: string, category: ThoughtCategory): boolean {
@@ -62,8 +72,8 @@ function isTaskWithoutSchedule(text: string, category: ThoughtCategory): boolean
   return false;
 }
 
-/** Low-confidence schedule: date-ish language but vague or missing time. */
 function isClarifySchedule(text: string): boolean {
+  if (NEXT_MONTH_EARLY_RE.test(text)) return true;
   if (VAGUE_WHEN_RE.test(text)) return true;
   const det = detectDate(text);
   if (!det) {
@@ -74,7 +84,16 @@ function isClarifySchedule(text: string): boolean {
   if (!hasExplicitTime(text) && /(?:다음\s*주|next\s+week|주말|weekend)/i.test(text)) {
     return true;
   }
+  if (!hasExplicitTime(text) && WEEKDAY_IN_TEXT_RE.test(text) && /약속|미팅|meeting|appointment/i.test(text)) {
+    return false;
+  }
   return false;
+}
+
+function schedulePrimaryLabels(lang: "ko" | "en"): { ko: string; en: string } {
+  return lang === "en"
+    ? { ko: "일정에 추가", en: "Add to schedule" }
+    : { ko: "일정에 추가", en: "Add to schedule" };
 }
 
 export function understandNaturalLanguage(
@@ -90,6 +109,8 @@ export function understandNaturalLanguage(
     (detectDate(trimmed) ? "schedule" : "note");
   const dateHit = detectDate(trimmed);
   const topic = thoughtFirstLine(trimmed);
+  const sensitive = isSensitiveContent(trimmed);
+  const scheduleLabels = schedulePrimaryLabels(lang);
 
   if (analysis.isJunk) {
     return {
@@ -103,10 +124,11 @@ export function understandNaturalLanguage(
         lang === "en" ? "Keep it here for now." : "일단 여기에 둘게요.",
       primaryLabelKo: "그대로 두기",
       primaryLabelEn: "Keep here",
+      isSensitive: false,
     };
   }
 
-  if (isReferenceNote(trimmed, category)) {
+  if (isReferenceNote(trimmed)) {
     return {
       intent: "archive",
       confidence: "high",
@@ -115,71 +137,66 @@ export function understandNaturalLanguage(
       hasExplicitTime: false,
       mirrorLine:
         lang === "en" ? "Looks like something to store" : "보관하면 좋을 것 같아요",
-      mirrorDetail:
-        lang === "en"
+      mirrorDetail: sensitive
+        ? lang === "en"
+          ? "Sensitive info stays on your device only."
+          : "민감한 내용은 기기에만 남아요. 다른 곳으로 보내지 않아요."
+        : lang === "en"
           ? "Reference notes belong in your vault."
           : "번호·메모는 보관함에 두면 찾기 쉬워요.",
       primaryLabelKo: "보관함에 맡기기",
       primaryLabelEn: "Save to vault",
-    };
-  }
-
-  if (dateHit && !isClarifySchedule(trimmed) && hasExplicitTime(trimmed)) {
-    const moment = formatSuggestedMoment(dateHit.start, lang);
-    return {
-      intent: "schedule_exact",
-      confidence: "high",
-      category: "schedule",
-      detectedDate: dateHit,
-      hasExplicitTime: true,
-      mirrorLine:
-        lang === "en"
-          ? `${moment} · ${topic}`
-          : `${moment} · ${topic}`,
-      mirrorDetail:
-        lang === "en"
-          ? "One tap to add it — no calendar needed."
-          : "한 번만 확인하면 돼요 — 달력은 필요 없어요.",
-      primaryLabelKo: "맞아요",
-      primaryLabelEn: "That's right",
+      isSensitive: sensitive,
     };
   }
 
   if (dateHit && !isClarifySchedule(trimmed)) {
     const moment = formatSuggestedMoment(dateHit.start, lang);
+    const explicit = hasExplicitTime(trimmed);
     return {
       intent: "schedule_exact",
       confidence: "high",
       category: "schedule",
       detectedDate: dateHit,
-      hasExplicitTime: false,
-      mirrorLine:
-        lang === "en" ? `${moment} · ${topic}` : `${moment} · ${topic}`,
-      mirrorDetail:
-        lang === "en"
-          ? "Defaults to 9:00 — adjust only if you want."
+      hasExplicitTime: explicit,
+      mirrorLine: `${moment} · ${topic}`,
+      mirrorDetail: explicit
+        ? lang === "en"
+          ? "Tap to add — calendar only if you want to change it."
+          : "한 번 누르면 일정에 들어가요 — 바꾸고 싶을 때만 날짜를 고르면 돼요."
+        : lang === "en"
+          ? "Defaults to 9:00 — change only if you want."
           : "시간은 9시로 잡을게요 — 바꾸고 싶을 때만 수정해요.",
-      primaryLabelKo: "맞아요",
-      primaryLabelEn: "That's right",
+      primaryLabelKo: scheduleLabels.ko,
+      primaryLabelEn: scheduleLabels.en,
+      isSensitive: false,
     };
   }
 
-  if (isClarifySchedule(trimmed) || (dateHit && isClarifySchedule(trimmed))) {
+  if (isClarifySchedule(trimmed)) {
+    const missing = TIME_RE.test(trimmed) ? "day" : "time";
     return {
       intent: "schedule_clarify",
-      confidence: "low",
+      confidence: "medium",
       category: "schedule",
       detectedDate: dateHit,
       hasExplicitTime: hasExplicitTime(trimmed),
-      clarifyMissing: TIME_RE.test(trimmed) ? "day" : "time",
+      clarifyMissing: missing,
       mirrorLine:
-        lang === "en" ? "When should we bring it back?" : "언제쯤 보면 좋을까요?",
+        missing === "day"
+          ? lang === "en"
+            ? "Which day works?"
+            : "며칠쯤이 좋을까요?"
+          : lang === "en"
+            ? "When should we bring it back?"
+            : "언제쯤 보면 좋을까요?",
       mirrorDetail:
         lang === "en"
-          ? "Pick roughly — no calendar yet."
-          : "대략만 골라 주세요 — 달력은 나중에 열 수 있어요.",
+          ? "Pick one — or choose a date yourself."
+          : "하나만 골라 주세요 — 필요하면 날짜를 직접 고를 수 있어요.",
       primaryLabelKo: "이번 주말",
       primaryLabelEn: "This weekend",
+      isSensitive: false,
     };
   }
 
@@ -194,10 +211,11 @@ export function understandNaturalLanguage(
         lang === "en" ? `Task · ${topic}` : `할 일 · ${topic}`,
       mirrorDetail:
         lang === "en"
-          ? "Add to Schedule without picking a date yet."
-          : "날짜 없이 일정에 넣을 수 있어요.",
+          ? "Add as a task now — add a date only if you want."
+          : "날짜 없이 할 일로 넣을 수 있어요.",
       primaryLabelKo: "할 일로 넣기",
       primaryLabelEn: "Add as task",
+      isSensitive: false,
     };
   }
 
@@ -212,10 +230,17 @@ export function understandNaturalLanguage(
       lang === "en" ? "Keep it here for now." : "일단 여기에 둘게요.",
     primaryLabelKo: "그대로 두기",
     primaryLabelEn: "Keep here",
+    isSensitive: false,
   };
 }
 
-export type ClarifyPick = "today" | "tomorrow" | "weekend" | "next_week";
+export type ClarifyPick =
+  | "today"
+  | "tomorrow"
+  | "weekend"
+  | "next_week"
+  | "early_next_month"
+  | "next_month_seventh";
 
 const CLARIFY_LABELS: Record<
   ClarifyPick,
@@ -225,18 +250,30 @@ const CLARIFY_LABELS: Record<
   tomorrow: { ko: "내일", en: "Tomorrow" },
   weekend: { ko: "이번 주말", en: "This weekend" },
   next_week: { ko: "다음 주", en: "Next week" },
+  early_next_month: { ko: "다음 달 1일", en: "1st next month" },
+  next_month_seventh: { ko: "다음 달 7일", en: "7th next month" },
 };
 
-/** Chips shown for low-confidence schedule — only missing info, no calendar. */
+/** Up to 3 contextual chips — no calendar until explicit fallback. */
 export function clarifyPicksForText(
   text: string,
   lang: "ko" | "en",
 ): { pick: ClarifyPick; label: string }[] {
-  const picks: ClarifyPick[] = /다음\s*주|next\s+week/i.test(text)
-    ? ["next_week", "weekend", "tomorrow"]
-    : ["today", "tomorrow", "weekend"];
+  let picks: ClarifyPick[];
 
-  return picks.map((pick) => ({
+  if (NEXT_MONTH_EARLY_RE.test(text)) {
+    picks = ["early_next_month", "next_month_seventh", "weekend"];
+  } else if (/다음\s*주|next\s+week/i.test(text)) {
+    picks = ["next_week", "weekend", "tomorrow"];
+  } else if (WEEKDAY_IN_TEXT_RE.test(text)) {
+    picks = ["tomorrow", "weekend", "next_week"];
+  } else if (VAGUE_WHEN_RE.test(text)) {
+    picks = ["tomorrow", "weekend", "next_week"];
+  } else {
+    picks = ["today", "tomorrow", "weekend"];
+  }
+
+  return picks.slice(0, 3).map((pick) => ({
     pick,
     label: lang === "en" ? CLARIFY_LABELS[pick].en : CLARIFY_LABELS[pick].ko,
   }));
@@ -263,6 +300,20 @@ export function dateFromClarifyPick(
     return { start, end, label: "다음 주" };
   }
 
+  if (pick === "early_next_month") {
+    start.setMonth(start.getMonth() + 1, 1);
+    const end = new Date(start);
+    end.setHours(start.getHours() + 1);
+    return { start, end, label: "다음 달 1일" };
+  }
+
+  if (pick === "next_month_seventh") {
+    start.setMonth(start.getMonth() + 1, 7);
+    const end = new Date(start);
+    end.setHours(start.getHours() + 1);
+    return { start, end, label: "다음 달 7일" };
+  }
+
   if (pick === "weekend") {
     const day = start.getDay();
     const toSat = day === 6 ? 0 : day === 0 ? 6 : 6 - day;
@@ -275,4 +326,10 @@ export function dateFromClarifyPick(
   const end = new Date(start);
   end.setHours(start.getHours() + 1);
   return { start, end, label: "오늘" };
+}
+
+/** Whether inline Brain Mirror should appear (high/medium only). */
+export function shouldShowNlPrompt(text: string, lang: "ko" | "en"): boolean {
+  const nl = understandNaturalLanguage(text.trim(), lang);
+  return nl.confidence !== "low" && nl.intent !== "keep";
 }

@@ -148,6 +148,13 @@ export function detectDate(
     label = label || (/next/i.test(text) ? "Next week" : "다음 주");
   }
 
+  // Early next month (다음 달 초)
+  if (/다음\s*달\s*초/.test(text) || /\bearly\s+next\s+month\b/i.test(text)) {
+    target = new Date(now.getFullYear(), now.getMonth() + 1, 1);
+    matched = true;
+    label = label || "다음 달 초";
+  }
+
   // Korean weekday: 월요일
   const koWd = text.match(/(일|월|화|수|목|금|토)요일/);
   if (koWd) {
@@ -233,7 +240,21 @@ export function detectDate(
   }
 
   if (matched && !timeSet) {
-    target.setHours(9, 0, 0, 0);
+    if (/저녁|\bevening\b/i.test(text)) {
+      target.setHours(18, 0, 0, 0);
+      timeSet = true;
+      label = `${label ? `${label} ` : ""}저녁`.trim();
+    } else if (/아침|\bmorning\b/i.test(text)) {
+      target.setHours(9, 0, 0, 0);
+      timeSet = true;
+      label = `${label ? `${label} ` : ""}아침`.trim();
+    } else if (/점심|\bafternoon\b|\blunch\b/i.test(text)) {
+      target.setHours(12, 0, 0, 0);
+      timeSet = true;
+      label = `${label ? `${label} ` : ""}점심`.trim();
+    } else {
+      target.setHours(9, 0, 0, 0);
+    }
   }
 
   if (!matched) return null;

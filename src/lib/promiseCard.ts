@@ -1,7 +1,9 @@
 import { detectDate } from "@/lib/dateDetect";
 import {
+  shouldShowNlPrompt,
   understandNaturalLanguage,
   type NlIntent,
+  type ScheduleConfidence,
 } from "@/lib/nlSchedule";
 import type { ThoughtCategory } from "@/lib/ruleEngine";
 
@@ -32,13 +34,14 @@ export type PromiseCard = {
   editAction: PromiseEditAction;
   category: ThoughtCategory;
   confidence: number;
-  confidenceLevel: "high" | "low";
+  confidenceLevel: ScheduleConfidence;
   nlIntent: NlIntent;
   actualAction: ActualAction;
   detectedDate: { start: Date; end: Date; label: string } | null;
   rediscoveryEligible: boolean;
   scheduleCommitted: boolean;
   showClarifyChips: boolean;
+  isSensitive: boolean;
 };
 
 const FORBIDDEN_PRE_CONFIRM = [
@@ -95,12 +98,18 @@ function mapIntentToActual(intent: NlIntent): ActualAction {
   }
 }
 
-/** Show inline promise only when NL suggests a concrete next step. */
+function confidenceScore(level: ScheduleConfidence): number {
+  if (level === "high") return 0.9;
+  if (level === "medium") return 0.65;
+  return 0.4;
+}
+
+/** Show inline promise only for high/medium confidence NL understanding. */
 export function shouldShowInlinePromise(
   text: string,
   lang: "ko" | "en",
 ): boolean {
-  return understandNaturalLanguage(text.trim(), lang).intent !== "keep";
+  return shouldShowNlPrompt(text, lang);
 }
 
 /** Deterministic promise copy — NL understanding first, no LLM on the hot path. */
@@ -121,11 +130,18 @@ export function buildPromiseCard(
     promise: nl.mirrorDetail,
     primaryActionLabel:
       lang === "en" ? nl.primaryLabelEn : nl.primaryLabelKo,
-    editActionLabel: lang === "en" ? "Adjust" : "수정",
+    editActionLabel:
+      nl.intent === "task"
+        ? lang === "en"
+          ? "Add date"
+          : "날짜 추가"
+        : lang === "en"
+          ? "Adjust"
+          : "수정",
     editAction: "open_edit_menu",
     primaryAction,
     category: nl.category,
-    confidence: nl.confidence === "high" ? 0.9 : 0.55,
+    confidence: confidenceScore(nl.confidence),
     confidenceLevel: nl.confidence,
     nlIntent: nl.intent,
     actualAction,
@@ -133,6 +149,7 @@ export function buildPromiseCard(
     scheduleCommitted: false,
     rediscoveryEligible: false,
     showClarifyChips: nl.intent === "schedule_clarify",
+    isSensitive: nl.isSensitive,
   };
 }
 
