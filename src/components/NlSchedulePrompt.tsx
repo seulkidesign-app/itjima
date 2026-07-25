@@ -1,12 +1,15 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useLang, useT } from "@/lib/i18n";
 import {
-  trackClarifyOpened,
-  trackIntentConfirmed,
-  trackIntentCorrected,
-  trackIntentPredicted,
-  trackManualFallbackUsed,
+  trackNlBrainMirrorDismissed,
+  trackNlBrainMirrorShown,
+  trackNlIntentCorrected,
+  trackNlIntentPredicted,
+  trackNlManualFallbackUsed,
+  trackNlPrimaryActionClicked,
 } from "@/lib/nlAnalytics";
+import { buildMirrorDisplay } from "@/lib/nlMirrorCopy";
+import { isNlDebugEnabled } from "@/lib/nlDebug";
 import {
   buildPromiseCard,
   type PromiseCard,
@@ -14,11 +17,13 @@ import {
 } from "@/lib/promiseCard";
 import {
   clarifyPicksForText,
+  understandNaturalLanguage,
   type ClarifyPick,
   type NlIntent,
 } from "@/lib/nlSchedule";
 import type { InboxItem } from "@/lib/store";
 import { confirm as confirmHaptic, haptic, tick } from "@/lib/haptics";
+import { NlDebugPanel } from "./NlDebugPanel";
 
 type CorrectableIntent = "schedule" | "task" | "archive" | "keep";
 
@@ -43,7 +48,7 @@ const INTENT_BADGE: Record<
   { ko: string; en: string }
 > = {
   schedule_exact: { ko: "일정", en: "Schedule" },
-  schedule_clarify: { ko: "일정 · 확인 필요", en: "Schedule · needs a moment" },
+  schedule_clarify: { ko: "일정 · 날짜 필요", en: "Schedule · pick a day" },
   task: { ko: "할 일", en: "Task" },
   archive: { ko: "보관", en: "Vault" },
   keep: { ko: "메모", en: "Note" },
@@ -68,10 +73,19 @@ export function NlSchedulePrompt({
   const [correctOpen, setCorrectOpen] = useState(false);
   const [privacyAcked, setPrivacyAcked] = useState(false);
   const trackedRef = useRef(false);
+  const showDebug = isNlDebugEnabled();
 
+  const nl = useMemo(
+    () => understandNaturalLanguage(item.text, uiLang),
+    [item.text, uiLang],
+  );
   const card = useMemo(
     () => buildPromiseCard(item.text, uiLang),
     [item.text, uiLang],
+  );
+  const mirror = useMemo(
+    () => buildMirrorDisplay(item.text, nl, uiLang),
+    [item.text, nl, uiLang],
   );
   const clarifyOptions = useMemo(
     () => clarifyPicksForText(item.text, uiLang),
@@ -82,9 +96,14 @@ export function NlSchedulePrompt({
   useEffect(() => {
     if (acknowledged || trackedRef.current) return;
     trackedRef.current = true;
-    trackIntentPredicted(card.nlIntent, card.confidenceLevel);
-    if (card.showClarifyChips) trackClarifyOpened();
-  }, [acknowledged, card.confidenceLevel, card.nlIntent, card.showClarifyChips]);
+    trackNlIntentPredicted(card.nlIntent, card.confidenceLevel);
+    trackNlBrainMirrorShown(card.nlIntent);
+  }, [acknowledged, card.confidenceLevel, card.nlIntent]);
+
+  const dismiss = (intent: NlIntent = card.nlIntent) => {
+    trackNlBrainMirrorDismissed(intent);
+    onDismiss();
+  };
 
   const runPrimary = async (c: PromiseCard, corrected = false) => {
     if (c.isSensitive && c.nlIntent === "archive" && !privacyAcked) {
@@ -95,27 +114,30 @@ export function NlSchedulePrompt({
     switch (c.primaryAction as PromisePrimaryAction) {
       case "confirm_schedule":
         await onConfirmScheduleQuick(item);
-        trackIntentConfirmed("schedule_exact", corrected);
-        onDismiss();
+        trackNlPrimaryActionClicked(
+          "schedule_exact",
+          corrected ? "add_schedule" : "add_schedule",
+        );
+        dismiss("schedule_exact");
         break;
       case "clarify_schedule":
         await onConfirmClarify(item, clarifyOptions[0]?.pick ?? "weekend");
-        trackIntentConfirmed("schedule_clarify", corrected);
-        onDismiss();
+        trackNlPrimaryActionClicked("schedule_clarify", "clarify_chip");
+        dismiss("schedule_clarify");
         break;
       case "confirm_task_later":
         await onConfirmTaskLater(item);
-        trackIntentConfirmed("task", corrected);
-        onDismiss();
+        trackNlPrimaryActionClicked("task", "add_task");
+        dismiss("task");
         break;
       case "archive":
         await onArchive(item);
-        trackIntentConfirmed("archive", corrected);
-        onDismiss();
+        trackNlPrimaryActionClicked("archive", "archive");
+        dismiss("archive");
         break;
       default:
-        trackIntentConfirmed("keep", corrected);
-        onDismiss();
+        trackNlPrimaryActionClicked("keep", "keep");
+        dismiss("keep");
         break;
     }
   };
@@ -130,7 +152,7 @@ export function NlSchedulePrompt({
           : target === "archive"
             ? "archive"
             : "keep";
-    if (from !== toIntent) trackIntentCorrected(from, toIntent);
+    if (from !== toIntent) trackNlIntentCorrected(from, toIntent);
     setCorrectOpen(false);
     confirmHaptic();
 
@@ -138,17 +160,17 @@ export function NlSchedulePrompt({
       case "schedule":
         if (card.detectedDate) {
           await onConfirmScheduleQuick(item);
-          trackIntentConfirmed("schedule_exact", true);
-          onDismiss();
+          trackNlPrimaryActionClicked("schedule_exact", "add_schedule");
+          dismiss("schedule_exact");
         } else {
-          trackManualFallbackUsed(from);
+          trackNlManualFallbackUsed(from, "calendar");
           onOpenManualSchedule(item);
         }
         break;
       case "task":
         await onConfirmTaskLater(item);
-        trackIntentConfirmed("task", true);
-        onDismiss();
+        trackNlPrimaryActionClicked("task", "add_task");
+        dismiss("task");
         break;
       case "archive":
         if (card.isSensitive && !privacyAcked) {
@@ -156,25 +178,25 @@ export function NlSchedulePrompt({
           return;
         }
         await onArchive(item);
-        trackIntentConfirmed("archive", true);
-        onDismiss();
+        trackNlPrimaryActionClicked("archive", "archive");
+        dismiss("archive");
         break;
       case "keep":
-        trackIntentConfirmed("keep", true);
-        onDismiss();
+        trackNlPrimaryActionClicked("keep", "keep");
+        dismiss("keep");
         break;
     }
   };
 
   const runManual = () => {
     confirmHaptic();
-    trackManualFallbackUsed(card.nlIntent);
+    trackNlManualFallbackUsed(card.nlIntent, "calendar");
     onOpenManualSchedule(item);
   };
 
   const runTaskAddDate = () => {
     confirmHaptic();
-    trackManualFallbackUsed("task");
+    trackNlManualFallbackUsed("task", "add_date");
     onOpenManualSchedule(item);
   };
 
@@ -197,7 +219,7 @@ export function NlSchedulePrompt({
     >
       <div className="mb-1.5 flex w-full items-center gap-2 px-0.5">
         <span className="text-[11px] font-semibold text-ink-soft">
-          {t("이해했어요", "Got it")}
+          {t("🧠 이렇게 이해했어요", "🧠 Here's what I understood")}
         </span>
         <span className="rounded-full bg-ink/[0.05] px-2 py-0.5 text-[10px] font-semibold text-ink-soft">
           {t(badge.ko, badge.en)}
@@ -219,13 +241,35 @@ export function NlSchedulePrompt({
       </div>
 
       <div className="brain-mirror-card w-full px-3.5 py-2.5">
-        <p className="line-clamp-3 text-[14px] font-semibold leading-snug text-ink">
-          {card.icon} {card.label}
+        <p
+          className="line-clamp-2 text-[15px] font-semibold leading-snug text-ink"
+          data-testid="promise-mirror-title"
+        >
+          {mirror.title}
         </p>
-        <p className="mt-0.5 line-clamp-2 text-[13px] leading-snug text-ink-soft">
-          {card.promise}
+        {mirror.when && (
+          <p
+            className="mt-1 text-[14px] font-medium leading-snug text-ink"
+            data-testid="promise-mirror-when"
+          >
+            {mirror.when}
+          </p>
+        )}
+        <p
+          className="mt-1 text-[12px] leading-snug text-ink-soft"
+          data-testid="promise-mirror-result"
+        >
+          → {mirror.resultHint}
         </p>
       </div>
+
+      {showDebug && (
+        <NlDebugPanel
+          text={item.text}
+          lang={uiLang}
+          acknowledged={acknowledged}
+        />
+      )}
 
       {card.isSensitive && card.nlIntent === "archive" && (
         <p
@@ -281,8 +325,8 @@ export function NlSchedulePrompt({
               onClick={() => {
                 tick();
                 void onConfirmClarify(item, pick).then(() => {
-                  trackIntentConfirmed("schedule_clarify", false);
-                  onDismiss();
+                  trackNlPrimaryActionClicked("schedule_clarify", "clarify_chip");
+                  dismiss("schedule_clarify");
                 });
               }}
               className="touch-press min-h-[40px] rounded-full border border-ink/10 bg-white px-2 py-2 text-[11px] font-semibold text-ink"
@@ -297,7 +341,7 @@ export function NlSchedulePrompt({
         <button
           type="button"
           data-testid="promise-keep"
-          onClick={onDismiss}
+          onClick={() => dismiss()}
           className="mt-2 w-full py-1 text-center text-[12px] font-medium text-ink-soft"
         >
           {t("그대로 두기", "Keep here")}
@@ -343,7 +387,7 @@ export function NlSchedulePrompt({
             >
               {card.showClarifyChips
                 ? t("날짜 고르기", "Pick a date")
-                : card.editActionLabel}
+                : t("수정", "Adjust")}
             </button>
           )}
         </div>
@@ -369,10 +413,13 @@ export function NlSchedulePrompt({
           <EditRow
             label={t("내려놓기", "Let go")}
             onClick={() => {
-              void Promise.resolve(onLetGo(item)).then(onDismiss);
+              void Promise.resolve(onLetGo(item)).then(() => dismiss());
             }}
           />
-          <EditRow label={t("그대로 두기", "Keep here")} onClick={onDismiss} />
+          <EditRow
+            label={t("그대로 두기", "Keep here")}
+            onClick={() => dismiss()}
+          />
         </div>
       )}
     </div>

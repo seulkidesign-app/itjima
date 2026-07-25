@@ -28,7 +28,11 @@ import {
 import { track } from "@/lib/analytics";
 
 type Props = {
-  onAdd: (text: string, images: string[]) => void | Promise<void>;
+  onAdd: (
+    text: string,
+    images: string[],
+    source?: "text" | "voice",
+  ) => void | Promise<void>;
   onPasteMulti: (chunks: string[], original: string) => void;
   /** Restores pasted text when the split sheet is dismissed. */
   restoreText?: string | null;
@@ -77,6 +81,7 @@ export function InputBar({
   const fileRef = useRef<HTMLInputElement>(null);
   const recogRef = useRef<SpeechRecognition | null>(null);
   const speechFinalIndexRef = useRef(0);
+  const captureSourceRef = useRef<"text" | "voice">("text");
 
   const text = interimText
     ? `${committedText}${committedText ? " " : ""}${interimText} […]`
@@ -132,6 +137,7 @@ export function InputBar({
     setCommittedText(value);
     setInterimText("");
     speechFinalIndexRef.current = 0;
+    captureSourceRef.current = "text";
     textRef.current = value;
   };
 
@@ -153,6 +159,7 @@ export function InputBar({
     textRef.current = "";
     imagesRef.current = [];
     commandSnapshotRef.current = "";
+    captureSourceRef.current = "text";
     setCommittedText("");
     setInterimText("");
     speechFinalIndexRef.current = 0;
@@ -195,7 +202,7 @@ export function InputBar({
         const backup = { text: textToAdd, images: imagesToAdd };
         reset();
         try {
-          await onAddRef.current(textToAdd, imagesToAdd);
+          await onAddRef.current(textToAdd, imagesToAdd, captureSourceRef.current);
         } catch {
           setCommittedText(backup.text);
           setInterimText("");
@@ -309,6 +316,7 @@ export function InputBar({
         if (!transcript) continue;
         if (result.isFinal) {
           if (i >= speechFinalIndexRef.current) {
+            captureSourceRef.current = "voice";
             setCommittedText((prev) => appendFinalSpeech(prev, transcript));
             speechFinalIndexRef.current = i + 1;
           }

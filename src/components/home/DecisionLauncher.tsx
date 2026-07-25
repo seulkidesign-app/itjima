@@ -71,6 +71,7 @@ type DeckProps = {
   startItemId: string | null;
   items: InboxItem[];
   onClose: () => void;
+  onCapture?: () => void;
   onDecide: (
     outcome: DecisionOutcome,
     item: InboxItem,
@@ -84,6 +85,7 @@ export function DecisionLauncher({
   startItemId,
   items,
   onClose,
+  onCapture,
   onDecide,
   onUndo,
 }: DeckProps) {
@@ -93,6 +95,7 @@ export function DecisionLauncher({
       startItemId={startItemId}
       items={items}
       onClose={onClose}
+      onCapture={onCapture}
       onDecide={onDecide}
       onUndo={onUndo}
     />

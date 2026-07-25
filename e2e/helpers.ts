@@ -74,6 +74,21 @@ export function phone(page: Page): Locator {
   return page.locator(".phone-frame");
 }
 
+export async function installAnalyticsSpy(page: Page) {
+  await page.addInitScript(() => {
+    (window as unknown as { __e2eEvents: unknown[] }).__e2eEvents = [];
+    window.gtag = (...args: unknown[]) => {
+      (window as unknown as { __e2eEvents: unknown[] }).__e2eEvents.push(args);
+    };
+  });
+}
+
+export async function readAnalytics(page: Page) {
+  return page.evaluate(
+    () => (window as unknown as { __e2eEvents: unknown[] }).__e2eEvents ?? [],
+  );
+}
+
 export async function resetAppState(page: Page) {
   await page.goto("/");
   await page.evaluate(() => {

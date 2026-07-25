@@ -27,6 +27,9 @@ test.describe("Design polish visual regression", () => {
     const laterEnd = new Date(laterStart.getTime() + 60 * 60 * 1000);
 
     await resetAppState(page);
+    await page.evaluate(() =>
+      localStorage.setItem("itjima.swipe.tutorial.done", "1"),
+    );
     await page.evaluate(
       ({
         ik,

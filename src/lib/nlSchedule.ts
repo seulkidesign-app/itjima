@@ -1,4 +1,4 @@
-import { detectDate, isRelativeDateReference } from "@/lib/dateDetect";
+import { detectDate, isAbsoluteDateReference, isRelativeDateReference } from "@/lib/dateDetect";
 import { classifyLocally } from "@/lib/localClassifier";
 import { analyzeThought, type ThoughtCategory } from "@/lib/ruleEngine";
 import { thoughtFirstLine } from "@/lib/brainMirror";
@@ -44,14 +44,57 @@ const SENSITIVE_RE =
   /(?:여권|passport|주민\s*등록|resident\s*registration|비밀번호|password|pin\s*code|카드\s*번호|card\s*number|\b\d{4}[\s-]?\d{4}[\s-]?\d{4}[\s-]?\d{4}\b|\b\d{6}[\s-]?\d{7}\b)/i;
 
 const TASK_VERB_RE =
-  /(?:하기|하자|해야|전화|연락|call|email|send|submit|buy|사기|구매|회의|미팅)/i;
+  /(?:하기|하자|해야|돌리기|갱신|알아보|제출|정리|청소|전화|연락|보내|call|email|send|submit|buy|사기|구매|회의(?:하기|잡)?|미팅)/i;
+
+const TASK_ACTION_RE =
+  /(?:하기|하자|해야|돌리기|갱신(?:하기)?|알아보(?:기)?|제출(?:하기)?|전화(?:하기)?|연락(?:하기)?|보내(?:기)?|call|submit|send)/i;
+
+const MEETING_RE = /(?:만나|약속|미팅|회의|meet|appointment)/i;
 
 const WATCH_READ_RE =
   /(?:보기|읽기|\bread\b|\bwatch\b|\bsee\b|볼\s)/i;
 
 const NEXT_MONTH_EARLY_RE = /다음\s*달\s*초|early\s+next\s+month/i;
 
-const WEEKDAY_IN_TEXT_RE = /(일|월|화|수|목|금|토)요일|\b(?:monday|tuesday|wednesday|thursday|friday|saturday|sunday)\b/i;
+const WEEKDAY_IN_TEXT_RE =
+  /(일|월|화|수|목|금|토)요일|\b(?:monday|tuesday|wednesday|thursday|friday|saturday|sunday)\b/i;
+
+const JOURNAL_ONLY_RE =
+  /(?:날씨|좋았|피곤|커피|기억하고|마셨|그냥|요즘|회고|떠올|하루였|기분)/i;
+
+function isJournalOnly(text: string): boolean {
+  if (/(?:오늘|today)/i.test(text)) {
+    if (
+      /(?:있었|했었|였다|했는데|갔는데|힘들|좋았|피곤|마셨|날씨|회고|하루)/i.test(
+        text,
+      ) &&
+      !/(?:내일|모레|다음|\d+\s*시|하기|하자|해야|퇴근\s*후)/i.test(text)
+    ) {
+      return true;
+    }
+    if (
+      /(?:날씨|좋았|피곤|커피|기억하고|마셨|그냥|요즘|회고|떠올|하루였|기분)/i.test(
+        text,
+      )
+    ) {
+      if (
+        !/(?:약속|미팅|회의|치과|병원|장보|전화|하기|하자|해야|퇴근\s*후)/i.test(
+          text,
+        )
+      ) {
+        return true;
+      }
+    }
+  }
+  if (
+    /(?:내일|모레)/i.test(text) &&
+    /(?:날씨|비\s|온대|춥|덥|맑)/i.test(text) &&
+    !/(?:약속|미팅|회의|치과|하기|하자|전화|장보|만나)/i.test(text)
+  ) {
+    return true;
+  }
+  return false;
+}
 
 export function isSensitiveContent(text: string): boolean {
   return SENSITIVE_RE.test(text.trim());
@@ -63,17 +106,56 @@ function hasExplicitTime(text: string): boolean {
 }
 
 function isReferenceNote(text: string): boolean {
-  return REFERENCE_RE.test(text.trim()) || isSensitiveContent(text);
+  if (/https?:\/\//i.test(text.trim())) return true;
+  if (/(?:나중에\s*읽|참고할\s*링크|read\s*later)/i.test(text.trim())) return true;
+  if (
+    TASK_ACTION_RE.test(text) &&
+    !/(?:번호|비밀번호|password|pin\s*code)/i.test(text)
+  ) {
+    return false;
+  }
+  if (REFERENCE_RE.test(text.trim())) return true;
+  if (isSensitiveContent(text) && !TASK_ACTION_RE.test(text)) return true;
+  return false;
 }
 
 function isTaskWithoutSchedule(text: string, category: ThoughtCategory): boolean {
+  const trimmed = text.trim();
+  if (/^메모:/i.test(trimmed)) return false;
+  if (/^회의실/i.test(trimmed)) return false;
   if (category === "task" || category === "reminder") return true;
-  if (TASK_VERB_RE.test(text) && !detectDate(text)) return true;
+  if (/(?:하기|하자|해야)\s*$/i.test(trimmed)) return true;
+  if (TASK_VERB_RE.test(trimmed) && !detectDate(trimmed)) return true;
   return false;
+}
+
+function hasDateAnchor(text: string): boolean {
+  return (
+    isRelativeDateReference(text) ||
+    isAbsoluteDateReference(text) ||
+    /다음\s*달\s*\d{1,2}\s*일/.test(text)
+  );
+}
+
+function isTimeOnlyPhrase(text: string): boolean {
+  const trimmed = text.trim();
+  if (!TIME_RE.test(trimmed) || hasDateAnchor(trimmed)) return false;
+  const stripped = trimmed
+    .replace(/(?:오전|오후)?\s*\d{1,2}\s*시(?:\s*\d{1,2}\s*분)?/g, "")
+    .trim();
+  return stripped.length <= 1;
 }
 
 function isClarifySchedule(text: string): boolean {
   if (NEXT_MONTH_EARLY_RE.test(text)) return true;
+  if (/이번\s*주\s*안/i.test(text)) return true;
+  if (
+    /(?:주말|weekend)/i.test(text) &&
+    MEETING_RE.test(text) &&
+    !hasExplicitTime(text)
+  ) {
+    return true;
+  }
   if (VAGUE_WHEN_RE.test(text)) return true;
   const det = detectDate(text);
   if (!det) {
@@ -128,29 +210,23 @@ export function understandNaturalLanguage(
     };
   }
 
-  if (isReferenceNote(trimmed)) {
+  if (isJournalOnly(trimmed)) {
     return {
-      intent: "archive",
-      confidence: "high",
-      category,
+      intent: "keep",
+      confidence: "low",
+      category: "note",
       detectedDate: null,
       hasExplicitTime: false,
-      mirrorLine:
-        lang === "en" ? "Looks like something to store" : "보관하면 좋을 것 같아요",
-      mirrorDetail: sensitive
-        ? lang === "en"
-          ? "Sensitive info stays on your device only."
-          : "민감한 내용은 기기에만 남아요. 다른 곳으로 보내지 않아요."
-        : lang === "en"
-          ? "Reference notes belong in your vault."
-          : "번호·메모는 보관함에 두면 찾기 쉬워요.",
-      primaryLabelKo: "보관함에 맡기기",
-      primaryLabelEn: "Save to vault",
-      isSensitive: sensitive,
+      mirrorLine: lang === "en" ? "Saved for you" : "맡아뒀어요",
+      mirrorDetail:
+        lang === "en" ? "Keep it here for now." : "일단 여기에 둘게요.",
+      primaryLabelKo: "그대로 두기",
+      primaryLabelEn: "Keep here",
+      isSensitive: false,
     };
   }
 
-  if (dateHit && !isClarifySchedule(trimmed)) {
+  if (dateHit && !isClarifySchedule(trimmed) && !isTimeOnlyPhrase(trimmed)) {
     const moment = formatSuggestedMoment(dateHit.start, lang);
     const explicit = hasExplicitTime(trimmed);
     return {
@@ -194,8 +270,8 @@ export function understandNaturalLanguage(
         lang === "en"
           ? "Pick one — or choose a date yourself."
           : "하나만 골라 주세요 — 필요하면 날짜를 직접 고를 수 있어요.",
-      primaryLabelKo: "이번 주말",
-      primaryLabelEn: "This weekend",
+      primaryLabelKo: "날짜 고르기",
+      primaryLabelEn: "Pick a date",
       isSensitive: false,
     };
   }
@@ -216,6 +292,28 @@ export function understandNaturalLanguage(
       primaryLabelKo: "할 일로 넣기",
       primaryLabelEn: "Add as task",
       isSensitive: false,
+    };
+  }
+
+  if (isReferenceNote(trimmed)) {
+    return {
+      intent: "archive",
+      confidence: "high",
+      category,
+      detectedDate: null,
+      hasExplicitTime: false,
+      mirrorLine:
+        lang === "en" ? "Looks like something to store" : "보관하면 좋을 것 같아요",
+      mirrorDetail: sensitive
+        ? lang === "en"
+          ? "Sensitive info stays on your device only."
+          : "민감한 내용은 기기에만 남아요. 다른 곳으로 보내지 않아요."
+        : lang === "en"
+          ? "Reference notes belong in your vault."
+          : "번호·메모는 보관함에 두면 찾기 쉬워요.",
+      primaryLabelKo: "보관함에 맡기기",
+      primaryLabelEn: "Save to vault",
+      isSensitive: sensitive,
     };
   }
 

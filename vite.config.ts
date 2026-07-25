@@ -16,6 +16,10 @@ export default defineConfig({
     tailwindcss(),
     tsconfigPaths(),
   ],
+  test: {
+    environment: "happy-dom",
+    include: ["tests/**/*.test.ts"],
+  },
   build: {
     outDir: "dist",
     emptyOutDir: true,

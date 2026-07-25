@@ -70,7 +70,17 @@ export const EASE_OUT_APP = [0.32, 0.72, 0, 1] as const;
 
 export const SWIPE_PREVIEW = 0.3;
 export const SWIPE_COMMIT = 0.6;
-export const MAX_ROTATE = 8;
+export const MAX_ROTATE = 6;
+
+/** Motion duration tiers (ms) */
+export const MOTION_INSTANT_MS = 120;
+export const MOTION_MICRO_MS = 180;
+export const MOTION_COMPONENT_MS = 250;
+export const MOTION_SHEET_MS = 320;
+
+/** Standard easing curves */
+export const EASE_STANDARD = [0.2, 0.8, 0.2, 1] as const;
+export const EASE_EXIT = [0.4, 0, 1, 1] as const;
 
 export function dragProgress(absPx: number, cardWidth: number) {
   return Math.min(1, absPx / (cardWidth * SWIPE_COMMIT));

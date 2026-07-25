@@ -19,6 +19,8 @@ import { useT } from "@/lib/i18n";
 import { BRAND } from "@/lib/brand";
 import { usePwaInstall } from "@/hooks/usePwaInstall";
 import { tap } from "@/lib/haptics";
+import { resetSwipeTutorial } from "@/lib/swipeTutorial";
+import { toast } from "sonner";
 
 type RowProps = {
   icon: ElementType;
@@ -243,6 +245,25 @@ export function BrandHubSheet({
               onClick={() => {
                 tap();
                 window.open(BRAND.termsUrl, "_blank", "noopener,noreferrer");
+              }}
+            />
+
+            <BrandHubRow
+              icon={Megaphone}
+              title={t("밀어서 정리하기 안내", "Swipe sorting guide")}
+              description={t(
+                "다음에 정리하기를 열면 다시 볼 수 있어요",
+                "Shows again next time you open Sort",
+              )}
+              onClick={() => {
+                tap();
+                resetSwipeTutorial();
+                toast.message(
+                  t(
+                    "다음 정리하기에서 안내를 다시 보여드릴게요.",
+                    "We'll show the guide next time you sort.",
+                  ),
+                );
               }}
             />
 

@@ -155,6 +155,15 @@ export function detectDate(
     label = label || "다음 달 초";
   }
 
+  // Next month day (다음 달 7일)
+  const nextMonthDay = text.match(/다음\s*달\s*(\d{1,2})\s*일/);
+  if (nextMonthDay) {
+    const d = parseInt(nextMonthDay[1], 10);
+    target = new Date(now.getFullYear(), now.getMonth() + 1, d);
+    matched = true;
+    label = label || `다음 달 ${d}일`;
+  }
+
   // Korean weekday: 월요일
   const koWd = text.match(/(일|월|화|수|목|금|토)요일/);
   if (koWd) {

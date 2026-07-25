@@ -1,0 +1,578 @@
+[
+  {
+    "input": "내일 3시에 치과",
+    "expected_intent": "schedule_exact",
+    "expected_confidence_tier": "high",
+    "expected_date_presence": true,
+    "expected_time_presence": true,
+    "sensitive": false,
+    "notes": "Core beta example — exact schedule with time"
+  },
+  {
+    "input": "금요일 저녁 약속",
+    "expected_intent": "schedule_exact",
+    "expected_confidence_tier": "high",
+    "expected_date_presence": true,
+    "expected_time_presence": true,
+    "sensitive": false,
+    "notes": "Weekday + evening time word"
+  },
+  {
+    "input": "8월 2일 오전 10시 회의",
+    "expected_intent": "schedule_exact",
+    "expected_confidence_tier": "high",
+    "expected_date_presence": true,
+    "expected_time_presence": true,
+    "sensitive": false,
+    "notes": "Absolute date with explicit time"
+  },
+  {
+    "input": "오늘 퇴근 후 장보기",
+    "expected_intent": "schedule_exact",
+    "expected_confidence_tier": "high",
+    "expected_date_presence": true,
+    "expected_time_presence": false,
+    "sensitive": false,
+    "notes": "Today with activity, defaults time"
+  },
+  {
+    "input": "모레 점심에 민지 만나기",
+    "expected_intent": "schedule_exact",
+    "expected_confidence_tier": "high",
+    "expected_date_presence": true,
+    "expected_time_presence": true,
+    "sensitive": false,
+    "notes": "Relative date + meal time"
+  },
+  {
+    "input": "다음주쯤 보기",
+    "expected_intent": "schedule_clarify",
+    "expected_confidence_tier": "medium",
+    "expected_date_presence": true,
+    "expected_time_presence": false,
+    "sensitive": false,
+    "notes": "Core beta example — vague when + watch verb"
+  },
+  {
+    "input": "다음 달 초에 병원",
+    "expected_intent": "schedule_clarify",
+    "expected_confidence_tier": "medium",
+    "expected_date_presence": true,
+    "expected_time_presence": false,
+    "sensitive": false,
+    "notes": "Early next month chips"
+  },
+  {
+    "input": "이번 주 안에 처리",
+    "expected_intent": "schedule_clarify",
+    "expected_confidence_tier": "medium",
+    "expected_date_presence": false,
+    "expected_time_presence": false,
+    "sensitive": false,
+    "notes": "Within-this-week window"
+  },
+  {
+    "input": "나중에 전화",
+    "expected_intent": "task",
+    "expected_confidence_tier": "high",
+    "expected_date_presence": false,
+    "expected_time_presence": false,
+    "sensitive": false,
+    "notes": "Deferred call without date"
+  },
+  {
+    "input": "주말에 만나기",
+    "expected_intent": "schedule_clarify",
+    "expected_confidence_tier": "medium",
+    "expected_date_presence": false,
+    "expected_time_presence": false,
+    "sensitive": false,
+    "notes": "Weekend meeting without exact time"
+  },
+  {
+    "input": "엄마한테 전화하기",
+    "expected_intent": "task",
+    "expected_confidence_tier": "high",
+    "expected_date_presence": false,
+    "expected_time_presence": false,
+    "sensitive": false,
+    "notes": "Core beta example — task verb"
+  },
+  {
+    "input": "여권 갱신하기",
+    "expected_intent": "task",
+    "expected_confidence_tier": "high",
+    "expected_date_presence": false,
+    "expected_time_presence": false,
+    "sensitive": true,
+    "notes": "Sensitive keyword but action task, not vault storage"
+  },
+  {
+    "input": "보험 알아보기",
+    "expected_intent": "task",
+    "expected_confidence_tier": "high",
+    "expected_date_presence": false,
+    "expected_time_presence": false,
+    "sensitive": false,
+    "notes": "Research task verb"
+  },
+  {
+    "input": "세탁기 돌리기",
+    "expected_intent": "task",
+    "expected_confidence_tier": "high",
+    "expected_date_presence": false,
+    "expected_time_presence": false,
+    "sensitive": false,
+    "notes": "Chore task with 돌리기 suffix"
+  },
+  {
+    "input": "보고서 제출하기",
+    "expected_intent": "task",
+    "expected_confidence_tier": "high",
+    "expected_date_presence": false,
+    "expected_time_presence": false,
+    "sensitive": false,
+    "notes": "Submit task"
+  },
+  {
+    "input": "여권 번호",
+    "expected_intent": "archive",
+    "expected_confidence_tier": "high",
+    "expected_date_presence": false,
+    "expected_time_presence": false,
+    "sensitive": true,
+    "notes": "Core beta example — sensitive reference"
+  },
+  {
+    "input": "와이파이 비밀번호",
+    "expected_intent": "archive",
+    "expected_confidence_tier": "high",
+    "expected_date_presence": false,
+    "expected_time_presence": false,
+    "sensitive": true,
+    "notes": "Password storage"
+  },
+  {
+    "input": "참고할 링크",
+    "expected_intent": "archive",
+    "expected_confidence_tier": "high",
+    "expected_date_presence": false,
+    "expected_time_presence": false,
+    "sensitive": false,
+    "notes": "Reference link cue"
+  },
+  {
+    "input": "나중에 읽을 기사",
+    "expected_intent": "archive",
+    "expected_confidence_tier": "high",
+    "expected_date_presence": false,
+    "expected_time_presence": false,
+    "sensitive": false,
+    "notes": "Read-later archive"
+  },
+  {
+    "input": "아이디어 메모",
+    "expected_intent": "keep",
+    "expected_confidence_tier": "low",
+    "expected_date_presence": false,
+    "expected_time_presence": false,
+    "sensitive": false,
+    "notes": "Plain idea note"
+  },
+  {
+    "input": "오늘 날씨 좋았다",
+    "expected_intent": "keep",
+    "expected_confidence_tier": "low",
+    "expected_date_presence": false,
+    "expected_time_presence": false,
+    "sensitive": false,
+    "notes": "Journal with 오늘 — no mirror"
+  },
+  {
+    "input": "커피 한 잔 마셨다",
+    "expected_intent": "keep",
+    "expected_confidence_tier": "low",
+    "expected_date_presence": false,
+    "expected_time_presence": false,
+    "sensitive": false,
+    "notes": "Plain daily note"
+  },
+  {
+    "input": "이 문장 기억하고 싶다",
+    "expected_intent": "keep",
+    "expected_confidence_tier": "low",
+    "expected_date_presence": false,
+    "expected_time_presence": false,
+    "sensitive": false,
+    "notes": "Memory wish without vault cue"
+  },
+  {
+    "input": "그냥 떠오른 생각",
+    "expected_intent": "keep",
+    "expected_confidence_tier": "low",
+    "expected_date_presence": false,
+    "expected_time_presence": false,
+    "sensitive": false,
+    "notes": "Freeform thought"
+  },
+  {
+    "input": "요즘 좀 피곤하다",
+    "expected_intent": "keep",
+    "expected_confidence_tier": "low",
+    "expected_date_presence": false,
+    "expected_time_presence": false,
+    "sensitive": false,
+    "notes": "Mood note"
+  },
+  {
+    "input": "치과",
+    "expected_intent": "keep",
+    "expected_confidence_tier": "low",
+    "expected_date_presence": false,
+    "expected_time_presence": false,
+    "sensitive": false,
+    "notes": "Ambiguous — topic only"
+  },
+  {
+    "input": "금요일",
+    "expected_intent": "schedule_exact",
+    "expected_confidence_tier": "high",
+    "expected_date_presence": true,
+    "expected_time_presence": false,
+    "sensitive": false,
+    "notes": "Ambiguous weekday alone still schedules"
+  },
+  {
+    "input": "다음에",
+    "expected_intent": "keep",
+    "expected_confidence_tier": "low",
+    "expected_date_presence": false,
+    "expected_time_presence": false,
+    "sensitive": false,
+    "notes": "Ambiguous deferral word"
+  },
+  {
+    "input": "저녁",
+    "expected_intent": "keep",
+    "expected_confidence_tier": "low",
+    "expected_date_presence": false,
+    "expected_time_presence": false,
+    "sensitive": false,
+    "notes": "Ambiguous time word alone"
+  },
+  {
+    "input": "엄마",
+    "expected_intent": "keep",
+    "expected_confidence_tier": "low",
+    "expected_date_presence": false,
+    "expected_time_presence": false,
+    "sensitive": false,
+    "notes": "Ambiguous person reference"
+  },
+  {
+    "input": "오늘이 정말 좋은 하루였다",
+    "expected_intent": "keep",
+    "expected_confidence_tier": "low",
+    "expected_date_presence": false,
+    "expected_time_presence": false,
+    "sensitive": false,
+    "notes": "Journal with 오늘 word — not a schedule"
+  },
+  {
+    "input": "3개 사과 5개 배 샀다",
+    "expected_intent": "keep",
+    "expected_confidence_tier": "low",
+    "expected_date_presence": false,
+    "expected_time_presence": false,
+    "sensitive": false,
+    "notes": "Numbers present but not time"
+  },
+  {
+    "input": "https://example.com/article",
+    "expected_intent": "archive",
+    "expected_confidence_tier": "high",
+    "expected_date_presence": false,
+    "expected_time_presence": false,
+    "sensitive": false,
+    "notes": "URL-only reference"
+  },
+  {
+    "input": "첫 줄\n둘째 줄",
+    "expected_intent": "keep",
+    "expected_confidence_tier": "low",
+    "expected_date_presence": false,
+    "expected_time_presence": false,
+    "sensitive": false,
+    "notes": "Multi-line plain note"
+  },
+  {
+    "input": "치과 🦷 내일",
+    "expected_intent": "schedule_exact",
+    "expected_confidence_tier": "high",
+    "expected_date_presence": true,
+    "expected_time_presence": false,
+    "sensitive": false,
+    "notes": "Emoji with date"
+  },
+  {
+    "input": "tomorrow dentist 내일 치과",
+    "expected_intent": "schedule_exact",
+    "expected_confidence_tier": "high",
+    "expected_date_presence": true,
+    "expected_time_presence": false,
+    "sensitive": false,
+    "notes": "Mixed EN/KO schedule"
+  },
+  {
+    "input": "내일    3시   치과",
+    "expected_intent": "schedule_exact",
+    "expected_confidence_tier": "high",
+    "expected_date_presence": true,
+    "expected_time_presence": true,
+    "sensitive": false,
+    "notes": "Repeated whitespace normalized"
+  },
+  {
+    "input": "4532 1234 5678 9010",
+    "expected_intent": "archive",
+    "expected_confidence_tier": "high",
+    "expected_date_presence": false,
+    "expected_time_presence": false,
+    "sensitive": true,
+    "notes": "Card number pattern"
+  },
+  {
+    "input": "주민등록번호 900101-1234567",
+    "expected_intent": "archive",
+    "expected_confidence_tier": "high",
+    "expected_date_presence": false,
+    "expected_time_presence": false,
+    "sensitive": true,
+    "notes": "Resident registration pattern"
+  },
+  {
+    "input": "PIN code 1234",
+    "expected_intent": "archive",
+    "expected_confidence_tier": "high",
+    "expected_date_presence": false,
+    "expected_time_presence": false,
+    "sensitive": true,
+    "notes": "PIN reference"
+  },
+  {
+    "input": "내일 치과 가고 엄마한테 전화하기",
+    "expected_intent": "schedule_exact",
+    "expected_confidence_tier": "high",
+    "expected_date_presence": true,
+    "expected_time_presence": false,
+    "sensitive": false,
+    "notes": "Compound input — date wins first action"
+  },
+  {
+    "input": "다음 주 회의",
+    "expected_intent": "schedule_clarify",
+    "expected_confidence_tier": "medium",
+    "expected_date_presence": true,
+    "expected_time_presence": false,
+    "sensitive": false,
+    "notes": "Next week meeting without time"
+  },
+  {
+    "input": "토요일 오후 미팅",
+    "expected_intent": "schedule_exact",
+    "expected_confidence_tier": "high",
+    "expected_date_presence": true,
+    "expected_time_presence": true,
+    "sensitive": false,
+    "notes": "Weekday + afternoon explicit"
+  },
+  {
+    "input": "12월 25일 생일 파티",
+    "expected_intent": "schedule_exact",
+    "expected_confidence_tier": "high",
+    "expected_date_presence": true,
+    "expected_time_presence": false,
+    "sensitive": false,
+    "notes": "Absolute month-day event"
+  },
+  {
+    "input": "이번 주말쯤 약속",
+    "expected_intent": "schedule_clarify",
+    "expected_confidence_tier": "medium",
+    "expected_date_presence": false,
+    "expected_time_presence": false,
+    "sensitive": false,
+    "notes": "Vague weekend appointment — clarify without parsed date"
+  },
+  {
+    "input": "장보기",
+    "expected_intent": "keep",
+    "expected_confidence_tier": "low",
+    "expected_date_presence": false,
+    "expected_time_presence": false,
+    "sensitive": false,
+    "notes": "Shopping word without date"
+  },
+  {
+    "input": "내일 장보기",
+    "expected_intent": "schedule_exact",
+    "expected_confidence_tier": "high",
+    "expected_date_presence": true,
+    "expected_time_presence": false,
+    "sensitive": false,
+    "notes": "Shopping with date becomes schedule"
+  },
+  {
+    "input": "계좌번호 110-123-456789",
+    "expected_intent": "archive",
+    "expected_confidence_tier": "high",
+    "expected_date_presence": false,
+    "expected_time_presence": false,
+    "sensitive": false,
+    "notes": "Account number reference"
+  },
+  {
+    "input": "메모: 회의실 B",
+    "expected_intent": "keep",
+    "expected_confidence_tier": "low",
+    "expected_date_presence": false,
+    "expected_time_presence": false,
+    "sensitive": false,
+    "notes": "Location memo without action"
+  },
+  {
+    "input": "내일 회의 준비하기",
+    "expected_intent": "schedule_exact",
+    "expected_confidence_tier": "high",
+    "expected_date_presence": true,
+    "expected_time_presence": false,
+    "sensitive": false,
+    "notes": "Date + task verb — schedule wins"
+  },
+  {
+    "input": "병원 예약 전화하기",
+    "expected_intent": "task",
+    "expected_confidence_tier": "high",
+    "expected_date_presence": false,
+    "expected_time_presence": false,
+    "sensitive": false,
+    "notes": "Call task without date"
+  },
+  {
+    "input": "다음 달 7일 치과",
+    "expected_intent": "schedule_exact",
+    "expected_confidence_tier": "high",
+    "expected_date_presence": true,
+    "expected_time_presence": false,
+    "sensitive": false,
+    "notes": "Specific next-month day"
+  },
+  {
+    "input": "오늘 저녁 약속",
+    "expected_intent": "schedule_exact",
+    "expected_confidence_tier": "high",
+    "expected_date_presence": true,
+    "expected_time_presence": true,
+    "sensitive": false,
+    "notes": "Today evening — not journal"
+  },
+  {
+    "input": "   ",
+    "expected_intent": "keep",
+    "expected_confidence_tier": "low",
+    "expected_date_presence": false,
+    "expected_time_presence": false,
+    "sensitive": false,
+    "notes": "Whitespace-only edge"
+  },
+  {
+    "input": "asdf",
+    "expected_intent": "keep",
+    "expected_confidence_tier": "low",
+    "expected_date_presence": false,
+    "expected_time_presence": false,
+    "sensitive": false,
+    "notes": "Junk input"
+  },
+  {
+    "input": "내일 3시 치과\n두 번째 줄",
+    "expected_intent": "schedule_exact",
+    "expected_confidence_tier": "high",
+    "expected_date_presence": true,
+    "expected_time_presence": true,
+    "sensitive": false,
+    "notes": "Schedule with extra line"
+  },
+  {
+    "input": "이번 주 금요일 미팅",
+    "expected_intent": "schedule_exact",
+    "expected_confidence_tier": "high",
+    "expected_date_presence": true,
+    "expected_time_presence": false,
+    "sensitive": false,
+    "notes": "This week + weekday meeting"
+  },
+  {
+    "input": "나중에 읽을 논문 링크 모음",
+    "expected_intent": "archive",
+    "expected_confidence_tier": "high",
+    "expected_date_presence": false,
+    "expected_time_presence": false,
+    "sensitive": false,
+    "notes": "Read-later collection"
+  },
+  {
+    "input": "운동하기",
+    "expected_intent": "task",
+    "expected_confidence_tier": "high",
+    "expected_date_presence": false,
+    "expected_time_presence": false,
+    "sensitive": false,
+    "notes": "Generic task ending in 하기"
+  },
+  {
+    "input": "다음주 미팅",
+    "expected_intent": "schedule_clarify",
+    "expected_confidence_tier": "medium",
+    "expected_date_presence": true,
+    "expected_time_presence": false,
+    "sensitive": false,
+    "notes": "Next week meeting without time"
+  },
+  {
+    "input": "오늘 하루 정리",
+    "expected_intent": "keep",
+    "expected_confidence_tier": "low",
+    "expected_date_presence": false,
+    "expected_time_presence": false,
+    "sensitive": false,
+    "notes": "Reflective 오늘 phrase"
+  },
+  {
+    "input": "3시",
+    "expected_intent": "keep",
+    "expected_confidence_tier": "low",
+    "expected_date_presence": false,
+    "expected_time_presence": false,
+    "sensitive": false,
+    "notes": "Time alone without date"
+  },
+  {
+    "input": "내일",
+    "expected_intent": "schedule_exact",
+    "expected_confidence_tier": "high",
+    "expected_date_presence": true,
+    "expected_time_presence": false,
+    "sensitive": false,
+    "notes": "Relative date alone"
+  },
+  {
+    "input": "주말",
+    "expected_intent": "keep",
+    "expected_confidence_tier": "low",
+    "expected_date_presence": false,
+    "expected_time_presence": false,
+    "sensitive": false,
+    "notes": "Weekend word alone — no meeting verb"
+  }
+]

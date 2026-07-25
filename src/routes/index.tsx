@@ -22,7 +22,19 @@ import {
   understandNaturalLanguage,
   type ClarifyPick,
 } from "@/lib/nlSchedule";
-import { trackParseFailed } from "@/lib/nlAnalytics";
+import {
+  trackNlArchiveCreated,
+  trackNlParseFailed,
+  trackNlScheduleCreated,
+  trackNlTaskCreated,
+  trackNlThoughtSubmitted,
+} from "@/lib/nlAnalytics";
+import {
+  loadAcknowledgedIds,
+  pruneAcknowledgedIds,
+  saveAcknowledgedIds,
+} from "@/lib/nlAckStorage";
+import { withNlConfirmGuard } from "@/lib/nlConfirmGuard";
 import { thoughtFirstLine } from "@/lib/brainMirror";
 import { setRevivalHint } from "@/lib/archiveMeta";
 import {
@@ -98,6 +110,10 @@ function Inbox() {
   const [acknowledgedIds, setAcknowledgedIds] = useState<Set<string>>(
     () => new Set(),
   );
+
+  useEffect(() => {
+    setAcknowledgedIds(loadAcknowledgedIds(userId));
+  }, [userId]);
   const items = inbox.items;
   const pendingItems = useMemo(() => pendingDecisionItems(items), [items]);
   const menuItem = menuFor
@@ -132,8 +148,23 @@ function Inbox() {
   };
 
   const acknowledgeItem = useCallback((id: string) => {
-    setAcknowledgedIds((prev) => new Set(prev).add(id));
-  }, []);
+    setAcknowledgedIds((prev) => {
+      const next = new Set(prev).add(id);
+      saveAcknowledgedIds(userId, next);
+      return next;
+    });
+  }, [userId]);
+
+  useEffect(() => {
+    if (items.length === 0) return;
+    setAcknowledgedIds((prev) => {
+      const active = new Set(items.map((it) => it.id));
+      const pruned = pruneAcknowledgedIds(prev, active);
+      if (pruned.size === prev.size) return prev;
+      saveAcknowledgedIds(userId, pruned);
+      return pruned;
+    });
+  }, [items, userId]);
 
   const openPromiseSchedule = useCallback((it: InboxItem) => {
     setFocusScheduleSheet({ open: true, item: it });
@@ -247,7 +278,11 @@ function Inbox() {
 
     if (snap.outcome === "today" && snap.scheduleId) {
       await schedules.remove(snap.scheduleId);
-      await inbox.add(base);
+      await inbox.add({
+        ...base,
+        id: snap.item.id,
+        created_at: snap.item.created_at,
+      });
       return;
     }
 
@@ -262,7 +297,11 @@ function Inbox() {
 
     if (snap.outcome === "archive" && snap.archiveId) {
       await archive.remove(snap.archiveId);
-      await inbox.add(base);
+      await inbox.add({
+        ...base,
+        id: snap.item.id,
+        created_at: snap.item.created_at,
+      });
     }
   };
 
@@ -356,98 +395,111 @@ function Inbox() {
   };
 
   const confirmReleaseScheduleQuick = async (it: InboxItem) => {
-    const uiLang = lang === "en" ? "en" : "ko";
-    const nl = understandNaturalLanguage(it.text, uiLang);
-    const det = nl.detectedDate ?? detectDate(it.text);
-    if (!det) {
-      trackParseFailed(nl.intent);
-      toast.message(
-        t(
-          "날짜를 확실히 못 잡았어요. 그대로 두었어요.",
-          "Couldn't pin down the date — left it here for you.",
-        ),
-      );
-      acknowledgeItem(it.id);
-      return;
-    }
-    try {
-      await commitInboxSchedule(
-        it,
-        thoughtFirstLine(it.text),
-        det.start,
-        det.end,
-        {
-          reminderMinutes: null,
-          allDay: false,
-          startAllDay: false,
-          endAllDay: false,
-          repeat: null,
-        },
-        "promise_card",
-      );
-      setFocusScheduleSheet({ open: false });
-      acknowledgeItem(it.id);
-    } catch {
-      toast.error(t("그때로 못 옮겼어요", "Couldn't set that moment — try again?"));
-    }
+    await withNlConfirmGuard(it.id, async () => {
+      const uiLang = lang === "en" ? "en" : "ko";
+      const nl = understandNaturalLanguage(it.text, uiLang);
+      const det = nl.detectedDate ?? detectDate(it.text);
+      if (!det) {
+        trackNlParseFailed("missing_date");
+        toast.message(
+          t(
+            "날짜를 확실히 못 잡았어요. 그대로 두었어요.",
+            "Couldn't pin down the date — left it here for you.",
+          ),
+        );
+        acknowledgeItem(it.id);
+        return;
+      }
+      try {
+        await commitInboxSchedule(
+          it,
+          thoughtFirstLine(it.text),
+          det.start,
+          det.end,
+          {
+            reminderMinutes: null,
+            allDay: false,
+            startAllDay: false,
+            endAllDay: false,
+            repeat: null,
+          },
+          "promise_card",
+        );
+        trackNlScheduleCreated();
+        setFocusScheduleSheet({ open: false });
+        acknowledgeItem(it.id);
+      } catch {
+        trackNlParseFailed("commit_error");
+        toast.error(t("그때로 못 옮겼어요", "Couldn't set that moment — try again?"));
+      }
+    });
   };
 
   const confirmClarifySchedule = async (
     it: InboxItem,
     pick: ClarifyPick,
   ) => {
-    const { start, end } = dateFromClarifyPick(pick);
-    try {
-      await commitInboxSchedule(
-        it,
-        thoughtFirstLine(it.text),
-        start,
-        end,
-        {
-          reminderMinutes: null,
-          allDay: false,
-          startAllDay: false,
-          endAllDay: false,
-          repeat: null,
-        },
-        "promise_clarify",
-      );
-      acknowledgeItem(it.id);
-    } catch {
-      toast.error(t("그때로 못 옮겼어요", "Couldn't set that moment — try again?"));
-    }
+    await withNlConfirmGuard(it.id, async () => {
+      const { start, end } = dateFromClarifyPick(pick);
+      try {
+        await commitInboxSchedule(
+          it,
+          thoughtFirstLine(it.text),
+          start,
+          end,
+          {
+            reminderMinutes: null,
+            allDay: false,
+            startAllDay: false,
+            endAllDay: false,
+            repeat: null,
+          },
+          "promise_clarify",
+        );
+        trackNlScheduleCreated();
+        acknowledgeItem(it.id);
+      } catch {
+        trackNlParseFailed("commit_error");
+        toast.error(t("그때로 못 옮겼어요", "Couldn't set that moment — try again?"));
+      }
+    });
   };
 
   const confirmTaskLater = async (it: InboxItem) => {
-    try {
-      const ok = await inbox.update(it.id, {
-        decision: "later",
-        decided_at: new Date().toISOString(),
-        decision_source: "button",
-      } as Partial<InboxItem>);
-      if (!ok) throw new Error("update failed");
-      track("thought_task_later", { text_length: it.text.length });
-      acknowledgeItem(it.id);
-      showActionToast(
-        t("할 일로 넣었어요", "Added as a task"),
-        t("보러 가기", "Take a look"),
-        () => void navigate({ to: "/schedule" }),
-        { actionAriaLabel: t("일정 열기", "Open schedule") },
-      );
-    } catch {
-      toast.error(t("잠깐, 못 넣었어요", "Couldn't add that — try again?"));
-    }
+    await withNlConfirmGuard(it.id, async () => {
+      try {
+        const ok = await inbox.update(it.id, {
+          decision: "later",
+          decided_at: new Date().toISOString(),
+          decision_source: "button",
+        } as Partial<InboxItem>);
+        if (!ok) throw new Error("update failed");
+        track("thought_task_later", { text_length: it.text.length });
+        trackNlTaskCreated();
+        acknowledgeItem(it.id);
+        showActionToast(
+          t("할 일로 넣었어요", "Added as a task"),
+          t("보러 가기", "Take a look"),
+          () => void navigate({ to: "/schedule" }),
+          { actionAriaLabel: t("일정 열기", "Open schedule") },
+        );
+      } catch {
+        toast.error(t("잠깐, 못 넣었어요", "Couldn't add that — try again?"));
+      }
+    });
   };
 
   const moveToArchive = async (it: InboxItem) => {
-    try {
-      const payload = archiveFromInbox(it);
-      const existing = archive.items;
-      const { item: created, cloudSynced: archiveSynced } = await archive.add(payload);
-      const inboxSynced = await inbox.remove(it.id);
-      track("thought_swiped_archive", { text_length: it.text.length });
+    await withNlConfirmGuard(it.id, async () => {
+      try {
+        const payload = archiveFromInbox(it);
+        const existing = archive.items;
+        const { item: created, cloudSynced: archiveSynced } = await archive.add(payload);
+        const inboxSynced = await inbox.remove(it.id);
+        track("thought_swiped_archive", { text_length: it.text.length });
+        trackNlArchiveCreated();
 
-      const related =
+        const related =
         FEATURES.REDISCOVERY
           ? buildRevivalHint(created, existing, "archive")
           : null;
@@ -482,6 +534,7 @@ function Inbox() {
     } catch {
       toast.error(t("잠깐, 못 옮겼어요. 그대로 있어요", "Didn't move — still here"));
     }
+    });
   };
 
   const moveToDelete = async (it: InboxItem) => {
@@ -510,7 +563,11 @@ function Inbox() {
     }
   };
 
-  const handleAdd = async (text: string, images: string[]) => {
+  const handleAdd = async (
+    text: string,
+    images: string[],
+    source: "text" | "voice" = "text",
+  ) => {
     if (!text && !images.length) return;
     haptic([6, 16, 10]);
     try {
@@ -522,6 +579,11 @@ function Inbox() {
         text_length: text.length,
         has_images: images.length > 0,
         image_count: images.length,
+      });
+      trackNlThoughtSubmitted({
+        textLength: text.length,
+        language: lang === "en" ? "en" : "ko",
+        source,
       });
 
       if (FEATURES.REDISCOVERY) {
@@ -740,6 +802,9 @@ function Inbox() {
         }}
         onDecide={handleDeckDecide}
         onUndo={handleDeckUndo}
+        onCapture={() => {
+          listEndRef.current?.scrollIntoView({ behavior: "smooth" });
+        }}
       />
 
       {FEATURES.CLEANUP && (

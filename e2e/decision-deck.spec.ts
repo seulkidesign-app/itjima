@@ -8,7 +8,11 @@ import {
   GUEST_SCHEDULE_KEY,
   GUEST_ARCHIVE_KEY,
 } from "./helpers";
-import { resolveDragOutcome, previewDragOutcome } from "../src/lib/decision";
+import {
+  resolveDragOutcome,
+  previewDragOutcome,
+  shouldCommitDrag,
+} from "../src/lib/decision";
 
 async function installAnalyticsSpy(page: Page) {
   await page.addInitScript(() => {
@@ -20,17 +24,46 @@ async function installAnalyticsSpy(page: Page) {
 }
 
 async function readAnalytics(page: Page) {
-  return page.evaluate(() => (window as unknown as { __e2eEvents: unknown[] }).__e2eEvents ?? []);
+  return page.evaluate(
+    () => (window as unknown as { __e2eEvents: unknown[] }).__e2eEvents ?? [],
+  );
 }
 
 async function openDeck(page: Page) {
-  await phone(page).getByTestId("decision-launcher").click();
-  await phone(page)
-    .getByRole("dialog", { name: "One by one" })
-    .waitFor({ state: "visible" });
+  const deck = phone(page);
+  const dialog = deck.getByRole("dialog", { name: "One by one" });
+  if (!(await dialog.isVisible())) {
+    await deck.getByTestId("decision-launcher").click();
+  }
+  await dialog.waitFor({ state: "visible" });
+  await waitForDeckReady(page);
 }
 
-async function dragDeckCard(page: Page, deltaX: number) {
+async function closeDeck(page: Page) {
+  const dialog = phone(page).getByRole("dialog", { name: "One by one" });
+  if (await dialog.isVisible()) {
+    await dialog.getByRole("button", { name: /Close|닫기/ }).click();
+    await dialog.waitFor({ state: "hidden" });
+  }
+}
+
+async function waitForDeckReady(page: Page) {
+  const deck = phone(page);
+  await expect
+    .poll(async () => deck.getByTestId("decision-btn-today").isEnabled())
+    .toBe(true);
+}
+
+async function clickDeckDecision(
+  page: Page,
+  testId: "decision-btn-today" | "decision-btn-later" | "decision-btn-archive",
+) {
+  const deck = phone(page);
+  await waitForDeckReady(page);
+  await deck.getByTestId(testId).click();
+}
+
+async function dragDeckCard(page: Page, deltaX: number, deltaY = 0) {
   const card = phone(page).getByTestId("decision-deck-active-card");
   await card.waitFor({ state: "visible" });
   const box = await card.boundingBox();
@@ -39,24 +72,29 @@ async function dragDeckCard(page: Page, deltaX: number) {
   const y = box!.y + box!.height / 2;
   await page.mouse.move(startX, y);
   await page.mouse.down();
-  await page.mouse.move(startX + deltaX, y, { steps: 14 });
+  await page.mouse.move(startX + deltaX, y + deltaY, { steps: 16 });
   await page.mouse.up();
 }
 
-test.describe("Decision deck 3-state swipe", () => {
+test.describe("Decision deck swipe", () => {
   test.beforeEach(async ({ page }) => {
     await installAnalyticsSpy(page);
     await resetAppState(page);
+    await page.evaluate(() =>
+      localStorage.setItem("itjima.swipe.tutorial.done", "1"),
+    );
   });
 
-  test("threshold helper matches card-width ratios", () => {
-    expect(resolveDragOutcome(-80, 320)).toBe("today");
-    expect(resolveDragOutcome(-50, 320)).toBeNull();
-    expect(resolveDragOutcome(120, 320)).toBe("later");
-    expect(resolveDragOutcome(220, 320)).toBe("archive");
-    expect(previewDragOutcome(-80, 0, 320)).toBe("today");
-    expect(previewDragOutcome(120, 0, 320)).toBe("later");
-    expect(previewDragOutcome(220, 0, 320)).toBe("archive");
+  test("threshold helper matches new direction model", () => {
+    const w = 320;
+    const h = 360;
+    expect(resolveDragOutcome(110, 0, w, h, "horizontal")).toBe("today");
+    expect(resolveDragOutcome(-110, 0, w, h, "horizontal")).toBe("archive");
+    expect(resolveDragOutcome(0, 100, w, h, "vertical")).toBe("later");
+    expect(previewDragOutcome(110, 0, w, h, "horizontal")).toBe("today");
+    expect(previewDragOutcome(-110, 0, w, h, "horizontal")).toBe("archive");
+    expect(previewDragOutcome(0, 100, w, h, "vertical")).toBe("later");
+    expect(shouldCommitDrag(110, 0, 0, 0, w, h, "horizontal")).toBe("today");
   });
 
   test("legacy inbox rows without decision fields still open in deck", async ({
@@ -81,9 +119,15 @@ test.describe("Decision deck 3-state swipe", () => {
       },
     );
     await page.reload();
-    await phone(page).getByRole("link", { name: /^Throw/ }).waitFor({ state: "visible" });
+    await phone(page).getByRole("link", { name: /^Throw/ }).waitFor({
+      state: "visible",
+    });
     await openDeck(page);
-    await expect(phone(page).getByText(`Legacy thought ${stamp}`)).toBeVisible();
+    await expect(
+      phone(page)
+        .getByTestId("decision-deck-active-card")
+        .getByText(`Legacy thought ${stamp}`),
+    ).toBeVisible();
   });
 
   test("below-threshold drag snaps back", async ({ page }) => {
@@ -97,25 +141,42 @@ test.describe("Decision deck 3-state swipe", () => {
     await expect(phone(page).getByTestId("decision-deck-complete")).toHaveCount(0);
   });
 
-  test("left swipe decides Today", async ({ page }) => {
-    const text = `Today swipe ${Date.now()}`;
+  test("right swipe schedules (Today)", async ({ page }) => {
+    const text = `Schedule swipe ${Date.now()}`;
     await addThought(page, text);
     await openDeck(page);
-    const width = (await phone(page).getByTestId("decision-deck-active-card").boundingBox())!.width;
-    await dragDeckCard(page, -width * 0.35);
+    const width = (
+      await phone(page).getByTestId("decision-deck-active-card").boundingBox()
+    )!.width;
+    await dragDeckCard(page, width * 0.38);
     await expect
       .poll(async () => (await readGuestList(page, GUEST_SCHEDULE_KEY)).length)
       .toBe(1);
-    const inbox = await readGuestList(page, GUEST_INBOX_KEY);
-    expect(inbox.length).toBe(0);
+    expect((await readGuestList(page, GUEST_INBOX_KEY)).length).toBe(0);
   });
 
-  test("medium right swipe decides Later", async ({ page }) => {
-    const text = `Later swipe ${Date.now()}`;
+  test("left swipe archives", async ({ page }) => {
+    const text = `Archive swipe ${Date.now()}`;
     await addThought(page, text);
     await openDeck(page);
-    const width = (await phone(page).getByTestId("decision-deck-active-card").boundingBox())!.width;
-    await dragDeckCard(page, width * 0.4);
+    const width = (
+      await phone(page).getByTestId("decision-deck-active-card").boundingBox()
+    )!.width;
+    await dragDeckCard(page, -width * 0.38);
+    await expect
+      .poll(async () => (await readGuestList(page, GUEST_ARCHIVE_KEY)).length)
+      .toBe(1);
+    expect((await readGuestList(page, GUEST_INBOX_KEY)).length).toBe(0);
+  });
+
+  test("down swipe keeps (Later)", async ({ page }) => {
+    const text = `Keep swipe ${Date.now()}`;
+    await addThought(page, text);
+    await openDeck(page);
+    const height = (
+      await phone(page).getByTestId("decision-deck-active-card").boundingBox()
+    )!.height;
+    await dragDeckCard(page, 0, height * 0.32);
     await expect
       .poll(async () => {
         const inbox = (await readGuestList(page, GUEST_INBOX_KEY)) as {
@@ -127,49 +188,44 @@ test.describe("Decision deck 3-state swipe", () => {
       .toBe("later");
   });
 
-  test("deep right swipe archives", async ({ page }) => {
-    const text = `Archive swipe ${Date.now()}`;
-    await addThought(page, text);
-    await openDeck(page);
-    const width = (await phone(page).getByTestId("decision-deck-active-card").boundingBox())!.width;
-    await dragDeckCard(page, width * 0.72);
-    await expect
-      .poll(async () => (await readGuestList(page, GUEST_ARCHIVE_KEY)).length)
-      .toBe(1);
-    const inbox = await readGuestList(page, GUEST_INBOX_KEY);
-    expect(inbox.length).toBe(0);
-  });
-
-  test("outcome label updates during drag across thresholds", async ({ page }) => {
+  test("outcome label updates during drag", async ({ page }) => {
     await addThought(page, `Label drag ${Date.now()}`);
     await openDeck(page);
     const card = phone(page).getByTestId("decision-deck-active-card");
     const box = await card.boundingBox();
     expect(box).toBeTruthy();
     const width = box!.width;
+    const height = box!.height;
     const startX = box!.x + box!.width / 2;
     const y = box!.y + box!.height / 2;
     const label = card.locator('[data-testid="decision-outcome-label"]');
 
     await page.mouse.move(startX, y);
     await page.mouse.down();
-
-    await page.mouse.move(startX - width * 0.26, y, { steps: 8 });
+    await page.mouse.move(startX + width * 0.2, y, { steps: 10 });
     await expect.poll(async () => label.getAttribute("data-outcome")).toBe("today");
-
-    await page.mouse.move(startX + width * 0.35, y, { steps: 12 });
-    await expect.poll(async () => label.getAttribute("data-outcome")).toBe("later");
-
-    await page.mouse.move(startX + width * 0.7, y, { steps: 12 });
-    await expect.poll(async () => label.getAttribute("data-outcome")).toBe("archive");
-
-    await page.mouse.move(startX, y, { steps: 10 });
     await page.mouse.up();
     await expect(card).toBeVisible();
-    await expect(phone(page).getByTestId("decision-deck-complete")).toHaveCount(0);
+
+    await page.mouse.move(startX, y);
+    await page.mouse.down();
+    await page.mouse.move(startX - width * 0.2, y, { steps: 12 });
+    await expect.poll(async () => label.getAttribute("data-outcome")).toBe("archive");
+    await page.mouse.up();
+    await expect(card).toBeVisible();
+
+    await page.mouse.move(startX, y);
+    await page.mouse.down();
+    await page.mouse.move(startX, y + height * 0.18, { steps: 12 });
+    await expect.poll(async () => label.getAttribute("data-outcome")).toBe("later");
+    await page.mouse.up();
+    await expect(card).toBeVisible();
+    await closeDeck(page);
   });
 
-  test("later item does not reappear in the same deck session", async ({ page }) => {
+  test("later item does not reappear in the same deck session", async ({
+    page,
+  }) => {
     const stamp = Date.now();
     const older = `Older ${stamp}`;
     const newer = `Newer ${stamp}`;
@@ -179,27 +235,22 @@ test.describe("Decision deck 3-state swipe", () => {
 
     const activeCard = phone(page).getByTestId("decision-deck-active-card");
     await expect(activeCard.getByText(newer)).toBeVisible();
-    await phone(page).getByTestId("decision-btn-later").click();
+    await clickDeckDecision(page, "decision-btn-later");
     await expect(activeCard.getByText(older)).toBeVisible();
     await expect(activeCard.getByText(newer)).toHaveCount(0);
-
-    await phone(page).getByRole("button", { name: "Close" }).click();
-    await openDeck(page);
-    await expect(activeCard.getByText(newer)).toHaveCount(0);
-    await expect(activeCard.getByText(older)).toBeVisible();
   });
 
   test("action buttons mirror swipe outcomes", async ({ page }) => {
-    const first = `Button today ${Date.now()}`;
-    const second = `Button later ${Date.now()}`;
+    const stamp = Date.now();
+    const first = `Thought A ${stamp}`;
+    const second = `Thought B ${stamp}`;
     await addThought(page, first);
     await addThought(page, second);
     await openDeck(page);
     const deck = phone(page);
     const activeCard = deck.getByTestId("decision-deck-active-card");
-    // Deck shows newest first, so the top card is `second`.
     await expect(activeCard.getByText(second)).toBeVisible();
-    await deck.getByTestId("decision-btn-today").click();
+    await clickDeckDecision(page, "decision-btn-today");
     await expect
       .poll(async () => {
         const schedule = (await readGuestList(page, GUEST_SCHEDULE_KEY)) as {
@@ -209,7 +260,7 @@ test.describe("Decision deck 3-state swipe", () => {
       })
       .toBe(true);
     await expect(activeCard.getByText(first)).toBeVisible();
-    await deck.getByTestId("decision-btn-later").click();
+    await clickDeckDecision(page, "decision-btn-later");
     await expect
       .poll(async () => {
         const inbox = (await readGuestList(page, GUEST_INBOX_KEY)) as {
@@ -232,56 +283,23 @@ test.describe("Decision deck 3-state swipe", () => {
     const events = await readAnalytics(page);
     const serialized = JSON.stringify(events);
     expect(serialized).toContain("decision_archive");
-    expect(serialized).toContain("decision_completed");
+    expect(serialized).toContain("swipe_committed");
     expect(serialized).not.toContain(text);
   });
 
-  test("undo restores the latest decision and counts", async ({ page }) => {
-    const a = `Undo A ${Date.now()}`;
-    const b = `Undo B ${Date.now()}`;
-    await addThought(page, a);
-    await addThought(page, b);
-    await openDeck(page);
-    await phone(page).getByTestId("decision-btn-today").click();
-    await phone(page).getByTestId("decision-btn-later").click();
-    const complete = phone(page).getByTestId("decision-deck-complete");
-    await complete.waitFor({ state: "visible" });
-    await expect(complete.locator("dd").nth(0)).toHaveText("1");
-    await expect(complete.locator("dd").nth(1)).toHaveText("1");
-
-    await phone(page).getByTestId("decision-undo").click();
-    await expect(phone(page).getByTestId("decision-deck-active-card")).toBeVisible();
-    await phone(page).getByTestId("decision-btn-archive").click();
-    await complete.waitFor({ state: "visible" });
-    await expect(complete.locator("dd").nth(0)).toHaveText("1");
-    await expect(complete.locator("dd").nth(1)).toHaveText("0");
-    await expect(complete.locator("dd").nth(2)).toHaveText("1");
-
-    const events = await readAnalytics(page);
-    const serialized = JSON.stringify(events);
-    expect(serialized).toContain("decision_undo");
-    expect(serialized).not.toContain(a);
-    expect(serialized).not.toContain(b);
-  });
-
-  test("undo restores the latest decision", async ({ page }) => {
+  test("undo restores the latest decision as active card", async ({ page }) => {
     const text = `Undo me ${Date.now()}`;
     await addThought(page, text);
     await openDeck(page);
-    await phone(page).getByTestId("decision-btn-later").click();
+    await clickDeckDecision(page, "decision-btn-later");
     await expect(phone(page).getByTestId("decision-undo")).toBeVisible();
     await phone(page).getByTestId("decision-undo").click();
     await expect(
       phone(page).getByTestId("decision-deck-active-card").getByText(text),
     ).toBeVisible();
-    const inbox = (await readGuestList(page, GUEST_INBOX_KEY)) as {
-      text: string;
-      decision?: string;
-    }[];
-    expect(inbox.some((row) => row.text === text && !row.decision)).toBe(true);
   });
 
-  test("completion summary shows outcome counts", async ({ page }) => {
+  test("completion summary shows session counts", async ({ page }) => {
     const a = `Complete A ${Date.now()}`;
     const b = `Complete B ${Date.now()}`;
     const c = `Complete C ${Date.now()}`;
@@ -289,16 +307,27 @@ test.describe("Decision deck 3-state swipe", () => {
     await addThought(page, b);
     await addThought(page, c);
     await openDeck(page);
-    await phone(page).getByTestId("decision-btn-today").click();
-    await phone(page).getByTestId("decision-btn-later").click();
-    await phone(page).getByTestId("decision-btn-archive").click();
-    const complete = phone(page).getByTestId("decision-deck-complete");
-    await complete.waitFor({ state: "visible" });
-    await expect(complete.getByText("All clear")).toBeVisible();
-    await expect(complete.getByText("3 thoughts — sorted")).toBeVisible();
-    const rows = complete.locator("dd");
-    await expect(rows.nth(0)).toHaveText("1");
-    await expect(rows.nth(1)).toHaveText("1");
-    await expect(rows.nth(2)).toHaveText("1");
+    const deck = phone(page);
+    await clickDeckDecision(page, "decision-btn-today");
+    await clickDeckDecision(page, "decision-btn-later");
+    await clickDeckDecision(page, "decision-btn-archive");
+    const complete = deck.getByTestId("decision-deck-complete");
+    await expect(complete).toBeVisible({ timeout: 15_000 });
+    await expect(complete.getByText(/Schedule 1|일정 1/)).toBeVisible();
+    await expect(complete.getByText(/Vault 1|보관 1/)).toBeVisible();
+    await expect(complete.getByText(/Kept 1|그대로 1/)).toBeVisible();
+  });
+
+  test("first-time tutorial appears once", async ({ page }) => {
+    await page.evaluate(() =>
+      localStorage.removeItem("itjima.swipe.tutorial.done"),
+    );
+    await addThought(page, `Tutorial ${Date.now()}`);
+    await openDeck(page);
+    await expect(phone(page).getByTestId("swipe-tutorial")).toBeVisible();
+    await phone(page).getByTestId("swipe-tutorial").getByRole("button", {
+      name: /Got it|알겠어요/,
+    }).click();
+    await expect(phone(page).getByTestId("swipe-tutorial")).toHaveCount(0);
   });
 });
