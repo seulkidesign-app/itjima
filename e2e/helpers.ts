@@ -101,7 +101,7 @@ export async function gotoInbox(page: Page) {
 export async function gotoArchiveListView(page: Page) {
   await phone(page).getByRole("link", { name: /^Archive/ }).click();
   await phone(page)
-    .getByRole("heading", { name: "Vault", exact: true })
+    .getByRole("heading", { name: "Archive", exact: true })
     .waitFor({ state: "visible" });
 }
 

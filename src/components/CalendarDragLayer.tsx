@@ -445,7 +445,7 @@ export function CalendarDayCell({
             : "transparent",
       }}
       transition={{ duration: isHover ? 0.12 : 0.15, ...SPRING_SNAP_BACK }}
-      className={`relative flex min-h-[52px] flex-col items-stretch rounded-[14px] p-1.5 text-left transition-shadow ${
+      className={`relative flex min-h-[44px] flex-col items-stretch rounded-[14px] p-1.5 text-left transition-shadow ${
         isHover
           ? "ring-1 ring-primary/40"
           : isSelected
@@ -463,26 +463,20 @@ export function CalendarDayCell({
         {day}
       </span>
 
-      {hasEvents && firstEvent && (
-        <div
-          role="presentation"
-          onPointerDown={(e) => {
-            e.stopPropagation();
-            if (onDragStart) onDragStart(e, firstEvent);
-          }}
-          onClick={(e) => e.stopPropagation()}
-          className="mt-auto flex touch-none items-center gap-0.5 rounded-[9px] bg-primary/45 px-1.5 py-1 active:scale-[0.97]"
-        >
-          <GripVertical
-            size={9}
-            strokeWidth={2.5}
-            className="shrink-0 text-ink/45"
-            aria-hidden
-          />
-          <span className="line-clamp-1 text-[10px] font-semibold leading-tight text-ink">
-            {preview}
-            {eventCount > 1 ? ` +${eventCount - 1}` : ""}
-          </span>
+      {hasEvents && (
+        <div className="mt-auto flex items-center gap-0.5 px-0.5 pb-0.5">
+          {Array.from({ length: Math.min(eventCount, 3) }).map((_, i) => (
+            <span
+              key={i}
+              className="h-1.5 w-1.5 rounded-full bg-primary"
+              aria-hidden
+            />
+          ))}
+          {eventCount > 3 && (
+            <span className="text-[9px] font-bold text-ink-soft">
+              +{eventCount - 3}
+            </span>
+          )}
         </div>
       )}
     </motion.button>

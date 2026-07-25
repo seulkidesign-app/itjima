@@ -83,10 +83,10 @@ test.describe("IA navigation (Throw / Schedule / Archive)", () => {
     await page.getByRole("link", { name: /^Schedule$/ }).click();
     await expect(page).toHaveURL(/\/schedule$/);
     await expect(
-      page.getByRole("heading", { name: "Today", exact: true }),
+      page.getByRole("heading", { name: "Schedule", exact: true }),
     ).toBeVisible();
     await expect(
-      page.getByText("Only what you need today — brought back when it matters."),
+      page.getByText("See what needs your attention now and later."),
     ).toBeVisible();
     await expect(page.getByRole("tab", { name: "Today" })).toBeVisible();
     await expect(page.getByRole("tab", { name: "Upcoming" })).toBeVisible();
@@ -99,14 +99,13 @@ test.describe("IA navigation (Throw / Schedule / Archive)", () => {
     await page.getByRole("link", { name: /^Archive$/ }).click();
     await expect(page).toHaveURL(/\/archive$/);
     await expect(
-      page.getByRole("heading", { name: "Vault", exact: true }),
+      page.getByRole("heading", { name: "Archive", exact: true }),
     ).toBeVisible();
     await expect(
-      page.getByText("Search and revisit everything you entrusted"),
+      page.getByText("Find anything you chose to keep."),
     ).toBeVisible();
-    await expect(page.getByRole("button", { name: "List", exact: true })).toBeVisible();
-    await expect(page.getByRole("button", { name: "Thought map" })).toBeVisible();
-    await expect(page.getByRole("link", { name: "Revisit" })).toBeVisible();
+    await expect(page.getByRole("button", { name: "Thought map" })).toHaveCount(0);
+    await expect(page.getByRole("link", { name: "Revisit" })).toHaveCount(0);
     await expect(page.getByText("Mom birthday idea").first()).toBeVisible();
 
     await page.screenshot({ path: "qa-ia/03-archive-shell.png" });

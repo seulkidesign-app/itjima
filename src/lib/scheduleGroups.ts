@@ -93,6 +93,60 @@ export function groupSchedules(
     .filter((g) => g.items.length > 0);
 }
 
+export type UpcomingSectionKey = "today" | "after" | "noDate";
+
+export type UpcomingSection = {
+  key: UpcomingSectionKey;
+  items: ScheduleItem[];
+};
+
+export function upcomingSectionLabel(
+  key: UpcomingSectionKey,
+  lang: "ko" | "en",
+): string {
+  const ko: Record<UpcomingSectionKey, string> = {
+    today: "오늘",
+    after: "이후",
+    noDate: "날짜 없음",
+  };
+  const en: Record<UpcomingSectionKey, string> = {
+    today: "Today",
+    after: "Later",
+    noDate: "No date",
+  };
+  return lang === "en" ? en[key] : ko[key];
+}
+
+/** Upcoming tab: today / after / (date-less items added in route) */
+export function groupSchedulesForUpcoming(
+  items: ScheduleItem[],
+  pins: Set<string>,
+): UpcomingSection[] {
+  const active = items.filter((s) => s.status !== "done");
+  const order: UpcomingSectionKey[] = ["today", "after"];
+  const buckets = new Map<UpcomingSectionKey, ScheduleItem[]>(
+    order.map((k) => [k, []]),
+  );
+
+  const sorted = [...active].sort((a, b) => {
+    const ap = pins.has(a.id) ? 1 : 0;
+    const bp = pins.has(b.id) ? 1 : 0;
+    if (ap !== bp) return bp - ap;
+    return +new Date(a.start_time) - +new Date(b.start_time);
+  });
+
+  for (const s of sorted) {
+    const k = classifySchedule(s.start_time);
+    const bucket: UpcomingSectionKey =
+      k === "now" || k === "today" ? "today" : "after";
+    buckets.get(bucket)!.push(s);
+  }
+
+  return order
+    .map((key) => ({ key, items: buckets.get(key)! }))
+    .filter((g) => g.items.length > 0);
+}
+
 export type FeelSectionKey = "today" | "tomorrow" | "later";
 
 export type FeelSection = {

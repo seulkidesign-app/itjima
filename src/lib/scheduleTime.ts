@@ -211,6 +211,33 @@ export function scheduleDotStatus(
   return "later";
 }
 
+/** Upcoming / compact rows — never shows ambiguous "Started" label. */
+export function formatUpcomingScheduleTime(
+  target: Date,
+  lang: "ko" | "en",
+  now = new Date(),
+): string | null {
+  const locale = lang === "en" ? "en-US" : "ko-KR";
+  const sameDay = target.toDateString() === now.toDateString();
+  const tomorrow = new Date(now);
+  tomorrow.setDate(tomorrow.getDate() + 1);
+  const isTomorrow = target.toDateString() === tomorrow.toDateString();
+
+  if (sameDay) {
+    return target.toLocaleTimeString(locale, {
+      hour: "2-digit",
+      minute: "2-digit",
+      hour12: false,
+    });
+  }
+  if (isTomorrow) return lang === "en" ? "Tomorrow" : "내일";
+  return target.toLocaleDateString(locale, {
+    month: "short",
+    day: "numeric",
+    weekday: "short",
+  });
+}
+
 /** Loose schedule time — no second/minute countdown strings. */
 export function formatScheduleTimeLoose(
   target: Date,

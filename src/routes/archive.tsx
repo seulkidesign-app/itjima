@@ -53,7 +53,8 @@ import { useThinkingInsights } from "@/hooks/useThinkingInsights";
 import { MemoryJourneySection } from "@/components/MemoryJourneySection";
 import { useMemoryJourney } from "@/hooks/useMemoryJourney";
 import { MemoryRevivalHint } from "@/components/MemoryRevivalHint";
-import { FEATURES } from "@/lib/features";
+import { ArchiveListRow } from "@/components/ArchiveListRow";
+import { featureEnabled } from "@/lib/features";
 import { consumeRevivalJumpTarget } from "@/lib/memoryRevival";
 import { ArchiveGridSkeleton } from "@/components/Skeleton";
 import { EmptyState } from "@/components/EmptyState";
@@ -82,18 +83,32 @@ const VAULT_FILTERS = [
   { key: "all", ko: "전체", en: "All" },
   { key: "idea", ko: "아이디어", en: "Ideas" },
   { key: "link", ko: "링크", en: "Links" },
-  { key: "shopping", ko: "구매", en: "Shopping" },
-  { key: "memory", ko: "기억", en: "Memories" },
+  { key: "memo", ko: "메모", en: "Notes" },
   { key: "etc", ko: "기타", en: "Other" },
 ] as const;
 
 function vaultCategory(text: string): string {
   const cat = classifyLocally(text)?.category;
   if (cat === "link") return "link";
-  if (cat === "shopping") return "shopping";
   if (cat === "idea") return "idea";
-  if (cat === "note" || cat === "place" || cat === "list") return "memory";
+  if (
+    cat === "note" ||
+    cat === "place" ||
+    cat === "list" ||
+    cat === "shopping" ||
+    cat === "reminder" ||
+    cat === "task" ||
+    cat === "schedule"
+  ) {
+    return "memo";
+  }
   return "etc";
+}
+
+function vaultCategoryLabel(key: string, lang: "ko" | "en"): string {
+  const match = VAULT_FILTERS.find((f) => f.key === key);
+  if (!match) return lang === "en" ? "Other" : "기타";
+  return lang === "en" ? match.en : match.ko;
 }
 
 function Archive() {
@@ -303,7 +318,14 @@ function Archive() {
       return sortOrder === "newest" ? db - da : da - db;
     });
     return list;
-  }, [items, q, groupFilter, sortOrder, overrides, searchMeta.hits]);
+  }, [items, q, groupFilter, sortOrder, searchMeta.hits]);
+
+  const v1ListItems = useMemo(() => {
+    if (q.trim()) return filtered;
+    const pinned = filtered.filter((it) => pins.has(it.id));
+    const rest = filtered.filter((it) => !pins.has(it.id));
+    return [...pinned, ...rest];
+  }, [filtered, pins, q]);
 
   const grouped = useMemo(() => {
     const map = new Map<string, typeof items>();
@@ -648,7 +670,10 @@ function Archive() {
   };
 
   const isSpaceView =
-    !isSearching && layoutMode === "space" && groupFilter === "all";
+    featureEnabled("ARCHIVE_THOUGHT_MAP") &&
+    !isSearching &&
+    layoutMode === "space" &&
+    groupFilter === "all";
 
   return (
     <div
@@ -681,7 +706,7 @@ function Archive() {
           >
             {isSpaceView
               ? t("생각 지도", "Thought map")
-              : t("생각 보관함", "Vault")}
+              : t("보관함", "Archive")}
           </h1>
           <p
             className={`mt-2 leading-relaxed ${
@@ -696,20 +721,14 @@ function Archive() {
                   "A map of the thoughts you entrusted",
                 )
               : t(
-                  "맡겨둔 모든 생각을 찾고 다시 볼 수 있어요",
-                  "Search and revisit everything you entrusted",
+                  "남겨둔 생각을 언제든 다시 찾아보세요.",
+                  "Find anything you chose to keep.",
                 )}
           </p>
-          {items.length > 0 && !isSpaceView && (
-            <p className="mt-3 text-[13px] page-eyebrow text-ink-soft/75">
-              {t(
-                `${items.length}개의 생각을 맡아두고 있어요`,
-                `${items.length} thoughts you entrusted here`,
-              )}
-            </p>
-          )}
         </div>
-        {items.length >= 2 && !isSpaceView && (
+        {items.length >= 2 &&
+          !isSpaceView &&
+          featureEnabled("ARCHIVE_AI_GROUPING") && (
           <div className="flex items-center justify-end px-5 pb-2">
             <button
               type="button"
@@ -787,75 +806,72 @@ function Archive() {
               </p>
             )}
             {!isSearching && (
-              <div className="mt-2 flex flex-wrap items-center gap-1.5">
-                <div
-                  className={`flex rounded-full p-0.5 ${
-                    isSpaceView ? "archive-space-toggle" : "bg-ink/[0.05]"
-                  }`}
-                >
-                  <button
-                    type="button"
-                    onClick={() => setLayoutMode("list")}
-                    className={`rounded-full px-3 py-1.5 text-[12px] font-semibold ${
-                      layoutMode === "list"
-                        ? isSpaceView
-                          ? "archive-space-toggle-active"
-                          : "bg-white text-ink shadow-card"
-                        : isSpaceView
-                          ? "text-[color:var(--archive-text-soft)]"
-                          : "text-ink-soft"
+              <div
+                className="mt-2 flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-none"
+                data-testid="archive-category-filters"
+              >
+                {featureEnabled("ARCHIVE_THOUGHT_MAP") ||
+                featureEnabled("ARCHIVE_REVISIT") ? (
+                  <div
+                    className={`mr-1 flex shrink-0 rounded-full p-0.5 ${
+                      isSpaceView ? "archive-space-toggle" : "bg-ink/[0.05]"
                     }`}
                   >
-                    {t("목록", "List")}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setLayoutMode("space")}
-                    className={`rounded-full px-3 py-1.5 text-[12px] font-semibold ${
-                      layoutMode === "space"
-                        ? isSpaceView
-                          ? "archive-space-toggle-active"
-                          : "bg-white text-ink shadow-card"
-                        : isSpaceView
-                          ? "text-[color:var(--archive-text-soft)]"
-                          : "text-ink-soft"
-                    }`}
-                  >
-                    {t("생각 지도", "Thought map")}
-                  </button>
-                  <Link
-                    to="/rediscovery"
-                    onClick={tap}
-                    className={`rounded-full px-3 py-1.5 text-[12px] font-semibold touch-press ${
-                      isSpaceView
-                        ? "archive-space-chip text-[color:var(--archive-text-soft)]"
-                        : "bg-ink/[0.06] text-ink-soft"
-                    }`}
-                  >
-                    {t("다시 만나기", "Revisit")}
-                  </Link>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => setGroupFilter("all")}
-                  className={`rounded-full px-3 py-1.5 text-[12px] font-medium transition-colors ${
-                    groupFilter === "all"
-                      ? isSpaceView
-                        ? "archive-space-chip-active font-semibold"
-                        : "bg-ink text-white"
-                      : isSpaceView
-                        ? "archive-space-chip"
-                        : "bg-ink/[0.06] text-ink-soft"
-                  }`}
-                >
-                  {t("전체", "All")}
-                </button>
-                {VAULT_FILTERS.filter((f) => f.key !== "all").map((f) => (
+                    {featureEnabled("ARCHIVE_THOUGHT_MAP") && (
+                      <>
+                        <button
+                          type="button"
+                          onClick={() => setLayoutMode("list")}
+                          className={`rounded-full px-3 py-1.5 text-[12px] font-semibold ${
+                            layoutMode === "list"
+                              ? isSpaceView
+                                ? "archive-space-toggle-active"
+                                : "bg-white text-ink shadow-card"
+                              : isSpaceView
+                                ? "text-[color:var(--archive-text-soft)]"
+                                : "text-ink-soft"
+                          }`}
+                        >
+                          {t("목록", "List")}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setLayoutMode("space")}
+                          className={`rounded-full px-3 py-1.5 text-[12px] font-semibold ${
+                            layoutMode === "space"
+                              ? isSpaceView
+                                ? "archive-space-toggle-active"
+                                : "bg-white text-ink shadow-card"
+                              : isSpaceView
+                                ? "text-[color:var(--archive-text-soft)]"
+                                : "text-ink-soft"
+                          }`}
+                        >
+                          {t("생각 지도", "Thought map")}
+                        </button>
+                      </>
+                    )}
+                    {featureEnabled("ARCHIVE_REVISIT") && (
+                      <Link
+                        to="/rediscovery"
+                        onClick={tap}
+                        className={`rounded-full px-3 py-1.5 text-[12px] font-semibold touch-press ${
+                          isSpaceView
+                            ? "archive-space-chip text-[color:var(--archive-text-soft)]"
+                            : "bg-ink/[0.06] text-ink-soft"
+                        }`}
+                      >
+                        {t("다시 만나기", "Revisit")}
+                      </Link>
+                    )}
+                  </div>
+                ) : null}
+                {VAULT_FILTERS.map((f) => (
                   <button
                     key={f.key}
                     type="button"
                     onClick={() => setGroupFilter(f.key)}
-                    className={`rounded-full px-3 py-1.5 text-[12px] font-medium transition-colors ${
+                    className={`shrink-0 rounded-full px-3 py-1.5 text-[12px] font-medium transition-colors ${
                       groupFilter === f.key
                         ? isSpaceView
                           ? "archive-space-chip-active font-semibold"
@@ -868,20 +884,22 @@ function Archive() {
                     {lang === "en" ? f.en : f.ko}
                   </button>
                 ))}
-                <select
-                  value={sortOrder}
-                  onChange={(e) =>
-                    setSortOrder(e.target.value as "newest" | "oldest")
-                  }
-                  className="ml-auto rounded-full bg-ink/[0.06] px-3 py-1.5 text-[12px] font-medium text-ink-soft focus:outline-none"
-                  aria-label={t("순서", "Order")}
-                >
-                  <option value="newest">{t("가까운 순", "Recent first")}</option>
-                  <option value="oldest">{t("먼 순", "Oldest first")}</option>
-                </select>
+                {featureEnabled("ARCHIVE_NEARBY_SORT") && (
+                  <select
+                    value={sortOrder}
+                    onChange={(e) =>
+                      setSortOrder(e.target.value as "newest" | "oldest")
+                    }
+                    className="ml-auto shrink-0 rounded-full bg-ink/[0.06] px-3 py-1.5 text-[12px] font-medium text-ink-soft focus:outline-none"
+                    aria-label={t("순서", "Order")}
+                  >
+                    <option value="newest">{t("가까운 순", "Recent first")}</option>
+                    <option value="oldest">{t("먼 순", "Oldest first")}</option>
+                  </select>
+                )}
               </div>
             )}
-            {isSearching && (
+            {isSearching && featureEnabled("ARCHIVE_NEARBY_SORT") && (
               <div className="mt-2 flex justify-end">
                 <select
                   value={sortOrder}
@@ -906,16 +924,19 @@ function Archive() {
         ) : items.length === 0 ? (
           <Empty dark={isSpaceView} />
         ) : filtered.length === 0 ? (
-          <div className="rounded-[24px] bg-ink/[0.04] px-5 py-10 text-center">
+          <div
+            className="max-h-[220px] rounded-[20px] bg-ink/[0.04] px-5 py-8 text-center"
+            data-testid="archive-empty-filter"
+          >
             <p className="text-[15px] font-semibold text-ink">
               {q.trim()
                 ? t("비슷한 생각을 못 찾았어요", "No similar thoughts found")
-                : t("이 묶음은 비어 있어요", "Nothing in this group yet")}
+                : t("이 묶음은 비어 있어요", "This group is empty")}
             </p>
             <p className="mt-1 text-[13px] text-ink-soft">
               {q.trim()
                 ? t("다른 키워드로 검색해 보세요", "Try different keywords")
-                : t("다른 묶음을 둘러보세요", "Browse another group")}
+                : t("다른 묶음을 살펴보세요", "Try another group")}
             </p>
             {!q.trim() && groupFilter !== "all" && (
               <button
@@ -927,77 +948,88 @@ function Archive() {
               </button>
             )}
           </div>
-        ) : (
-          <>
-            {isSearching ? (
-              <section>
-                <h2 className="mb-2.5 px-1 text-[13px] font-semibold text-ink-soft">
-                  {t("찾은 기억", "Found memories")}
-                </h2>
-                <div className="flex flex-col gap-3">
-                  {filtered.map((it) => renderMemoryCard(it))}
-                </div>
-              </section>
-            ) : layoutMode === "space" && groupFilter === "all" ? (
-              <>
-                {FEATURES.REDISCOVERY &&
-                  revival &&
-                  revival.sourceKind === "archive" && (
-                  <div className="px-5">
-                    <MemoryRevivalHint
-                      hint={revival}
-                      onRevisit={(id) => {
-                        jumpToMemory(id);
-                        clearRevivalHint();
-                        setRevival(null);
-                      }}
-                      onDismiss={() => {
-                        clearRevivalHint();
-                        setRevival(null);
-                      }}
-                    />
-                  </div>
-                )}
-                <ArchiveConnectedGrid
-                  items={items}
-                  pins={pins}
-                  selectedMonth={timelineMonth}
-                  onSelectMonth={setTimelineMonth}
-                  onOpenDetail={(it, clusterIds) => {
+        ) : isSearching ? (
+          <section data-testid="archive-search-results">
+            <div className="flex flex-col gap-3">
+              {filtered.map((it) => (
+                <ArchiveListRow
+                  key={it.id}
+                  item={it}
+                  locale={locale}
+                  categoryLabel={vaultCategoryLabel(vaultCategory(it.text), lang)}
+                  pinned={pins.has(it.id)}
+                  onOpen={() => {
                     recordArchiveVisit(it.id);
-                    setDetailClusterIds(clusterIds);
                     setDetailItem(it);
                   }}
+                  onEditTitle={() => {
+                    setEditItem(it);
+                    setEditTitle(
+                      readArchiveTitles()[it.id] ??
+                        archiveDisplayTitle(it.id, it),
+                    );
+                  }}
                 />
-              </>
-            ) : (
-              <>
-            {FEATURES.REDISCOVERY &&
+              ))}
+            </div>
+          </section>
+        ) : isSpaceView ? (
+          <>
+            {featureEnabled("REDISCOVERY") &&
               revival &&
-              !isSearching &&
               revival.sourceKind === "archive" && (
-              <MemoryRevivalHint
-                hint={revival}
-                onRevisit={(id) => {
-                  jumpToMemory(id);
-                  clearRevivalHint();
-                  setRevival(null);
-                }}
-                onDismiss={() => {
-                  clearRevivalHint();
-                  setRevival(null);
-                }}
-              />
-            )}
+                <MemoryRevivalHint
+                  hint={revival}
+                  onRevisit={(id) => {
+                    jumpToMemory(id);
+                    clearRevivalHint();
+                    setRevival(null);
+                  }}
+                  onDismiss={() => {
+                    clearRevivalHint();
+                    setRevival(null);
+                  }}
+                />
+              )}
+            <ArchiveConnectedGrid
+              items={items}
+              pins={pins}
+              selectedMonth={timelineMonth}
+              onSelectMonth={setTimelineMonth}
+              onOpenDetail={(it, clusterIds) => {
+                recordArchiveVisit(it.id);
+                setDetailClusterIds(clusterIds);
+                setDetailItem(it);
+              }}
+            />
+          </>
+        ) : featureEnabled("ARCHIVE_AI_GROUPING") ? (
+          <>
+            {featureEnabled("REDISCOVERY") &&
+              revival &&
+              revival.sourceKind === "archive" && (
+                <MemoryRevivalHint
+                  hint={revival}
+                  onRevisit={(id) => {
+                    jumpToMemory(id);
+                    clearRevivalHint();
+                    setRevival(null);
+                  }}
+                  onDismiss={() => {
+                    clearRevivalHint();
+                    setRevival(null);
+                  }}
+                />
+              )}
 
-            {!isSearching && (
+            {featureEnabled("ARCHIVE_FREQUENT_THOUGHTS") && !isSearching && (
               <ThinkingInsightsSection
                 insights={insightsForArchive}
                 onRevisit={jumpToMemory}
               />
             )}
 
-            {!isSearching && (
+            {featureEnabled("ARCHIVE_JOURNEY") && !isSearching && (
               <MemoryJourneySection
                 chapters={journeyChapters}
                 thoughts={journeyThoughts}
@@ -1006,7 +1038,7 @@ function Archive() {
               />
             )}
 
-            {!isSearching && (
+            {featureEnabled("ARCHIVE_CONTINUING_THOUGHTS") && !isSearching && (
               <ArchiveDiscoverySection
                 lenses={lenses}
                 items={items}
@@ -1139,9 +1171,33 @@ function Archive() {
                 </section>
               );
             })}
-              </>
-            )}
           </>
+        ) : (
+          <section
+            className="flex flex-col gap-3"
+            data-testid="archive-v1-list"
+          >
+            {v1ListItems.map((it) => (
+              <ArchiveListRow
+                key={it.id}
+                item={it}
+                locale={locale}
+                categoryLabel={vaultCategoryLabel(vaultCategory(it.text), lang)}
+                pinned={pins.has(it.id)}
+                onOpen={() => {
+                  recordArchiveVisit(it.id);
+                  setDetailItem(it);
+                }}
+                onEditTitle={() => {
+                  setEditItem(it);
+                  setEditTitle(
+                    readArchiveTitles()[it.id] ??
+                      archiveDisplayTitle(it.id, it),
+                  );
+                }}
+              />
+            ))}
+          </section>
         )}
       </div>
 

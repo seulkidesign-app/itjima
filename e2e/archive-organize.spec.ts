@@ -30,6 +30,15 @@ test.describe("Archive keyword organize", () => {
     await saveToArchive(page, `Todo item ${Date.now()}`);
     await saveToArchive(page, `Another note ${Date.now()}`);
 
+    await page.evaluate(() => {
+      localStorage.setItem(
+        "itjima.__feature_overrides__",
+        JSON.stringify({ ARCHIVE_AI_GROUPING: true }),
+      );
+    });
+    await page.reload();
+    await phone(page).getByRole("link", { name: /^Throw/ }).waitFor();
+
     await gotoArchiveListView(page);
     await phone(page)
       .getByRole("button", { name: "Gather by theme", exact: true })

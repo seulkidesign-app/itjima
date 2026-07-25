@@ -33,7 +33,7 @@ test.describe("Product reset IA", () => {
 
     await phone(page).getByRole("link", { name: /^Archive/ }).click();
     await expect(
-      phone(page).getByRole("heading", { name: "Vault", exact: true }),
+      phone(page).getByRole("heading", { name: "Archive", exact: true }),
     ).toBeVisible();
     await expect(phone(page).getByText("Travel").first()).toBeVisible();
 
@@ -69,10 +69,12 @@ test.describe("Product reset IA", () => {
     await expect(phone(page).getByText(/Dentist/i).first()).toBeVisible();
   });
 
-  test("vault list is default and can switch to thought map", async ({
-    page,
-  }) => {
+  test("legacy thought map remains behind feature flag", async ({ page }) => {
     await page.evaluate(({ ak }) => {
+      localStorage.setItem(
+        "itjima.__feature_overrides__",
+        JSON.stringify({ ARCHIVE_THOUGHT_MAP: true, ARCHIVE_AI_GROUPING: true }),
+      );
       localStorage.setItem(
         ak,
         JSON.stringify([

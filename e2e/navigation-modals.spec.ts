@@ -25,10 +25,10 @@ test.describe("Navigation and modals", () => {
     page.on("pageerror", (e) => errors.push(e.message));
 
     await phone(page).getByRole("link", { name: /^Schedule/ }).click();
-    await phone(page).getByRole("heading", { name: "Today" }).waitFor();
+    await phone(page).getByRole("heading", { name: "Schedule" }).waitFor();
     await phone(page).getByRole("link", { name: /^Archive/ }).click();
     await phone(page)
-      .getByRole("heading", { name: "Vault" })
+      .getByRole("heading", { name: "Archive" })
       .waitFor();
     await phone(page).getByRole("link", { name: /^Throw/ }).click();
     await phone(page).getByPlaceholder("What's on your mind?").waitFor();
@@ -72,12 +72,10 @@ test.describe("Navigation and modals", () => {
       .click();
 
     await gotoArchiveListView(page);
-    await phone(page)
-      .getByRole("button")
-      .filter({ hasText: text })
-      .first()
-      .click();
-    await phone(page).getByRole("button", { name: "Name", exact: true }).click();
+    const row = phone(page).getByRole("button").filter({ hasText: text }).first();
+    await row.dispatchEvent("pointerdown");
+    await page.waitForTimeout(550);
+    await row.dispatchEvent("pointerup");
 
     const newTitle = `Renamed ${Date.now()}`;
     await page.getByRole("dialog").locator("input").fill(newTitle);
@@ -152,12 +150,10 @@ test.describe("Navigation and modals", () => {
       .click();
 
     await gotoArchiveListView(page);
-    await phone(page)
-      .getByRole("button")
-      .filter({ hasText: text })
-      .first()
-      .click();
-    await phone(page).getByRole("button", { name: "Name", exact: true }).click();
+    const row = phone(page).getByRole("button").filter({ hasText: text }).first();
+    await row.dispatchEvent("pointerdown");
+    await page.waitForTimeout(550);
+    await row.dispatchEvent("pointerup");
     await expect(page).toHaveURL(/\/archive/);
     await phone(page).getByRole("dialog").waitFor({ state: "visible" });
 
@@ -181,7 +177,7 @@ test.describe("Navigation and modals", () => {
     await expect(phone(page).getByRole("dialog")).toHaveCount(0);
 
     await phone(page).getByRole("link", { name: /^Schedule/ }).click();
-    await phone(page).getByRole("heading", { name: "Today" }).waitFor();
+    await phone(page).getByRole("heading", { name: "Schedule" }).waitFor();
   });
 
   test("context menu closes when thought is removed", async ({ page }) => {
@@ -207,6 +203,6 @@ test.describe("Navigation and modals", () => {
 
     await expect(phone(page).getByRole("dialog")).toHaveCount(0);
     await phone(page).getByRole("link", { name: /^Schedule/ }).click();
-    await phone(page).getByRole("heading", { name: "Today" }).waitFor();
+    await phone(page).getByRole("heading", { name: "Schedule" }).waitFor();
   });
 });

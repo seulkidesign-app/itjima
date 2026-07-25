@@ -23,7 +23,16 @@ import {
   Archive,
 } from "lucide-react";
 import { animate, motion, AnimatePresence, LayoutGroup } from "framer-motion";
-import { useArchive, useSchedules, type ScheduleItem } from "@/lib/store";
+import {
+  useArchive,
+  useInbox,
+  useSchedules,
+  type ScheduleItem,
+} from "@/lib/store";
+import {
+  ScheduleCompactRow,
+  LaterInboxRow,
+} from "@/components/ScheduleCompactRow";
 import { ScheduleSheet } from "@/components/ScheduleSheet";
 import { ReminderSheet } from "@/components/ReminderSheet";
 import { ScheduleAlarmSheet } from "@/components/ScheduleAlarmSheet";
@@ -40,13 +49,7 @@ import {
 import { EmptyState } from "@/components/EmptyState";
 import { ScheduleListSkeleton } from "@/components/Skeleton";
 import { SyncIndicator } from "@/components/SyncIndicator";
-import {
-  partitionTodaySchedules,
-  pickTodaySuggestion,
-  formatTodaySpotlightTime,
-} from "@/lib/todaySuggestions";
-import { scheduleStatusBadge } from "@/lib/dateDetect";
-import { MOTION_CRAFT } from "@/lib/motionLanguage";
+import { partitionTodaySchedules } from "@/lib/todaySuggestions";
 import { useScrollLock } from "@/hooks/useScrollLock";
 import { allCloudSynced } from "@/lib/syncFeedback";
 import {
@@ -71,20 +74,11 @@ import {
   scheduleAllDayFieldsFromItem,
 } from "@/lib/scheduleTime";
 import {
-  groupSchedulesForFeel,
-  feelSectionLabel,
-  scheduleFeelDot,
+  groupSchedulesForUpcoming,
+  upcomingSectionLabel,
   isMissed,
-  sectionLabel,
   classifySchedule,
 } from "@/lib/scheduleGroups";
-import { archiveDisplayTitle } from "@/lib/archiveMeta";
-import {
-  dismissRediscovery,
-  pickRediscoveryCandidate,
-} from "@/lib/rediscoveryPick";
-import { setRevivalJumpTarget } from "@/lib/memoryRevival";
-import { useNavigate } from "@tanstack/react-router";
 import { scheduleDisplayTitle, rawPreview } from "@/lib/thoughtProvenance";
 import { SPRING_TAB, SPRING_SNAP_BACK } from "@/lib/motion";
 import { toast } from "sonner";
@@ -165,6 +159,7 @@ function Schedule() {
   const { lang } = useLang();
   const { items, update, remove, add, syncState, retrySync } = useSchedules();
   const archive = useArchive();
+  const inbox = useInbox();
   const [tab, setTab] = useState<"today" | "list" | "cal">("today");
   const [sheet, setSheet] = useState<{
     open: boolean;
@@ -263,9 +258,14 @@ function Schedule() {
     toast(t("타이머 종료", "Timer stopped"));
   };
 
-  const feelSections = useMemo(
-    () => groupSchedulesForFeel(activeItems, pins),
+  const upcomingSections = useMemo(
+    () => groupSchedulesForUpcoming(activeItems, pins),
     [activeItems, pins],
+  );
+
+  const laterInboxItems = useMemo(
+    () => inbox.items.filter((it) => it.decision === "later"),
+    [inbox.items],
   );
 
   const { today: todayActive, flowed: flowedPast } = useMemo(
@@ -399,32 +399,6 @@ function Schedule() {
     }
   };
 
-  const cardProps = (s: ScheduleItem) => ({
-    s,
-    pinned: pins.has(s.id),
-    missed: isMissed(s),
-    done: s.status === "done",
-    onPin: () => {
-      togglePin(s.id);
-      haptic(8);
-    },
-    onEdit: () => setSheet({ open: true, edit: s }),
-    onComplete: () => markDone(s),
-    onMoveToArchive: () => moveDoneToArchive(s),
-    onAlarm: () => setAlarmSheet(s),
-    onTimer: () => setTimerSheet(s),
-    onDisarm: () => disarmReminder(s),
-    onDelete: async () => {
-      try {
-        const deleted = await remove(s.id);
-        if (pins.has(s.id)) togglePin(s.id);
-        if (deleted) toast(t("내려놨어요", "Let go"));
-      } catch {
-        toast.error(t("내려놓지 못했어요", "Couldn't let go"));
-      }
-    },
-  });
-
   return (
     <div className="flex h-full flex-col bg-white">
       <SyncIndicator
@@ -433,18 +407,12 @@ function Schedule() {
         onRetry={retrySync}
       />
       <div className="sticky top-0 z-10 shrink-0 bg-white">
-        <div className={`px-5 ${tab === "today" ? "pb-4 pt-6" : "pb-3 pt-5"}`}>
-          <h1 className="page-title">{t("오늘", "Today")}</h1>
-          <p
-            className={`leading-relaxed text-ink-soft ${
-              tab === "today"
-                ? "page-eyebrow mt-2.5 max-w-[20rem]"
-                : "mt-1.5 text-[13px]"
-            }`}
-          >
+        <div className="px-5 pb-3 pt-6">
+          <h1 className="page-title">{t("일정", "Schedule")}</h1>
+          <p className="page-eyebrow mt-2.5 max-w-[22rem] leading-relaxed text-ink-soft">
             {t(
-              "지금 필요한 기억만 꺼내드려요.",
-              "Only what you need today — brought back when it matters.",
+              "오늘 해야 할 것과 다가오는 일을 모아봐요.",
+              "See what needs your attention now and later.",
             )}
           </p>
         </div>
@@ -534,31 +502,31 @@ function Schedule() {
             <ScheduleTodayPanel
               todayItems={todayTimerItems}
               flowedItems={flowedPast}
-              activeItems={activeItems}
-              archiveItems={archive.items}
               doneCount={doneItems.length}
-              ScheduleCard={ScheduleCard}
-              cardProps={cardProps}
-              DoneSection={DoneSection}
               doneItems={doneItems}
+              pins={pins}
+              onComplete={markDone}
+              onEdit={(s) => setSheet({ open: true, edit: s })}
             />
           )
         ) : tab === "list" ? (
-          feelSections.length === 0 && doneItems.length === 0 ? (
+          upcomingSections.length === 0 &&
+          laterInboxItems.length === 0 &&
+          doneItems.length === 0 ? (
             <Empty />
           ) : (
-            <div className="flex flex-col gap-6 animate-fade-in">
-              {feelSections.map((sec) => (
-                <section key={sec.key}>
-                  <h2 className="mb-3 text-[15px] font-bold text-ink">
-                    {feelSectionLabel(sec.key, lang)}
+            <div className="flex flex-col gap-6 animate-fade-in pb-2">
+              {upcomingSections.map((sec) => (
+                <section key={sec.key} data-testid={`upcoming-section-${sec.key}`}>
+                  <h2 className="mb-2 px-0.5 text-[14px] font-bold text-ink">
+                    {upcomingSectionLabel(sec.key, lang)}
                   </h2>
-                  <ul className="flex flex-col gap-0.5">
+                  <ul className="flex flex-col">
                     {sec.items.map((s) => (
-                      <ScheduleFeelRow
+                      <ScheduleCompactRow
                         key={s.id}
                         s={s}
-                        dot={scheduleFeelDot(s, pins)}
+                        pinned={pins.has(s.id)}
                         onComplete={() => markDone(s)}
                         onEdit={() => setSheet({ open: true, edit: s })}
                       />
@@ -566,10 +534,37 @@ function Schedule() {
                   </ul>
                 </section>
               ))}
-              {doneItems.length > 0 && (
-                <DoneSection items={doneItems} cardProps={cardProps} t={t} />
+              {laterInboxItems.length > 0 && (
+                <section data-testid="upcoming-section-noDate">
+                  <h2 className="mb-2 px-0.5 text-[14px] font-bold text-ink">
+                    {upcomingSectionLabel("noDate", lang)}
+                  </h2>
+                  <ul className="flex flex-col">
+                    {laterInboxItems.map((it) => (
+                      <LaterInboxRow
+                        key={it.id}
+                        text={it.text}
+                        onOpen={() =>
+                          toast.message(
+                            t(
+                              "던지기에서 다시 정리할 수 있어요",
+                              "You can sort this again from Throw",
+                            ),
+                          )
+                        }
+                      />
+                    ))}
+                  </ul>
+                </section>
               )}
-              <ScheduleFeelHint />
+              {doneItems.length > 0 && (
+                <DoneSection
+                  items={doneItems}
+                  onComplete={markDone}
+                  onEdit={(s) => setSheet({ open: true, edit: s })}
+                  t={t}
+                />
+              )}
             </div>
           )
         ) : (
@@ -733,529 +728,56 @@ function Schedule() {
   );
 }
 
-function ScheduleFeelRow({
-  s,
-  dot,
-  onComplete,
-  onEdit,
-}: {
-  s: ScheduleItem;
-  dot: "filled" | "hollow";
-  onComplete: () => void;
-  onEdit: () => void;
-}) {
-  const t = useT();
-  const { lang } = useLang();
-  const title = scheduleDisplayTitle(s);
-  const flowDateLabel = formatScheduleTimeLoose(new Date(s.start_time), lang);
-  const dxRef = useRef(0);
-  const [dx, setDx] = useState(0);
-  const [acting, setActing] = useState(false);
-  const dragging = useRef(false);
-  const startX = useRef(0);
-  dxRef.current = dx;
-
-  const onDown = (e: ReactPointerEvent<HTMLLIElement>) => {
-    if (acting) return;
-    dragging.current = true;
-    startX.current = e.clientX;
-    (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
-  };
-
-  const onMove = (e: ReactPointerEvent<HTMLLIElement>) => {
-    if (!dragging.current || acting) return;
-    const next = Math.max(0, Math.min(100, e.clientX - startX.current));
-    dxRef.current = next;
-    setDx(next);
-  };
-
-  const onUp = () => {
-    if (!dragging.current) return;
-    dragging.current = false;
-    if (dxRef.current >= 64) {
-      setActing(true);
-      animate(dxRef.current, 120, {
-        type: "spring",
-        stiffness: 340,
-        damping: 28,
-        onUpdate: (v) => {
-          dxRef.current = v;
-          setDx(v);
-        },
-        onComplete: () => {
-          hapticConfirm();
-          onComplete();
-          setActing(false);
-          dxRef.current = 0;
-          setDx(0);
-        },
-      });
-      return;
-    }
-    if (dxRef.current < 8) onEdit();
-    animate(dxRef.current, 0, {
-      type: "spring",
-      stiffness: 420,
-      damping: 32,
-      onUpdate: (v) => {
-        dxRef.current = v;
-        setDx(v);
-      },
-    });
-  };
-
-  return (
-    <li
-      className="relative flex touch-none select-none items-center gap-3 rounded-[14px] px-1 py-3 active:bg-ink/[0.03]"
-      role="button"
-      tabIndex={0}
-      aria-label={`${title}. ${t("밀면 다녀온 기억, 탭하면 다듬기", "Swipe to let go, tap to refine")}`}
-      style={{
-        transform: `translateX(${dx}px)`,
-        transition: dragging.current || acting ? "none" : undefined,
-      }}
-      onPointerDown={onDown}
-      onPointerMove={onMove}
-      onPointerUp={onUp}
-      onPointerCancel={onUp}
-      onKeyDown={(e) => {
-        if (e.key === "Enter") {
-          e.preventDefault();
-          onEdit();
-        } else if (e.key === " ") {
-          e.preventDefault();
-          onComplete();
-        }
-      }}
-    >
-      {dx > 20 && (
-        <div
-          className="pointer-events-none absolute left-0 top-1/2 z-0 -translate-y-1/2 rounded-full bg-primary/90 px-2.5 py-1 text-[11px] font-bold text-ink"
-          style={{ opacity: Math.min(1, dx / 64) }}
-        >
-          ✓
-        </div>
-      )}
-      <span
-        className={`flex h-3 w-3 shrink-0 items-center justify-center rounded-full ${
-          dot === "filled" ? "bg-ink" : "border-2 border-ink/25 bg-transparent"
-        }`}
-        aria-hidden
-      />
-      <span className="min-w-0 flex-1">
-        <span className="block truncate text-[16px] font-semibold text-ink">
-          {title}
-        </span>
-        <span className="block text-[12px] text-ink-soft">
-          {flowDateLabel}
-        </span>
-      </span>
-    </li>
-  );
-}
-
-function ScheduleFeelHint() {
-  const t = useT();
-  return (
-    <p className="mt-2 px-1 text-[11px] text-ink-soft/70">
-      {t("→ 밀면 다녀온 기억 · 탭하면 다듬기", "→ Swipe to let go · Tap to refine")}
-    </p>
-  );
-}
-
-type ScheduleCardProps = {
-  s: ScheduleItem;
-  pinned: boolean;
-  missed?: boolean;
-  done?: boolean;
-  emphasize?: boolean;
-  timer?: boolean;
-  onPin: () => void;
-  onEdit: () => void;
-  onComplete: () => void;
-  onMoveToArchive?: () => void;
-  onAlarm: () => void;
-  onTimer: () => void;
-  onDisarm: () => void;
-  onDelete: () => void;
-};
-
-type ScheduleCardBaseProps = Omit<ScheduleCardProps, "emphasize" | "timer">;
-
-function ScheduleCard({
-  s,
-  pinned,
-  missed,
-  done,
-  emphasize,
-  timer,
-  onPin,
-  onEdit,
-  onComplete,
-  onMoveToArchive,
-  onAlarm,
-  onTimer,
-  onDisarm,
-  onDelete,
-}: ScheduleCardProps) {
-  const t = useT();
-  const { lang } = useLang();
-  const locale = lang === "en" ? "en-US" : "ko-KR";
-  const start = new Date(s.start_time);
-  const end = new Date(s.end_time);
-  const rel = formatScheduleTimeLoose(start, lang);
-  const r = remainingUntil(start);
-  const dotColor =
-    !r.past && r.ms > 0 && r.ms < 10 * 60_000
-      ? "bg-red-500"
-      : !r.past && start.toDateString() === new Date().toDateString()
-        ? "bg-primary"
-        : "bg-ink/25";
-  const title = scheduleDisplayTitle(s);
-  const preview = rawPreview(s);
-  const alarmAt = s.alarm ? effectiveAlarmAt(s) : null;
-  const timerEnd = getActiveTimerEnd(s.id);
-  const pressTimer = useRef<number | null>(null);
-  const longFired = useRef(false);
-  const dragging = useRef(false);
-  const dxRef = useRef(0);
-  const [dx, setDx] = useState(0);
-  const [acting, setActing] = useState(false);
-  const startX = useRef(0);
-
-  dxRef.current = dx;
-
-  const clearPress = () => {
-    if (pressTimer.current) {
-      clearTimeout(pressTimer.current);
-      pressTimer.current = null;
-    }
-  };
-
-  const onDown = (e: ReactPointerEvent<HTMLDivElement>) => {
-    if (done || acting) return;
-    // Taps that start on a nested action control (pin/timer/alarm/delete)
-    // must never be captured by the card's swipe gesture — capturing here
-    // routes all subsequent pointer events (and often the resulting click)
-    // through the card, silently swallowing the button press.
-    if ((e.target as HTMLElement).closest("[data-card-action]")) return;
-    dragging.current = true;
-    longFired.current = false;
-    startX.current = e.clientX;
-    clearPress();
-    pressTimer.current = window.setTimeout(() => {
-      if (dragging.current && !acting) {
-        longFired.current = true;
-        onEdit();
-      }
-    }, 480);
-    (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
-  };
-
-  const onMove = (e: ReactPointerEvent<HTMLDivElement>) => {
-    if (!dragging.current || acting || done) return;
-    const next = Math.max(0, Math.min(120, e.clientX - startX.current));
-    if (next > 8) clearPress();
-    dxRef.current = next;
-    setDx(next);
-  };
-
-  const onUp = () => {
-    if (!dragging.current) return;
-    dragging.current = false;
-    clearPress();
-    if (longFired.current) {
-      dxRef.current = 0;
-      setDx(0);
-      return;
-    }
-    if (dxRef.current >= 72) {
-      setActing(true);
-      animate(dxRef.current, 140, {
-        type: "spring",
-        stiffness: 340,
-        damping: 28,
-        onUpdate: (v) => {
-          dxRef.current = v;
-          setDx(v);
-        },
-        onComplete: () => {
-          onComplete();
-          setActing(false);
-          dxRef.current = 0;
-          setDx(0);
-        },
-      });
-      return;
-    }
-    animate(dxRef.current, 0, {
-      type: "spring",
-      stiffness: 420,
-      damping: 32,
-      onUpdate: (v) => {
-        dxRef.current = v;
-        setDx(v);
-      },
-    });
-  };
-
-  const swipeHint = dx > 24;
-
-  return (
-    <div className="relative">
-      {swipeHint && !done && (
-        <div
-          className="pointer-events-none absolute left-3 top-1/2 z-0 flex -translate-y-1/2 items-center gap-1 rounded-full bg-primary/90 px-3 py-1.5 text-[12px] font-extrabold text-ink shadow-card"
-          style={{ opacity: Math.min(1, dx / 72) }}
-        >
-          <Check size={14} strokeWidth={3} />
-          {t("다녀옴", "Done")}
-        </div>
-      )}
-      <div
-        className={`card-radius shadow-card px-[18px] py-5 transition ${
-          done ? "opacity-50" : ""
-        } ${emphasize || timer ? "ring-2 ring-primary/30 bg-primary/10" : pinned ? "bg-primary/15 ring-2 ring-primary/40" : "glass"} ${
-          missed && !done ? "border-l-4 border-primary/40" : ""
-        }`}
-        style={{
-          transform: `translateX(${dx}px)`,
-          transition: dragging.current || acting ? "none" : undefined,
-        }}
-        onPointerDown={onDown}
-        onPointerMove={onMove}
-        onPointerUp={onUp}
-        onPointerCancel={onUp}
-      >
-        <div className="flex items-start gap-3">
-          <button
-            type="button"
-            onClick={(e) => {
-              e.stopPropagation();
-              if (done) onMoveToArchive?.();
-              else onComplete();
-            }}
-            className={`touch-target mt-1 flex shrink-0 items-center justify-center rounded-full border-2 ${
-              done
-                ? "border-primary bg-primary text-ink"
-                : "border-ink/20 hover:border-primary"
-            }`}
-            aria-label={
-              done ? t("생각 지도에 남기기", "Save to thought map") : t("다녀옴", "Done")
-            }
-          >
-            {done ? (
-              <Archive size={13} strokeWidth={2.25} />
-            ) : (
-              <span
-                className={`h-2.5 w-2.5 rounded-full ${dotColor}`}
-                aria-hidden
-              />
-            )}
-          </button>
-          <div className="min-w-0 flex-1">
-            {timer ? (
-              <>
-                <p className="text-[12px] text-ink-soft">
-                  {t("다음에 떠올릴 것", "Next up")}
-                </p>
-                <div className="mt-1 text-[17px] font-bold leading-snug text-ink">
-                  {title}
-                </div>
-                <p className="mt-1.5 text-[13.5px] text-ink-soft">
-                  {formatTodaySpotlightTime(s.start_time, lang)}
-                </p>
-                <span className="mt-2 inline-block rounded-full bg-ink/[0.04] px-2.5 py-1 text-[12px] text-ink-soft">
-                  {scheduleStatusBadge(s.start_time, lang)}
-                </span>
-              </>
-            ) : (
-              <>
-            <div className="flex flex-wrap items-center gap-2">
-              {pinned && (
-                <Pin size={12} className="fill-primary text-primary" />
-              )}
-              <span
-                className={`font-num font-bold text-ink ${emphasize || timer ? "text-[18px]" : "text-[14px]"}`}
-              >
-                {rel}
-              </span>
-              {missed && !done && (
-                <span className="rounded-full bg-primary/25 px-2 py-0.5 text-[10px] font-bold text-ink">
-                  {t("그때가 지났어요", "That moment passed")}
-                </span>
-              )}
-            </div>
-            <div className="mt-1 text-[15px] font-semibold leading-snug text-ink">
-              {title}
-            </div>
-            {preview && preview !== title && (
-              <p className="mt-0.5 line-clamp-1 text-[12px] text-ink-soft">
-                {preview}
-              </p>
-            )}
-            <div className="mt-1.5 text-meta">
-              {fmt(start, locale)} → {fmt(end, locale)}
-            </div>
-            {alarmAt && (
-              <button
-                type="button"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onDisarm();
-                }}
-                className="mt-1.5 inline-flex items-center gap-1 rounded-full bg-primary/30 px-2 py-0.5 text-[11px] font-bold text-ink"
-              >
-                <Bell size={11} /> {formatAlarmLabel(alarmAt, lang)}
-              </button>
-            )}
-            {timerEnd && (
-              <span className="mt-1.5 inline-flex items-center gap-1 rounded-full bg-ink/10 px-2 py-0.5 text-[11px] font-bold text-ink">
-                <Timer size={11} /> {formatTimerLabel(timerEnd, lang)}
-              </span>
-            )}
-              </>
-            )}
-          </div>
-          {!done && (
-            <div
-              data-card-action
-              className="flex shrink-0 flex-col items-end gap-2"
-            >
-              <div className="flex items-center gap-1.5">
-                <button
-                  type="button"
-                  data-card-action
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onPin();
-                  }}
-                  aria-label={t("고정", "Pin")}
-                  className={`touch-target rounded-full transition ${
-                    pinned ? "bg-primary text-ink" : "bg-white/70 text-ink-soft"
-                  }`}
-                >
-                  <Pin size={14} className={pinned ? "fill-current" : ""} />
-                </button>
-                <button
-                  type="button"
-                  data-card-action
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onTimer();
-                  }}
-                  aria-label={t("타이머", "Timer")}
-                  className={`touch-target rounded-full transition ${
-                    timerEnd ? "bg-ink text-white" : "bg-white/70 text-ink-soft"
-                  }`}
-                >
-                  <Timer size={14} />
-                </button>
-              </div>
-              {/* Alarm: iOS-style pill toggle. On = filled yellow, knob right.
-                  Tap toggles on/off directly when an alarm time already
-                  exists; if none is set yet, tap opens the alarm sheet
-                  to choose a time (first-time setup only). */}
-              <button
-                type="button"
-                data-card-action
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onAlarm();
-                }}
-                aria-label={
-                  s.alarm ? t("알림 끄기", "Turn off reminder") : t("알림 켜기", "Turn on reminder")
-                }
-                aria-pressed={!!s.alarm}
-                className={`relative h-8 w-14 shrink-0 rounded-full transition-colors duration-200 ${
-                  s.alarm ? "bg-primary" : "bg-ink/15"
-                }`}
-              >
-                <span
-                  className={`absolute top-1 flex h-6 w-6 items-center justify-center rounded-full bg-white shadow-card transition-all duration-200 ${
-                    s.alarm ? "left-7" : "left-1"
-                  }`}
-                >
-                  {s.alarm ? (
-                    <Bell size={13} className="text-ink" />
-                  ) : (
-                    <BellOff size={13} className="text-ink-soft" />
-                  )}
-                </span>
-              </button>
-            </div>
-          )}
-        </div>
-        {!done && (
-          <div data-card-action className="mt-2 flex justify-end">
-            <button
-              type="button"
-              data-card-action
-              onClick={(e) => {
-                e.stopPropagation();
-                onDelete();
-              }}
-              className="touch-target text-[12px] font-medium text-ink-soft hover:text-ink"
-              aria-label={t("삭제", "Delete")}
-            >
-              {t("삭제", "Delete")}
-            </button>
-          </div>
-        )}
-      </div>
-    </div>
-  );
-}
-
 function FlowedPastSection({
   items,
-  cardProps,
+  onEdit,
   t,
-  lang,
 }: {
   items: ScheduleItem[];
-  cardProps: (
-    s: ScheduleItem,
-  ) => Omit<ComponentProps<typeof ScheduleCard>, "emphasize" | "timer">;
+  onEdit: (s: ScheduleItem) => void;
   t: ReturnType<typeof useT>;
-  lang: "ko" | "en";
 }) {
   const [open, setOpen] = useState(false);
+  const { lang } = useLang();
   if (!items.length) return null;
 
   const locale = lang === "en" ? "en-US" : "ko-KR";
-  const visible = open ? items : items.slice(0, 1);
+  const visible = open ? items : items.slice(0, 2);
 
   return (
-    <section className="mt-6 border-t border-ink/[0.06] pt-4">
+    <section className="mt-4 border-t border-ink/[0.06] pt-3">
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
-        className="flex w-full items-center justify-between px-1 py-1.5 text-[14px] text-ink-soft touch-press"
+        className="flex w-full items-center justify-between px-0.5 py-1.5 text-[13px] font-semibold text-ink-soft touch-press"
       >
         <span>{t("놓친 것", "Missed")}</span>
-        <span className="text-[13px]">
+        <span className="text-[12px]">
           {items.length} {open ? "▴" : "▾"}
         </span>
       </button>
-      <div className="flex flex-col">
+      <ul className="flex flex-col">
         {visible.map((s) => (
-          <div
+          <li
             key={s.id}
-            className="flex items-center justify-between px-1 py-3.5 text-[15px] text-ink/45"
+            className="flex items-center justify-between gap-3 border-b border-ink/[0.05] px-0.5 py-2.5 last:border-b-0"
           >
-            <span className="min-w-0 truncate pr-3">
+            <button
+              type="button"
+              onClick={() => onEdit(s)}
+              className="min-w-0 flex-1 truncate text-left text-[14px] text-ink/55 touch-press"
+            >
               {scheduleDisplayTitle(s)}
-            </span>
-            <span className="shrink-0 text-[12.5px] text-ink-soft">
+            </button>
+            <span className="shrink-0 text-[12px] text-ink-soft">
               {new Date(s.end_time).toLocaleDateString(locale, {
                 month: "short",
                 day: "numeric",
               })}
             </span>
-          </div>
+          </li>
         ))}
-      </div>
+      </ul>
     </section>
   );
 }
@@ -1263,168 +785,80 @@ function FlowedPastSection({
 function ScheduleTodayPanel({
   todayItems,
   flowedItems,
-  activeItems,
-  archiveItems,
   doneCount,
-  ScheduleCard,
-  cardProps,
-  DoneSection,
   doneItems,
+  pins,
+  onComplete,
+  onEdit,
 }: {
   todayItems: ScheduleItem[];
   flowedItems: ScheduleItem[];
-  activeItems: ScheduleItem[];
-  archiveItems: import("@/lib/store").ArchiveItem[];
   doneCount: number;
-  ScheduleCard: ComponentType<ScheduleCardProps>;
-  cardProps: (s: ScheduleItem) => ScheduleCardBaseProps;
-  DoneSection: ComponentType<{
-    items: ScheduleItem[];
-    cardProps: (s: ScheduleItem) => ScheduleCardBaseProps;
-    t: ReturnType<typeof useT>;
-  }>;
   doneItems: ScheduleItem[];
+  pins: Set<string>;
+  onComplete: (s: ScheduleItem) => void;
+  onEdit: (s: ScheduleItem) => void;
 }) {
   const t = useT();
-  const { lang } = useLang();
-  const navigate = useNavigate();
-  const suggestion = pickTodaySuggestion(
-    todayItems,
-    activeItems,
-    archiveItems,
-    lang,
-  );
-  const rediscovery = useMemo(
-    () => pickRediscoveryCandidate(archiveItems, activeItems),
-    [archiveItems, activeItems],
-  );
-  const spotlight = todayItems[0] ?? null;
-  const alsoToday = todayItems.slice(1);
 
   return (
-    <div className="flex flex-col gap-8 animate-craft-in px-0.5 pb-4 pt-3">
-      {spotlight && (
-        <motion.section
-          initial={{ opacity: 0, y: 10 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={MOTION_CRAFT}
-          className="mx-1 rounded-[24px] border border-ink/[0.03] bg-primary/[0.08] px-[22px] py-5"
-        >
-          <p className="text-[12px] font-semibold text-ink-soft">
-            {t("지금", "Now")}
-          </p>
-          <p className="mt-2 text-[17px] font-bold leading-snug text-ink">
-            {scheduleDisplayTitle(spotlight)}
-          </p>
-          <p className="mt-1.5 text-[13.5px] text-ink-soft">
-            {formatTodaySpotlightTime(spotlight.start_time, lang)}
-          </p>
-          <span className="mt-2.5 inline-block rounded-full bg-ink/[0.04] px-2.5 py-1 text-[12px] text-ink-soft">
-            {scheduleStatusBadge(spotlight.start_time, lang)}
-          </span>
-        </motion.section>
-      )}
-
-      {alsoToday.length > 0 && (
-        <section className="flex flex-col gap-3 px-0.5">
-          <p className="text-[13px] font-semibold text-ink">
-            {t("오늘", "Today")}
-          </p>
-          <div className="flex flex-col gap-3">
-            {alsoToday.map((s) => (
-              <ScheduleCard key={s.id} {...cardProps(s)} timer />
-            ))}
-          </div>
-        </section>
-      )}
-
-      {rediscovery && (
-        <section className="mx-0.5 rounded-[24px] border border-ink/[0.06] bg-white px-4 py-4 shadow-[0_2px_12px_-4px_rgba(0,0,0,0.08)]">
-          <p className="text-[13px] font-semibold text-ink">
-            {t("다시 꺼낸 생각", "Brought back")}
-          </p>
-          <p className="mt-2 text-[16px] font-bold text-ink">
-            {archiveDisplayTitle(rediscovery.memory.id, rediscovery.memory)}
-          </p>
-          <p className="mt-1.5 text-[13px] text-ink-soft">
-            {lang === "en"
-              ? `${rediscovery.ageEn} — a thought you entrusted`
-              : `${rediscovery.ageKo}에 맡긴 생각이에요.`}
-          </p>
-          <div className="mt-4 flex gap-2">
-            <button
-              type="button"
-              onClick={() => {
-                setRevivalJumpTarget(rediscovery.memory.id);
-                void navigate({ to: "/archive" });
-              }}
-              className="pill-yellow touch-press min-h-[44px] flex-1 px-3 py-2.5 text-[13px] font-bold text-ink"
-            >
-              {t("다시 보기", "View again")}
-            </button>
-            <button
-              type="button"
-              onClick={() => dismissRediscovery(rediscovery.memory.id)}
-              className="touch-press min-h-[44px] rounded-full border border-ink/12 bg-white px-4 py-2.5 text-[13px] font-semibold text-ink"
-            >
-              {t("며칠 더 맡기기", "Keep a few more days")}
-            </button>
-          </div>
-        </section>
-      )}
-
-      {suggestion && (
-        <div className="craft-suggestion mx-0.5 px-4 py-3.5">
-          <p className="text-[14px] leading-[1.65] tracking-[0.005em] text-ink/88">
-            {lang === "en" ? suggestion.messageEn : suggestion.messageKo}
-          </p>
-        </div>
-      )}
-
-      <FlowedPastSection
-        items={flowedItems}
-        cardProps={cardProps}
-        t={t}
-        lang={lang}
-      />
-
-      {doneItems.length > 0 && (
-        <DoneSection items={doneItems} cardProps={cardProps} t={t} />
-      )}
-
-      {todayItems.length === 0 &&
+    <div className="flex flex-col animate-fade-in pb-2 pt-1">
+      {todayItems.length > 0 ? (
+        <ul className="flex flex-col" data-testid="schedule-today-list">
+          {todayItems.map((s) => (
+            <ScheduleCompactRow
+              key={s.id}
+              s={s}
+              pinned={pins.has(s.id)}
+              onComplete={() => onComplete(s)}
+              onEdit={() => onEdit(s)}
+            />
+          ))}
+        </ul>
+      ) : (
         doneCount === 0 &&
-        flowedItems.length === 0 &&
-        !rediscovery && (
-          <p className="px-4 text-center text-[14px] leading-[1.7] text-ink-soft/85">
+        flowedItems.length === 0 && (
+          <p className="px-1 py-6 text-center text-[14px] leading-[1.7] text-ink-soft/85">
             {t(
               "오늘은 특별히 떠올릴 게 없어요. 괜찮아요.",
               "Nothing needs your attention today — and that's okay.",
             )}
           </p>
-        )}
+        )
+      )}
+
+      <FlowedPastSection items={flowedItems} onEdit={onEdit} t={t} />
+
+      {doneItems.length > 0 && (
+        <DoneSection
+          items={doneItems}
+          onComplete={onComplete}
+          onEdit={onEdit}
+          t={t}
+        />
+      )}
     </div>
   );
 }
 
 function DoneSection({
   items,
-  cardProps,
+  onComplete,
+  onEdit,
   t,
 }: {
   items: ScheduleItem[];
-  cardProps: (
-    s: ScheduleItem,
-  ) => Omit<ComponentProps<typeof ScheduleCard>, "emphasize" | "timer">;
+  onComplete: (s: ScheduleItem) => void;
+  onEdit: (s: ScheduleItem) => void;
   t: ReturnType<typeof useT>;
 }) {
   const [open, setOpen] = useState(false);
   return (
-    <section>
+    <section className="mt-4 border-t border-ink/[0.06] pt-3">
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
-        className="mb-2 w-full px-1 text-left text-[11px] font-semibold tracking-[-0.01em] text-ink-soft/80 touch-press"
+        className="mb-2 w-full px-0.5 text-left text-[12px] font-semibold tracking-[-0.01em] text-ink-soft/80 touch-press"
       >
         {t("완료", "Done")} · {items.length}{" "}
         <motion.span
@@ -1437,17 +871,23 @@ function DoneSection({
       </button>
       <AnimatePresence initial={false}>
         {open && (
-          <motion.div
+          <motion.ul
             initial={{ height: 0, opacity: 0 }}
             animate={{ height: "auto", opacity: 1 }}
             exit={{ height: 0, opacity: 0 }}
             transition={{ duration: 0.28, ease: [0.32, 0.72, 0, 1] }}
-            className="flex flex-col gap-3 overflow-hidden"
+            className="flex flex-col overflow-hidden"
           >
             {items.map((s) => (
-              <ScheduleCard key={s.id} {...cardProps(s)} done />
+              <ScheduleCompactRow
+                key={s.id}
+                s={s}
+                done
+                onComplete={() => onComplete(s)}
+                onEdit={() => onEdit(s)}
+              />
             ))}
-          </motion.div>
+          </motion.ul>
         )}
       </AnimatePresence>
     </section>
@@ -1624,7 +1064,7 @@ function CalendarGrid({
       }}
     >
       {({ startDrag, hoverDay, draggingIds }) => (
-        <div ref={calendarRef} className="relative space-y-4">
+        <div ref={calendarRef} className="relative space-y-3">
           <AnimatePresence mode="wait">
             <motion.div
               key={`${y}-${m}`}
@@ -1703,7 +1143,7 @@ function CalendarGrid({
                         {week.map((c, i) => {
                           if (!c) {
                             return (
-                              <div key={`${wi}-${i}`} className="min-h-[52px]" />
+                              <div key={`${wi}-${i}`} className="min-h-[44px]" />
                             );
                           }
                           const evs = singleDayEventsOf(c);
@@ -2100,7 +1540,9 @@ function DayEventChip({
         {st.getHours().toString().padStart(2, "0")}:
         {st.getMinutes().toString().padStart(2, "0")}
       </span>
-      <span className="flex-1 text-[13px] leading-snug text-ink">{s.text}</span>
+      <span className="flex-1 break-words text-left text-[14px] font-medium leading-snug text-ink">
+        {scheduleDisplayTitle(s)}
+      </span>
     </li>
   );
 }
