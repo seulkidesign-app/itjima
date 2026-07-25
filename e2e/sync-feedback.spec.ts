@@ -8,6 +8,7 @@ import {
   injectSignedInUser,
   blockCloudMutations,
   TEST_USER_ID,
+  contextMenuDialog,
 } from "./helpers";
 
 test.describe("sync feedback", () => {
@@ -23,8 +24,7 @@ test.describe("sync feedback", () => {
     await addThought(page, text);
 
     await openContextMenu(page, text);
-    await phone(page)
-      .getByRole("dialog")
+    await contextMenuDialog(page)
       .getByRole("button", { name: "Delete", exact: true })
       .click();
 

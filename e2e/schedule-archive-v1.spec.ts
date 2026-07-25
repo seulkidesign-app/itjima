@@ -89,6 +89,7 @@ test.describe("Schedule V1", () => {
 
   test("page heading and today compact list", async ({ page }) => {
     await phone(page).getByRole("link", { name: /^Schedule/ }).click();
+    await phone(page).getByRole("tab", { name: "Today" }).click();
     await expect(
       phone(page).getByRole("heading", { name: "Schedule", exact: true }),
     ).toBeVisible();

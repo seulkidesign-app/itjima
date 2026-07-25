@@ -10,6 +10,7 @@ import {
   gotoArchiveListView,
   gotoScheduleUpcoming,
   completeScheduleDialog,
+  contextMenuDialog,
   GUEST_INBOX_KEY,
   GUEST_ARCHIVE_KEY,
   GUEST_SCHEDULE_KEY,
@@ -73,8 +74,7 @@ test.describe("CRUD flows (guest / offline)", () => {
     await addThought(page, text);
 
     await openContextMenu(page, text);
-    await phone(page)
-      .getByRole("dialog")
+    await contextMenuDialog(page)
       .getByRole("button", { name: "Delete", exact: true })
       .click();
 

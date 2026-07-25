@@ -96,6 +96,7 @@ export async function resetAppState(page: Page) {
       if (k.startsWith("itjima.")) localStorage.removeItem(k);
     }
     localStorage.setItem("itjima_lang", "en");
+    localStorage.setItem("itjima.swipe.tutorial.done", "1");
     sessionStorage.clear();
   });
   await page.reload();
@@ -249,8 +250,27 @@ export async function openContextMenu(page: Page, thoughtText: string) {
   await openContextMenuRaw(page, thoughtText);
 }
 
+export async function closeDecisionDeckIfOpen(page: Page) {
+  const frame = phone(page);
+  const deck = frame.getByRole("dialog", { name: "One by one" });
+  if (!(await deck.isVisible().catch(() => false))) return;
+  const tutorial = frame.getByTestId("swipe-tutorial");
+  if (await tutorial.isVisible().catch(() => false)) {
+    await tutorial.getByRole("button", { name: /Got it|알겠어요/ }).click();
+  }
+  await deck.getByRole("button", { name: "Close", exact: true }).click({ force: true });
+  await deck.waitFor({ state: "hidden", timeout: 5000 }).catch(() => {});
+}
+
+export function contextMenuDialog(page: Page) {
+  return phone(page).getByRole("dialog").filter({
+    has: phone(page).getByRole("button", { name: "Save to vault", exact: true }),
+  });
+}
+
 export async function openContextMenuRaw(page: Page, thoughtText: string) {
   const frame = phone(page);
+  await closeDecisionDeckIfOpen(page);
   const bubble = frame
     .getByRole("paragraph")
     .filter({ hasText: thoughtText })
@@ -260,6 +280,9 @@ export async function openContextMenuRaw(page: Page, thoughtText: string) {
   await bubble.dispatchEvent("pointerup", { button: 0, pointerId: 1 });
   await frame
     .getByRole("dialog")
+    .filter({
+      has: frame.getByRole("button", { name: "Save to vault", exact: true }),
+    })
     .getByRole("button", { name: "Save to vault", exact: true })
     .waitFor({
       state: "visible",
