@@ -242,6 +242,13 @@ function Archive() {
   const groupOf = (id: string, text: string) =>
     overrides[id] ?? (autoClassify ? archiveGroup(text).key : "etc");
 
+  const groupLabelFor = (id: string, text: string) => {
+    const key = groupOf(id, text);
+    const def = allGroups.find((g) => g.key === key);
+    if (!def) return null;
+    return lang === "en" ? def.en : def.ko;
+  };
+
   const persistOverrides = (next: Record<string, string>) => {
     setOverrides(next);
     writeGroupOverrides(next);
@@ -947,6 +954,7 @@ function Archive() {
                   item={it}
                   locale={locale}
                   categoryLabel={vaultCategoryLabel(vaultCategory(it.text), lang)}
+                  groupLabel={groupLabelFor(it.id, it.text)}
                   pinned={pins.has(it.id)}
                   onOpen={() => {
                     recordArchiveVisit(it.id);
@@ -994,7 +1002,7 @@ function Archive() {
             />
           </>
         ) : featureEnabled("ARCHIVE_AI_GROUPING") ? (
-          <>
+          <div data-testid="archive-grouped-list">
             {featureEnabled("REDISCOVERY") &&
               revival &&
               revival.sourceKind === "archive" && (
@@ -1161,7 +1169,7 @@ function Archive() {
                 </section>
               );
             })}
-          </>
+          </div>
         ) : (
           <section
             className="flex flex-col gap-2"
@@ -1173,6 +1181,7 @@ function Archive() {
                 item={it}
                 locale={locale}
                 categoryLabel={vaultCategoryLabel(vaultCategory(it.text), lang)}
+                groupLabel={groupLabelFor(it.id, it.text)}
                 pinned={pins.has(it.id)}
                 onOpen={() => {
                   recordArchiveVisit(it.id);

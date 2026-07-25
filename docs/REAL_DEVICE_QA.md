@@ -1,110 +1,91 @@
-# Real-Device QA Checklist — Itjima Beta RC
+# Real-Device QA Checklist — Itjima Core Product Sprint
 
-Manual verification for external beta (5–10 testers). **Do not mark PASS unless tested on the stated platform.**
+Manual verification for external beta. **Do not mark PASS unless tested on the stated platform.**
 
-Last updated: 2026-07-25 (RC verification sprint)
-
----
-
-## How to use
-
-1. Install the beta build (production URL or PWA install prompt).
-2. Complete each section on the listed device/browser.
-3. Record: **PASS** / **FAIL** / **UNTESTED** + notes.
-4. File P0/P1 bugs before inviting external testers.
+Last updated: 2026-07-25 (Core Product Completion sprint)
 
 ---
 
-## iOS Safari
+## Beta gate (minimum)
+
+| Platform | Required | Status |
+|----------|----------|--------|
+| iPhone installed PWA | Core loop A–F | UNTESTED |
+| Android installed PWA | Core loop A–F | UNTESTED |
+
+**Beta blocked by reminder architecture** until at least one iOS PWA and one Android PWA complete notification tests with app closed.
+
+---
+
+## Core flows
+
+| Flow | Description | iOS PWA | Android PWA | Notes |
+|------|-------------|---------|-------------|-------|
+| A | Text capture → Brain Mirror → schedule → detail | UNTESTED | UNTESTED | |
+| B | Voice capture — exactly one thought | UNTESTED | UNTESTED | |
+| C | Schedule reminder fires once; edit cancels old | UNTESTED | UNTESTED | SW + in-tab fallback |
+| D | Archive group → detail → search → delete → undo | UNTESTED | UNTESTED | |
+| E | Decision Deck — no overlay collision | UNTESTED | UNTESTED | |
+| F | Reload persistence (schedule + archive + groups) | UNTESTED | UNTESTED | |
+
+---
+
+## Capture
+
+| Check | iOS Safari | iOS PWA | Android Chrome | Android PWA |
+|-------|------------|---------|----------------|-------------|
+| Text capture — one thought per submit | UNTESTED | UNTESTED | UNTESTED | UNTESTED |
+| Voice — no duplicate transcript | UNTESTED | UNTESTED | UNTESTED | UNTESTED |
+| Newest thought visible after capture | UNTESTED | UNTESTED | UNTESTED | UNTESTED |
+| Keyboard does not hide latest thought | UNTESTED | UNTESTED | UNTESTED | UNTESTED |
+| "최신 생각 보기" when scrolled up | UNTESTED | UNTESTED | UNTESTED | UNTESTED |
+
+---
+
+## Schedule
+
+| Check | iOS PWA | Android PWA |
+|-------|---------|-------------|
+| Quick dates [오늘][내일][이번 주말] sync with calendar | UNTESTED | UNTESTED |
+| Start/end time; all-day | UNTESTED | UNTESTED |
+| Overdue grouped under "지난 일정" | UNTESTED | UNTESTED |
+| Detail/edit/delete | UNTESTED | UNTESTED |
+| Reminder permission denied — UI shows state | UNTESTED | UNTESTED |
+| Reminder while app closed | UNTESTED | UNTESTED |
+| Reminder while device locked | UNTESTED | UNTESTED |
+| Notification tap opens correct schedule | UNTESTED | UNTESTED |
+| Edit schedule replaces reminder | UNTESTED | UNTESTED |
+
+### Notification architecture limitations
+
+- **In-tab timers**: reliable while app/tab is open (7-day horizon).
+- **Service worker**: schedules background notifications on supported platforms (Android Chrome PWA best; iOS 16.4+ PWA limited).
+- **iOS Safari tab closed**: reminders may not fire — **beta blocker** until verified on device.
+- **Backend Web Push**: not implemented; required for guaranteed closed-app delivery on all platforms.
+
+---
+
+## Archive
+
+| Check | iOS PWA | Android PWA |
+|-------|---------|-------------|
+| Groups visible (전체 default) | UNTESTED | UNTESTED |
+| Row shows type, preview, group, date | UNTESTED | UNTESTED |
+| Detail sheet complete | UNTESTED | UNTESTED |
+| Search across title/body/url/group | UNTESTED | UNTESTED |
+| Delete + undo snackbar | UNTESTED | UNTESTED |
+
+---
+
+## Semantic UI
 
 | Check | Status | Notes |
 |-------|--------|-------|
-| Home capture + send | UNTESTED | |
-| Brain Mirror appears after capture | UNTESTED | |
-| NL schedule confirm sheet | UNTESTED | |
-| Decision Deck swipe (right=schedule, left=archive, down=keep) | UNTESTED | |
-| Swipe responsiveness / no browser back conflict | UNTESTED | |
-| Archive swipe delete + undo snackbar | UNTESTED | |
-| Schedule Today tab | UNTESTED | |
-| Schedule Calendar tab + date select | UNTESTED | |
-| Bottom sheet open/close (Brand Hub, detail) | UNTESTED | |
-| Keyboard does not cover primary actions | UNTESTED | |
-| Safe area / home indicator (no overlap) | UNTESTED | |
-| Reload persistence (thoughts, schedule, archive) | UNTESTED | |
-| Offline capture → reconnect sync | UNTESTED | |
-| Voice input — no duplicate submission | UNTESTED | |
-| Links inside thoughts open correctly | UNTESTED | |
-| Copy/paste in input | UNTESTED | |
-| Reduced motion (`Settings → Accessibility`) | UNTESTED | |
-| Large text (`Dynamic Type`) | UNTESTED | |
-
----
-
-## iOS installed PWA (Add to Home Screen)
-
-| Check | Status | Notes |
-|-------|--------|-------|
-| Install prompt / Add to Home Screen | UNTESTED | |
-| Launch in standalone (no Safari chrome) | UNTESTED | |
-| Safe area in standalone layout | UNTESTED | |
-| Status bar / home indicator spacing | UNTESTED | |
-| Reload after force-quit | UNTESTED | |
-| Offline capture in PWA | UNTESTED | |
-| Swipe vs edge gesture conflict | UNTESTED | |
-| Haptic on swipe commit (if supported) | UNTESTED | |
-| Notification permission (if shown) | UNTESTED | |
-
----
-
-## Android Chrome
-
-| Check | Status | Notes |
-|-------|--------|-------|
-| Home capture flow | UNTESTED | |
-| Decision Deck swipes | UNTESTED | |
-| Archive delete + undo | UNTESTED | |
-| Schedule Calendar month navigation (44px targets) | UNTESTED | |
-| Sheet backdrop + drag-to-dismiss | UNTESTED | |
-| Keyboard viewport resize | UNTESTED | |
-| Safe area / gesture nav bar | UNTESTED | |
-| Reload persistence | UNTESTED | |
-| Offline → online sync | UNTESTED | |
-| Voice input duplicate prevention | UNTESTED | |
-| Text selection in archive detail | UNTESTED | |
-
----
-
-## Android installed PWA
-
-| Check | Status | Notes |
-|-------|--------|-------|
-| Install prompt (Chrome menu → Install app) | UNTESTED | |
-| Standalone launch | UNTESTED | |
-| Safe area / nav bar overlap | UNTESTED | |
-| Reload persistence in PWA | UNTESTED | |
-| Offline capture in PWA | UNTESTED | |
-| Swipe scroll conflict in sheets | UNTESTED | |
-
----
-
-## Cross-platform regression spots
-
-These areas were changed in the RC sprint — prioritize on real devices:
-
-- **Destructive copy**: Archive swipe label `삭제하기`, snackbar `삭제했어요 · 되돌리기`
-- **Calendar polish**: month nav touch targets, today vs selected rings, event dots
-- **Sheet transitions**: Login, Brand Hub, NL schedule — backdrop `ink/35` + blur
-- **Schedule delete toast**: `삭제했어요` (calendar event menu)
-
----
-
-## Beta safety (smoke on any device)
-
-| Check | Status | Notes |
-|-------|--------|-------|
-| No NL debug panel in production URL | UNTESTED | `?nlDebug=1` should not enable in prod |
-| No console errors on Home → capture → Home | UNTESTED | |
-| No thought text visible in network analytics | UNTESTED | Inspect devtools Network tab |
+| Schedule = yellow | UNTESTED | |
+| Task = blue | UNTESTED | |
+| Archive = green | UNTESTED | |
+| Keep = neutral gray | UNTESTED | |
+| Destructive = red only | UNTESTED | |
 
 ---
 
@@ -116,4 +97,4 @@ These areas were changed in the RC sprint — prioritize on real devices:
 | Engineering | | | |
 | QA | | | |
 
-**Minimum for external beta:** All P0 flows PASS on at least one iOS and one Android device; PWA install tested once per platform.
+**Do not claim beta readiness without real-device notification verification.**

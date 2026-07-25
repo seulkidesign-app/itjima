@@ -21,9 +21,9 @@ describe("Itjima voice — clarity", () => {
 
   it("uses literal result hints in Korean", () => {
     const nl = understandNaturalLanguage("내일 3시 치과", "ko");
-    expect(warmResultHint(nl, "ko")).toBe("일정에 추가돼요");
+    expect(warmResultHint(nl, "ko")).toMatch(/일정에 추가할게요/);
     const task = understandNaturalLanguage("여권 갱신하기", "ko");
-    expect(warmResultHint(task, "ko")).toBe("할 일로 들어가요");
+    expect(warmResultHint(task, "ko")).toBe("날짜 없이 할 일에 둘게요.");
   });
 
   it("does not use ambiguous poetic phrases in result hints", () => {

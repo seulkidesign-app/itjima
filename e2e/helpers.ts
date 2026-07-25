@@ -128,10 +128,10 @@ export async function gotoScheduleUpcoming(page: Page) {
 
 export async function openArchiveEditDialog(page: Page, thoughtText: string) {
   await gotoArchiveListView(page);
-  const row = phone(page)
-    .getByRole("button")
-    .filter({ hasText: thoughtText })
-    .first();
+  const search = phone(page).getByPlaceholder("Find a thought you kept");
+  await search.fill(thoughtText);
+  const row = phone(page).getByTestId("archive-list-row").first();
+  await row.waitFor({ state: "visible" });
   await row.dispatchEvent("pointerdown");
   await page.waitForTimeout(550);
   await row.dispatchEvent("pointerup");

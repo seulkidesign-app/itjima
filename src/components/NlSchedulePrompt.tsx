@@ -9,7 +9,7 @@ import {
   trackNlPrimaryActionClicked,
 } from "@/lib/nlAnalytics";
 import { buildMirrorDisplay } from "@/lib/nlMirrorCopy";
-import { warmMirrorLine, warmResultHint } from "@/lib/warmMirrorCopy";
+import { warmMirrorLine, warmResultHint, mirrorSemanticRole } from "@/lib/warmMirrorCopy";
 import { isNlDebugEnabled } from "@/lib/nlDebug";
 import {
   buildPromiseCard,
@@ -93,6 +93,7 @@ export function NlSchedulePrompt({
     [item.text, uiLang],
   );
   const badge = INTENT_BADGE[card.nlIntent];
+  const semanticRole = mirrorSemanticRole(card.nlIntent);
 
   useEffect(() => {
     if (acknowledged || trackedRef.current) return;
@@ -223,9 +224,13 @@ export function NlSchedulePrompt({
           {t("🧠", "🧠")}
         </span>
         <span className="min-w-0 flex-1 truncate text-[12px] font-medium text-ink-soft">
+          {t("AI가 이해했어요", "AI understood")}
+          {" · "}
           {warmMirrorLine(item.text, nl, uiLang)}
         </span>
-        <span className="shrink-0 rounded-full bg-ink/[0.05] px-2 py-0.5 text-[10px] font-semibold text-ink-soft">
+        <span
+          className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] font-semibold status-chip status-chip--${semanticRole}`}
+        >
           {t(badge.ko, badge.en)}
         </span>
         {!acknowledged && (
@@ -244,7 +249,7 @@ export function NlSchedulePrompt({
         )}
       </div>
 
-      <div className="brain-mirror-card w-full px-3.5 py-2.5">
+      <div className={`brain-mirror-card brain-mirror-card--${semanticRole} w-full px-3.5 py-2.5`}>
         <p
           className="line-clamp-2 text-[15px] font-semibold leading-snug text-ink"
           data-testid="promise-mirror-title"

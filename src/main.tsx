@@ -6,6 +6,8 @@ import { supabase } from "./integrations/supabase/client";
 import { queryClient, router } from "./router";
 import "./styles.css";
 
+import { registerServiceWorker } from "@/lib/swReminders";
+
 // Start PKCE exchange as early as possible on the OAuth callback route
 if (
   typeof window !== "undefined" &&
@@ -18,6 +20,10 @@ declare module "@tanstack/react-router" {
   interface Register {
     router: typeof router;
   }
+}
+
+if (typeof window !== "undefined" && import.meta.env.VITE_E2E !== "true") {
+  void registerServiceWorker();
 }
 
 createRoot(document.getElementById("root")!).render(

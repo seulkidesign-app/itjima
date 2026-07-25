@@ -1,7 +1,7 @@
 import { useRef, useState, type PointerEvent as ReactPointerEvent } from "react";
 import { animate } from "framer-motion";
 import type { ScheduleItem } from "@/lib/store";
-import { formatUpcomingScheduleTime } from "@/lib/scheduleTime";
+import { formatUpcomingScheduleTime, resolveScheduleAllDayFlags } from "@/lib/scheduleTime";
 import { scheduleDisplayTitle } from "@/lib/thoughtProvenance";
 import { isMissed } from "@/lib/scheduleGroups";
 import { useT, useLang } from "@/lib/i18n";
@@ -12,6 +12,8 @@ export type ScheduleCompactRowProps = {
   s: ScheduleItem;
   pinned?: boolean;
   done?: boolean;
+  /** When true, suppress per-row overdue label (shown at section level). */
+  inPastSection?: boolean;
   onComplete: () => void;
   onEdit: () => void;
 };
@@ -20,14 +22,27 @@ export function ScheduleCompactRow({
   s,
   pinned,
   done,
+  inPastSection = false,
   onComplete,
   onEdit,
 }: ScheduleCompactRowProps) {
   const t = useT();
   const { lang } = useLang();
   const title = scheduleDisplayTitle(s);
-  const timeLabel = formatUpcomingScheduleTime(new Date(s.start_time), lang);
-  const missed = !done && isMissed(s);
+  const flags = resolveScheduleAllDayFlags(s);
+  const start = new Date(s.start_time);
+  const end = new Date(s.end_time);
+  const timeLabel = flags.startAllDay
+    ? t("종일", "All day")
+    : formatUpcomingScheduleTime(start, lang);
+  const rangeLabel =
+    !flags.startAllDay &&
+    !flags.endAllDay &&
+    end.getTime() > start.getTime() + 30 * 60 * 1000
+      ? `${formatUpcomingScheduleTime(start, lang)}–${formatUpcomingScheduleTime(end, lang)}`
+      : null;
+  const displayTime = rangeLabel ?? timeLabel;
+  const missed = !done && !inPastSection && isMissed(s);
   const dxRef = useRef(0);
   const [dx, setDx] = useState(0);
   const [acting, setActing] = useState(false);
@@ -137,19 +152,29 @@ export function ScheduleCompactRow({
         {done && <Check size={12} strokeWidth={3} />}
       </button>
       <span className="min-w-0 flex-1">
+        {displayTime && (
+          <span
+            className={`block text-[13px] font-semibold tabular-nums leading-snug ${
+              flags.startAllDay
+                ? "text-ink-soft/80"
+                : "text-semantic-schedule"
+            }`}
+          >
+            {displayTime}
+          </span>
+        )}
         <span
           className={`block text-[16px] font-semibold leading-snug tracking-[-0.01em] text-ink ${
             done ? "line-through decoration-ink/20" : ""
-          }`}
+          } ${displayTime ? "mt-0.5" : ""}`}
         >
           {title}
         </span>
-        {(timeLabel || missed || pinned) && (
-          <span className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[12px] tabular-nums text-ink-soft/75">
-            {timeLabel && <span>{timeLabel}</span>}
+        {(missed || pinned) && (
+          <span className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[12px] text-ink-soft/75">
             {missed && (
-              <span className="text-ink-soft/80">
-                {t("그때가 지났어요", "That moment passed")}
+              <span className="status-chip status-chip--overdue">
+                {t("지남", "Past")}
               </span>
             )}
             {pinned && !done && (

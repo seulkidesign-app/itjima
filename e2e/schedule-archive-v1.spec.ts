@@ -27,8 +27,13 @@ test.describe("Schedule V1", () => {
   test.beforeEach(async ({ page }) => {
     await resetAppState(page);
     const now = Date.now();
-    const todayStart = new Date();
-    todayStart.setHours(todayStart.getHours() + 2, 0, 0, 0);
+    const todayStart = new Date(now + 2 * 60 * 60 * 1000);
+    todayStart.setSeconds(0, 0);
+    // Keep fixture on today's calendar day (avoid midnight rollover flakiness).
+    if (todayStart.toDateString() !== new Date(now).toDateString()) {
+      todayStart.setTime(now);
+      todayStart.setHours(15, 0, 0, 0);
+    }
     const todayEnd = new Date(todayStart.getTime() + 60 * 60 * 1000);
     const laterStart = new Date();
     laterStart.setDate(laterStart.getDate() + 4);
@@ -152,7 +157,11 @@ test.describe("Archive V1", () => {
     await expect(
       phone(page).getByText("Find what you saved, when you need it."),
     ).toBeVisible();
-    await expect(phone(page).getByTestId("archive-v1-list")).toBeVisible();
+    await expect(
+      phone(page).getByTestId("archive-grouped-list").or(
+        phone(page).getByTestId("archive-v1-list"),
+      ),
+    ).toBeVisible();
     await expect(phone(page).getByRole("button", { name: "Thought map" })).toHaveCount(0);
     await expect(phone(page).getByRole("link", { name: "Revisit" })).toHaveCount(0);
     await expect(phone(page).getByText("Threads that connect")).toHaveCount(0);
@@ -163,7 +172,7 @@ test.describe("Archive V1", () => {
 
     await phone(page).getByPlaceholder("Find a thought you kept").fill("");
     await phone(page).getByTestId("archive-category-filters").getByRole("button", { name: "Links" }).click();
-    await expect(phone(page).getByText("https://example.com/reference")).toBeVisible();
+    await expect(phone(page).getByTestId("archive-list-row").filter({ hasText: "example.com" })).toBeVisible();
     await expect(phone(page).getByText("Startup idea for cafe")).toHaveCount(0);
   });
 

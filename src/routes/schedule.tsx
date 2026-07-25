@@ -83,6 +83,7 @@ import { scheduleDisplayTitle, rawPreview } from "@/lib/thoughtProvenance";
 import { SPRING_SNAP_BACK, SHEET_BACKDROP_CLASS, SHEET_BACKDROP_FADE } from "@/lib/motion";
 import { toast } from "sonner";
 import { useT, useLang } from "@/lib/i18n";
+import { syncRemindersToServiceWorker } from "@/lib/swReminders";
 import { track } from "@/lib/analytics";
 import { haptic, confirm as hapticConfirm } from "@/lib/haptics";
 
@@ -184,6 +185,7 @@ function Schedule() {
   );
 
   useEffect(() => {
+    void syncRemindersToServiceWorker(items);
     return bindInAppReminders(items, (title, body) => {
       if (Notification.permission === "granted") {
         new Notification(title, { body });
@@ -203,10 +205,17 @@ function Schedule() {
       clearReminderOffset(s.id);
       await update(s.id, { alarm: true, alarm_at: at.toISOString() });
       if (perm === "granted") {
+        await syncRemindersToServiceWorker(
+          items.map((it) =>
+            it.id === s.id
+              ? { ...it, alarm: true, alarm_at: at.toISOString() }
+              : it,
+          ),
+        );
         toast.success(
           t(
-            "앱을 열어두면 그때 알려드릴게요",
-            "I'll remind you while the app is open",
+            "설정한 시간에 알림을 보낼게요",
+            "Reminder set for the time you chose",
           ),
           scheduleToast,
         );
@@ -737,7 +746,7 @@ function FlowedPastSection({
         onClick={() => setOpen((v) => !v)}
         className="flex w-full items-center justify-between px-0.5 py-1.5 text-[13px] font-semibold text-ink-soft touch-press"
       >
-        <span>{t("놓친 것", "Missed")}</span>
+        <span>{t("지난 일정", "Past")}</span>
         <span className="text-[12px]">
           {items.length} {open ? "▴" : "▾"}
         </span>

@@ -17,7 +17,7 @@ export const FEATURES = {
   /** Archive: 가까운 순 sort toggle */
   ARCHIVE_NEARBY_SORT: false,
   /** Archive: AI / keyword grouping, organize sheet, collapsible groups */
-  ARCHIVE_AI_GROUPING: false,
+  ARCHIVE_AI_GROUPING: true,
 } as const;
 
 export type FeatureKey = keyof typeof FEATURES;

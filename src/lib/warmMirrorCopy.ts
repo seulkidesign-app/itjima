@@ -6,7 +6,7 @@ function topic(text: string) {
   return thoughtFirstLine(text).replace(/[.!?…]+$/u, "").trim();
 }
 
-/** Layer 2 — warm interpretation. Never promises an action. */
+/** Layer 2 — warm interpretation. Never promises an unscheduled action. */
 export function warmMirrorLine(
   text: string,
   nl: NlScheduleUnderstanding,
@@ -20,43 +20,25 @@ export function warmMirrorLine(
       : null;
 
   if (lang === "en") {
-    if (/dentist|dental/i.test(raw)) {
-      return when ? `${when} — dentist appointment.` : "Dentist appointment.";
-    }
-    if (/call|phone|mom|dad|parent/i.test(raw)) {
-      return "Something to call about.";
-    }
-    if (/meet|meeting|coffee|lunch|dinner/i.test(raw)) {
-      return when ? `Plans for ${when}.` : "Sounds like a meet-up.";
-    }
-    if (/buy|shop|grocery|pick up/i.test(raw)) {
-      return "Something to buy or pick up.";
-    }
-    if (/link|read|article|watch/i.test(raw)) {
-      return "Something to read later.";
-    }
-    if (/passport|renew|visa|tax|insurance/i.test(raw)) {
-      return "Worth saving for later.";
-    }
     switch (nl.intent) {
       case "schedule_exact":
-        return when ? `Schedule for ${when}.` : "Sounds like a schedule.";
+        return when ? `Looks like a schedule for ${when}.` : "Looks like a schedule.";
       case "schedule_clarify":
-        return "A schedule — needs a day.";
+        return "Looks like a schedule — needs a day.";
       case "task":
-        return "Something to get done.";
+        return "Looks like something to do.";
       case "archive":
-        return "Worth keeping for later.";
+        return "Looks like something to save.";
       default:
         return line.length <= 36 ? line : "A note for now.";
     }
   }
 
   if (/치과|치료|검진/.test(raw)) {
-    return when ? `${when} 치과 예약이네요.` : "치과 예약이네요.";
+    return when ? `${when} 치과 예약 같아요.` : "치과 예약 같아요.";
   }
   if (/전화|통화|엄마|아빠|부모/.test(raw)) {
-    return "전화할 일이네요.";
+    return "전화할 일 같아요.";
   }
   if (/만나|약속|미팅|회의|브런치|저녁|점심/.test(raw)) {
     return when ? `${when} 만날 약속 같아요.` : "만날 약속 같아요.";
@@ -68,55 +50,82 @@ export function warmMirrorLine(
     return "나중에 다시 보고 싶은 내용 같아요.";
   }
   if (/여권|갱신|세금|보험|계약/.test(raw)) {
-    return "나중을 위해 남겨둘 내용이네요.";
+    return "나중을 위해 남겨둘 내용 같아요.";
   }
   if (/생일|기념/.test(raw)) {
-    return when ? `${when} 챙길 날이네요.` : "챙길 날이네요.";
+    return when ? `${when} 챙길 날이에요.` : "챙길 날이에요.";
   }
 
   switch (nl.intent as NlIntent) {
     case "schedule_exact":
-      return when ? `${when} 일정이에요.` : "일정 같아요.";
+      return when ? `${when} 일정 같아요.` : "일정 같아요.";
     case "schedule_clarify":
-      return "일정인데, 날짜만 정하면 돼요.";
+      return "일정 같은데, 날짜만 정하면 돼요.";
     case "task":
-      return "해야 할 일 같아요.";
+      return "할 일로 보여요.";
     case "archive":
-      return "다시 보고 싶은 내용 같아요.";
+      return "보관할 내용 같아요.";
     default:
-      return line.length <= 28 ? `${line}` : "메모로 남긴 내용이에요.";
+      return line.length <= 28 ? line : "메모로 남긴 내용이에요.";
   }
 }
 
-/** Layer 3 supporting hint — literal outcome preview under Brain Mirror. */
+/** Layer 3 — literal system action preview. Only states what will actually happen. */
 export function warmResultHint(
   nl: NlScheduleUnderstanding,
   lang: "ko" | "en",
 ): string {
+  const when =
+    nl.detectedDate && nl.intent === "schedule_exact"
+      ? formatSuggestedMoment(nl.detectedDate.start, lang)
+      : null;
+
   if (lang === "en") {
     switch (nl.intent) {
       case "schedule_exact":
-        return "Adds to Schedule";
+        return when
+          ? `Will add to Schedule for ${when}.`
+          : "Will add to Schedule.";
       case "schedule_clarify":
-        return "Pick a day, then adds to Schedule";
+        return "Pick a day, then adds to Schedule.";
       case "task":
-        return "Adds as a task with no date";
+        return "Will add as a task with no date.";
       case "archive":
-        return "Saves to Archive on your device";
+        return "Will save to Archive on your device.";
       default:
-        return "Stays in your inbox";
+        return "Stays in your inbox.";
     }
   }
+
   switch (nl.intent) {
     case "schedule_exact":
-      return "일정에 추가돼요";
+      return when
+        ? `${when}로 일정에 추가할게요.`
+        : "일정에 추가할게요.";
     case "schedule_clarify":
-      return "날짜를 고르면 일정에 추가돼요";
+      return "날짜를 고르면 일정에 추가할게요.";
     case "task":
-      return "할 일로 들어가요";
+      return "날짜 없이 할 일에 둘게요.";
     case "archive":
-      return "보관함에 저장돼요";
+      return "보관함에 저장할게요.";
     default:
-      return "던진 곳에 그대로 남아요";
+      return "던진 곳에 그대로 남아요.";
+  }
+}
+
+/** Semantic destination for Brain Mirror card styling. */
+export function mirrorSemanticRole(
+  intent: NlIntent,
+): "schedule" | "task" | "archive" | "keep" {
+  switch (intent) {
+    case "schedule_exact":
+    case "schedule_clarify":
+      return "schedule";
+    case "task":
+      return "task";
+    case "archive":
+      return "archive";
+    default:
+      return "keep";
   }
 }

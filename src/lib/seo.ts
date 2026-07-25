@@ -6,14 +6,14 @@ export const SITE_URL = BRAND.siteUrl;
 export const SEO = {
   siteName: BRAND.name,
   alternateNames: BRAND.alternateNames,
-  landingTitle: `${BRAND.displayKo} | AI 기억 관리 앱`,
+  landingTitle: "잊지마 Itjima | 생각을 던지고 안심하고 잊는 기억 관리 앱",
   landingDescription:
-    "잊지마(Itjima)는 AI 메모와 AI 일정으로 생각을 정리하는 기억 관리·생각 정리 앱입니다. Itjima와 잊지마는 같은 소프트웨어입니다.",
-  ogTitle: BRAND.displayKo,
+    "잊지마 Itjima는 떠오른 생각을 빠르게 기록하고 일정, 할 일, 보관으로 정리해주는 기억 관리 앱입니다. 대충 던지고 안심하고 잊으세요.",
+  ogTitle: "잊지마 Itjima",
   ogDescription:
-    "AI 메모·AI 일정·기억 관리 — 잊지마(Itjima)에 생각을 맡기고, 필요할 때 다시 꺼내보세요.",
+    "떠오른 생각을 빠르게 기록하고 일정, 할 일, 보관으로 정리해주는 기억 관리 앱입니다.",
   appDescription:
-    "잊지마(Itjima)는 떠오른 생각을 AI 메모로 남기고, AI 일정과 보관함으로 정리하는 기억 관리 웹앱입니다. Itjima와 잊지마는 동일한 제품입니다.",
+    "잊지마 Itjima는 떠오른 생각을 빠르게 기록하고 일정, 할 일, 보관으로 정리해주는 기억 관리 웹앱입니다.",
   keywords:
     "잊지마, Itjima, ItJima, 잊지마 앱, 잊지마 메모, 잊지마 일정, AI 메모, AI 일정, 기억 관리 앱, 생각 정리 앱",
 } as const;
@@ -213,8 +213,8 @@ export function landingSoftwareApplicationLd() {
     alternateName: [...BRAND.alternateNames],
     applicationCategory: "ProductivityApplication",
     applicationSubCategory: "NoteTakingApplication",
-    operatingSystem: "Web",
-    url: SITE_URL,
+    operatingSystem: "Web, iOS PWA, Android PWA",
+    url: `${SITE_URL}/`,
     downloadUrl: `${SITE_URL}/`,
     softwareVersion: BRAND.softwareVersion,
     inLanguage: "ko-KR",

@@ -6,8 +6,8 @@ export const BRAND = {
   displayKo: "잊지마 (Itjima)",
   displayEn: "Itjima (잊지마)",
   siteUrl: "https://itjima.app",
-  landingPath: "/about",
-  landingUrl: "https://itjima.app/about",
+  landingPath: "/",
+  landingUrl: "https://itjima.app/",
   logoUrl: "https://itjima.app/favicon.svg",
   logoAlt: "잊지마(Itjima) AI 기억 관리 앱",
   /** Verified external profiles that describe the same product entity. */

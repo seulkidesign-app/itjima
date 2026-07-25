@@ -461,7 +461,7 @@ export function ScheduleChoiceFlow({
 
   const nextLabel =
     step === "when"
-      ? t("시간 보기", "Pick a time")
+      ? t("시간 추가", "Add time")
       : t("알림 정하기", "Set a reminder");
 
   const canProceedWhen =
