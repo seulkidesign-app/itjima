@@ -75,15 +75,15 @@ test.describe("CRUD flows (guest / offline)", () => {
     await openContextMenu(page, text);
     await phone(page)
       .getByRole("dialog")
-      .getByRole("button", { name: "Delete", exact: true })
+      .getByRole("button", { name: "Let it go", exact: true })
       .click();
 
     await expect(
       phone(page).getByRole("paragraph").filter({ hasText: text }),
     ).toHaveCount(0);
-    await page.getByText("Removed").waitFor({ state: "visible" });
+    await page.getByText("Let it go").waitFor({ state: "visible" });
 
-    await page.getByRole("button", { name: "Undo" }).click();
+    await page.getByRole("button", { name: "Take back" }).click();
     await phone(page).getByText(text, { exact: true }).first().waitFor({ state: "visible" });
   });
 

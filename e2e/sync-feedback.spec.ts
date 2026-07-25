@@ -25,10 +25,10 @@ test.describe("sync feedback", () => {
     await openContextMenu(page, text);
     await phone(page)
       .getByRole("dialog")
-      .getByRole("button", { name: "Delete", exact: true })
+      .getByRole("button", { name: "Let it go", exact: true })
       .click();
 
-    await page.getByText("Removed").waitFor({ state: "visible" });
+    await page.getByText("Let it go").waitFor({ state: "visible" });
     await expect(phone(page).getByRole("alert")).toHaveCount(0);
   });
 
