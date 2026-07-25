@@ -215,6 +215,16 @@ function AboutPage() {
       },
       {
         q: t(
+          "Itjima와 잊지마는 같은 앱인가요?",
+          "Are Itjima and 잊지마 the same app?",
+        ),
+        a: t(
+          "네. Itjima는 한국어 '잊지마'의 로마자 표기이며, 동일한 AI 기억 관리 소프트웨어입니다.",
+          "Yes — Itjima romanizes the Korean name 잊지마. They are the same AI memory management software.",
+        ),
+      },
+      {
+        q: t(
           "잊지마 앱은 Brain Dump·Mental Inbox 방식인가요?",
           "Is Itjima a brain dump or mental inbox app?",
         ),

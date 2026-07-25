@@ -598,8 +598,8 @@ export function InputBar({
       {!hero && !composer && (
         <p className="px-5 pb-3 text-center text-[11px] text-ink-soft/75">
           {t(
-            "잊어도 괜찮아요. ItJima가 기억할게요.",
-            "It's okay to forget. ItJima will remember.",
+            "잊어도 괜찮아요. Itjima(잊지마)가 기억할게요.",
+            "It's okay to forget. Itjima (잊지마) will remember.",
           )}
         </p>
       )}

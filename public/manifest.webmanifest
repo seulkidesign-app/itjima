@@ -1,7 +1,8 @@
 {
+  "id": "https://itjima.app/",
   "name": "잊지마 (Itjima) — AI 기억 관리",
   "short_name": "잊지마",
-  "description": "AI 메모와 AI 일정으로 생각을 정리하는 잊지마(Itjima) 기억 관리·생각 정리 앱",
+  "description": "Itjima(잊지마) — AI 메모와 AI 일정으로 생각을 정리하는 기억 관리·생각 정리 앱",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",

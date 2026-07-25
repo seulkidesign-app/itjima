@@ -15,7 +15,10 @@ function AuthCallbackPage() {
   const started = useRef(false);
 
   useEffect(() => {
-    document.title = t("로그인 처리 중 — ItJima", "Signing in — ItJima");
+    document.title = t(
+      "로그인 처리 중 — Itjima (잊지마)",
+      "Signing in — Itjima (잊지마)",
+    );
   }, [t]);
 
   useEffect(() => {

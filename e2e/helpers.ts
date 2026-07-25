@@ -256,17 +256,21 @@ export async function openSettings(page: Page) {
   await phone(page).getByRole("button", { name: "Settings", exact: true }).click();
 }
 
-/** About / Feedback live in the settings sheet on mobile. */
+export async function openBrandHub(page: Page) {
+  await gotoInbox(page);
+  await phone(page)
+    .getByRole("button", { name: "Itjima (잊지마)", exact: true })
+    .click();
+}
+
+/** Brand hub on Home replaces the old about sheet. */
 export async function openAbout(page: Page) {
-  await openSettings(page);
-  await phone(page).getByRole("button", { name: "About Itjima", exact: true }).click();
+  await openBrandHub(page);
 }
 
 export async function openFeedback(page: Page) {
-  await openSettings(page);
-  await phone(page)
-    .getByRole("button", { name: "Contact · Feedback", exact: true })
-    .click();
+  await openBrandHub(page);
+  await phone(page).getByRole("button", { name: "Send feedback", exact: true }).click();
 }
 
 /** Stub Supabase admin role checks for signed-in E2E. */

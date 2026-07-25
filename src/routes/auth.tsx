@@ -29,7 +29,7 @@ function AuthPage() {
   const [oauthError, setOauthError] = useState<string | null>(null);
 
   useEffect(() => {
-    document.title = t("로그인 — ItJima", "Sign in — ItJima");
+    document.title = t("로그인 — Itjima (잊지마)", "Sign in — Itjima (잊지마)");
   }, [t]);
 
   useEffect(() => {

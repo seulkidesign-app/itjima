@@ -6,7 +6,6 @@ import type { ScheduleConfirmOptions } from "@/components/ScheduleChoiceFlow";
 import { LoginSheet } from "@/components/LoginSheet";
 import { CleanupReviewSheet } from "@/components/CleanupReviewSheet";
 import { InputBar } from "@/components/InputBar";
-import { InstallPrompt } from "@/components/InstallPrompt";
 import { SyncIndicator } from "@/components/SyncIndicator";
 import { runUserOrganize } from "@/components/BrainMirrorSummary";
 import { InboxChat } from "@/components/home/InboxChat";
@@ -541,8 +540,6 @@ function Inbox() {
           onRestoreConsumed={() => setRestorePasteText(null)}
         />
       </div>
-
-      <InstallPrompt />
 
       {menuItem && (
         <ContextMenu

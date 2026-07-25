@@ -34,7 +34,7 @@ function AdminPage() {
   const qc = useQueryClient();
 
   useEffect(() => {
-    document.title = t("관리자 — ItJima", "Admin — ItJima");
+    document.title = t("관리자 — Itjima (잊지마)", "Admin — Itjima (잊지마)");
   }, [t]);
 
   const adminCheck = useQuery({

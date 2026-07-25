@@ -1,26 +1,43 @@
+import { BRAND } from "@/lib/brand";
+
 /** Public site URL — used for canonical, Open Graph, and sitemap. */
-export const SITE_URL = "https://itjima.app";
+export const SITE_URL = BRAND.siteUrl;
 
 export const SEO = {
-  siteName: "Itjima",
-  alternateName: "잊지마",
-  landingTitle: "잊지마 (Itjima) | AI 기억 관리 앱",
+  siteName: BRAND.name,
+  alternateNames: BRAND.alternateNames,
+  landingTitle: `${BRAND.displayKo} | AI 기억 관리 앱`,
   landingDescription:
-    "잊지마(Itjima)는 AI 메모와 AI 일정으로 생각을 정리하는 기억 관리·생각 정리 앱입니다. 떠오른 생각을 던지고, 필요할 때 다시 찾으세요.",
-  ogTitle: "잊지마 (Itjima)",
+    "잊지마(Itjima)는 AI 메모와 AI 일정으로 생각을 정리하는 기억 관리·생각 정리 앱입니다. Itjima와 잊지마는 같은 소프트웨어입니다.",
+  ogTitle: BRAND.displayKo,
   ogDescription:
     "AI 메모·AI 일정·기억 관리 — 잊지마(Itjima)에 생각을 맡기고, 필요할 때 다시 꺼내보세요.",
   appDescription:
-    "잊지마(Itjima)는 떠오른 생각을 AI 메모로 남기고, AI 일정과 보관함으로 정리하는 기억 관리 웹앱입니다. Brain dump와 Mental Inbox 방식의 생각 정리 앱.",
+    "잊지마(Itjima)는 떠오른 생각을 AI 메모로 남기고, AI 일정과 보관함으로 정리하는 기억 관리 웹앱입니다. Itjima와 잊지마는 동일한 제품입니다.",
   keywords:
-    "잊지마, Itjima, 잊지마 앱, 잊지마 메모, 잊지마 일정, AI 메모, AI 일정, 기억 관리 앱, 생각 정리 앱, Brain Dump, Mental Inbox",
+    "잊지마, Itjima, ItJima, 잊지마 앱, 잊지마 메모, 잊지마 일정, AI 메모, AI 일정, 기억 관리 앱, 생각 정리 앱",
 } as const;
 
 const ORG_ID = `${SITE_URL}/#organization`;
+const BRAND_ID = `${SITE_URL}/#brand`;
 const WEBSITE_ID = `${SITE_URL}/#website`;
 const APP_ID = `${SITE_URL}/#software`;
-const ABOUT_PAGE_ID = `${SITE_URL}/about#webpage`;
-const BREADCRUMB_ID = `${SITE_URL}/about#breadcrumb`;
+const ABOUT_PAGE_ID = `${BRAND.landingUrl}#webpage`;
+const BREADCRUMB_ID = `${BRAND.landingUrl}#breadcrumb`;
+
+function brandEntity() {
+  return {
+    "@type": "Brand" as const,
+    "@id": BRAND_ID,
+    name: BRAND.name,
+    alternateName: [...BRAND.alternateNames],
+    logo: {
+      "@type": "ImageObject" as const,
+      url: BRAND.logoUrl,
+      name: BRAND.logoAlt,
+    },
+  };
+}
 
 function upsertMeta(
   key: string,
@@ -71,7 +88,7 @@ export type LandingSeoOptions = {
 };
 
 export function applyLandingSeo(options: LandingSeoOptions = {}) {
-  const canonicalPath = options.canonicalPath ?? "/about";
+  const canonicalPath = options.canonicalPath ?? BRAND.landingPath;
   const title = options.title ?? SEO.landingTitle;
   const description = options.description ?? SEO.landingDescription;
   const canonical = `${SITE_URL}${canonicalPath}`;
@@ -81,8 +98,9 @@ export function applyLandingSeo(options: LandingSeoOptions = {}) {
 
   upsertMeta("description", description);
   upsertMeta("keywords", SEO.keywords);
-  upsertMeta("application-name", `${SEO.alternateName} (${SEO.siteName})`);
-  upsertMeta("apple-mobile-web-app-title", SEO.alternateName);
+  upsertMeta("author", BRAND.displayKo);
+  upsertMeta("application-name", BRAND.displayKo);
+  upsertMeta("apple-mobile-web-app-title", "잊지마");
   upsertLink("canonical", canonical);
 
   upsertMeta("og:title", SEO.ogTitle, "property");
@@ -90,28 +108,46 @@ export function applyLandingSeo(options: LandingSeoOptions = {}) {
   upsertMeta("og:type", "website", "property");
   upsertMeta("og:url", canonical, "property");
   upsertMeta("og:locale", "ko_KR", "property");
-  upsertMeta("og:site_name", `${SEO.alternateName} (${SEO.siteName})`, "property");
-  upsertMeta("og:image", `${SITE_URL}/favicon.svg`, "property");
-  upsertMeta("og:image:alt", "잊지마(Itjima) AI 기억 관리 앱", "property");
+  upsertMeta("og:site_name", BRAND.displayKo, "property");
+  upsertMeta("og:image", BRAND.logoUrl, "property");
+  upsertMeta("og:image:alt", BRAND.logoAlt, "property");
 
   upsertMeta("twitter:card", "summary");
   upsertMeta("twitter:title", SEO.ogTitle);
   upsertMeta("twitter:description", SEO.ogDescription);
-  upsertMeta("twitter:image", `${SITE_URL}/favicon.svg`);
-  upsertMeta("twitter:image:alt", "잊지마(Itjima) AI 기억 관리 앱");
+  upsertMeta("twitter:image", BRAND.logoUrl);
+  upsertMeta("twitter:image:alt", BRAND.logoAlt);
 }
 
 export function landingOrganizationLd() {
   return {
     "@type": "Organization",
     "@id": ORG_ID,
-    name: SEO.siteName,
-    alternateName: SEO.alternateName,
+    name: BRAND.name,
+    alternateName: [...BRAND.alternateNames],
     url: SITE_URL,
+    foundingDate: BRAND.foundingDate,
+    sameAs: [...BRAND.sameAs],
+    brand: { "@id": BRAND_ID },
     logo: {
       "@type": "ImageObject",
-      url: `${SITE_URL}/favicon.svg`,
-      caption: "잊지마(Itjima) AI 기억 관리 앱",
+      url: BRAND.logoUrl,
+      name: BRAND.logoAlt,
+      caption: BRAND.logoAlt,
+    },
+    knowsAbout: [
+      "AI memory management",
+      "AI notes",
+      "AI scheduling",
+      "productivity software",
+      "잊지마",
+      "Itjima",
+    ],
+    makesOffer: {
+      "@type": "Offer",
+      itemOffered: { "@id": APP_ID },
+      price: "0",
+      priceCurrency: "KRW",
     },
   };
 }
@@ -120,11 +156,12 @@ export function landingWebSiteLd() {
   return {
     "@type": "WebSite",
     "@id": WEBSITE_ID,
-    name: SEO.siteName,
-    alternateName: SEO.alternateName,
+    name: BRAND.name,
+    alternateName: [...BRAND.alternateNames],
     url: SITE_URL,
     inLanguage: "ko-KR",
     publisher: { "@id": ORG_ID },
+    about: { "@id": APP_ID },
   };
 }
 
@@ -132,16 +169,16 @@ export function landingWebPageLd() {
   return {
     "@type": "WebPage",
     "@id": ABOUT_PAGE_ID,
-    url: `${SITE_URL}/about`,
+    url: BRAND.landingUrl,
     name: SEO.landingTitle,
     description: SEO.landingDescription,
     inLanguage: "ko-KR",
     isPartOf: { "@id": WEBSITE_ID },
-    about: { "@id": APP_ID },
+    about: [{ "@id": ORG_ID }, { "@id": APP_ID }],
     primaryImageOfPage: {
       "@type": "ImageObject",
-      url: `${SITE_URL}/favicon.svg`,
-      caption: "잊지마(Itjima) AI 기억 관리 앱",
+      url: BRAND.logoUrl,
+      name: BRAND.logoAlt,
     },
     breadcrumb: { "@id": BREADCRUMB_ID },
   };
@@ -155,14 +192,14 @@ export function landingBreadcrumbLd() {
       {
         "@type": "ListItem",
         position: 1,
-        name: "잊지마 (Itjima)",
+        name: BRAND.displayKo,
         item: SITE_URL,
       },
       {
         "@type": "ListItem",
         position: 2,
         name: "소개",
-        item: `${SITE_URL}/about`,
+        item: BRAND.landingUrl,
       },
     ],
   };
@@ -172,24 +209,26 @@ export function landingSoftwareApplicationLd() {
   return {
     "@type": "SoftwareApplication",
     "@id": APP_ID,
-    name: SEO.siteName,
-    alternateName: SEO.alternateName,
+    name: BRAND.name,
+    alternateName: [...BRAND.alternateNames],
     applicationCategory: "ProductivityApplication",
     applicationSubCategory: "NoteTakingApplication",
     operatingSystem: "Web",
     url: SITE_URL,
     downloadUrl: `${SITE_URL}/`,
+    softwareVersion: BRAND.softwareVersion,
     inLanguage: "ko-KR",
     description: SEO.appDescription,
+    brand: { "@id": BRAND_ID },
+    creator: { "@id": ORG_ID },
+    publisher: { "@id": ORG_ID },
+    isPartOf: { "@id": WEBSITE_ID },
     featureList: [
       "AI 메모",
       "AI 일정",
       "기억 관리",
       "생각 정리",
-      "Brain dump",
-      "Mental inbox",
     ],
-    publisher: { "@id": ORG_ID },
     offers: {
       "@type": "Offer",
       price: "0",
@@ -201,7 +240,7 @@ export function landingSoftwareApplicationLd() {
 export function landingFaqLd(items: { question: string; answer: string }[]) {
   return {
     "@type": "FAQPage",
-    "@id": `${SITE_URL}/about#faq`,
+    "@id": `${BRAND.landingUrl}#faq`,
     mainEntity: items.map(({ question, answer }) => ({
       "@type": "Question",
       name: question,
@@ -213,13 +252,14 @@ export function landingFaqLd(items: { question: string; answer: string }[]) {
   };
 }
 
-/** Combined @graph for rich-result eligibility on the landing page. */
+/** Combined @graph — entity-first markup for Google Knowledge Graph signals. */
 export function landingStructuredDataGraph(
   faqItems: { question: string; answer: string }[],
 ) {
   return {
     "@context": "https://schema.org",
     "@graph": [
+      brandEntity(),
       landingOrganizationLd(),
       landingWebSiteLd(),
       landingWebPageLd(),

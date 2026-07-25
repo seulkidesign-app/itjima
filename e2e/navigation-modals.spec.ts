@@ -44,12 +44,17 @@ test.describe("Navigation and modals", () => {
     expect(ignorable).toEqual([]);
   });
 
-  test("about sheet opens and closes without trapping focus", async ({
+  test("brand hub opens and closes without trapping focus", async ({
     page,
   }) => {
     await openAbout(page);
-    await page.getByRole("button", { name: "Got it" }).click();
-    await expect(page.getByRole("button", { name: "Got it" })).toHaveCount(0);
+    await expect(
+      page.getByRole("dialog", { name: "Itjima (잊지마)" }),
+    ).toBeVisible();
+    await page.keyboard.press("Escape");
+    await expect(
+      page.getByRole("dialog", { name: "Itjima (잊지마)" }),
+    ).toHaveCount(0);
   });
 
   test("feedback sheet opens and closes with Escape", async ({ page }) => {
@@ -97,17 +102,17 @@ test.describe("Navigation and modals", () => {
     await expect(phone(page).getByRole("tabpanel")).toHaveCount(1);
   });
 
-  test("feedback from about replaces about sheet and closes fully", async ({
+  test("feedback from brand hub opens feedback sheet and closes fully", async ({
     page,
   }) => {
     await openAbout(page);
-    await page.getByRole("button", { name: "Send feedback" }).click();
+    await page.getByRole("button", { name: "Send feedback", exact: true }).click();
     await page
       .getByRole("dialog", { name: /Contact · Feedback/ })
       .waitFor({ state: "visible" });
-    await expect(page.getByText("A vault for forgotten thoughts")).toHaveCount(
-      0,
-    );
+    await expect(
+      page.getByRole("dialog", { name: "Itjima (잊지마)" }),
+    ).toHaveCount(0);
     await expect(page.getByRole("dialog")).toHaveCount(1);
 
     await page.keyboard.press("Escape");

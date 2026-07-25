@@ -35,10 +35,10 @@ export function AboutSheet({
         >
           <div className="mx-auto mb-4 h-1.5 w-10 rounded-full bg-ink/15" />
           <div id="about-sheet-title" className="text-[22px] font-semibold tracking-[-0.02em] text-ink">
-            ItJima
+            {t("Itjima (잊지마)", "Itjima (잊지마)")}
           </div>
           <div className="text-sm text-ink-soft">
-            {t("잊어도 되는 기억함", "A vault for forgotten thoughts")}
+            {t("AI 기억 관리 · 생각 정리", "AI memory · thought organization")}
           </div>
           <p className="mt-4 text-[14px] leading-[1.6] text-ink/90">
             {t(

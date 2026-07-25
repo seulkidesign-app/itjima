@@ -7,6 +7,7 @@ import { SPRING_TAB } from "@/lib/motion";
 import { useUserId } from "@/lib/store";
 import { tap } from "@/lib/haptics";
 import { SettingsSheet } from "./SettingsSheet";
+import { BrandHubSheet } from "./BrandHubSheet";
 
 export function TopNav() {
   const t = useT();
@@ -20,6 +21,12 @@ export function TopNav() {
 
   const [scrolled, setScrolled] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [brandHubOpen, setBrandHubOpen] = useState(false);
+  const isHome = path === "/";
+
+  useEffect(() => {
+    if (!isHome) setBrandHubOpen(false);
+  }, [isHome]);
 
   useEffect(() => {
     const el = document.getElementById("phone-scroll");
@@ -38,13 +45,28 @@ export function TopNav() {
         style={{ paddingTop: "env(safe-area-inset-top)" }}
       >
         <div className="flex items-center justify-between gap-2 px-5 pb-1 pt-2">
-          <Link
-            to="/"
-            className="shrink-0 font-display text-[19px] uppercase leading-none tracking-wide text-ink"
-          >
-            ITJIMA
-            <span className="ml-1 inline-block h-1.5 w-1.5 -translate-y-1 rounded-full bg-primary align-middle" />
-          </Link>
+          {isHome ? (
+            <button
+              type="button"
+              aria-label={t("Itjima (잊지마)", "Itjima (잊지마)")}
+              onClick={() => {
+                tap();
+                setBrandHubOpen(true);
+              }}
+              className="shrink-0 font-display text-[19px] uppercase leading-none tracking-wide text-ink"
+            >
+              ITJIMA
+              <span className="ml-1 inline-block h-1.5 w-1.5 -translate-y-1 rounded-full bg-primary align-middle" />
+            </button>
+          ) : (
+            <Link
+              to="/"
+              className="shrink-0 font-display text-[19px] uppercase leading-none tracking-wide text-ink"
+            >
+              ITJIMA
+              <span className="ml-1 inline-block h-1.5 w-1.5 -translate-y-1 rounded-full bg-primary align-middle" />
+            </Link>
+          )}
           <button
             type="button"
             aria-label={t("설정", "Settings")}
@@ -91,6 +113,12 @@ export function TopNav() {
         open={settingsOpen}
         onClose={() => setSettingsOpen(false)}
       />
+      {isHome && (
+        <BrandHubSheet
+          open={brandHubOpen}
+          onClose={() => setBrandHubOpen(false)}
+        />
+      )}
     </>
   );
 }
