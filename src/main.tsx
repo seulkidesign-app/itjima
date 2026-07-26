@@ -7,6 +7,7 @@ import { installAuthDebugInstrumentation } from "@/lib/authDebug";
 import "./styles.css";
 import "./ui-polish.css";
 import "./ui-components.css";
+import "./ui-forms.css";
 
 import { registerServiceWorker } from "@/lib/swReminders";
 
