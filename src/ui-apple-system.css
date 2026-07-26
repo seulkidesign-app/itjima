@@ -1,0 +1,757 @@
+/*
+ * Itjima adaptive product UI — system-level finish.
+ * Imported last so it unifies legacy route/component styles without changing logic.
+ */
+
+:root {
+  --apple-canvas: #f5f5f7;
+  --apple-surface: rgba(255, 255, 255, 0.96);
+  --apple-surface-solid: #ffffff;
+  --apple-surface-raised: rgba(255, 255, 255, 0.985);
+  --apple-fill: rgba(118, 118, 128, 0.12);
+  --apple-fill-hover: rgba(118, 118, 128, 0.16);
+  --apple-fill-pressed: rgba(118, 118, 128, 0.2);
+  --apple-separator: rgba(60, 60, 67, 0.12);
+  --apple-separator-soft: rgba(60, 60, 67, 0.075);
+  --apple-label: #111113;
+  --apple-secondary-label: rgba(60, 60, 67, 0.62);
+  --apple-tertiary-label: rgba(60, 60, 67, 0.38);
+  --apple-yellow: #ffd33d;
+  --apple-yellow-pressed: #f3c52e;
+  --apple-danger: #ff3b30;
+  --apple-radius-control: 12px;
+  --apple-radius-card: 18px;
+  --apple-radius-panel: 28px;
+  --apple-shadow-card: 0 1px 2px rgba(0, 0, 0, 0.025),
+    0 10px 34px -24px rgba(0, 0, 0, 0.3);
+  --apple-shadow-float: 0 18px 60px -28px rgba(0, 0, 0, 0.34),
+    0 2px 12px -5px rgba(0, 0, 0, 0.12);
+  --apple-motion: cubic-bezier(0.32, 0.72, 0, 1);
+  --apple-sidebar-width: 216px;
+  --apple-reading-width: 720px;
+  --apple-chat-width: 620px;
+}
+
+html {
+  background: var(--apple-canvas);
+}
+
+body {
+  background: var(--apple-canvas);
+  color: var(--apple-label);
+}
+
+.phone-frame {
+  color: var(--apple-label);
+}
+
+.phone-frame .page-shell {
+  background: var(--apple-surface-solid);
+}
+
+.phone-frame :is(button, a, [role="button"], summary) {
+  -webkit-tap-highlight-color: transparent;
+}
+
+.phone-frame :is(button, a, [role="button"], input, textarea, select, summary):focus-visible {
+  outline: none !important;
+  box-shadow: 0 0 0 3px rgba(255, 211, 61, 0.34) !important;
+}
+
+.phone-frame button:not(:disabled),
+.phone-frame [role="button"]:not([aria-disabled="true"]) {
+  transition:
+    transform 160ms var(--apple-motion),
+    background-color 160ms ease,
+    border-color 160ms ease,
+    box-shadow 160ms ease,
+    opacity 160ms ease;
+}
+
+.phone-frame button:disabled,
+.phone-frame [aria-disabled="true"] {
+  opacity: 0.42;
+}
+
+/* Typography */
+.phone-frame .page-title {
+  color: var(--apple-label);
+  font-size: clamp(32px, 8vw, 38px);
+  font-weight: 720;
+  line-height: 1.08;
+  letter-spacing: -0.045em;
+}
+
+.phone-frame .page-eyebrow,
+.phone-frame .text-secondary,
+.phone-frame .text-meta,
+.phone-frame .text-caption {
+  color: var(--apple-secondary-label);
+}
+
+.phone-frame .section-title {
+  color: var(--apple-secondary-label);
+  font-size: 12px;
+  font-weight: 650;
+  letter-spacing: -0.005em;
+  text-transform: none;
+}
+
+/* App chrome */
+.phone-frame .app-top-nav {
+  position: relative;
+  z-index: 50;
+  border-bottom: 1px solid var(--apple-separator-soft);
+  background: rgba(255, 255, 255, 0.84);
+  box-shadow: none;
+  backdrop-filter: blur(24px) saturate(170%);
+  -webkit-backdrop-filter: blur(24px) saturate(170%);
+}
+
+.phone-frame .app-top-nav-bar {
+  min-height: 54px;
+}
+
+.phone-frame .app-brand-trigger {
+  color: var(--apple-label);
+  border-radius: 10px;
+}
+
+.phone-frame .app-account-button {
+  min-height: 40px;
+  border: 1px solid var(--apple-separator-soft);
+  background: rgba(255, 255, 255, 0.8);
+  color: var(--apple-secondary-label);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.025);
+}
+
+.phone-frame .app-account-button:hover {
+  background: var(--apple-surface-solid);
+  border-color: var(--apple-separator);
+}
+
+.phone-frame .app-primary-tabs {
+  gap: 2px;
+}
+
+.phone-frame .app-primary-tab {
+  min-height: 44px;
+  color: var(--apple-secondary-label);
+  font-weight: 630;
+}
+
+.phone-frame .app-primary-tab[aria-current="page"] {
+  color: var(--apple-label);
+}
+
+/* Home / chat */
+.phone-frame:has(.app-primary-tab[href="/"][aria-current="page"]) .page-shell {
+  background: var(--apple-surface-solid);
+}
+
+.phone-frame .home-chat-lane,
+.phone-frame .chat-scroll {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(60, 60, 67, 0.16) transparent;
+}
+
+.phone-frame .chat-bubble {
+  min-width: min(64%, 180px);
+  border: 1px solid rgba(210, 170, 16, 0.13);
+  border-radius: 19px 19px 7px 19px;
+  background: linear-gradient(180deg, #fff9df 0%, #fff5c8 100%);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.02);
+}
+
+.phone-frame .chat-turn-group {
+  max-width: min(350px, calc(100vw - 44px));
+}
+
+.phone-frame .brain-mirror-card,
+.phone-frame .itjima-reply-bubble,
+.phone-frame .thought-card {
+  border-color: var(--apple-separator-soft);
+  box-shadow: var(--apple-shadow-card);
+}
+
+.phone-frame .decision-launcher-bar,
+.phone-frame [data-testid="decision-launcher"] {
+  min-height: 52px;
+  border: 1px solid var(--apple-separator-soft);
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.88);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.02);
+  backdrop-filter: blur(18px) saturate(150%);
+  -webkit-backdrop-filter: blur(18px) saturate(150%);
+}
+
+.phone-frame [data-testid="decision-launcher"] .pill-yellow {
+  min-height: 36px;
+  padding-inline: 14px;
+  background: var(--apple-yellow);
+  font-weight: 700;
+}
+
+/* Composer: one calm, tactile control instead of stacked floating rows. */
+.phone-frame .composer-hero.sticky {
+  border-top: 1px solid var(--apple-separator-soft);
+  background: rgba(248, 248, 250, 0.84);
+  padding: 8px 0 max(8px, env(safe-area-inset-bottom));
+  box-shadow: 0 -12px 34px -30px rgba(0, 0, 0, 0.3);
+  backdrop-filter: blur(24px) saturate(170%);
+  -webkit-backdrop-filter: blur(24px) saturate(170%);
+}
+
+.phone-frame form.composer-hero {
+  overflow: hidden;
+  border: 1px solid var(--apple-separator);
+  border-radius: 22px;
+  background: rgba(255, 255, 255, 0.94) !important;
+  box-shadow: var(--apple-shadow-card);
+}
+
+.phone-frame form.composer-hero .input-shell {
+  margin: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.phone-frame form.composer-hero .input-shell-focused {
+  border: 0;
+  box-shadow: none;
+}
+
+.phone-frame form.composer-hero textarea#capture-input {
+  min-height: 30px;
+  color: var(--apple-label);
+  font-size: 16px;
+  line-height: 1.45;
+}
+
+.phone-frame form.composer-hero textarea#capture-input::placeholder {
+  color: var(--apple-tertiary-label);
+}
+
+.phone-frame form.composer-hero > div.flex.items-center.gap-1 {
+  min-height: 48px;
+  border-top: 1px solid var(--apple-separator-soft);
+}
+
+.phone-frame form.composer-hero > div.flex.items-center.gap-1 > button:not([aria-label="던지기"]):not([aria-label="Drop it"]) {
+  width: 40px;
+  min-width: 40px;
+  height: 40px;
+  min-height: 40px;
+  color: var(--apple-secondary-label);
+}
+
+.phone-frame form.composer-hero > div.flex.items-center.gap-1 > button:not([aria-label="던지기"]):not([aria-label="Drop it"]):hover {
+  background: var(--apple-fill);
+  color: var(--apple-label);
+}
+
+.phone-frame form.composer-hero button[aria-label="던지기"],
+.phone-frame form.composer-hero button[aria-label="Drop it"] {
+  min-width: 88px;
+  min-height: 40px;
+  height: 40px;
+  border-radius: 999px;
+  background: var(--apple-yellow) !important;
+  color: var(--apple-label) !important;
+  box-shadow: none;
+}
+
+.phone-frame form.composer-hero button[aria-label="던지기"]:disabled,
+.phone-frame form.composer-hero button[aria-label="Drop it"]:disabled {
+  background: var(--apple-fill) !important;
+  color: var(--apple-tertiary-label) !important;
+  opacity: 1;
+}
+
+.phone-frame form.composer-hero button[aria-label="던지기"]:not(:disabled):active,
+.phone-frame form.composer-hero button[aria-label="Drop it"]:not(:disabled):active {
+  background: var(--apple-yellow-pressed) !important;
+  transform: scale(0.97);
+}
+
+/* Segmented control */
+.phone-frame .segment-nav {
+  min-height: 48px;
+  gap: 2px;
+  padding: 3px;
+  border: 0;
+  border-radius: 13px;
+  background: var(--apple-fill);
+  box-shadow: inset 0 0 0 0.5px rgba(60, 60, 67, 0.06);
+}
+
+.phone-frame .segment-nav-item {
+  min-height: 42px;
+  border-radius: 10px;
+  color: var(--apple-secondary-label);
+  font-size: 14px;
+  font-weight: 650;
+}
+
+.phone-frame .segment-nav-item-active {
+  color: var(--apple-label);
+  background: rgba(255, 255, 255, 0.98);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08),
+    0 1px 1px rgba(0, 0, 0, 0.04);
+}
+
+/* Schedule */
+.phone-frame:has(#schedule-tab-today) .page-shell,
+.phone-frame:has(#schedule-tab-today) .page-shell > div {
+  background: var(--apple-canvas);
+}
+
+.phone-frame .sticky:has(#schedule-tab-today) {
+  border-bottom: 1px solid var(--apple-separator-soft);
+  background: rgba(255, 255, 255, 0.88);
+  backdrop-filter: blur(24px) saturate(170%);
+  -webkit-backdrop-filter: blur(24px) saturate(170%);
+}
+
+.phone-frame :is(#schedule-panel-today, #schedule-panel-list, #schedule-panel-cal) {
+  min-width: 0;
+}
+
+.phone-frame #schedule-panel-today > div > ul,
+.phone-frame #schedule-panel-list > div > section,
+.phone-frame #schedule-panel-list > section {
+  overflow: hidden;
+  border: 1px solid var(--apple-separator-soft);
+  border-radius: var(--apple-radius-card);
+  background: var(--apple-surface-solid);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.018);
+}
+
+.phone-frame #schedule-panel-list > div > section > h2,
+.phone-frame #schedule-panel-list > section > h2 {
+  padding: 12px 14px 7px;
+  margin: 0;
+}
+
+.phone-frame :is(#schedule-panel-today, #schedule-panel-list) li[role="button"],
+.phone-frame :is(#schedule-panel-today, #schedule-panel-list) li.relative {
+  min-height: 58px;
+  padding: 10px 14px;
+  border-bottom-color: var(--apple-separator-soft);
+}
+
+.phone-frame :is(#schedule-panel-today, #schedule-panel-list) li[role="button"]:active,
+.phone-frame :is(#schedule-panel-today, #schedule-panel-list) li.relative:active {
+  background: rgba(118, 118, 128, 0.055);
+}
+
+.phone-frame button[aria-label="할 일 추가"],
+.phone-frame button[aria-label="Add task"] {
+  width: 50px;
+  height: 50px;
+  border: 1px solid rgba(190, 150, 0, 0.12);
+  background: var(--apple-yellow) !important;
+  box-shadow: 0 12px 28px -16px rgba(124, 91, 0, 0.48),
+    0 2px 7px rgba(0, 0, 0, 0.08);
+}
+
+.phone-frame button[aria-label="할 일 추가"]:active,
+.phone-frame button[aria-label="Add task"]:active {
+  background: var(--apple-yellow-pressed) !important;
+}
+
+/* Archive */
+.phone-frame:has(.app-primary-tab[href="/archive"][aria-current="page"]) .page-shell > div:not(.archive-space-page) {
+  background: var(--apple-canvas);
+}
+
+.phone-frame:has(.app-primary-tab[href="/archive"][aria-current="page"]) .page-shell > div > .sticky:not(.archive-space-page *) {
+  border-bottom: 1px solid var(--apple-separator-soft);
+  background: rgba(255, 255, 255, 0.88);
+  backdrop-filter: blur(24px) saturate(170%);
+  -webkit-backdrop-filter: blur(24px) saturate(170%);
+}
+
+.phone-frame:has(.app-primary-tab[href="/archive"][aria-current="page"]) .sticky input {
+  color: var(--apple-label);
+}
+
+.phone-frame:has(.app-primary-tab[href="/archive"][aria-current="page"]) .sticky > div .flex.items-center.gap-2.rounded-\[var\(--radius-lg\)\] {
+  min-height: 48px;
+  border-color: var(--apple-separator-soft);
+  background: var(--apple-surface-solid);
+  box-shadow: none;
+}
+
+.phone-frame .filter-chip {
+  min-height: 34px;
+  padding-inline: 13px;
+  border-radius: 999px;
+  font-size: 13px;
+  font-weight: 620;
+}
+
+.phone-frame .filter-chip-active {
+  background: var(--apple-label);
+  color: #fff;
+}
+
+.phone-frame .filter-chip-inactive {
+  background: var(--apple-fill);
+  color: var(--apple-secondary-label);
+}
+
+.phone-frame .thought-card,
+.phone-frame .archive-memory-card,
+.phone-frame [data-testid="archive-v1-list"] > *,
+.phone-frame [data-testid="archive-search-results"] > * {
+  border-color: var(--apple-separator-soft);
+  border-radius: var(--apple-radius-card);
+  background: var(--apple-surface-solid);
+  box-shadow: var(--apple-shadow-card);
+}
+
+/* Sheets, dialogs and menus */
+.bottom-sheet-backdrop {
+  background: rgba(0, 0, 0, 0.28) !important;
+  backdrop-filter: blur(2px);
+  -webkit-backdrop-filter: blur(2px);
+}
+
+.bottom-sheet-panel {
+  border-color: var(--apple-separator-soft);
+  background: rgba(255, 255, 255, 0.985) !important;
+  box-shadow: var(--apple-shadow-float);
+}
+
+.bottom-sheet-handle > div {
+  width: 36px;
+  height: 5px;
+  background: rgba(60, 60, 67, 0.22);
+}
+
+.phone-frame [role="dialog"].fixed.inset-0 {
+  width: 100vw !important;
+  max-width: none !important;
+  margin: 0 !important;
+  border-radius: 0 !important;
+}
+
+.phone-frame .focus-sort-card {
+  border: 1px solid var(--apple-separator-soft);
+  border-radius: 28px;
+  background: var(--apple-surface-raised);
+  box-shadow: var(--apple-shadow-float);
+}
+
+/* Auth */
+.phone-frame > .relative.flex.h-full.min-h-full.flex-col form input {
+  min-height: 52px;
+  border: 1px solid var(--apple-separator);
+  border-radius: 13px;
+  background: var(--apple-surface-solid);
+  box-shadow: none;
+}
+
+.phone-frame > .relative.flex.h-full.min-h-full.flex-col form input:focus {
+  border-color: rgba(210, 165, 0, 0.5);
+  box-shadow: 0 0 0 3px rgba(255, 211, 61, 0.22);
+}
+
+.phone-frame > .relative.flex.h-full.min-h-full.flex-col > button.mt-8,
+.phone-frame > .relative.flex.h-full.min-h-full.flex-col form > button[type="submit"] {
+  min-height: 52px;
+  border-radius: 13px;
+}
+
+/* Toasts */
+[data-sonner-toast] {
+  border: 1px solid var(--apple-separator-soft) !important;
+  border-radius: 16px !important;
+  background: rgba(255, 255, 255, 0.94) !important;
+  color: var(--apple-label) !important;
+  box-shadow: var(--apple-shadow-float) !important;
+  backdrop-filter: blur(22px) saturate(160%);
+  -webkit-backdrop-filter: blur(22px) saturate(160%);
+}
+
+/* Desktop adaptation: real sidebar + focused workspace, not a stretched phone. */
+@media (min-width: 900px) {
+  body {
+    display: grid;
+    min-height: 100dvh;
+    place-items: center;
+    padding: 16px;
+    background: linear-gradient(180deg, #f5f5f7 0%, #efeff2 100%);
+  }
+
+  #root {
+    width: 100%;
+    height: 100%;
+  }
+
+  .phone-frame {
+    display: grid !important;
+    grid-template-columns: var(--apple-sidebar-width) minmax(0, 1fr);
+    grid-template-rows: minmax(0, 1fr);
+    width: min(calc(100vw - 32px), 1180px) !important;
+    max-width: 1180px !important;
+    height: min(calc(100dvh - 32px), 940px);
+    margin: auto;
+    overflow: hidden;
+    border: 1px solid rgba(60, 60, 67, 0.12);
+    border-radius: 24px;
+    background: var(--apple-surface-solid);
+    box-shadow: 0 28px 90px -50px rgba(0, 0, 0, 0.45),
+      0 2px 12px -6px rgba(0, 0, 0, 0.12);
+  }
+
+  .phone-frame .app-top-nav {
+    grid-column: 1;
+    grid-row: 1;
+    display: flex;
+    min-width: 0;
+    height: 100%;
+    flex-direction: column;
+    padding: 22px 12px 16px !important;
+    border-right: 1px solid var(--apple-separator-soft);
+    border-bottom: 0;
+    background: rgba(245, 245, 247, 0.86);
+  }
+
+  .phone-frame .app-top-nav-bar {
+    display: contents;
+  }
+
+  .phone-frame .app-brand-trigger {
+    order: 0;
+    min-height: 44px;
+    margin: 0 10px 24px;
+    padding: 0;
+    font-size: 20px;
+  }
+
+  .phone-frame .app-primary-tabs {
+    order: 1;
+    display: flex;
+    width: 100% !important;
+    max-width: none !important;
+    min-height: 0;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 5px;
+    margin: 0;
+    padding: 0;
+  }
+
+  .phone-frame .app-primary-tab {
+    flex: 0 0 auto;
+    width: 100%;
+    min-height: 44px;
+    justify-content: flex-start;
+    padding: 0 14px !important;
+    border-radius: 10px;
+    font-size: 14px;
+  }
+
+  .phone-frame .app-primary-tab > span.absolute {
+    display: none;
+  }
+
+  .phone-frame .app-primary-tab:hover {
+    background: rgba(118, 118, 128, 0.08);
+  }
+
+  .phone-frame .app-primary-tab[aria-current="page"] {
+    background: rgba(118, 118, 128, 0.14);
+    box-shadow: inset 0 0 0 0.5px rgba(60, 60, 67, 0.04);
+  }
+
+  .phone-frame .app-primary-tab:focus-visible {
+    box-shadow: inset 0 0 0 2px rgba(255, 211, 61, 0.55) !important;
+  }
+
+  .phone-frame .app-account-button {
+    order: 3;
+    width: calc(100% - 8px);
+    min-height: 44px;
+    justify-content: flex-start;
+    margin: auto 4px 0;
+    padding-inline: 12px;
+    background: rgba(255, 255, 255, 0.68);
+  }
+
+  .phone-frame .app-account-button span {
+    max-width: none;
+    font-size: 12px;
+  }
+
+  .phone-frame #phone-scroll {
+    grid-column: 2;
+    grid-row: 1;
+    width: 100%;
+    height: 100%;
+    min-height: 0;
+    background: var(--apple-surface-solid);
+  }
+
+  .phone-frame .page-shell {
+    min-height: 100%;
+  }
+
+  .phone-frame .home-chat-lane,
+  .phone-frame:has(.app-primary-tab[href="/"][aria-current="page"]) .chat-scroll {
+    width: min(100%, var(--apple-chat-width)) !important;
+    max-width: var(--apple-chat-width) !important;
+    margin-inline: auto;
+    padding-inline: 24px !important;
+  }
+
+  .phone-frame .home-chat-turn {
+    max-width: 540px;
+  }
+
+  .phone-frame .chat-turn-group {
+    max-width: min(390px, 78%);
+  }
+
+  .phone-frame form.composer-hero {
+    width: min(calc(100% - 40px), var(--apple-chat-width)) !important;
+    max-width: var(--apple-chat-width) !important;
+    margin-inline: auto;
+    padding-inline: 0 !important;
+  }
+
+  .phone-frame .decision-launcher-bar,
+  .phone-frame [data-testid="decision-launcher"] {
+    width: min(calc(100% - 40px), var(--apple-chat-width)) !important;
+    max-width: var(--apple-chat-width) !important;
+    margin-inline: auto !important;
+  }
+
+  .phone-frame .sticky:has(#schedule-tab-today) > div:first-of-type,
+  .phone-frame .sticky:has(#schedule-tab-today) > div:nth-of-type(2),
+  .phone-frame .sticky:has(#schedule-tab-today) + div {
+    width: min(100%, var(--apple-reading-width));
+    max-width: var(--apple-reading-width) !important;
+    margin-inline: auto;
+    padding-inline: 28px !important;
+  }
+
+  .phone-frame .segment-nav {
+    max-width: 430px !important;
+  }
+
+  .phone-frame:has(.app-primary-tab[href="/archive"][aria-current="page"])
+    .page-shell
+    > div
+    > .sticky
+    > div,
+  .phone-frame:has(.app-primary-tab[href="/archive"][aria-current="page"])
+    .page-shell
+    > div
+    > .sticky
+    + div {
+    width: min(100%, 780px);
+    max-width: 780px !important;
+    margin-inline: auto;
+    padding-inline: 28px !important;
+  }
+
+  .bottom-sheet-root {
+    padding: 28px;
+  }
+
+  .bottom-sheet-panel {
+    width: min(100%, 680px);
+    max-width: 680px;
+    max-height: min(var(--sheet-max-h), calc(100dvh - 56px));
+    border-radius: var(--apple-radius-panel);
+  }
+
+  .bottom-sheet-handle {
+    padding-block: 10px 4px;
+  }
+
+  .phone-frame .focus-sort-card {
+    max-width: 420px;
+  }
+
+  .phone-frame > .relative.flex.h-full.min-h-full.flex-col {
+    align-self: center;
+    width: min(100%, 560px);
+    height: auto;
+    min-height: min(760px, calc(100dvh - 80px));
+    margin: auto;
+    padding: 36px 44px;
+    border: 1px solid var(--apple-separator-soft);
+    border-radius: 24px;
+    background: var(--apple-surface-solid);
+    box-shadow: var(--apple-shadow-float);
+  }
+}
+
+@media (min-width: 900px) and (display-mode: standalone) {
+  body {
+    padding: 0;
+  }
+
+  .phone-frame {
+    width: 100vw !important;
+    max-width: none !important;
+    height: 100dvh;
+    border: 0;
+    border-radius: 0;
+    box-shadow: none;
+  }
+}
+
+@media (max-width: 899px) {
+  body {
+    padding: 0;
+    background: var(--apple-surface-solid);
+  }
+
+  .phone-frame {
+    border-radius: 0;
+    box-shadow: none;
+  }
+}
+
+@media (max-width: 430px) {
+  .phone-frame .page-title {
+    font-size: 34px;
+  }
+
+  .phone-frame .composer-hero.sticky {
+    padding-top: 6px;
+  }
+
+  .phone-frame form.composer-hero {
+    border-radius: 20px;
+  }
+
+  .phone-frame .segment-nav {
+    min-height: 48px;
+  }
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .phone-frame button:not(:disabled):active,
+  .phone-frame [role="button"]:not([aria-disabled="true"]):active {
+    transform: scale(0.985);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .phone-frame *,
+  .phone-frame *::before,
+  .phone-frame *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
+  }
+}
