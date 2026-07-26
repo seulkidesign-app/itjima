@@ -1,0 +1,189 @@
+/* Route-level responsive layout rules. */
+
+/* Home / Throw */
+.phone-frame:has(.app-primary-tab[href="/"][aria-current="page"]) .chat-scroll {
+  width: 100%;
+  max-width: 820px;
+  margin-inline: auto;
+  padding-inline: var(--app-mobile-gutter);
+}
+
+.phone-frame:has(.app-primary-tab[href="/"][aria-current="page"]) [data-testid="home-empty-hero"] {
+  width: 100%;
+  max-width: 620px;
+  margin-inline: auto;
+}
+
+.phone-frame:has(.app-primary-tab[href="/"][aria-current="page"]) .composer-hero.sticky {
+  border-top-color: rgba(17, 17, 17, 0.055);
+}
+
+/* Archive / Vault */
+.phone-frame:has(.app-primary-tab[href="/archive"][aria-current="page"])
+  .page-shell
+  > div
+  > .sticky {
+  border-bottom: 1px solid rgba(17, 17, 17, 0.035);
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(18px) saturate(150%);
+  -webkit-backdrop-filter: blur(18px) saturate(150%);
+}
+
+.phone-frame:has(.app-primary-tab[href="/archive"][aria-current="page"])
+  .page-shell
+  > div
+  > .sticky
+  > div {
+  width: 100%;
+  max-width: 880px;
+  margin-inline: auto;
+  padding-inline: var(--app-mobile-gutter);
+}
+
+.phone-frame:has(.app-primary-tab[href="/archive"][aria-current="page"])
+  .page-shell
+  > div
+  > .sticky
+  + div {
+  width: 100%;
+  max-width: 880px;
+  margin-inline: auto;
+  padding-inline: var(--app-mobile-gutter);
+}
+
+.phone-frame:has(.app-primary-tab[href="/archive"][aria-current="page"])
+  .archive-space-page
+  > .sticky
+  > div,
+.phone-frame:has(.app-primary-tab[href="/archive"][aria-current="page"])
+  .archive-space-page
+  > .sticky
+  + div {
+  max-width: 1000px;
+}
+
+.phone-frame:has(.app-primary-tab[href="/archive"][aria-current="page"])
+  .sticky
+  input {
+  min-height: 36px;
+  min-width: 0;
+  font-size: 16px;
+}
+
+.phone-frame:has(.app-primary-tab[href="/archive"][aria-current="page"])
+  .sticky
+  .filter-chip {
+  min-height: 36px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  white-space: nowrap;
+}
+
+.phone-frame:has(.app-primary-tab[href="/archive"][aria-current="page"])
+  .sticky
+  select {
+  min-height: 36px;
+  flex-shrink: 0;
+}
+
+.phone-frame:has(.app-primary-tab[href="/archive"][aria-current="page"])
+  [data-testid="archive-grouped-list"]
+  > section,
+.phone-frame:has(.app-primary-tab[href="/archive"][aria-current="page"])
+  [data-testid="archive-search-results"],
+.phone-frame:has(.app-primary-tab[href="/archive"][aria-current="page"])
+  [data-testid="archive-v1-list"] {
+  min-width: 0;
+}
+
+/* Keep archive selection actions inside the app workspace on larger screens. */
+.phone-frame:has(.app-primary-tab[href="/archive"][aria-current="page"])
+  .page-shell
+  > div
+  > .fixed.inset-x-0.bottom-0 {
+  width: calc(100% - (var(--app-mobile-gutter) * 2));
+  max-width: 880px;
+  margin-inline: auto;
+  padding-inline: 0;
+}
+
+@media (min-width: 640px) {
+  .phone-frame:has(.app-primary-tab[href="/"][aria-current="page"]) .chat-scroll {
+    padding-inline: var(--app-tablet-gutter);
+  }
+
+  .phone-frame:has(.app-primary-tab[href="/archive"][aria-current="page"])
+    .page-shell
+    > div
+    > .sticky
+    > div,
+  .phone-frame:has(.app-primary-tab[href="/archive"][aria-current="page"])
+    .page-shell
+    > div
+    > .sticky
+    + div {
+    padding-inline: var(--app-tablet-gutter);
+  }
+
+  .phone-frame:has(.app-primary-tab[href="/archive"][aria-current="page"])
+    .page-shell
+    > div
+    > .fixed.inset-x-0.bottom-0 {
+    width: calc(100% - (var(--app-tablet-gutter) * 2));
+  }
+}
+
+@media (min-width: 900px) {
+  .phone-frame:has(.app-primary-tab[href="/"][aria-current="page"]) .chat-scroll {
+    padding-inline: var(--app-desktop-gutter);
+  }
+
+  .phone-frame:has(.app-primary-tab[href="/archive"][aria-current="page"])
+    .page-shell
+    > div
+    > .sticky
+    > div,
+  .phone-frame:has(.app-primary-tab[href="/archive"][aria-current="page"])
+    .page-shell
+    > div
+    > .sticky
+    + div {
+    padding-inline: var(--app-desktop-gutter);
+  }
+
+  .phone-frame:has(.app-primary-tab[href="/archive"][aria-current="page"])
+    [data-testid="archive-grouped-list"] {
+    max-width: 800px;
+    margin-inline: auto;
+  }
+
+  .phone-frame:has(.app-primary-tab[href="/archive"][aria-current="page"])
+    .archive-space-page
+    [data-testid="archive-grouped-list"] {
+    max-width: none;
+  }
+
+  .phone-frame:has(.app-primary-tab[href="/archive"][aria-current="page"])
+    .page-shell
+    > div
+    > .fixed.inset-x-0.bottom-0 {
+    width: min(calc(100% - (var(--app-desktop-gutter) * 2)), 820px);
+  }
+}
+
+@media (max-width: 359px) {
+  .phone-frame:has(.app-primary-tab[href="/"][aria-current="page"]) .chat-scroll,
+  .phone-frame:has(.app-primary-tab[href="/archive"][aria-current="page"])
+    .page-shell
+    > div
+    > .sticky
+    > div,
+  .phone-frame:has(.app-primary-tab[href="/archive"][aria-current="page"])
+    .page-shell
+    > div
+    > .sticky
+    + div {
+    padding-inline: 14px;
+  }
+}
