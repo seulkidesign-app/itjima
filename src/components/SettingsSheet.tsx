@@ -7,6 +7,7 @@ import { useUserId } from "@/lib/store";
 import { useIsAdmin } from "@/hooks/useIsAdmin";
 import { supabase } from "@/integrations/supabase/client";
 import { authDebugSignOut } from "@/lib/authDebug";
+import { tap } from "@/lib/haptics";
 
 type Props = {
   open: boolean;
