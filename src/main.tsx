@@ -11,6 +11,7 @@ import "./ui-forms.css";
 import "./ui-overlays.css";
 import "./ui-pages.css";
 import "./ui-desktop-fix.css";
+import "./ui-apple-system.css";
 
 import { registerServiceWorker } from "@/lib/swReminders";
 
