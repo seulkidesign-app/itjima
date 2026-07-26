@@ -24,11 +24,14 @@ Generate VAPID keys: `npx web-push generate-vapid-keys`
 
 Migration `20260725120100_reminder_cron.sql` schedules `process-reminders` via pg_cron + pg_net.
 
-Set database setting before cron runs:
+Store secrets in Supabase Vault **once** before the cron job runs (Dashboard → SQL Editor, or CLI). Never commit actual values:
 
 ```sql
-ALTER DATABASE postgres SET app.settings.cron_secret = 'your-cron-secret';
+SELECT vault.create_secret('https://<project-ref>.supabase.co', 'project_url');
+SELECT vault.create_secret('<CRON_SECRET>', 'cron_secret');
 ```
+
+The cron job reads `project_url` and `cron_secret` from `vault.decrypted_secrets`. The same `CRON_SECRET` value must be set on the `process-reminders` Edge Function.
 
 ## Real-device QA
 

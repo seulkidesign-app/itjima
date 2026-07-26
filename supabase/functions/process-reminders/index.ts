@@ -39,19 +39,25 @@ function json(body: unknown, status = 200) {
   });
 }
 
-Deno.serve(async (req) => {
+/** Validate pg_cron caller before any database access. */
+function rejectUnlessCronAuthorized(req: Request): Response | null {
   const cronSecret = Deno.env.get("CRON_SECRET");
-  const authHeader = req.headers.get("Authorization") ?? "";
-  const cronHeader = req.headers.get("x-cron-secret") ?? "";
-  const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
+  const cronHeader = req.headers.get("x-cron-secret");
 
-  const authorized =
-    (cronSecret && cronHeader === cronSecret) ||
-    authHeader === `Bearer ${serviceKey}`;
-
-  if (!authorized) {
+  if (!cronHeader) {
     return json({ error: "unauthorized" }, 401);
   }
+
+  if (!cronSecret || cronHeader !== cronSecret) {
+    return json({ error: "unauthorized" }, 401);
+  }
+
+  return null;
+}
+
+Deno.serve(async (req) => {
+  const authFailure = rejectUnlessCronAuthorized(req);
+  if (authFailure) return authFailure;
 
   const vapidPublic = Deno.env.get("VAPID_PUBLIC_KEY");
   const vapidPrivate = Deno.env.get("VAPID_PRIVATE_KEY");
@@ -64,6 +70,7 @@ Deno.serve(async (req) => {
 
   webpush.setVapidDetails(vapidSubject, vapidPublic, vapidPrivate);
 
+  const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
   const supabase = createClient(
     Deno.env.get("SUPABASE_URL") ?? "",
     serviceKey,

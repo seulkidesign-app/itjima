@@ -1,6 +1,8 @@
 -- pg_cron job to invoke process-reminders Edge Function every minute.
 -- Requires pg_cron + pg_net (enabled on Supabase hosted projects).
--- Set CRON_SECRET in Edge Function secrets and replace YOUR_PROJECT_REF below.
+-- Before this job runs, create Vault secrets once (see docs/WEB_PUSH_SETUP.md):
+--   project_url  -> https://<project-ref>.supabase.co
+--   cron_secret  -> same value as CRON_SECRET Edge Function secret
 
 CREATE EXTENSION IF NOT EXISTS pg_cron WITH SCHEMA pg_catalog;
 CREATE EXTENSION IF NOT EXISTS pg_net WITH SCHEMA extensions;
@@ -15,10 +17,18 @@ SELECT cron.schedule(
   '* * * * *',
   $$
   SELECT net.http_post(
-    url := 'https://qikgvovbzliqcfcfgvcd.supabase.co/functions/v1/process-reminders',
+    url := (
+      SELECT decrypted_secret
+      FROM vault.decrypted_secrets
+      WHERE name = 'project_url'
+    ) || '/functions/v1/process-reminders',
     headers := jsonb_build_object(
       'Content-Type', 'application/json',
-      'x-cron-secret', current_setting('app.settings.cron_secret', true)
+      'x-cron-secret', (
+        SELECT decrypted_secret
+        FROM vault.decrypted_secrets
+        WHERE name = 'cron_secret'
+      )
     ),
     body := '{}'::jsonb
   ) AS request_id;
