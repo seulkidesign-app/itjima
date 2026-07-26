@@ -306,6 +306,9 @@ export type AuthCallbackResult =
   | { ok: true; nextPath: string }
   | { ok: false; message: string };
 
+/** Survives React StrictMode remounts — prevents double PKCE exchange. */
+let authCallbackInFlight: Promise<AuthCallbackResult> | null = null;
+
 function failCallback(
   message: string,
   code?: string | null,
@@ -322,9 +325,14 @@ function sessionExpiredMessage(lang: "ko" | "en"): string {
     : "Sign-in session expired. Please try Google sign-in again.";
 }
 
-/** OAuth/email confirmation callback — call only on /auth/callback */
-export async function completeAuthCallback(
-  lang: "ko" | "en" = "ko",
+function succeedCallback(): AuthCallbackResult {
+  purgeOAuthFromUrl();
+  clearOAuthCodeHandled();
+  return { ok: true, nextPath: consumeAuthReturnPath() };
+}
+
+async function completeAuthCallbackOnce(
+  lang: "ko" | "en",
 ): Promise<AuthCallbackResult> {
   const params = new URLSearchParams(window.location.search);
   const hashParams = new URLSearchParams(
@@ -340,15 +348,17 @@ export async function completeAuthCallback(
 
   const code = params.get("code");
 
-  if (code && sessionStorage.getItem(OAUTH_HANDLED_CODE_KEY) === code) {
-    return failCallback(sessionExpiredMessage(lang), code);
-  }
-
   const { data: existing } = await supabase.auth.getSession();
   if (existing.session) {
-    purgeOAuthFromUrl();
-    clearOAuthCodeHandled();
-    return { ok: true, nextPath: consumeAuthReturnPath() };
+    return succeedCallback();
+  }
+
+  if (code && sessionStorage.getItem(OAUTH_HANDLED_CODE_KEY) === code) {
+    const { data: retrySession } = await supabase.auth.getSession();
+    if (retrySession.session) {
+      return succeedCallback();
+    }
+    return failCallback(sessionExpiredMessage(lang), code);
   }
 
   // detectSessionInUrl exchanges ?code= on client init; wait before manual fallback
@@ -357,6 +367,10 @@ export async function completeAuthCallback(
   if (!hasSession && code) {
     const { data, error } = await supabase.auth.exchangeCodeForSession(code);
     if (error) {
+      const { data: afterError } = await supabase.auth.getSession();
+      if (afterError.session) {
+        return succeedCallback();
+      }
       return failCallback(mapAuthError(error.message, lang), code);
     }
     hasSession = !!data.session;
@@ -374,7 +388,20 @@ export async function completeAuthCallback(
     return failCallback(mapAuthError("Auth session missing!", lang), code);
   }
 
-  purgeOAuthFromUrl();
-  clearOAuthCodeHandled();
-  return { ok: true, nextPath: consumeAuthReturnPath() };
+  return succeedCallback();
+}
+
+/** OAuth/email confirmation callback — call only on /auth/callback */
+export function completeAuthCallback(
+  lang: "ko" | "en" = "ko",
+): Promise<AuthCallbackResult> {
+  if (authCallbackInFlight) {
+    return authCallbackInFlight;
+  }
+
+  authCallbackInFlight = completeAuthCallbackOnce(lang).finally(() => {
+    authCallbackInFlight = null;
+  });
+
+  return authCallbackInFlight;
 }

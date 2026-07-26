@@ -439,7 +439,10 @@ export function useUserId() {
       setId(e2eUserId);
       return;
     }
-    supabase.auth.getUser().then(({ data }) => setId(data.user?.id ?? null));
+    // Read persisted session locally first — getUser() can lag right after OAuth.
+    supabase.auth
+      .getSession()
+      .then(({ data }) => setId(data.session?.user?.id ?? null));
     const { data: sub } = supabase.auth.onAuthStateChange((_e, session) => {
       setId(session?.user?.id ?? null);
     });
