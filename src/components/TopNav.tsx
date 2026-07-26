@@ -1,5 +1,5 @@
 import { Link, useRouterState } from "@tanstack/react-router";
-import { User } from "lucide-react";
+import { Archive, CalendarDays, SendHorizontal, User } from "lucide-react";
 import { useEffect, useState } from "react";
 import { motion, LayoutGroup } from "framer-motion";
 import { useT } from "@/lib/i18n";
@@ -14,9 +14,9 @@ export function TopNav() {
   const path = useRouterState({ select: (s) => s.location.pathname });
   const userId = useUserId();
   const tabs = [
-    { to: "/", label: t("던지기", "Throw") },
-    { to: "/schedule", label: t("일정", "Schedule") },
-    { to: "/archive", label: t("보관함", "Archive") },
+    { to: "/", label: t("던지기", "Throw"), Icon: SendHorizontal },
+    { to: "/schedule", label: t("일정", "Schedule"), Icon: CalendarDays },
+    { to: "/archive", label: t("보관함", "Archive"), Icon: Archive },
   ] as const;
 
   const [scrolled, setScrolled] = useState(false);
@@ -76,15 +76,18 @@ export function TopNav() {
             }}
             className="app-account-button touch-target flex h-9 shrink-0 items-center gap-1.5 rounded-full border border-ink/10 bg-white px-2.5 py-1.5 text-ink-soft shadow-card"
           >
-            <User size={16} strokeWidth={2.25} />
+            <User size={16} strokeWidth={2.1} aria-hidden />
             <span className="max-w-[4.5rem] truncate text-[11px] font-semibold">
               {userId ? t("계정", "Account") : t("로그인", "Sign in")}
             </span>
           </button>
         </div>
         <LayoutGroup>
-          <nav className="app-primary-tabs flex items-stretch px-4" aria-label={t("주요 메뉴", "Primary navigation")}>
-            {tabs.map(({ to, label }) => {
+          <nav
+            className="app-primary-tabs flex items-stretch px-4"
+            aria-label={t("주요 메뉴", "Primary navigation")}
+          >
+            {tabs.map(({ to, label, Icon }) => {
               const active = path === to;
               return (
                 <Link
@@ -92,16 +95,23 @@ export function TopNav() {
                   to={to}
                   onClick={tap}
                   aria-current={active ? "page" : undefined}
-                  className={`app-primary-tab relative flex min-w-0 flex-1 items-center justify-center whitespace-nowrap px-1 pb-2.5 pt-1 text-[13px] font-semibold tracking-[-0.01em] transition-colors duration-200 ${
+                  className={`app-primary-tab relative flex min-w-0 flex-1 items-center justify-center gap-2 whitespace-nowrap px-1 pb-2.5 pt-1 text-[13px] font-semibold tracking-[-0.01em] transition-colors duration-200 ${
                     active ? "text-ink" : "text-ink-soft"
                   }`}
                 >
-                  {label}
+                  <Icon
+                    className="app-primary-tab-icon hidden shrink-0"
+                    size={17}
+                    strokeWidth={2}
+                    aria-hidden
+                  />
+                  <span className="app-primary-tab-label">{label}</span>
                   {active && (
                     <motion.span
                       layoutId="topnav-tab-underline"
                       className="absolute inset-x-3 bottom-0 h-[3px] rounded-full bg-ink"
                       transition={SPRING_TAB}
+                      aria-hidden
                     />
                   )}
                 </Link>
