@@ -6,6 +6,11 @@
   padding: 0;
 }
 
+.bottom-sheet-root[data-layout="panel"] {
+  align-items: center;
+  justify-content: center;
+}
+
 .bottom-sheet-backdrop {
   width: 100%;
   height: 100%;
@@ -18,6 +23,10 @@
   padding-bottom: max(env(safe-area-inset-bottom), 0px);
   border: 1px solid rgba(17, 17, 17, 0.055);
   border-bottom: 0;
+}
+
+.bottom-sheet-root[data-layout="panel"] .bottom-sheet-panel {
+  margin: auto;
 }
 
 .bottom-sheet-panel .touch-target {
