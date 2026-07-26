@@ -1,4 +1,4 @@
-import { User, Globe, Shield, LogOut } from "lucide-react";
+import { Globe, LogOut, Shield, User } from "lucide-react";
 import { Link } from "@tanstack/react-router";
 import { toast } from "sonner";
 import { BottomSheet } from "./BottomSheet";
@@ -14,18 +14,35 @@ type Props = {
   onClose: () => void;
 };
 
+const rowClass =
+  "flex min-h-[52px] w-full items-center gap-3 px-3.5 text-left text-[14px] font-medium text-ink transition-colors active:bg-ink/[0.04]";
+
 export function SettingsSheet({ open, onClose }: Props) {
   const t = useT();
   const userId = useUserId();
   const isAdmin = useIsAdmin();
 
   return (
-    <BottomSheet open={open} onClose={onClose} maxHeight="70dvh">
-      <div className="px-5 pb-8 pt-2">
-        <h2 className="text-[17px] font-bold text-ink">
-          {t("설정", "Settings")}
-        </h2>
-        <div className="mt-4 flex flex-col gap-1">
+    <BottomSheet
+      open={open}
+      onClose={onClose}
+      maxHeight="70dvh"
+      title={t("설정", "Settings")}
+    >
+      <div className="px-5 pb-8 pt-1">
+        <div className="px-1 pb-4">
+          <h2 className="text-[22px] font-bold tracking-[-0.03em] text-ink">
+            {t("설정", "Settings")}
+          </h2>
+          <p className="mt-1 text-[13px] leading-relaxed text-ink-soft">
+            {t(
+              "계정과 잊지마의 기본 사용 환경을 관리해요.",
+              "Manage your account and Itjima preferences.",
+            )}
+          </p>
+        </div>
+
+        <div className="overflow-hidden rounded-[18px] border border-ink/[0.07] bg-white shadow-[0_1px_2px_rgba(0,0,0,0.02)]">
           {!userId && (
             <Link
               to="/auth"
@@ -33,43 +50,53 @@ export function SettingsSheet({ open, onClose }: Props) {
                 tap();
                 onClose();
               }}
-              className="flex items-center gap-3 rounded-[18px] px-3 py-3.5 text-[14px] font-medium text-ink active:bg-ink/[0.04]"
+              className={`${rowClass} border-b border-ink/[0.06]`}
             >
-              <User size={18} />
-              {t("로그인", "Sign in")}
+              <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-[10px] bg-primary/20 text-ink">
+                <User size={17} strokeWidth={2.1} aria-hidden />
+              </span>
+              <span className="flex-1">{t("로그인", "Sign in")}</span>
             </Link>
           )}
-          {userId && (
-            <button
-              type="button"
-              onClick={async () => {
-                authDebugSignOut("SettingsSheet.tsx");
-                await supabase.auth.signOut();
-                toast(t("로그아웃됨", "Signed out"));
-                onClose();
-              }}
-              className="flex w-full items-center gap-3 rounded-[18px] px-3 py-3.5 text-left text-[14px] font-medium text-ink active:bg-ink/[0.04]"
-            >
-              <LogOut size={18} />
-              {t("로그아웃", "Sign out")}
-            </button>
-          )}
+
           {isAdmin && (
             <Link
               to="/admin"
               onClick={onClose}
-              className="flex items-center gap-3 rounded-[18px] px-3 py-3.5 text-[14px] font-medium text-ink active:bg-ink/[0.04]"
+              className={`${rowClass} border-b border-ink/[0.06]`}
             >
-              <Shield size={18} />
-              {t("관리자", "Admin")}
+              <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-[10px] bg-ink/[0.06] text-ink-soft">
+                <Shield size={17} strokeWidth={2.1} aria-hidden />
+              </span>
+              <span className="flex-1">{t("관리자", "Admin")}</span>
             </Link>
           )}
-          <div className="flex items-center gap-3 rounded-[18px] px-3 py-3.5 text-[14px] font-medium text-ink">
-            <Globe size={18} />
+
+          <div className={rowClass}>
+            <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-[10px] bg-ink/[0.06] text-ink-soft">
+              <Globe size={17} strokeWidth={2.1} aria-hidden />
+            </span>
             <span className="flex-1">{t("언어", "Language")}</span>
             <LanguageToggle />
           </div>
         </div>
+
+        {userId && (
+          <button
+            type="button"
+            onClick={async () => {
+              tap();
+              authDebugSignOut("SettingsSheet.tsx");
+              await supabase.auth.signOut();
+              toast(t("로그아웃됨", "Signed out"));
+              onClose();
+            }}
+            className="mt-3 flex min-h-[50px] w-full items-center justify-center gap-2 rounded-[16px] border border-red-500/10 bg-red-500/[0.06] px-4 text-[14px] font-semibold text-red-600 transition-colors active:bg-red-500/[0.1]"
+          >
+            <LogOut size={17} strokeWidth={2.1} aria-hidden />
+            {t("로그아웃", "Sign out")}
+          </button>
+        )}
       </div>
     </BottomSheet>
   );
