@@ -78,13 +78,13 @@ export function BottomSheet({
     <AnimatePresence>
       {open && (
         <div
-          className="fixed inset-0 z-[80] mx-auto flex max-w-[430px] flex-col"
+          className="bottom-sheet-root fixed inset-0 z-[80] flex min-w-0 flex-col"
           role="presentation"
         >
           <motion.button
             type="button"
             aria-label={t("닫기", "Close")}
-            className={`absolute inset-0 z-0 ${SHEET_BACKDROP_CLASS}`}
+            className={`bottom-sheet-backdrop absolute inset-0 z-0 ${SHEET_BACKDROP_CLASS}`}
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
@@ -112,7 +112,7 @@ export function BottomSheet({
             animate={{ y: 0 }}
             exit={{ y: "100%" }}
             transition={SPRING_SHEET}
-            className="sheet-chrome relative z-[1] mt-auto flex w-full max-h-[var(--sheet-max-h)] shrink-0 flex-col overflow-hidden bg-white/98 shadow-[0_-20px_60px_-10px_rgba(0,0,0,0.22)] backdrop-blur-2xl"
+            className="bottom-sheet-panel sheet-chrome relative z-[1] mx-auto mt-auto flex w-full max-h-[var(--sheet-max-h)] shrink-0 flex-col overflow-hidden bg-white/98 shadow-[0_-20px_60px_-10px_rgba(0,0,0,0.22)] backdrop-blur-2xl"
             style={
               {
                 "--sheet-max-h": maxHeight,
@@ -126,7 +126,7 @@ export function BottomSheet({
               </span>
             )}
             <div
-              className="flex shrink-0 cursor-grab justify-center py-3 active:cursor-grabbing"
+              className="bottom-sheet-handle flex shrink-0 cursor-grab justify-center py-3 active:cursor-grabbing"
               onPointerDown={(e) => dragControls.start(e)}
               aria-hidden
             >
