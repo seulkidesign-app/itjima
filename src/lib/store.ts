@@ -1,5 +1,6 @@
 import { supabase } from "@/integrations/supabase/client";
 import { mergeCloudRow, shouldPreferLocalInboxStatus } from "@/lib/cloudMerge";
+import { authDebug, authDebugAuthStateChange } from "@/lib/authDebug";
 import { ensureCanonicalMemoriesMigrated } from "@/lib/memoryLocalStore";
 import {
   parseBrainMirrorResult,
@@ -440,11 +441,16 @@ export function useUserId() {
       return;
     }
     // Read persisted session locally first — getUser() can lag right after OAuth.
-    supabase.auth
-      .getSession()
-      .then(({ data }) => setId(data.session?.user?.id ?? null));
-    const { data: sub } = supabase.auth.onAuthStateChange((_e, session) => {
-      setId(session?.user?.id ?? null);
+    supabase.auth.getSession().then(({ data }) => {
+      const userId = data.session?.user?.id ?? null;
+      authDebug("useUserId: getSession", { userId });
+      setId(userId);
+    });
+    const { data: sub } = supabase.auth.onAuthStateChange((event, session) => {
+      const userId = session?.user?.id ?? null;
+      authDebugAuthStateChange(event, session, "useUserId");
+      authDebug("useUserId: setId", { userId });
+      setId(userId);
     });
     return () => sub.subscription.unsubscribe();
   }, []);

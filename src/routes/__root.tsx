@@ -2,6 +2,7 @@ import { Outlet, createRootRoute, useRouterState } from "@tanstack/react-router"
 import { useEffect } from "react";
 import { Toaster } from "sonner";
 import { maybeRouteOAuthCallback } from "@/lib/oauth";
+import { authDebug } from "@/lib/authDebug";
 import { SideNav } from "@/components/SideNav";
 import { TopNav } from "@/components/TopNav";
 import { PageTransition } from "@/components/PageTransition";
@@ -42,6 +43,7 @@ function RootLayout() {
   useArchiveMetaSync();
 
   useEffect(() => {
+    authDebug("__root: pathname", { pathname });
     maybeRouteOAuthCallback();
   }, [pathname]);
 

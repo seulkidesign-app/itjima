@@ -2,6 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { completeAuthCallback } from "@/lib/oauth";
+import { authDebug, authDebugNavigateToAuth } from "@/lib/authDebug";
 import { useLang, useT } from "@/lib/i18n";
 
 export const Route = createFileRoute("/auth/callback")({
@@ -22,15 +23,33 @@ function AuthCallbackPage() {
   }, [t]);
 
   useEffect(() => {
-    if (started.current) return;
+    if (started.current) {
+      authDebug("auth.callback: effect skipped (started ref)", {
+        strictModeRemountGuard: true,
+      });
+      return;
+    }
     started.current = true;
+
+    authDebug("auth.callback: effect started", {
+      mountId: crypto.randomUUID().slice(0, 8),
+    });
 
     (async () => {
       const result = await completeAuthCallback(lang);
 
+      authDebug("auth.callback: completeAuthCallback result", {
+        ok: result.ok,
+        nextPath: result.ok ? result.nextPath : null,
+        message: result.ok ? null : result.message,
+      });
+
       if (!result.ok) {
         setMessage(result.message);
         toast.error(result.message, { duration: 8000 });
+        authDebugNavigateToAuth("auth.callback.tsx:callback_failure", {
+          failureMessage: result.message,
+        });
         window.location.replace("/auth");
         return;
       }
@@ -38,6 +57,9 @@ function AuthCallbackPage() {
       toast.success(
         t("로그인됐어요. 다시 만나서 반가워요!", "Signed in. Welcome back!"),
       );
+      authDebug("auth.callback: redirect after success", {
+        nextPath: result.nextPath || "/",
+      });
       window.location.replace(result.nextPath || "/");
     })();
   }, [t, lang]);

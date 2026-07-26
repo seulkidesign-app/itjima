@@ -2,6 +2,11 @@ import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
+import {
+  authDebug,
+  authDebugAuthStateChange,
+  authDebugGetSession,
+} from "@/lib/authDebug";
 import { useLang, useT } from "@/lib/i18n";
 import {
   consumeOAuthError,
@@ -33,26 +38,49 @@ function AuthPage() {
   }, [t]);
 
   useEffect(() => {
+    authDebug("auth.tsx: page mounted", {
+      oauthErrorPending: Boolean(sessionStorage.getItem("itjima.oauth.lastError")),
+    });
+  }, []);
+
+  useEffect(() => {
     const message = consumeOAuthError();
     if (message) {
+      authDebug("auth.tsx: consumed OAuth error from callback failure", {
+        message,
+      });
       setOauthError(message);
       toast.error(message, { duration: 10000 });
     }
   }, []);
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data }) => {
-      if (data.session?.user) navigate({ to: "/" });
-      else setReady(true);
+    void authDebugGetSession("auth.tsx:mount_check", () =>
+      supabase.auth.getSession(),
+    ).then(({ data }) => {
+      if (data.session?.user) {
+        authDebug("auth.tsx: navigate → / (session found on mount)", {
+          userId: data.session.user.id,
+        });
+        navigate({ to: "/" });
+      } else {
+        authDebug("auth.tsx: no session on mount — showing login form");
+        setReady(true);
+      }
     });
   }, [navigate]);
 
   useEffect(() => {
     const { data: sub } = supabase.auth.onAuthStateChange((event, session) => {
+      authDebugAuthStateChange(event, session, "auth.tsx");
       if (
         (event === "SIGNED_IN" || event === "INITIAL_SESSION") &&
         session?.user
       ) {
+        authDebug("auth.tsx: navigate → / (onAuthStateChange)", {
+          event,
+          userId: session.user.id,
+        });
         navigate({ to: "/" });
       }
     });

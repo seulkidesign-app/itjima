@@ -15,6 +15,7 @@ import { useT, LanguageToggle } from "@/lib/i18n";
 import { useUserId } from "@/lib/store";
 import { useIsAdmin } from "@/hooks/useIsAdmin";
 import { supabase } from "@/integrations/supabase/client";
+import { authDebugSignOut } from "@/lib/authDebug";
 import { AboutSheet } from "@/components/AboutSheet";
 import { FeedbackSheet } from "@/components/FeedbackSheet";
 import { tap } from "@/lib/haptics";
@@ -101,6 +102,7 @@ export function SideNav() {
         {userId ? (
           <button
             onClick={async () => {
+              authDebugSignOut("SideNav.tsx");
               await supabase.auth.signOut();
               toast(t("로그아웃됨", "Signed out"));
             }}

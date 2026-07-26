@@ -1,4 +1,5 @@
 import { supabase } from "@/integrations/supabase/client";
+import { authDebug, authDebugAuthStateChange, authDebugGetSession } from "@/lib/authDebug";
 
 /** Supabase Dashboard → Authentication → URL Configuration 에 등록 필요 */
 export const AUTH_REDIRECT_PATHS = {
@@ -35,10 +36,16 @@ export function maybeRouteOAuthCallback() {
 
   const code = new URLSearchParams(window.location.search).get("code");
   if (code && sessionStorage.getItem(OAUTH_HANDLED_CODE_KEY) === code) {
+    authDebug("maybeRouteOAuthCallback: handled code, purging URL only", {
+      codePrefix: code.slice(0, 8),
+    });
     purgeOAuthFromUrl();
     return;
   }
 
+  authDebug("maybeRouteOAuthCallback: redirecting to /auth/callback", {
+    codePrefix: code?.slice(0, 8) ?? null,
+  });
   window.location.replace(
     `/auth/callback${window.location.search}${window.location.hash}`,
   );
@@ -136,23 +143,25 @@ export function consumeOAuthError() {
 function waitForAuthSession(timeoutMs = 12000): Promise<boolean> {
   return new Promise((resolve) => {
     let settled = false;
-    const finish = (ok: boolean) => {
+    const finish = (ok: boolean, via: string) => {
       if (settled) return;
       settled = true;
       clearTimeout(timer);
       sub.subscription.unsubscribe();
+      authDebug("waitForAuthSession: resolved", { ok, via, timeoutMs });
       resolve(ok);
     };
 
     supabase.auth.getSession().then(({ data }) => {
-      if (data.session) finish(true);
+      if (data.session) finish(true, "getSession");
     });
 
-    const { data: sub } = supabase.auth.onAuthStateChange((_event, session) => {
-      if (session) finish(true);
+    const { data: sub } = supabase.auth.onAuthStateChange((event, session) => {
+      authDebugAuthStateChange(event, session, "waitForAuthSession");
+      if (session) finish(true, `onAuthStateChange:${event}`);
     });
 
-    const timer = setTimeout(() => finish(false), timeoutMs);
+    const timer = setTimeout(() => finish(false, "timeout"), timeoutMs);
   });
 }
 
@@ -312,7 +321,13 @@ let authCallbackInFlight: Promise<AuthCallbackResult> | null = null;
 function failCallback(
   message: string,
   code?: string | null,
+  reason?: string,
 ): AuthCallbackResult {
+  authDebug("completeAuthCallback FAIL", {
+    reason: reason ?? "unspecified",
+    message,
+    codePrefix: code?.slice(0, 8) ?? null,
+  });
   if (code) markOAuthCodeHandled(code);
   stashOAuthError(message);
   purgeOAuthFromUrl();
@@ -325,15 +340,22 @@ function sessionExpiredMessage(lang: "ko" | "en"): string {
     : "Sign-in session expired. Please try Google sign-in again.";
 }
 
-function succeedCallback(): AuthCallbackResult {
+function succeedCallback(reason: string): AuthCallbackResult {
+  const nextPath = consumeAuthReturnPath();
+  authDebug("completeAuthCallback SUCCESS", { reason, nextPath });
   purgeOAuthFromUrl();
   clearOAuthCodeHandled();
-  return { ok: true, nextPath: consumeAuthReturnPath() };
+  return { ok: true, nextPath };
 }
 
 async function completeAuthCallbackOnce(
   lang: "ko" | "en",
 ): Promise<AuthCallbackResult> {
+  authDebug("completeAuthCallback START", {
+    lang,
+    handledCode: sessionStorage.getItem(OAUTH_HANDLED_CODE_KEY),
+  });
+
   const params = new URLSearchParams(window.location.search);
   const hashParams = new URLSearchParams(
     window.location.hash.replace(/^#/, ""),
@@ -343,35 +365,72 @@ async function completeAuthCallbackOnce(
   const oauthDescription =
     params.get("error_description") || hashParams.get("error_description");
   if (oauthError) {
-    return failCallback(mapAuthError(oauthDescription || oauthError, lang));
+    return failCallback(
+      mapAuthError(oauthDescription || oauthError, lang),
+      null,
+      "oauth_error_in_url",
+    );
   }
 
   const code = params.get("code");
+  authDebug("completeAuthCallback params", {
+    hasCode: !!code,
+    codePrefix: code?.slice(0, 8) ?? null,
+    hashHasTokens: hashParams.has("access_token"),
+  });
 
-  const { data: existing } = await supabase.auth.getSession();
+  const { data: existing } = await authDebugGetSession(
+    "completeAuthCallback:initial",
+    () => supabase.auth.getSession(),
+  );
   if (existing.session) {
-    return succeedCallback();
+    return succeedCallback("session_already_present");
   }
 
   if (code && sessionStorage.getItem(OAUTH_HANDLED_CODE_KEY) === code) {
-    const { data: retrySession } = await supabase.auth.getSession();
+    const { data: retrySession } = await authDebugGetSession(
+      "completeAuthCallback:handled_code_retry",
+      () => supabase.auth.getSession(),
+    );
     if (retrySession.session) {
-      return succeedCallback();
+      return succeedCallback("handled_code_but_session_exists");
     }
-    return failCallback(sessionExpiredMessage(lang), code);
+    return failCallback(
+      sessionExpiredMessage(lang),
+      code,
+      "duplicate_handled_code_no_session",
+    );
   }
 
   // detectSessionInUrl exchanges ?code= on client init; wait before manual fallback
+  authDebug("completeAuthCallback: waiting for detectSessionInUrl", {
+    timeoutMs: 12000,
+  });
   let hasSession = await waitForAuthSession();
+  authDebug("completeAuthCallback: waitForAuthSession result", { hasSession });
 
   if (!hasSession && code) {
+    authDebug("completeAuthCallback: manual exchange fallback", {
+      codePrefix: code.slice(0, 8),
+    });
     const { data, error } = await supabase.auth.exchangeCodeForSession(code);
+    authDebug("completeAuthCallback: manual exchange result", {
+      hasSession: !!data.session,
+      error: error?.message ?? null,
+    });
     if (error) {
-      const { data: afterError } = await supabase.auth.getSession();
+      const { data: afterError } = await authDebugGetSession(
+        "completeAuthCallback:after_exchange_error",
+        () => supabase.auth.getSession(),
+      );
       if (afterError.session) {
-        return succeedCallback();
+        return succeedCallback("session_present_after_exchange_error");
       }
-      return failCallback(mapAuthError(error.message, lang), code);
+      return failCallback(
+        mapAuthError(error.message, lang),
+        code,
+        "exchangeCodeForSession_error",
+      );
     }
     hasSession = !!data.session;
   } else if (
@@ -380,15 +439,24 @@ async function completeAuthCallbackOnce(
       hashParams.has("refresh_token") ||
       hashParams.has("type"))
   ) {
+    authDebug("completeAuthCallback: hash token wait", { timeoutMs: 4000 });
     hasSession = await waitForAuthSession(4000);
+    authDebug("completeAuthCallback: hash token wait result", { hasSession });
   }
 
-  const { data: sessionCheck } = await supabase.auth.getSession();
+  const { data: sessionCheck } = await authDebugGetSession(
+    "completeAuthCallback:final_check",
+    () => supabase.auth.getSession(),
+  );
   if (!sessionCheck.session) {
-    return failCallback(mapAuthError("Auth session missing!", lang), code);
+    return failCallback(
+      mapAuthError("Auth session missing!", lang),
+      code,
+      "final_session_check_null",
+    );
   }
 
-  return succeedCallback();
+  return succeedCallback("final_session_check_ok");
 }
 
 /** OAuth/email confirmation callback — call only on /auth/callback */
@@ -396,6 +464,7 @@ export function completeAuthCallback(
   lang: "ko" | "en" = "ko",
 ): Promise<AuthCallbackResult> {
   if (authCallbackInFlight) {
+    authDebug("completeAuthCallback DEDUPED (in-flight)", { lang });
     return authCallbackInFlight;
   }
 

@@ -4,6 +4,11 @@ import { QueryClientProvider } from "@tanstack/react-query";
 import { RouterProvider } from "@tanstack/react-router";
 import { supabase } from "./integrations/supabase/client";
 import { queryClient, router } from "./router";
+import {
+  authDebug,
+  authDebugGetSession,
+  installAuthDebugInstrumentation,
+} from "@/lib/authDebug";
 import "./styles.css";
 
 import { registerServiceWorker } from "@/lib/swReminders";
@@ -13,7 +18,12 @@ if (
   typeof window !== "undefined" &&
   window.location.pathname === "/auth/callback"
 ) {
-  void supabase.auth.getSession();
+  authDebug("main.tsx: bootstrap getSession on /auth/callback", {
+    href: window.location.href,
+  });
+  void authDebugGetSession("main.tsx:post-redirect-bootstrap", () =>
+    supabase.auth.getSession(),
+  );
 }
 
 declare module "@tanstack/react-router" {
@@ -23,6 +33,7 @@ declare module "@tanstack/react-router" {
 }
 
 if (typeof window !== "undefined" && import.meta.env.VITE_E2E !== "true") {
+  installAuthDebugInstrumentation(router);
   void registerServiceWorker();
 }
 

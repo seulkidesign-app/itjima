@@ -6,7 +6,7 @@ import { useT, LanguageToggle } from "@/lib/i18n";
 import { useUserId } from "@/lib/store";
 import { useIsAdmin } from "@/hooks/useIsAdmin";
 import { supabase } from "@/integrations/supabase/client";
-import { tap } from "@/lib/haptics";
+import { authDebugSignOut } from "@/lib/authDebug";
 
 type Props = {
   open: boolean;
@@ -42,6 +42,7 @@ export function SettingsSheet({ open, onClose }: Props) {
             <button
               type="button"
               onClick={async () => {
+                authDebugSignOut("SettingsSheet.tsx");
                 await supabase.auth.signOut();
                 toast(t("로그아웃됨", "Signed out"));
                 onClose();
