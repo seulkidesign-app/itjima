@@ -39,12 +39,12 @@ export function TopNav() {
   return (
     <>
       <div
-        className={`shrink-0 z-40 bg-white/95 backdrop-blur-md transition-shadow ${
+        className={`app-top-nav shrink-0 z-40 bg-white/95 backdrop-blur-md transition-shadow ${
           scrolled ? "border-b border-ink/10 shadow-card" : ""
         }`}
         style={{ paddingTop: "env(safe-area-inset-top)" }}
       >
-        <div className="flex items-center justify-between gap-2 px-5 pb-1 pt-2">
+        <div className="app-top-nav-bar flex items-center justify-between gap-2 px-5 pb-1 pt-2">
           {isHome ? (
             <button
               type="button"
@@ -53,7 +53,7 @@ export function TopNav() {
                 tap();
                 setBrandHubOpen(true);
               }}
-              className="shrink-0 font-display text-[19px] uppercase leading-none tracking-wide text-ink"
+              className="app-brand-trigger shrink-0 font-display text-[19px] uppercase leading-none tracking-wide text-ink"
             >
               ITJIMA
               <span className="ml-1 inline-block h-1.5 w-1.5 -translate-y-1 rounded-full bg-primary align-middle" />
@@ -61,7 +61,7 @@ export function TopNav() {
           ) : (
             <Link
               to="/"
-              className="shrink-0 font-display text-[19px] uppercase leading-none tracking-wide text-ink"
+              className="app-brand-trigger shrink-0 font-display text-[19px] uppercase leading-none tracking-wide text-ink"
             >
               ITJIMA
               <span className="ml-1 inline-block h-1.5 w-1.5 -translate-y-1 rounded-full bg-primary align-middle" />
@@ -74,7 +74,7 @@ export function TopNav() {
               tap();
               setSettingsOpen(true);
             }}
-            className="touch-target flex h-9 shrink-0 items-center gap-1.5 rounded-full border border-ink/10 bg-white px-2.5 py-1.5 text-ink-soft shadow-card"
+            className="app-account-button touch-target flex h-9 shrink-0 items-center gap-1.5 rounded-full border border-ink/10 bg-white px-2.5 py-1.5 text-ink-soft shadow-card"
           >
             <User size={16} strokeWidth={2.25} />
             <span className="max-w-[4.5rem] truncate text-[11px] font-semibold">
@@ -83,7 +83,7 @@ export function TopNav() {
           </button>
         </div>
         <LayoutGroup>
-          <nav className="flex items-stretch px-4">
+          <nav className="app-primary-tabs flex items-stretch px-4" aria-label={t("주요 메뉴", "Primary navigation")}>
             {tabs.map(({ to, label }) => {
               const active = path === to;
               return (
@@ -91,7 +91,8 @@ export function TopNav() {
                   key={to}
                   to={to}
                   onClick={tap}
-                  className={`relative flex min-w-0 flex-1 items-center justify-center whitespace-nowrap px-1 pb-2.5 pt-1 text-[13px] font-semibold tracking-[-0.01em] transition-colors duration-200 ${
+                  aria-current={active ? "page" : undefined}
+                  className={`app-primary-tab relative flex min-w-0 flex-1 items-center justify-center whitespace-nowrap px-1 pb-2.5 pt-1 text-[13px] font-semibold tracking-[-0.01em] transition-colors duration-200 ${
                     active ? "text-ink" : "text-ink-soft"
                   }`}
                 >
