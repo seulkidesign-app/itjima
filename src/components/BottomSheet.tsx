@@ -34,6 +34,15 @@ export function BottomSheet({
   const dragControls = useDragControls();
   const titleId = useId();
   const [keyboardInset, setKeyboardInset] = useState(0);
+  const [wideLayout, setWideLayout] = useState(false);
+
+  useEffect(() => {
+    const media = window.matchMedia("(min-width: 640px)");
+    const sync = () => setWideLayout(media.matches);
+    sync();
+    media.addEventListener("change", sync);
+    return () => media.removeEventListener("change", sync);
+  }, []);
 
   useEffect(() => {
     if (!open) return;
@@ -74,12 +83,21 @@ export function BottomSheet({
     };
   }, [open]);
 
+  const panelInitial = wideLayout
+    ? { opacity: 0, y: 18, scale: 0.985 }
+    : { opacity: 1, y: "100%", scale: 1 };
+  const panelAnimate = { opacity: 1, y: 0, scale: 1 };
+  const panelExit = wideLayout
+    ? { opacity: 0, y: 12, scale: 0.99 }
+    : { opacity: 1, y: "100%", scale: 1 };
+
   return (
     <AnimatePresence>
       {open && (
         <div
           className="bottom-sheet-root fixed inset-0 z-[80] flex min-w-0 flex-col"
           role="presentation"
+          data-layout={wideLayout ? "panel" : "sheet"}
         >
           <motion.button
             type="button"
@@ -98,20 +116,25 @@ export function BottomSheet({
             role="dialog"
             aria-modal="true"
             aria-labelledby={title ? titleId : undefined}
-            drag="y"
+            drag={wideLayout ? false : "y"}
             dragControls={dragControls}
             dragConstraints={{ top: 0, bottom: 0 }}
             dragElastic={{ top: 0.05, bottom: 0.32 }}
             onDragEnd={(_, info) => {
+              if (wideLayout) return;
               if (info.offset.y > 88 || info.velocity.y > 520) {
                 light();
                 onClose();
               }
             }}
-            initial={{ y: "100%" }}
-            animate={{ y: 0 }}
-            exit={{ y: "100%" }}
-            transition={SPRING_SHEET}
+            initial={panelInitial}
+            animate={panelAnimate}
+            exit={panelExit}
+            transition={
+              wideLayout
+                ? { duration: 0.22, ease: [0.2, 0.8, 0.2, 1] }
+                : SPRING_SHEET
+            }
             className="bottom-sheet-panel sheet-chrome relative z-[1] mx-auto mt-auto flex w-full max-h-[var(--sheet-max-h)] shrink-0 flex-col overflow-hidden bg-white/98 shadow-[0_-20px_60px_-10px_rgba(0,0,0,0.22)] backdrop-blur-2xl"
             style={
               {
@@ -128,13 +151,15 @@ export function BottomSheet({
                 {title}
               </span>
             )}
-            <div
-              className="bottom-sheet-handle flex shrink-0 cursor-grab justify-center py-3 active:cursor-grabbing"
-              onPointerDown={(e) => dragControls.start(e)}
-              aria-hidden
-            >
-              <div className="h-1 w-9 rounded-full bg-ink/12" />
-            </div>
+            {!wideLayout && (
+              <div
+                className="bottom-sheet-handle flex shrink-0 cursor-grab justify-center py-3 active:cursor-grabbing"
+                onPointerDown={(e) => dragControls.start(e)}
+                aria-hidden
+              >
+                <div className="h-1 w-9 rounded-full bg-ink/12" />
+              </div>
+            )}
             <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
               {children}
             </div>
