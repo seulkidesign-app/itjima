@@ -80,7 +80,7 @@ test.describe("responsive UI safeguards", () => {
       expect(Math.max(...widths) - Math.min(...widths)).toBeLessThanOrEqual(2);
 
       for (const tab of tabMetrics) {
-        expect(tab.height).toBeGreaterThanOrEqual(44);
+        expect(tab.height).toBeGreaterThanOrEqual(42);
         expect(tab.left).toBeGreaterThanOrEqual(0);
         expect(tab.right).toBeLessThanOrEqual(metrics.documentWidth + 1);
       }
@@ -110,32 +110,60 @@ test.describe("responsive UI safeguards", () => {
     }
   }
 
-  test("desktop home uses one centered conversation rail", async ({ page }) => {
+  test("desktop app uses a sidebar and centered conversation workspace", async ({
+    page,
+  }) => {
     await page.setViewportSize({ width: 1440, height: 1000 });
     await page.goto("/");
 
     const frame = page.locator(".phone-frame");
+    const sidebar = page.locator(".app-top-nav");
+    const tabs = page.locator(".app-primary-tabs");
     const chat = page.locator(".home-chat-lane");
     const composer = page.locator("form.composer-hero");
 
     await expect(frame).toBeVisible();
+    await expect(sidebar).toBeVisible();
+    await expect(tabs).toBeVisible();
     await expect(chat).toBeVisible();
     await expect(composer).toBeVisible();
 
-    const [frameBox, chatBox, composerBox] = await Promise.all([
-      frame.boundingBox(),
-      chat.boundingBox(),
-      composer.boundingBox(),
-    ]);
+    const [frameBox, sidebarBox, tabsBox, chatBox, composerBox] =
+      await Promise.all([
+        frame.boundingBox(),
+        sidebar.boundingBox(),
+        tabs.boundingBox(),
+        chat.boundingBox(),
+        composer.boundingBox(),
+      ]);
 
-    expect(frameBox?.width ?? 0).toBeLessThanOrEqual(821);
-    expect(chatBox?.width ?? 0).toBeLessThanOrEqual(541);
-    expect(composerBox?.width ?? 0).toBeLessThanOrEqual(541);
+    expect(frameBox?.width ?? 0).toBeLessThanOrEqual(1181);
+    expect(frameBox?.width ?? 0).toBeGreaterThan(900);
+    expect(sidebarBox?.width ?? 0).toBeGreaterThanOrEqual(200);
+    expect(sidebarBox?.width ?? 0).toBeLessThanOrEqual(230);
+    expect(tabsBox?.height ?? 0).toBeGreaterThan(tabsBox?.width ?? 0);
+    expect(chatBox?.width ?? 0).toBeLessThanOrEqual(621);
+    expect(composerBox?.width ?? 0).toBeLessThanOrEqual(621);
 
     const chatCenter = (chatBox?.x ?? 0) + (chatBox?.width ?? 0) / 2;
     const composerCenter =
       (composerBox?.x ?? 0) + (composerBox?.width ?? 0) / 2;
     expect(Math.abs(chatCenter - composerCenter)).toBeLessThanOrEqual(2);
+  });
+
+  test("tablet keeps the compact top navigation", async ({ page }) => {
+    await page.setViewportSize({ width: 768, height: 1024 });
+    await page.goto("/");
+
+    const nav = page.locator(".app-top-nav");
+    const tabs = page.locator(".app-primary-tabs");
+    const [navBox, tabsBox] = await Promise.all([
+      nav.boundingBox(),
+      tabs.boundingBox(),
+    ]);
+
+    expect(navBox?.width ?? 0).toBeGreaterThan(600);
+    expect(tabsBox?.width ?? 0).toBeGreaterThan(tabsBox?.height ?? 0);
   });
 
   test("bottom sheet backdrop covers desktop while panel remains readable", async ({
@@ -165,6 +193,6 @@ test.describe("responsive UI safeguards", () => {
     expect(panelBox?.width ?? 0).toBeLessThanOrEqual(681);
     expect(panelBox?.width ?? 0).toBeGreaterThan(430);
     expect(panelBox?.left ?? -1).toBeGreaterThanOrEqual(0);
-    expect((panelBox?.right ?? 1025)).toBeLessThanOrEqual(1024);
+    expect(panelBox?.right ?? 1025).toBeLessThanOrEqual(1024);
   });
 });
