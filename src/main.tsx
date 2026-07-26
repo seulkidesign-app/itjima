@@ -32,8 +32,10 @@ declare module "@tanstack/react-router" {
   }
 }
 
-if (typeof window !== "undefined" && import.meta.env.VITE_E2E !== "true") {
-  installAuthDebugInstrumentation(router);
+if (typeof window !== "undefined") {
+  if (import.meta.env.DEV && import.meta.env.VITE_E2E !== "true") {
+    installAuthDebugInstrumentation(router);
+  }
   void registerServiceWorker();
 }
 

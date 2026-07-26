@@ -6,6 +6,10 @@ import type { AnyRouter } from "@tanstack/react-router";
 
 const PREFIX = "[auth-debug]";
 
+/** Dev-only; never install hooks or log in production builds. */
+const AUTH_DEBUG_ENABLED =
+  import.meta.env.DEV && import.meta.env.VITE_E2E !== "true";
+
 /** Every automatic /auth destination in the codebase (for audit). */
 export const AUTH_LOGIN_ROUTE_SOURCES = [
   {
@@ -67,7 +71,7 @@ export function authDebug(
   step: string,
   data: Record<string, unknown> = {},
 ) {
-  if (typeof window === "undefined") return;
+  if (!AUTH_DEBUG_ENABLED || typeof window === "undefined") return;
   console.log(PREFIX, step, {
     pathname: window.location.pathname,
     search: window.location.search,
@@ -137,8 +141,7 @@ export function authDebugSignOut(source: string) {
 let installed = false;
 
 export function installAuthDebugInstrumentation(router: AnyRouter) {
-  if (typeof window === "undefined") return;
-  if (import.meta.env.VITE_E2E === "true") return;
+  if (!AUTH_DEBUG_ENABLED || typeof window === "undefined") return;
   if (installed) return;
   installed = true;
 
@@ -175,15 +178,4 @@ export function installAuthDebugInstrumentation(router: AnyRouter) {
       });
     }
   });
-
-  const originalReplace = window.location.replace.bind(window.location);
-  window.location.replace = ((url: string | URL) => {
-    const href = String(url);
-    if (href.includes("/auth")) {
-      authDebugNavigateToAuth("window.location.replace", { href });
-    } else {
-      authDebug("window.location.replace", { href });
-    }
-    return originalReplace(url);
-  }) as typeof window.location.replace;
 }
