@@ -9,6 +9,7 @@ import {
   authDebugGetSession,
   installAuthDebugInstrumentation,
 } from "@/lib/authDebug";
+import { oauthPkceStorageDiag } from "@/lib/oauth";
 import "./styles.css";
 
 import { registerServiceWorker } from "@/lib/swReminders";
@@ -21,9 +22,14 @@ if (
   authDebug("main.tsx: bootstrap getSession on /auth/callback", {
     href: window.location.href,
   });
+  oauthPkceStorageDiag("main:callback-bootstrap:before-getSession", {
+    hasCode: new URLSearchParams(window.location.search).has("code"),
+  });
   void authDebugGetSession("main.tsx:post-redirect-bootstrap", () =>
     supabase.auth.getSession(),
-  );
+  ).then(() => {
+    oauthPkceStorageDiag("main:callback-bootstrap:after-getSession");
+  });
 }
 
 declare module "@tanstack/react-router" {

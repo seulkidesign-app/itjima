@@ -28,6 +28,40 @@ export function oauthDiag(
   });
 }
 
+/** Supabase auth-js PKCE verifier key: `${storageKey}-code-verifier`. */
+export function getPkceVerifierStorageKey() {
+  const url = import.meta.env.VITE_SUPABASE_URL as string | undefined;
+  if (!url) return null;
+  try {
+    const projectRef = new URL(url).hostname.split(".")[0];
+    return `sb-${projectRef}-auth-token-code-verifier`;
+  } catch {
+    return null;
+  }
+}
+
+/** DEV-only: log localStorage auth keys and PKCE verifier presence (never token values). */
+export function oauthPkceStorageDiag(
+  phase: string,
+  extra: Record<string, unknown> = {},
+) {
+  if (!OAUTH_DIAG_ENABLED || typeof window === "undefined") return;
+  const verifierKey = getPkceVerifierStorageKey();
+  const authKeys = Object.keys(localStorage)
+    .filter((k) => k.startsWith("sb-") || k.includes("auth"))
+    .sort();
+  oauthDiag(`pkce-storage:${phase}`, {
+    origin: window.location.origin,
+    verifierKey,
+    hasVerifier: verifierKey ? localStorage.getItem(verifierKey) != null : null,
+    verifierLength: verifierKey
+      ? (localStorage.getItem(verifierKey)?.length ?? 0)
+      : null,
+    authLocalStorageKeys: authKeys,
+    ...extra,
+  });
+}
+
 function hasOAuthReturnInUrl() {
   const params = new URLSearchParams(window.location.search);
   const hash = window.location.hash;
@@ -194,6 +228,7 @@ export async function signInWithGoogle(returnPath?: string) {
   saveAuthReturnPath(returnPath ?? window.location.pathname);
 
   const redirectTo = authRedirectUrl();
+  oauthPkceStorageDiag("signInWithGoogle:before", { redirectTo });
   oauthDiag("signInWithGoogle", {
     redirectTo,
     returnPath: returnPath ?? window.location.pathname,
@@ -210,6 +245,12 @@ export async function signInWithGoogle(returnPath?: string) {
         prompt: "select_account",
       },
     },
+  });
+
+  oauthPkceStorageDiag("signInWithGoogle:after", {
+    redirectTo,
+    oauthError: error?.message ?? null,
+    willRedirect: Boolean(data.url),
   });
 
   if (error) {
@@ -379,6 +420,9 @@ async function completeAuthCallbackOnce(
     href: window.location.href,
     handledCode: sessionStorage.getItem(OAUTH_HANDLED_CODE_KEY),
   });
+  oauthPkceStorageDiag("callback:start", {
+    hasCode: new URLSearchParams(window.location.search).has("code"),
+  });
   authDebug("completeAuthCallback START", {
     lang,
     handledCode: sessionStorage.getItem(OAUTH_HANDLED_CODE_KEY),
@@ -442,6 +486,9 @@ async function completeAuthCallbackOnce(
   }
 
   if (code) {
+    oauthPkceStorageDiag("callback:before-exchange", {
+      codePrefix: code.slice(0, 8),
+    });
     oauthDiag("callback:exchange:start", { codePrefix: code.slice(0, 8) });
     authDebug("completeAuthCallback: exchangeCodeForSession", {
       codePrefix: code.slice(0, 8),
@@ -451,6 +498,10 @@ async function completeAuthCallbackOnce(
       hasSession: !!data.session,
       userId: data.session?.user?.id ?? null,
       error: error?.message ?? null,
+    });
+    oauthPkceStorageDiag("callback:after-exchange", {
+      hasSession: !!data.session,
+      exchangeError: error?.message ?? null,
     });
     authDebug("completeAuthCallback: exchange result", {
       hasSession: !!data.session,
