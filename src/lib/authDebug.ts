@@ -1,4 +1,4 @@
-/**
+﻿/**
  * TEMPORARY OAuth investigation instrumentation — remove after root cause is confirmed.
  */
 import type { AuthChangeEvent, Session } from "@supabase/supabase-js";
@@ -121,6 +121,23 @@ export async function authDebugGetSession(
     import("@supabase/supabase-js").SupabaseAuthClient["getSession"]
   >,
 ) {
+  // On a PKCE callback the code verifier must remain in storage until
+  // exchangeCodeForSession(code) runs. Calling getSession() first initializes
+  // auth-js and can remove the verifier on the no-session path.
+  const shouldSkipBeforePkceExchange =
+    typeof window !== "undefined" &&
+    window.location.pathname === "/auth/callback" &&
+    new URLSearchParams(window.location.search).has("code") &&
+    source === "completeAuthCallback:initial";
+
+  if (shouldSkipBeforePkceExchange) {
+    authDebug("getSession SKIPPED before PKCE exchange", { source });
+    return {
+      data: { session: null },
+      error: null,
+    } as Awaited<ReturnType<typeof getSession>>;
+  }
+
   const result = await getSession();
   authDebug("getSession", {
     source,
