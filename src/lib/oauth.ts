@@ -12,6 +12,22 @@ const AUTH_NEXT_KEY = "itjima.auth.next";
 const OAUTH_HANDLED_CODE_KEY = "itjima.oauth.handledCode";
 const OAUTH_ERROR_KEY = "itjima.oauth.lastError";
 
+/** Dev-only OAuth diagnostics — never logs tokens. */
+const OAUTH_DIAG_ENABLED =
+  import.meta.env.DEV && import.meta.env.VITE_E2E !== "true";
+
+export function oauthDiag(
+  step: string,
+  data: Record<string, unknown> = {},
+) {
+  if (!OAUTH_DIAG_ENABLED || typeof window === "undefined") return;
+  console.log("[oauth-diag]", step, {
+    pathname: window.location.pathname,
+    search: window.location.search,
+    ...data,
+  });
+}
+
 function hasOAuthReturnInUrl() {
   const params = new URLSearchParams(window.location.search);
   const hash = window.location.hash;
@@ -177,10 +193,18 @@ export async function signInWithGoogle(returnPath?: string) {
 
   saveAuthReturnPath(returnPath ?? window.location.pathname);
 
+  const redirectTo = authRedirectUrl();
+  oauthDiag("signInWithGoogle", {
+    redirectTo,
+    returnPath: returnPath ?? window.location.pathname,
+    flowType: "pkce",
+  });
+  authDebug("signInWithGoogle", { redirectTo });
+
   const { data, error } = await supabase.auth.signInWithOAuth({
     provider: "google",
     options: {
-      redirectTo: authRedirectUrl(),
+      redirectTo,
       queryParams: {
         access_type: "offline",
         prompt: "select_account",
@@ -320,15 +344,13 @@ let authCallbackInFlight: Promise<AuthCallbackResult> | null = null;
 
 function failCallback(
   message: string,
-  code?: string | null,
   reason?: string,
 ): AuthCallbackResult {
   authDebug("completeAuthCallback FAIL", {
     reason: reason ?? "unspecified",
     message,
-    codePrefix: code?.slice(0, 8) ?? null,
   });
-  if (code) markOAuthCodeHandled(code);
+  oauthDiag("callback:fail", { message, reason: reason ?? "unspecified" });
   stashOAuthError(message);
   purgeOAuthFromUrl();
   return { ok: false, message };
@@ -340,9 +362,11 @@ function sessionExpiredMessage(lang: "ko" | "en"): string {
     : "Sign-in session expired. Please try Google sign-in again.";
 }
 
-function succeedCallback(reason: string): AuthCallbackResult {
+function succeedCallback(reason: string, code?: string | null): AuthCallbackResult {
+  if (code) markOAuthCodeHandled(code);
   const nextPath = consumeAuthReturnPath();
   authDebug("completeAuthCallback SUCCESS", { reason, nextPath });
+  oauthDiag("callback:success", { reason, nextPath, hasCode: !!code });
   purgeOAuthFromUrl();
   clearOAuthCodeHandled();
   return { ok: true, nextPath };
@@ -351,6 +375,10 @@ function succeedCallback(reason: string): AuthCallbackResult {
 async function completeAuthCallbackOnce(
   lang: "ko" | "en",
 ): Promise<AuthCallbackResult> {
+  oauthDiag("callback:start", {
+    href: window.location.href,
+    handledCode: sessionStorage.getItem(OAUTH_HANDLED_CODE_KEY),
+  });
   authDebug("completeAuthCallback START", {
     lang,
     handledCode: sessionStorage.getItem(OAUTH_HANDLED_CODE_KEY),
@@ -367,12 +395,16 @@ async function completeAuthCallbackOnce(
   if (oauthError) {
     return failCallback(
       mapAuthError(oauthDescription || oauthError, lang),
-      null,
       "oauth_error_in_url",
     );
   }
 
   const code = params.get("code");
+  oauthDiag("callback:params", {
+    hasCode: !!code,
+    codePrefix: code?.slice(0, 8) ?? null,
+    hashHasTokens: hashParams.has("access_token"),
+  });
   authDebug("completeAuthCallback params", {
     hasCode: !!code,
     codePrefix: code?.slice(0, 8) ?? null,
@@ -383,8 +415,12 @@ async function completeAuthCallbackOnce(
     "completeAuthCallback:initial",
     () => supabase.auth.getSession(),
   );
+  oauthDiag("callback:getSession:initial", {
+    hasSession: !!existing.session,
+    userId: existing.session?.user?.id ?? null,
+  });
   if (existing.session) {
-    return succeedCallback("session_already_present");
+    return succeedCallback("session_already_present", code);
   }
 
   if (code && sessionStorage.getItem(OAUTH_HANDLED_CODE_KEY) === code) {
@@ -392,29 +428,31 @@ async function completeAuthCallbackOnce(
       "completeAuthCallback:handled_code_retry",
       () => supabase.auth.getSession(),
     );
+    oauthDiag("callback:handled_code_retry", {
+      hasSession: !!retrySession.session,
+      userId: retrySession.session?.user?.id ?? null,
+    });
     if (retrySession.session) {
-      return succeedCallback("handled_code_but_session_exists");
+      return succeedCallback("handled_code_but_session_exists", code);
     }
     return failCallback(
       sessionExpiredMessage(lang),
-      code,
       "duplicate_handled_code_no_session",
     );
   }
 
-  // detectSessionInUrl exchanges ?code= on client init; wait before manual fallback
-  authDebug("completeAuthCallback: waiting for detectSessionInUrl", {
-    timeoutMs: 12000,
-  });
-  let hasSession = await waitForAuthSession();
-  authDebug("completeAuthCallback: waitForAuthSession result", { hasSession });
-
-  if (!hasSession && code) {
-    authDebug("completeAuthCallback: manual exchange fallback", {
+  if (code) {
+    oauthDiag("callback:exchange:start", { codePrefix: code.slice(0, 8) });
+    authDebug("completeAuthCallback: exchangeCodeForSession", {
       codePrefix: code.slice(0, 8),
     });
     const { data, error } = await supabase.auth.exchangeCodeForSession(code);
-    authDebug("completeAuthCallback: manual exchange result", {
+    oauthDiag("callback:exchange:result", {
+      hasSession: !!data.session,
+      userId: data.session?.user?.id ?? null,
+      error: error?.message ?? null,
+    });
+    authDebug("completeAuthCallback: exchange result", {
       hasSession: !!data.session,
       error: error?.message ?? null,
     });
@@ -423,40 +461,63 @@ async function completeAuthCallbackOnce(
         "completeAuthCallback:after_exchange_error",
         () => supabase.auth.getSession(),
       );
+      oauthDiag("callback:getSession:after_exchange_error", {
+        hasSession: !!afterError.session,
+        userId: afterError.session?.user?.id ?? null,
+      });
       if (afterError.session) {
-        return succeedCallback("session_present_after_exchange_error");
+        return succeedCallback("session_present_after_exchange_error", code);
       }
       return failCallback(
         mapAuthError(error.message, lang),
-        code,
         "exchangeCodeForSession_error",
       );
     }
-    hasSession = !!data.session;
+    if (data.session) {
+      return succeedCallback("exchangeCodeForSession_ok", code);
+    }
   } else if (
-    !hasSession &&
-    (hashParams.has("access_token") ||
-      hashParams.has("refresh_token") ||
-      hashParams.has("type"))
+    hashParams.has("access_token") ||
+    hashParams.has("refresh_token") ||
+    hashParams.has("type")
   ) {
     authDebug("completeAuthCallback: hash token wait", { timeoutMs: 4000 });
-    hasSession = await waitForAuthSession(4000);
+    oauthDiag("callback:hash_token_wait", { timeoutMs: 4000 });
+    const hasSession = await waitForAuthSession(4000);
+    oauthDiag("callback:hash_token_wait:result", { hasSession });
     authDebug("completeAuthCallback: hash token wait result", { hasSession });
+    if (hasSession) {
+      return succeedCallback("hash_token_wait_ok");
+    }
+  } else {
+    authDebug("completeAuthCallback: waiting for detectSessionInUrl", {
+      timeoutMs: 5000,
+    });
+    oauthDiag("callback:detectSessionInUrl_wait", { timeoutMs: 5000 });
+    const hasSession = await waitForAuthSession(5000);
+    oauthDiag("callback:detectSessionInUrl_wait:result", { hasSession });
+    authDebug("completeAuthCallback: waitForAuthSession result", { hasSession });
+    if (hasSession) {
+      return succeedCallback("detectSessionInUrl_ok");
+    }
   }
 
   const { data: sessionCheck } = await authDebugGetSession(
     "completeAuthCallback:final_check",
     () => supabase.auth.getSession(),
   );
+  oauthDiag("callback:getSession:final", {
+    hasSession: !!sessionCheck.session,
+    userId: sessionCheck.session?.user?.id ?? null,
+  });
   if (!sessionCheck.session) {
     return failCallback(
       mapAuthError("Auth session missing!", lang),
-      code,
       "final_session_check_null",
     );
   }
 
-  return succeedCallback("final_session_check_ok");
+  return succeedCallback("final_session_check_ok", code);
 }
 
 /** OAuth/email confirmation callback — call only on /auth/callback */

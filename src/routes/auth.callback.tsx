@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
-import { completeAuthCallback } from "@/lib/oauth";
+import { completeAuthCallback, oauthDiag } from "@/lib/oauth";
 import { authDebug, authDebugNavigateToAuth } from "@/lib/authDebug";
 import { useLang, useT } from "@/lib/i18n";
 
@@ -13,6 +13,7 @@ function AuthCallbackPage() {
   const t = useT();
   const { lang } = useLang();
   const [message, setMessage] = useState<string | null>(null);
+  const [authLoading, setAuthLoading] = useState(true);
   const started = useRef(false);
 
   useEffect(() => {
@@ -34,9 +35,21 @@ function AuthCallbackPage() {
     authDebug("auth.callback: effect started", {
       mountId: crypto.randomUUID().slice(0, 8),
     });
+    oauthDiag("callback:page:started", {
+      href: window.location.href,
+      hasCode: new URLSearchParams(window.location.search).has("code"),
+      authLoading: true,
+    });
 
     (async () => {
       const result = await completeAuthCallback(lang);
+      setAuthLoading(false);
+      oauthDiag("callback:page:finished", {
+        ok: result.ok,
+        authLoading: false,
+        nextPath: result.ok ? result.nextPath : null,
+        message: result.ok ? null : result.message,
+      });
 
       authDebug("auth.callback: completeAuthCallback result", {
         ok: result.ok,
@@ -73,7 +86,9 @@ function AuthCallbackPage() {
             {t("로그인 마무리 중...", "Finishing sign-in...")}
           </p>
           <p className="mt-1 text-sm text-ink-soft">
-            {t("잠시만 기다려 주세요.", "Just a moment.")}
+            {authLoading
+              ? t("잠시만 기다려 주세요.", "Just a moment.")
+              : t("이동 중...", "Redirecting...")}
           </p>
         </>
       ) : (

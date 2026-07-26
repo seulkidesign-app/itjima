@@ -1,4 +1,10 @@
-import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
+import {
+  Outlet,
+  createFileRoute,
+  useNavigate,
+  Link,
+  useRouterState,
+} from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
@@ -15,13 +21,23 @@ import {
   signInWithGoogle,
   signUpWithEmail,
   sendPasswordResetEmail,
+  oauthDiag,
 } from "@/lib/oauth";
 
 export const Route = createFileRoute("/auth")({
-  component: AuthPage,
+  component: AuthRouteShell,
 });
 
-function AuthPage() {
+/** Parent shell — must render Outlet so /auth/callback can mount. */
+function AuthRouteShell() {
+  const isCallback = useRouterState({
+    select: (s) => s.location.pathname.startsWith("/auth/callback"),
+  });
+  if (isCallback) return <Outlet />;
+  return <AuthLoginPage />;
+}
+
+function AuthLoginPage() {
   const t = useT();
   const { lang } = useLang();
   const navigate = useNavigate();
@@ -55,36 +71,47 @@ function AuthPage() {
   }, []);
 
   useEffect(() => {
+    let settled = false;
+
+    const finish = (hasSession: boolean, via: string) => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timer);
+      sub.subscription.unsubscribe();
+      oauthDiag("auth:loading:done", { hasSession, via });
+      if (hasSession) {
+        authDebug("auth.tsx: navigate → / (session resolved)", { via });
+        navigate({ to: "/" });
+      } else {
+        authDebug("auth.tsx: no session — showing login form", { via });
+        setReady(true);
+      }
+    };
+
+    oauthDiag("auth:loading:start", {});
+
     void authDebugGetSession("auth.tsx:mount_check", () =>
       supabase.auth.getSession(),
     ).then(({ data }) => {
-      if (data.session?.user) {
-        authDebug("auth.tsx: navigate → / (session found on mount)", {
-          userId: data.session.user.id,
-        });
-        navigate({ to: "/" });
-      } else {
-        authDebug("auth.tsx: no session on mount — showing login form");
-        setReady(true);
-      }
+      if (data.session?.user) finish(true, "getSession");
     });
-  }, [navigate]);
 
-  useEffect(() => {
     const { data: sub } = supabase.auth.onAuthStateChange((event, session) => {
       authDebugAuthStateChange(event, session, "auth.tsx");
-      if (
-        (event === "SIGNED_IN" || event === "INITIAL_SESSION") &&
-        session?.user
-      ) {
-        authDebug("auth.tsx: navigate → / (onAuthStateChange)", {
-          event,
-          userId: session.user.id,
-        });
-        navigate({ to: "/" });
+      if (event === "INITIAL_SESSION") {
+        finish(!!session?.user, "INITIAL_SESSION");
+      } else if (event === "SIGNED_IN" && session?.user) {
+        finish(true, "SIGNED_IN");
       }
     });
-    return () => sub.subscription.unsubscribe();
+
+    const timer = setTimeout(() => finish(false, "timeout"), 8000);
+
+    return () => {
+      settled = true;
+      clearTimeout(timer);
+      sub.subscription.unsubscribe();
+    };
   }, [navigate]);
 
   const onGoogle = async () => {
