@@ -110,6 +110,34 @@ test.describe("responsive UI safeguards", () => {
     }
   }
 
+  test("desktop home uses one centered conversation rail", async ({ page }) => {
+    await page.setViewportSize({ width: 1440, height: 1000 });
+    await page.goto("/");
+
+    const frame = page.locator(".phone-frame");
+    const chat = page.locator(".home-chat-lane");
+    const composer = page.locator("form.composer-hero");
+
+    await expect(frame).toBeVisible();
+    await expect(chat).toBeVisible();
+    await expect(composer).toBeVisible();
+
+    const [frameBox, chatBox, composerBox] = await Promise.all([
+      frame.boundingBox(),
+      chat.boundingBox(),
+      composer.boundingBox(),
+    ]);
+
+    expect(frameBox?.width ?? 0).toBeLessThanOrEqual(821);
+    expect(chatBox?.width ?? 0).toBeLessThanOrEqual(541);
+    expect(composerBox?.width ?? 0).toBeLessThanOrEqual(541);
+
+    const chatCenter = (chatBox?.x ?? 0) + (chatBox?.width ?? 0) / 2;
+    const composerCenter =
+      (composerBox?.x ?? 0) + (composerBox?.width ?? 0) / 2;
+    expect(Math.abs(chatCenter - composerCenter)).toBeLessThanOrEqual(2);
+  });
+
   test("bottom sheet backdrop covers desktop while panel remains readable", async ({
     page,
   }) => {
