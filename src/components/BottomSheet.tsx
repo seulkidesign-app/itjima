@@ -116,7 +116,10 @@ export function BottomSheet({
             style={
               {
                 "--sheet-max-h": maxHeight,
-                paddingBottom: keyboardInset,
+                paddingBottom:
+                  keyboardInset > 0
+                    ? keyboardInset
+                    : "env(safe-area-inset-bottom)",
               } as CSSProperties
             }
           >
