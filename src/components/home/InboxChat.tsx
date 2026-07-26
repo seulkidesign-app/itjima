@@ -59,14 +59,18 @@ export function InboxChat({
   const uiLang = lang === "en" ? "en" : "ko";
 
   return (
-    <div className="chat-scroll flex min-h-0 flex-1 flex-col gap-2 px-3 pb-[calc(5.75rem+env(safe-area-inset-bottom))] pt-1">
+    <div className="home-chat-lane chat-scroll flex min-h-0 flex-1 flex-col gap-2 px-3 pb-[calc(5.75rem+env(safe-area-inset-bottom))] pt-1">
       {itemsAsc.length === 0 ? (
         <HomeEmptyHero />
       ) : (
         itemsAsc.map((it) => {
           const isNewest = it.id === newestId;
           return (
-            <div key={it.id} className="flex flex-col gap-0.5" data-testid="chat-turn">
+            <div
+              key={it.id}
+              className="home-chat-turn flex flex-col gap-0.5"
+              data-testid="chat-turn"
+            >
               <ChatBubble
                 item={it}
                 isNewest={isNewest}
