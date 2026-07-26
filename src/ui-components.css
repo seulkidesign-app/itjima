@@ -52,6 +52,10 @@
   text-decoration: none;
 }
 
+.phone-frame .app-primary-tab-icon {
+  display: none;
+}
+
 .phone-frame .app-primary-tab[aria-current="page"] {
   color: var(--ink);
 }
@@ -121,6 +125,10 @@
 
   .phone-frame .app-primary-tab {
     font-size: 14px;
+  }
+
+  .phone-frame .app-primary-tab-icon {
+    display: block;
   }
 
   .phone-frame .sheet-chrome,
