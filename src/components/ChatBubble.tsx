@@ -36,7 +36,7 @@ export function ChatBubble({
 
   return (
     <motion.div
-      className="flex w-full flex-col items-end"
+      className="home-chat-bubble-row flex w-full flex-col items-end"
       initial={isNewest ? { opacity: 0, y: 8 } : { opacity: 0, y: 4 }}
       animate={{ opacity: 1, y: 0 }}
       transition={TRANSITION_CALM}
