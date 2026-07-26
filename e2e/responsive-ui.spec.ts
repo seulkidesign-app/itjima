@@ -1,4 +1,4 @@
-import { test, expect } from "@playwright/test";
+import { test, expect, type Page } from "@playwright/test";
 
 const viewports = [
   { width: 360, height: 780 },
@@ -8,6 +8,34 @@ const viewports = [
   { width: 1024, height: 900 },
   { width: 1440, height: 1000 },
 ] as const;
+
+async function layoutMetrics(page: Page) {
+  return page.evaluate(() => {
+    const documentWidth = document.documentElement.clientWidth;
+    const scrollWidth = Math.max(
+      document.documentElement.scrollWidth,
+      document.body.scrollWidth,
+    );
+    const frameEl = document.querySelector<HTMLElement>(".phone-frame");
+    const frameRect = frameEl?.getBoundingClientRect();
+
+    return {
+      documentWidth,
+      scrollWidth,
+      frameWidth: frameRect?.width ?? 0,
+      frameLeft: frameRect?.left ?? 0,
+      frameRight: frameRect?.right ?? 0,
+    };
+  });
+}
+
+async function expectNoHorizontalOverflow(page: Page) {
+  const metrics = await layoutMetrics(page);
+  expect(metrics.scrollWidth).toBeLessThanOrEqual(metrics.documentWidth + 1);
+  expect(metrics.frameLeft).toBeGreaterThanOrEqual(-1);
+  expect(metrics.frameRight).toBeLessThanOrEqual(metrics.documentWidth + 1);
+  return metrics;
+}
 
 test.describe("responsive UI safeguards", () => {
   for (const viewport of viewports) {
@@ -28,24 +56,15 @@ test.describe("responsive UI safeguards", () => {
         await expect(tab).toBeVisible();
       }
 
-      const metrics = await page.evaluate(() => {
-        const documentWidth = document.documentElement.clientWidth;
-        const scrollWidth = Math.max(
-          document.documentElement.scrollWidth,
-          document.body.scrollWidth,
-        );
-        const frameEl = document.querySelector<HTMLElement>(".phone-frame");
-        const tabEls = [
+      const metrics = await expectNoHorizontalOverflow(page);
+      const tabMetrics = await page.evaluate(() =>
+        [
           document.getElementById("schedule-tab-today"),
           document.getElementById("schedule-tab-list"),
           document.getElementById("schedule-tab-cal"),
-        ].filter((element): element is HTMLElement => Boolean(element));
-
-        return {
-          documentWidth,
-          scrollWidth,
-          frameWidth: frameEl?.getBoundingClientRect().width ?? 0,
-          tabs: tabEls.map((element) => {
+        ]
+          .filter((element): element is HTMLElement => Boolean(element))
+          .map((element) => {
             const rect = element.getBoundingClientRect();
             return {
               left: rect.left,
@@ -54,16 +73,13 @@ test.describe("responsive UI safeguards", () => {
               height: rect.height,
             };
           }),
-        };
-      });
+      );
 
-      expect(metrics.scrollWidth).toBeLessThanOrEqual(metrics.documentWidth + 1);
-      expect(metrics.tabs).toHaveLength(3);
-
-      const widths = metrics.tabs.map((tab) => tab.width);
+      expect(tabMetrics).toHaveLength(3);
+      const widths = tabMetrics.map((tab) => tab.width);
       expect(Math.max(...widths) - Math.min(...widths)).toBeLessThanOrEqual(2);
 
-      for (const tab of metrics.tabs) {
+      for (const tab of tabMetrics) {
         expect(tab.height).toBeGreaterThanOrEqual(44);
         expect(tab.left).toBeGreaterThanOrEqual(0);
         expect(tab.right).toBeLessThanOrEqual(metrics.documentWidth + 1);
@@ -76,4 +92,51 @@ test.describe("responsive UI safeguards", () => {
       }
     });
   }
+
+  for (const viewport of [
+    { width: 360, height: 780 },
+    { width: 768, height: 1024 },
+    { width: 1440, height: 1000 },
+  ] as const) {
+    for (const route of ["/", "/archive", "/auth"] as const) {
+      test(`${route} has no horizontal overflow at ${viewport.width}px`, async ({
+        page,
+      }) => {
+        await page.setViewportSize(viewport);
+        await page.goto(route);
+        await expect(page.locator(".phone-frame")).toBeVisible();
+        await expectNoHorizontalOverflow(page);
+      });
+    }
+  }
+
+  test("bottom sheet backdrop covers desktop while panel remains readable", async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width: 1024, height: 900 });
+    await page.goto("/schedule");
+    await page
+      .getByRole("button", { name: /할 일 추가|Add task/i })
+      .click();
+
+    const root = page.locator(".bottom-sheet-root");
+    const backdrop = page.locator(".bottom-sheet-backdrop");
+    const panel = page.locator(".bottom-sheet-panel");
+
+    await expect(panel).toBeVisible();
+
+    const boxes = await Promise.all([
+      root.boundingBox(),
+      backdrop.boundingBox(),
+      panel.boundingBox(),
+    ]);
+    const [rootBox, backdropBox, panelBox] = boxes;
+
+    expect(rootBox?.width ?? 0).toBeGreaterThanOrEqual(1023);
+    expect(backdropBox?.width ?? 0).toBeGreaterThanOrEqual(1023);
+    expect(panelBox?.width ?? 0).toBeLessThanOrEqual(681);
+    expect(panelBox?.width ?? 0).toBeGreaterThan(430);
+    expect(panelBox?.left ?? -1).toBeGreaterThanOrEqual(0);
+    expect((panelBox?.right ?? 1025)).toBeLessThanOrEqual(1024);
+  });
 });
