@@ -10,6 +10,7 @@ import "./ui-components.css";
 import "./ui-forms.css";
 import "./ui-overlays.css";
 import "./ui-pages.css";
+import "./ui-desktop-fix.css";
 
 import { registerServiceWorker } from "@/lib/swReminders";
 
