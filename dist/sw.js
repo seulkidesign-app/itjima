@@ -1,6 +1,3 @@
-/// <reference lib="webworker" />
-declare const self: ServiceWorkerGlobalScope;
-
 const CACHE = "itjima-shell-v1";
 const SHELL = ["/", "/index.html", "/manifest.webmanifest", "/favicon.svg"];
 
@@ -35,21 +32,17 @@ self.addEventListener("fetch", (event) => {
         caches.open(CACHE).then((cache) => cache.put(event.request, copy));
         return res;
       })
-      .catch(
-        () =>
-          caches.match(event.request).then((r) => r ?? caches.match("/index.html")!),
+      .catch(() =>
+        caches
+          .match(event.request)
+          .then((r) => r ?? caches.match("/index.html")),
       ),
   );
 });
 
 /** Server-triggered Web Push — no in-memory scheduling. */
 self.addEventListener("push", (event) => {
-  let payload: {
-    title?: string;
-    body?: string;
-    tag?: string;
-    data?: { url?: string; scheduleId?: string };
-  } = {};
+  let payload = {};
 
   try {
     payload = event.data?.json() ?? {};
@@ -77,9 +70,7 @@ self.addEventListener("push", (event) => {
 
 self.addEventListener("notificationclick", (event) => {
   event.notification.close();
-  const data = event.notification.data as
-    | { url?: string; scheduleId?: string }
-    | undefined;
+  const data = event.notification.data;
   const url = data?.url ?? "/schedule";
 
   event.waitUntil(
@@ -87,9 +78,9 @@ self.addEventListener("notificationclick", (event) => {
       .matchAll({ type: "window", includeUncontrolled: true })
       .then((clients) => {
         for (const client of clients) {
-          if ("focus" in client) {
-            void (client as WindowClient).focus();
-            void (client as WindowClient).navigate(url);
+          if ("focus" in client && "navigate" in client) {
+            void client.focus();
+            void client.navigate(url);
             return;
           }
         }
