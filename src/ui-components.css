@@ -1,0 +1,148 @@
+/* Shared component polish layered after the responsive foundation. */
+
+.phone-frame .app-top-nav {
+  position: relative;
+  border-bottom: 1px solid rgba(17, 17, 17, 0.035);
+  background: rgba(255, 255, 255, 0.94);
+  backdrop-filter: blur(20px) saturate(155%);
+  -webkit-backdrop-filter: blur(20px) saturate(155%);
+}
+
+.phone-frame .app-top-nav-bar {
+  width: 100%;
+  max-width: var(--app-content-max);
+  min-height: 52px;
+  margin-inline: auto;
+  padding-inline: var(--app-mobile-gutter);
+}
+
+.phone-frame .app-brand-trigger {
+  display: inline-flex;
+  min-width: 44px;
+  min-height: 44px;
+  align-items: center;
+  border-radius: 12px;
+  text-decoration: none;
+}
+
+.phone-frame .app-account-button {
+  min-width: 44px;
+  min-height: 44px;
+  border-color: var(--ui-border);
+  background: rgba(255, 255, 255, 0.9);
+  box-shadow: 0 1px 2px rgba(17, 17, 17, 0.03),
+    0 8px 22px -18px rgba(17, 17, 17, 0.22);
+}
+
+.phone-frame .app-primary-tabs {
+  width: calc(100% - (var(--app-mobile-gutter) * 2));
+  max-width: 430px;
+  min-height: 46px;
+  margin-inline: auto;
+  padding-inline: 0;
+  gap: 4px;
+}
+
+.phone-frame .app-primary-tab {
+  min-width: 0;
+  min-height: 44px;
+  border-radius: 12px 12px 0 0;
+  font-size: 13px;
+  font-weight: 650;
+  text-decoration: none;
+}
+
+.phone-frame .app-primary-tab[aria-current="page"] {
+  color: var(--ink);
+}
+
+/* Buttons and links retain their own visual language but share reliable geometry. */
+.phone-frame .touch-target {
+  min-width: 44px;
+  min-height: 44px;
+}
+
+.phone-frame :is(.pill-yellow, .pill-black, .pill-ghost) {
+  min-height: 44px;
+  align-items: center;
+  justify-content: center;
+}
+
+.phone-frame .input-shell {
+  max-width: 100%;
+  border-color: var(--ui-border);
+  box-shadow: 0 1px 2px rgba(17, 17, 17, 0.018);
+}
+
+.phone-frame .input-shell-focused {
+  border-color: rgba(255, 212, 59, 0.72);
+}
+
+/* Long labels cannot force controls outside the viewport. */
+.phone-frame button,
+.phone-frame a,
+.phone-frame summary,
+.phone-frame label {
+  min-width: 0;
+}
+
+.phone-frame button > span,
+.phone-frame a > span {
+  min-width: 0;
+}
+
+/* Toasts and sheets avoid device edges and remain readable on wider screens. */
+.phone-frame [data-sonner-toaster] {
+  width: min(100% - 24px, 520px) !important;
+}
+
+.phone-frame .sheet-chrome {
+  max-width: min(100%, 680px);
+}
+
+@media (min-width: 640px) {
+  .phone-frame .app-top-nav-bar {
+    padding-inline: var(--app-tablet-gutter);
+  }
+
+  .phone-frame .app-primary-tabs {
+    max-width: 470px;
+  }
+}
+
+@media (min-width: 900px) {
+  .phone-frame .app-top-nav-bar {
+    padding-inline: var(--app-desktop-gutter);
+  }
+
+  .phone-frame .app-primary-tabs {
+    max-width: 500px;
+  }
+
+  .phone-frame .app-primary-tab {
+    font-size: 14px;
+  }
+
+  .phone-frame .sheet-chrome,
+  .phone-frame [role="dialog"] {
+    border-radius: 24px;
+  }
+}
+
+@media (max-width: 359px) {
+  .phone-frame .app-top-nav-bar {
+    padding-inline: 14px;
+  }
+
+  .phone-frame .app-primary-tabs {
+    width: calc(100% - 28px);
+  }
+
+  .phone-frame .app-primary-tab {
+    font-size: 12px;
+  }
+
+  .phone-frame .app-account-button span {
+    max-width: 3.5rem;
+  }
+}
