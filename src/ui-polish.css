@@ -1,0 +1,316 @@
+/*
+ * Itjima responsive UI foundation
+ * Imported after styles.css so this file acts as a safe, reversible polish layer.
+ */
+
+:root {
+  --app-mobile-gutter: clamp(16px, 5vw, 22px);
+  --app-tablet-gutter: clamp(24px, 4vw, 40px);
+  --app-desktop-gutter: clamp(32px, 4vw, 52px);
+  --app-content-max: 920px;
+  --control-height-sm: 40px;
+  --control-height-md: 44px;
+  --control-height-lg: 52px;
+  --control-radius-sm: 12px;
+  --control-radius-md: 16px;
+  --control-radius-lg: 20px;
+  --ui-border: rgba(17, 17, 17, 0.075);
+  --ui-border-strong: rgba(17, 17, 17, 0.12);
+  --ui-surface-muted: #f5f5f2;
+  --ui-shadow-active: 0 1px 2px rgba(17, 17, 17, 0.04),
+    0 8px 24px -18px rgba(17, 17, 17, 0.22);
+}
+
+html {
+  text-size-adjust: 100%;
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  min-width: 320px;
+  background: #f5f5f2;
+}
+
+/* The app is full-width on phones and progressively gains workspace on larger screens. */
+.phone-frame {
+  width: 100%;
+  max-width: 430px;
+  min-width: 0;
+  height: 100dvh;
+  margin-inline: auto;
+  overflow: hidden;
+  background: #fff;
+}
+
+.phone-frame,
+.phone-frame .page-shell,
+.phone-frame #phone-scroll {
+  max-width: 100%;
+  min-width: 0;
+}
+
+.phone-frame #phone-scroll {
+  scrollbar-gutter: stable;
+  overflow-x: clip;
+}
+
+.phone-frame .page-shell {
+  overflow-x: clip;
+}
+
+/* Typography: clear hierarchy without oversized fixed values. */
+.phone-frame .page-title {
+  font-size: clamp(32px, 9.5vw, 38px);
+  font-weight: 700;
+  line-height: 1.08;
+  letter-spacing: -0.045em;
+  text-wrap: balance;
+}
+
+.phone-frame .page-eyebrow {
+  font-size: clamp(14px, 3.8vw, 16px);
+  line-height: 1.55;
+  letter-spacing: -0.012em;
+  text-wrap: pretty;
+}
+
+/* Shared interaction quality. */
+.phone-frame button,
+.phone-frame [role="button"],
+.phone-frame a {
+  -webkit-tap-highlight-color: transparent;
+}
+
+.phone-frame button:not(:disabled),
+.phone-frame [role="button"]:not([aria-disabled="true"]) {
+  cursor: pointer;
+}
+
+.phone-frame button:focus-visible,
+.phone-frame [role="button"]:focus-visible,
+.phone-frame a:focus-visible,
+.phone-frame input:focus-visible,
+.phone-frame textarea:focus-visible,
+.phone-frame summary:focus-visible {
+  outline: 3px solid rgba(255, 212, 59, 0.72);
+  outline-offset: 3px;
+}
+
+.phone-frame input,
+.phone-frame textarea,
+.phone-frame select {
+  max-width: 100%;
+  min-width: 0;
+  font-size: max(16px, 1em);
+}
+
+.phone-frame img,
+.phone-frame video,
+.phone-frame canvas,
+.phone-frame svg {
+  max-width: 100%;
+}
+
+.phone-frame [role="tab"] {
+  min-width: 0;
+  min-height: var(--control-height-md);
+  white-space: nowrap;
+}
+
+.phone-frame button:disabled,
+.phone-frame [aria-disabled="true"] {
+  cursor: default;
+  opacity: 0.45;
+}
+
+/* Segmented controls: equal width, stable geometry, Apple-like restrained state. */
+.phone-frame .segment-nav {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: minmax(0, 1fr);
+  width: 100%;
+  min-width: 0;
+  min-height: 52px;
+  gap: 4px;
+  padding: 4px;
+  border: 1px solid rgba(17, 17, 17, 0.025);
+  border-radius: 18px;
+  background: var(--ui-surface-muted);
+}
+
+.phone-frame .segment-nav-item {
+  width: 100%;
+  min-width: 0;
+  min-height: 42px;
+  flex: 1 1 0 !important;
+  padding: 0 10px !important;
+  border-radius: 14px;
+  overflow: hidden;
+  font-size: clamp(13px, 3.6vw, 15px);
+  font-weight: 650;
+  line-height: 1;
+  text-align: center;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.phone-frame .segment-nav-item-active {
+  background: rgba(255, 255, 255, 0.98);
+  box-shadow: var(--ui-shadow-active);
+}
+
+.phone-frame .segment-nav-item-inactive {
+  color: #8b8b83;
+}
+
+/* Schedule page: fixes unequal tabs and establishes reliable responsive rhythm. */
+.phone-frame .sticky:has(#schedule-tab-today) {
+  border-bottom: 1px solid rgba(17, 17, 17, 0.035);
+  background: rgba(255, 255, 255, 0.94);
+  backdrop-filter: blur(18px) saturate(150%);
+  -webkit-backdrop-filter: blur(18px) saturate(150%);
+}
+
+.phone-frame .sticky:has(#schedule-tab-today) > div:first-of-type {
+  width: 100%;
+  max-width: var(--app-content-max);
+  margin-inline: auto;
+  padding: clamp(24px, 7vw, 34px) var(--app-mobile-gutter) 18px;
+}
+
+.phone-frame .sticky:has(#schedule-tab-today) > div:nth-of-type(2) {
+  width: 100%;
+  max-width: var(--app-content-max);
+  margin-inline: auto;
+  padding: 0 var(--app-mobile-gutter) 12px;
+}
+
+.phone-frame .sticky:has(#schedule-tab-today) + div {
+  width: 100%;
+  max-width: var(--app-content-max);
+  margin-inline: auto;
+  padding-inline: var(--app-mobile-gutter);
+}
+
+.phone-frame #schedule-tab-cal,
+.phone-frame #schedule-tab-list,
+.phone-frame #schedule-tab-today {
+  flex: 1 1 0 !important;
+  width: auto !important;
+  min-width: 0 !important;
+  max-width: none !important;
+}
+
+/* Prevent fixed-position/action controls from colliding with safe areas. */
+.phone-frame button[style*="safe-area-inset-bottom"] {
+  margin-bottom: max(0px, env(safe-area-inset-bottom));
+}
+
+/* Sheets and dialogs preserve mobile behavior, then adapt on larger screens. */
+.phone-frame [role="dialog"] {
+  max-width: min(100%, 680px);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .phone-frame button:not(:disabled),
+  .phone-frame [role="button"]:not([aria-disabled="true"]),
+  .phone-frame a {
+    transition:
+      transform 160ms cubic-bezier(0.2, 0.8, 0.2, 1),
+      background-color 160ms ease,
+      color 160ms ease,
+      border-color 160ms ease,
+      box-shadow 160ms ease;
+  }
+
+  .phone-frame button:not(:disabled):active,
+  .phone-frame [role="button"]:not([aria-disabled="true"]):active {
+    transform: scale(0.985);
+  }
+}
+
+@media (min-width: 640px) {
+  .phone-frame {
+    max-width: 720px;
+  }
+
+  .phone-frame .page-title {
+    font-size: clamp(38px, 5vw, 44px);
+  }
+
+  .phone-frame .sticky:has(#schedule-tab-today) > div:first-of-type,
+  .phone-frame .sticky:has(#schedule-tab-today) > div:nth-of-type(2),
+  .phone-frame .sticky:has(#schedule-tab-today) + div {
+    padding-inline: var(--app-tablet-gutter);
+  }
+
+  .phone-frame .segment-nav {
+    max-width: 560px;
+  }
+}
+
+@media (min-width: 900px) {
+  body {
+    background: #f1f1ee;
+  }
+
+  .phone-frame {
+    width: min(100%, 920px);
+    max-width: 920px;
+    border-inline: 1px solid var(--ui-border);
+    box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.75),
+      0 24px 80px -46px rgba(17, 17, 17, 0.28);
+  }
+
+  .phone-frame .sticky:has(#schedule-tab-today) > div:first-of-type,
+  .phone-frame .sticky:has(#schedule-tab-today) > div:nth-of-type(2),
+  .phone-frame .sticky:has(#schedule-tab-today) + div {
+    padding-inline: var(--app-desktop-gutter);
+  }
+
+  .phone-frame .sticky:has(#schedule-tab-today) > div:first-of-type {
+    padding-top: 40px;
+    padding-bottom: 22px;
+  }
+
+  .phone-frame .segment-nav {
+    max-width: 520px;
+  }
+
+  .phone-frame [role="dialog"] {
+    margin-inline: auto;
+    border-radius: 24px;
+  }
+}
+
+@media (min-width: 1200px) {
+  .phone-frame {
+    width: min(100%, 1040px);
+    max-width: 1040px;
+  }
+}
+
+@media (max-width: 359px) {
+  .phone-frame .page-title {
+    font-size: 30px;
+  }
+
+  .phone-frame .segment-nav-item {
+    padding-inline: 6px !important;
+    font-size: 12px;
+  }
+
+  .phone-frame .sticky:has(#schedule-tab-today) > div:first-of-type,
+  .phone-frame .sticky:has(#schedule-tab-today) > div:nth-of-type(2),
+  .phone-frame .sticky:has(#schedule-tab-today) + div {
+    padding-inline: 14px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .phone-frame *,
+  .phone-frame *::before,
+  .phone-frame *::after {
+    scroll-behavior: auto !important;
+  }
+}
