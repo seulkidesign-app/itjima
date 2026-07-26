@@ -6,6 +6,7 @@ import { queryClient, router } from "./router";
 import { installAuthDebugInstrumentation } from "@/lib/authDebug";
 import "./styles.css";
 import "./ui-polish.css";
+import "./ui-components.css";
 
 import { registerServiceWorker } from "@/lib/swReminders";
 
