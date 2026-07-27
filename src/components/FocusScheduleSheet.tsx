@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { toast } from "sonner";
 import { BottomSheet } from "./BottomSheet";
 import {
   ScheduleChoiceFlow,
@@ -9,6 +10,11 @@ import { thoughtFirstLine } from "@/lib/brainMirror";
 import { readCachedTimingExtra } from "@/lib/brainMirrorApi";
 import { detectDate, resolveScheduleGuidanceReason } from "@/lib/dateDetect";
 import { defaultScheduleStart } from "@/lib/inboxScheduleDefaults";
+import { useLang } from "@/lib/i18n";
+import {
+  scheduleValidationMessage,
+  validateScheduleRange,
+} from "@/lib/scheduleValidation";
 
 type Props = {
   item: InboxItem | null;
@@ -24,6 +30,7 @@ type Props = {
 
 export function FocusScheduleSheet({ item, open, onClose, onConfirm }: Props) {
   const [title, setTitle] = useState("");
+  const { lang } = useLang();
 
   const guidanceReason = useMemo(() => {
     if (!item || !open) return null;
@@ -52,6 +59,16 @@ export function FocusScheduleSheet({ item, open, onClose, onConfirm }: Props) {
         guidanceReason={guidanceReason}
         initialStart={initialStart}
         onConfirm={(start, end, options) => {
+          const validation = validateScheduleRange(start, end);
+          if (!validation.ok) {
+            toast.message(
+              scheduleValidationMessage(
+                validation.reason,
+                lang === "en" ? "en" : "ko",
+              ),
+            );
+            return;
+          }
           onConfirm(
             title.trim() || thoughtFirstLine(item.text),
             start,
