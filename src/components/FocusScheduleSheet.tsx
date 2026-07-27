@@ -8,7 +8,7 @@ import {
 import type { InboxItem } from "@/lib/store";
 import { thoughtFirstLine } from "@/lib/brainMirror";
 import { readCachedTimingExtra } from "@/lib/brainMirrorApi";
-import { detectDate, resolveScheduleGuidanceReason } from "@/lib/dateDetect";
+import { resolveScheduleGuidanceReason } from "@/lib/dateDetect";
 import { defaultScheduleStart } from "@/lib/inboxScheduleDefaults";
 import { useLang } from "@/lib/i18n";
 import {
