@@ -12,6 +12,10 @@ import {
   SHEET_BACKDROP_FADE,
 } from "@/lib/motion";
 
+function currentReturnPath() {
+  return `${window.location.pathname}${window.location.search}${window.location.hash}`;
+}
+
 export function LoginSheet({
   open,
   onClose,
@@ -27,7 +31,7 @@ export function LoginSheet({
 
   const onGoogle = async () => {
     setLoading(true);
-    const r = await signInWithGoogle(window.location.pathname);
+    const r = await signInWithGoogle(currentReturnPath());
     if (r.error) {
       toast.error(mapAuthError(r.error.message, lang));
       setLoading(false);
