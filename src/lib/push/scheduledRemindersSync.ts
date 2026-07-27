@@ -13,6 +13,44 @@ export type ScheduledReminderUpsert = {
   idempotency_key: string;
 };
 
+const SYNC_STATE_KEY = "itjima.reminder.serverSync";
+const FAILURE_WINDOW_MS = 30_000;
+let memorySyncState: { ok: boolean; at: number } | null = null;
+
+export function rememberReminderSyncResult(ok: boolean, at = Date.now()) {
+  memorySyncState = { ok, at };
+  if (typeof sessionStorage === "undefined") return;
+  try {
+    sessionStorage.setItem(SYNC_STATE_KEY, JSON.stringify(memorySyncState));
+  } catch {
+    // Memory state is enough for the current interaction.
+  }
+}
+
+function readSyncState(): { ok: boolean; at: number } | null {
+  if (memorySyncState) return memorySyncState;
+  if (typeof sessionStorage === "undefined") return null;
+  try {
+    const parsed = JSON.parse(sessionStorage.getItem(SYNC_STATE_KEY) || "null");
+    if (
+      parsed &&
+      typeof parsed === "object" &&
+      typeof parsed.ok === "boolean" &&
+      typeof parsed.at === "number"
+    ) {
+      return parsed;
+    }
+  } catch {
+    return null;
+  }
+  return null;
+}
+
+export function wasRecentReminderSyncFailure(now = Date.now()): boolean {
+  const state = readSyncState();
+  return Boolean(state && !state.ok && now - state.at <= FAILURE_WINDOW_MS);
+}
+
 export function buildReminderUpsert(
   userId: string,
   schedule: ScheduleItem,
@@ -45,33 +83,46 @@ export async function cancelScheduleReminders(
     .in("status", ["pending", "processing"]);
   if (error) {
     console.error("[reminders] cancel failed", error.message);
+    rememberReminderSyncResult(false);
     return false;
   }
   return true;
 }
 
-/** Replace server reminder when schedule alarm changes. */
+/**
+ * Replace the server reminder when an alarm changes. A false result means the
+ * local in-app reminder remains valid, but background delivery was not proven.
+ */
 export async function syncScheduleReminder(
   userId: string,
   schedule: ScheduleItem,
 ): Promise<boolean> {
   if (import.meta.env.VITE_E2E === "true") return true;
-  const cancelled = await cancelScheduleReminders(userId, schedule.id);
-  if (!cancelled) {
-    throw new Error("Could not replace the previous reminder");
-  }
+  try {
+    const cancelled = await cancelScheduleReminders(userId, schedule.id);
+    if (!cancelled) return false;
 
-  const row = buildReminderUpsert(userId, schedule);
-  if (!row) return true;
+    const row = buildReminderUpsert(userId, schedule);
+    if (!row) {
+      rememberReminderSyncResult(true);
+      return true;
+    }
 
-  const { error } = await supabase.from("scheduled_reminders").upsert(row, {
-    onConflict: "idempotency_key",
-  });
-  if (error) {
-    console.error("[reminders] schedule failed", error.message);
-    throw new Error("Could not schedule reminder");
+    const { error } = await supabase.from("scheduled_reminders").upsert(row, {
+      onConflict: "idempotency_key",
+    });
+    if (error) {
+      console.error("[reminders] schedule failed", error.message);
+      rememberReminderSyncResult(false);
+      return false;
+    }
+    rememberReminderSyncResult(true);
+    return true;
+  } catch (error) {
+    console.error("[reminders] unexpected sync failure", error);
+    rememberReminderSyncResult(false);
+    return false;
   }
-  return true;
 }
 
 export async function syncAllScheduleReminders(
@@ -81,11 +132,8 @@ export async function syncAllScheduleReminders(
   if (import.meta.env.VITE_E2E === "true") return;
   for (const s of schedules) {
     if (s.alarm && s.status !== "done") {
-      try {
-        await syncScheduleReminder(userId, s);
-      } catch (error) {
-        console.error("[reminders] bulk sync failed", s.id, error);
-      }
+      const ok = await syncScheduleReminder(userId, s);
+      if (!ok) console.error("[reminders] bulk sync deferred", s.id);
     }
   }
 }
