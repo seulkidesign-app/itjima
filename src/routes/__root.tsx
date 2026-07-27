@@ -7,6 +7,7 @@ import { SideNav } from "@/components/SideNav";
 import { TopNav } from "@/components/TopNav";
 import { PageTransition } from "@/components/PageTransition";
 import { GlobalInteractions } from "@/components/GlobalInteractions";
+import { ScheduleDeepLinkBridge } from "@/components/ScheduleDeepLinkBridge";
 import { LanguageProvider } from "@/lib/i18n";
 import { useArchiveMetaSync } from "@/hooks/useArchiveMetaSync";
 
@@ -68,6 +69,7 @@ function RootLayout() {
   return (
     <LanguageProvider>
       <GlobalInteractions />
+      <ScheduleDeepLinkBridge />
       {isFullPage ? (
         <>
           <Outlet />
