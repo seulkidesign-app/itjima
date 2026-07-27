@@ -1,21 +1,44 @@
 {
-  "id": "https://itjima.app/",
-  "name": "잊지마 (Itjima) — AI 기억 관리",
+  "id": "/",
+  "name": "잊지마 (Itjima) — 생각을 던지는 기억 인박스",
   "short_name": "잊지마",
-  "description": "Itjima(잊지마) — AI 메모와 AI 일정으로 생각을 정리하는 기억 관리·생각 정리 앱",
+  "description": "떠오른 생각을 정리 없이 던져두고, 필요할 때 일정이나 보관함으로 직접 정리하는 기억 인박스",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",
-  "orientation": "portrait",
-  "lang": "ko",
+  "orientation": "any",
+  "lang": "ko-KR",
   "background_color": "#FFFFFF",
   "theme_color": "#FFD43B",
+  "categories": ["productivity", "utilities"],
+  "prefer_related_applications": false,
   "icons": [
     {
       "src": "/favicon.svg",
       "sizes": "any",
       "type": "image/svg+xml",
       "purpose": "any"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "생각 던지기",
+      "short_name": "던지기",
+      "description": "정리하지 않고 바로 남기기",
+      "url": "/",
+      "icons": [{ "src": "/favicon.svg", "sizes": "any", "type": "image/svg+xml" }]
+    },
+    {
+      "name": "일정 보기",
+      "short_name": "일정",
+      "url": "/schedule",
+      "icons": [{ "src": "/favicon.svg", "sizes": "any", "type": "image/svg+xml" }]
+    },
+    {
+      "name": "보관함 보기",
+      "short_name": "보관함",
+      "url": "/archive",
+      "icons": [{ "src": "/favicon.svg", "sizes": "any", "type": "image/svg+xml" }]
     }
   ]
 }
