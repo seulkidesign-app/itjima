@@ -2,6 +2,7 @@ import { useEffect } from "react";
 import { useNavigate, useRouterState } from "@tanstack/react-router";
 import { toast } from "sonner";
 import { useT } from "@/lib/i18n";
+import { composerSafetyState, focusComposer } from "@/lib/composerSafety";
 import {
   APP_UPDATE_READY_EVENT,
   activateWaitingServiceWorker,
@@ -14,7 +15,7 @@ const APP_UPDATE_TOAST_ID = "itjima-app-update";
  * Cross-device interaction controller.
  * - Tracks keyboard vs pointer modality for precise focus/hover behavior.
  * - Adds desktop shortcuts without changing mobile/tablet behavior.
- * - Offers app updates without reloading while the user is typing.
+ * - Offers app updates without reloading while the composer has unsaved content.
  */
 export function GlobalInteractions() {
   const navigate = useNavigate();
@@ -74,52 +75,119 @@ export function GlobalInteractions() {
 
   useEffect(() => {
     let disposed = false;
+    let updateReady = false;
+    let composerWatch: number | null = null;
 
-    const showUpdateToast = () => {
-      if (disposed) return;
+    const clearComposerWatch = () => {
+      if (composerWatch !== null) {
+        window.clearInterval(composerWatch);
+        composerWatch = null;
+      }
+    };
+
+    const activateUpdate = () => {
+      const composer = composerSafetyState();
+      if (composer.dirty) {
+        focusComposer();
+        toast.warning(
+          t(
+            composer.hasImages
+              ? "첨부한 이미지가 있어요. 먼저 던진 뒤 업데이트해 주세요."
+              : "작성 중인 내용을 먼저 던진 뒤 업데이트해 주세요.",
+            composer.hasImages
+              ? "You have attached images. Drop them first, then update."
+              : "Drop what you are writing first, then update.",
+          ),
+          { id: APP_UPDATE_TOAST_ID, duration: 4_000 },
+        );
+        return;
+      }
+
+      clearComposerWatch();
+      toast.loading(t("업데이트 중이에요", "Updating"), {
+        id: APP_UPDATE_TOAST_ID,
+      });
+      void activateWaitingServiceWorker().then((activated) => {
+        if (activated) {
+          window.location.reload();
+          return;
+        }
+        toast.error(
+          t(
+            "업데이트를 적용하지 못했어요. 잠시 후 다시 시도해 주세요.",
+            "The update could not be applied. Please try again shortly.",
+          ),
+          { id: APP_UPDATE_TOAST_ID, duration: 5_000 },
+        );
+      });
+    };
+
+    const showReadyToast = () => {
+      if (disposed || !updateReady) return;
+      const composer = composerSafetyState();
+
+      if (composer.dirty) {
+        toast(t("새 버전이 준비됐어요", "A new version is ready"), {
+          id: APP_UPDATE_TOAST_ID,
+          duration: Infinity,
+          description: t(
+            "작성 중인 내용을 먼저 던지면 업데이트 버튼이 나타나요.",
+            "Drop your current thought first, then the update button will appear.",
+          ),
+          action: {
+            label: t("입력창 보기", "Go to composer"),
+            onClick: () => {
+              if (!focusComposer() && pathname !== "/") {
+                void navigate({ to: "/" }).then(() => {
+                  window.setTimeout(() => focusComposer(), 120);
+                });
+              }
+            },
+          },
+        });
+
+        if (composerWatch === null) {
+          composerWatch = window.setInterval(() => {
+            if (!composerSafetyState().dirty) {
+              clearComposerWatch();
+              showReadyToast();
+            }
+          }, 500);
+        }
+        return;
+      }
+
+      clearComposerWatch();
       toast(t("새 버전이 준비됐어요", "A new version is ready"), {
         id: APP_UPDATE_TOAST_ID,
         duration: Infinity,
         description: t(
-          "작성 중인 내용은 그대로 두고, 준비됐을 때 업데이트하세요.",
-          "Your current work stays here. Update when you are ready.",
+          "업데이트하면 최신 버전으로 다시 열려요.",
+          "Update now to reopen the latest version.",
         ),
         action: {
           label: t("업데이트", "Update"),
-          onClick: () => {
-            toast.loading(t("업데이트 중이에요", "Updating"), {
-              id: APP_UPDATE_TOAST_ID,
-            });
-            void activateWaitingServiceWorker().then((activated) => {
-              if (activated) {
-                window.location.reload();
-                return;
-              }
-              toast.error(
-                t(
-                  "업데이트를 적용하지 못했어요. 잠시 후 다시 시도해 주세요.",
-                  "The update could not be applied. Please try again shortly.",
-                ),
-                { id: APP_UPDATE_TOAST_ID, duration: 5_000 },
-              );
-            });
-          },
+          onClick: activateUpdate,
         },
       });
     };
 
-    const onUpdateReady = () => showUpdateToast();
+    const onUpdateReady = () => {
+      updateReady = true;
+      showReadyToast();
+    };
     window.addEventListener(APP_UPDATE_READY_EVENT, onUpdateReady);
     void hasWaitingServiceWorker().then((waiting) => {
-      if (waiting) showUpdateToast();
+      if (waiting) onUpdateReady();
     });
 
     return () => {
       disposed = true;
+      clearComposerWatch();
       window.removeEventListener(APP_UPDATE_READY_EVENT, onUpdateReady);
       toast.dismiss(APP_UPDATE_TOAST_ID);
     };
-  }, [t]);
+  }, [navigate, pathname, t]);
 
   return null;
 }
