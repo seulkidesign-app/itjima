@@ -69,6 +69,20 @@ async function networkFirstStatic(request) {
   }
 }
 
+function safeAppPath(value, fallback = "/schedule") {
+  if (typeof value !== "string" || !value.startsWith("/") || value.startsWith("//")) {
+    return fallback;
+  }
+
+  try {
+    const parsed = new URL(value, self.location.origin);
+    if (parsed.origin !== self.location.origin) return fallback;
+    return `${parsed.pathname}${parsed.search}${parsed.hash}`;
+  } catch {
+    return fallback;
+  }
+}
+
 self.addEventListener("fetch", (event) => {
   const { request } = event;
   if (request.method !== "GET") return;
@@ -105,9 +119,10 @@ self.addEventListener("push", (event) => {
   const title = payload.title ?? "⏰ 잊지마";
   const body = payload.body ?? "예정된 일정 알림";
   const scheduleId = payload.data?.scheduleId;
-  const url =
-    payload.data?.url ??
-    (scheduleId ? `/schedule?open=${scheduleId}` : "/schedule");
+  const fallbackUrl = scheduleId
+    ? `/schedule?open=${encodeURIComponent(String(scheduleId))}`
+    : "/schedule";
+  const url = safeAppPath(payload.data?.url, fallbackUrl);
 
   event.waitUntil(
     self.registration.showNotification(title, {
@@ -122,21 +137,25 @@ self.addEventListener("push", (event) => {
 
 self.addEventListener("notificationclick", (event) => {
   event.notification.close();
-  const data = event.notification.data;
-  const url = data?.url ?? "/schedule";
+  const url = safeAppPath(event.notification.data?.url, "/schedule");
 
   event.waitUntil(
-    self.clients
-      .matchAll({ type: "window", includeUncontrolled: true })
-      .then((clients) => {
-        for (const client of clients) {
-          if ("focus" in client && "navigate" in client) {
-            void client.focus();
-            void client.navigate(url);
-            return;
-          }
+    (async () => {
+      const clients = await self.clients.matchAll({
+        type: "window",
+        includeUncontrolled: true,
+      });
+
+      for (const client of clients) {
+        if (!("focus" in client) || !("navigate" in client)) continue;
+        const navigated = await client.navigate(url);
+        if (navigated && "focus" in navigated) {
+          return navigated.focus();
         }
-        return self.clients.openWindow(url);
-      }),
+        return client.focus();
+      }
+
+      return self.clients.openWindow(url);
+    })(),
   );
 });
