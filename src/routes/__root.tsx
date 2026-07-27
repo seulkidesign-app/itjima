@@ -6,6 +6,7 @@ import { authDebug } from "@/lib/authDebug";
 import { SideNav } from "@/components/SideNav";
 import { TopNav } from "@/components/TopNav";
 import { PageTransition } from "@/components/PageTransition";
+import { GlobalInteractions } from "@/components/GlobalInteractions";
 import { LanguageProvider } from "@/lib/i18n";
 import { useArchiveMetaSync } from "@/hooks/useArchiveMetaSync";
 
@@ -50,6 +51,7 @@ function RootLayout() {
   if (isAuth) {
     return (
       <LanguageProvider>
+        <GlobalInteractions />
         <div className="phone-frame">
           <Outlet />
           <Toaster
@@ -65,6 +67,7 @@ function RootLayout() {
 
   return (
     <LanguageProvider>
+      <GlobalInteractions />
       {isFullPage ? (
         <>
           <Outlet />
