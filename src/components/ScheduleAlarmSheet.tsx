@@ -9,7 +9,7 @@ import { scheduleDisplayTitle } from "@/lib/thoughtProvenance";
 import {
   backgroundRemindersVerified,
   pushSupportState,
-  showDeviceNotificationTest,
+  sendServerPushTest,
 } from "@/lib/push/pushSubscription";
 import { alarmAvailabilityHint } from "@/lib/alarmAvailability";
 
@@ -89,7 +89,7 @@ export function ScheduleAlarmSheet({
     onClose();
   };
 
-  const testDeviceNotification = async () => {
+  const testServerNotification = async () => {
     if (!userId || testing) return;
     if (installRequired) {
       explainInstallation();
@@ -98,13 +98,14 @@ export function ScheduleAlarmSheet({
 
     setTesting(true);
     try {
-      const result = await showDeviceNotificationTest(userId);
+      const result = await sendServerPushTest(userId);
       if (result.ok) {
         toast.success(
           t(
-            "테스트 알림을 보냈어요. 기기 연결은 정상이에요.",
-            "Test notification sent. This device is connected.",
+            "서버에서 실제 푸시를 보냈어요. 10초 안에 알림이 보여야 해요.",
+            "A real server push was sent. It should appear within 10 seconds.",
           ),
+          { duration: 6500 },
         );
       } else if (result.state === "denied") {
         toast.error(
@@ -119,9 +120,10 @@ export function ScheduleAlarmSheet({
       } else {
         toast.error(
           t(
-            "알림 연결을 완료하지 못했어요. 홈 화면 앱에서 다시 시도해 주세요.",
-            "Could not complete notification setup. Try again from the Home Screen app.",
+            `서버 푸시 테스트에 실패했어요${result.error ? ` (${result.error})` : ""}.`,
+            `Server push test failed${result.error ? ` (${result.error})` : ""}.`,
           ),
+          { duration: 8000 },
         );
       }
     } finally {
@@ -162,13 +164,13 @@ export function ScheduleAlarmSheet({
         {userId && !installRequired && (
           <button
             type="button"
-            onClick={() => void testDeviceNotification()}
+            onClick={() => void testServerNotification()}
             disabled={testing}
             className="touch-press mt-3 w-full rounded-[18px] border border-ink/[0.08] bg-white px-4 py-3 text-[13px] font-semibold text-ink shadow-card disabled:opacity-50"
           >
             {testing
-              ? t("알림 연결 확인 중...", "Checking notification setup...")
-              : t("이 기기에서 테스트 알림 보내기", "Send a test notification on this device")}
+              ? t("서버 푸시 확인 중...", "Checking server push...")
+              : t("서버까지 실제 푸시 테스트", "Run a real server push test")}
           </button>
         )}
 
