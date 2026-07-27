@@ -43,6 +43,9 @@ export function isStandalonePwa(): boolean {
 
 export function pushSupportState(): PushSupportState {
   if (typeof window === "undefined") return "unsupported";
+  if (detectPlatform() === "ios" && !isStandalonePwa()) {
+    return "not_installed";
+  }
   if (!("Notification" in window) || !("PushManager" in window)) {
     return "unsupported";
   }
@@ -64,57 +67,63 @@ export async function ensurePushSubscription(
   if (!vapidPublic) return { ok: false, state: "unsupported" };
 
   const support = pushSupportState();
-  if (support === "unsupported") return { ok: false, state: "unsupported" };
+  if (support === "unsupported" || support === "not_installed") {
+    return { ok: false, state: support };
+  }
 
-  if (Notification.permission === "default") {
-    const perm = await Notification.requestPermission();
-    if (perm !== "granted") {
-      return { ok: false, state: perm === "denied" ? "denied" : "default" };
+  try {
+    if (Notification.permission === "default") {
+      const perm = await Notification.requestPermission();
+      if (perm !== "granted") {
+        return { ok: false, state: perm === "denied" ? "denied" : "default" };
+      }
+    } else if (Notification.permission === "denied") {
+      return { ok: false, state: "denied" };
     }
-  } else if (Notification.permission === "denied") {
-    return { ok: false, state: "denied" };
-  }
 
-  const reg = (await registerServiceWorker()) ??
-    (await navigator.serviceWorker.ready.catch(() => null));
-  if (!reg?.pushManager) return { ok: false, state: "unsupported" };
+    const reg = (await registerServiceWorker()) ??
+      (await navigator.serviceWorker.ready.catch(() => null));
+    if (!reg?.pushManager) return { ok: false, state: "unsupported" };
 
-  let sub = await reg.pushManager.getSubscription();
-  if (!sub) {
-    sub = await reg.pushManager.subscribe({
-      userVisibleOnly: true,
-      applicationServerKey: urlBase64ToUint8Array(vapidPublic),
-    });
-  }
+    let sub = await reg.pushManager.getSubscription();
+    if (!sub) {
+      sub = await reg.pushManager.subscribe({
+        userVisibleOnly: true,
+        applicationServerKey: urlBase64ToUint8Array(vapidPublic),
+      });
+    }
 
-  const json = sub.toJSON();
-  if (!json.endpoint || !json.keys?.p256dh || !json.keys?.auth) {
+    const json = sub.toJSON();
+    if (!json.endpoint || !json.keys?.p256dh || !json.keys?.auth) {
+      return { ok: false, state: "expired", expired: true };
+    }
+
+    const record: PushSubscriptionRecord = {
+      endpoint: json.endpoint,
+      p256dh: json.keys.p256dh,
+      auth: json.keys.auth,
+      platform: detectPlatform(),
+    };
+
+    const { error } = await supabase.from("push_subscriptions").upsert(
+      {
+        user_id: userId,
+        endpoint: record.endpoint,
+        p256dh: record.p256dh,
+        auth: record.auth,
+        platform: record.platform,
+        revoked_at: null,
+        failure_count: 0,
+        updated_at: new Date().toISOString(),
+      },
+      { onConflict: "user_id,endpoint" },
+    );
+
+    if (error) return { ok: false, state: "expired", expired: true };
+    return { ok: true, state: "granted" };
+  } catch {
     return { ok: false, state: "expired", expired: true };
   }
-
-  const record: PushSubscriptionRecord = {
-    endpoint: json.endpoint,
-    p256dh: json.keys.p256dh,
-    auth: json.keys.auth,
-    platform: detectPlatform(),
-  };
-
-  const { error } = await supabase.from("push_subscriptions").upsert(
-    {
-      user_id: userId,
-      endpoint: record.endpoint,
-      p256dh: record.p256dh,
-      auth: record.auth,
-      platform: record.platform,
-      revoked_at: null,
-      failure_count: 0,
-      updated_at: new Date().toISOString(),
-    },
-    { onConflict: "user_id,endpoint" },
-  );
-
-  if (error) return { ok: false, state: "expired", expired: true };
-  return { ok: true, state: "granted" };
 }
 
 export async function hasActivePushSubscription(
