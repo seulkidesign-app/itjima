@@ -2,7 +2,7 @@ export const FEATURES = {
   BRAIN_MIRROR: false,
   REDISCOVERY: false,
   CLEANUP: false,
-  INLINE_PROMISE: true,
+  INLINE_PROMISE: false,
   PASTE_SPLIT: false,
   /** Archive: 생각 지도 / Thought map layout */
   ARCHIVE_THOUGHT_MAP: false,
@@ -16,11 +16,23 @@ export const FEATURES = {
   ARCHIVE_JOURNEY: false,
   /** Archive: 가까운 순 sort toggle */
   ARCHIVE_NEARBY_SORT: false,
-  /** Archive: AI / keyword grouping — disabled until group rename is complete */
+  /** Archive: AI / keyword grouping — disabled for v1 */
   ARCHIVE_AI_GROUPING: false,
 } as const;
 
 export type FeatureKey = keyof typeof FEATURES;
+
+/**
+ * v1 release boundary.
+ * These features must remain unavailable even when an old E2E or localStorage
+ * override exists in the browser. Re-enable only after user testing and a
+ * separate production-readiness review.
+ */
+const V1_LOCKED_OFF = new Set<FeatureKey>([
+  "BRAIN_MIRROR",
+  "INLINE_PROMISE",
+  "ARCHIVE_AI_GROUPING",
+]);
 
 function readOverride(key: FeatureKey): boolean | undefined {
   if (typeof window === "undefined") return undefined;
@@ -34,8 +46,9 @@ function readOverride(key: FeatureKey): boolean | undefined {
   }
 }
 
-/** Runtime feature gate — honors E2E overrides via localStorage. */
+/** Runtime feature gate — AI surfaces stay locked off for the v1 release. */
 export function featureEnabled(key: FeatureKey): boolean {
+  if (V1_LOCKED_OFF.has(key)) return false;
   const override = readOverride(key);
   if (override !== undefined) return override;
   return FEATURES[key];
