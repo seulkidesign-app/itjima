@@ -1,8 +1,11 @@
 import { BottomSheet } from "./BottomSheet";
-import { useT } from "@/lib/i18n";
+import { useT, useLang } from "@/lib/i18n";
 import type { AlarmPreset } from "@/lib/scheduleReminders";
 import type { ScheduleItem } from "@/lib/store";
+import { useUserId } from "@/lib/store";
 import { scheduleDisplayTitle } from "@/lib/thoughtProvenance";
+import { pushSupportState } from "@/lib/push/pushSubscription";
+import { alarmAvailabilityHint } from "@/lib/alarmAvailability";
 
 type Props = {
   schedule: ScheduleItem | null;
@@ -24,6 +27,8 @@ export function ScheduleAlarmSheet({
   armed,
 }: Props) {
   const t = useT();
+  const { lang } = useLang();
+  const userId = useUserId();
   if (!schedule) return null;
 
   const presets: { id: AlarmPreset; label: string }[] = [
@@ -34,6 +39,12 @@ export function ScheduleAlarmSheet({
     { id: "tomorrow_am", label: t("내일 아침", "Tomorrow AM") },
   ];
 
+  const availability = alarmAvailabilityHint(
+    pushSupportState(),
+    Boolean(userId),
+    lang === "en" ? "en" : "ko",
+  );
+
   return (
     <BottomSheet open={open} onClose={onClose} maxHeight="62dvh">
       <div className="px-5 pb-[calc(env(safe-area-inset-bottom)+1.25rem)]">
@@ -43,8 +54,8 @@ export function ScheduleAlarmSheet({
         <p className="mt-1 line-clamp-2 text-[14px] text-ink-soft">
           {scheduleDisplayTitle(schedule)}
         </p>
-        <p className="mt-2 text-[12px] text-ink-soft">
-          {t("앱을 열어두면 알려드려요.", "Works while the app stays open.")}
+        <p className="mt-2 rounded-[14px] bg-ink/[0.035] px-3 py-2.5 text-[12px] leading-relaxed text-ink-soft">
+          {availability}
         </p>
         <div className="mt-4 flex flex-col gap-2">
           {presets.map(({ id, label }) => (
