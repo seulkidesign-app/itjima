@@ -1,14 +1,43 @@
+import { useEffect, useRef } from "react";
 import { RefreshCw, WifiOff } from "lucide-react";
 import { useT } from "@/lib/i18n";
 
- type Props = {
+type Props = {
   syncing?: boolean;
   error?: boolean;
   onRetry?: () => void;
 };
 
+const ONLINE_RETRY_THROTTLE_MS = 1_500;
+
 export function SyncIndicator({ syncing, error, onRetry }: Props) {
   const t = useT();
+  const retryRef = useRef(onRetry);
+  const lastAutoRetryAtRef = useRef(0);
+
+  retryRef.current = onRetry;
+
+  useEffect(() => {
+    if (!error || !onRetry || typeof window === "undefined") return;
+
+    const retryWhenOnline = () => {
+      if (!navigator.onLine) return;
+      const now = Date.now();
+      if (now - lastAutoRetryAtRef.current < ONLINE_RETRY_THROTTLE_MS) return;
+      lastAutoRetryAtRef.current = now;
+      retryRef.current?.();
+    };
+
+    window.addEventListener("online", retryWhenOnline);
+
+    // Covers an app reopened after connectivity has already returned.
+    const initialRetry = window.setTimeout(retryWhenOnline, 500);
+
+    return () => {
+      window.clearTimeout(initialRetry);
+      window.removeEventListener("online", retryWhenOnline);
+    };
+  }, [error, onRetry]);
 
   if (error) {
     return (
