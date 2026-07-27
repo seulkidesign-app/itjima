@@ -8,10 +8,10 @@ describe("alarm availability copy", () => {
     expect(copy).toContain("로그인");
   });
 
-  it("explains the iPhone Home Screen requirement", () => {
+  it("explains the iPhone Home Screen requirement without claiming delivery", () => {
     const copy = alarmAvailabilityHint("not_installed", true, "ko");
     expect(copy).toContain("홈 화면");
-    expect(copy).toContain("앱을 닫은 뒤");
+    expect(copy).toContain("테스트");
   });
 
   it("states that the schedule remains when permission is denied", () => {
@@ -20,9 +20,15 @@ describe("alarm availability copy", () => {
     expect(copy).toContain("일정은 그대로 저장");
   });
 
-  it("uses conditional language even when permission is granted", () => {
+  it("keeps granted permission in verification mode by default", () => {
     const copy = alarmAvailabilityHint("granted", true, "ko");
-    expect(copy).toContain("지원되는 기기");
-    expect(copy).not.toMatch(/반드시|무조건/);
+    expect(copy).toContain("앱을 열어둔 동안");
+    expect(copy).toContain("검증 중");
+    expect(copy).not.toMatch(/앱을 닫아도 알려드려요/);
+  });
+
+  it("only claims closed-app verification after an explicit release gate", () => {
+    const copy = alarmAvailabilityHint("granted", true, "ko", true);
+    expect(copy).toContain("앱을 닫은 뒤 알림까지 검증");
   });
 });
