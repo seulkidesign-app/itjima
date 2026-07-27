@@ -4,17 +4,18 @@ export function alarmAvailabilityHint(
   state: PushSupportState,
   signedIn: boolean,
   lang: "ko" | "en",
+  backgroundVerified = false,
 ): string {
   if (!signedIn) {
     return lang === "en"
-      ? "For now, alarms work while the app is open. Sign in to set background alerts."
-      : "지금은 앱을 열어둔 동안 알려드려요. 로그인하면 백그라운드 알림을 설정할 수 있어요.";
+      ? "For now, alarms work while the app is open. Sign in to keep your schedules across devices."
+      : "지금은 앱을 열어둔 동안 알려드려요. 로그인하면 일정을 다른 기기에서도 이어갈 수 있어요.";
   }
 
   if (state === "not_installed") {
     return lang === "en"
-      ? "On iPhone, add Itjima to your Home Screen to receive alerts after closing it."
-      : "아이폰에서는 홈 화면에 추가해야 앱을 닫은 뒤에도 알림을 받을 수 있어요.";
+      ? "On iPhone, add Itjima to your Home Screen before testing closed-app alerts."
+      : "아이폰에서는 홈 화면에 추가한 뒤 닫힌 앱 알림을 테스트할 수 있어요.";
   }
 
   if (state === "denied") {
@@ -29,10 +30,16 @@ export function alarmAvailabilityHint(
       : "이 기기에서는 앱을 열어둔 동안에만 알려드릴 수 있어요.";
   }
 
+  if (state === "granted" && backgroundVerified) {
+    return lang === "en"
+      ? "Closed-app alerts have been verified for this release."
+      : "이번 버전은 앱을 닫은 뒤 알림까지 검증됐어요.";
+  }
+
   if (state === "granted") {
     return lang === "en"
-      ? "We'll verify the alert and, when supported, notify you even after the app closes."
-      : "알림 예약을 확인한 뒤, 지원되는 기기에서는 앱을 닫아도 알려드려요.";
+      ? "Alerts work while the app is open. Closed-app delivery is still being verified."
+      : "앱을 열어둔 동안 알려드려요. 닫힌 앱 알림은 실제 기기에서 검증 중이에요.";
   }
 
   return lang === "en"
