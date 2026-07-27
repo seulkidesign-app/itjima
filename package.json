@@ -10,7 +10,7 @@
     "lint": "eslint .",
     "format": "prettier --write .",
     "test": "vitest run",
-    "test:nl": "vitest run tests/nl-ko-regression.test.ts tests/nl-regression.test.ts tests/nl-guards.test.ts tests/nl-analytics.test.ts tests/nl-beta-guards.test.ts tests/decision-swipe.test.ts tests/itjima-voice.test.ts tests/decision-recovery.test.ts tests/cloud-merge-decision.test.ts",
+    "test:nl": "vitest run tests/nl-ko-regression.test.ts tests/nl-regression.test.ts tests/nl-guards.test.ts tests/nl-analytics.test.ts tests/nl-beta-guards.test.ts tests/decision-swipe.test.ts tests/itjima-voice.test.ts tests/decision-recovery.test.ts tests/cloud-merge-decision.test.ts tests/inbox-schedule-defaults.test.ts",
     "test:e2e": "playwright test",
     "test:e2e:ui": "playwright test --ui"
   },
@@ -53,7 +53,7 @@
     "date-fns": "^4.1.0",
     "embla-carousel-react": "^8.6.0",
     "framer-motion": "^12.42.2",
-    "input-otp": "^1.4.2",
+    "input-otp": "^1.4.1",
     "lucide-react": "^0.575.0",
     "react": "^19.2.0",
     "react-day-picker": "^9.14.0",
