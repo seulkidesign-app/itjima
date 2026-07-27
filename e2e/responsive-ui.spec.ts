@@ -166,6 +166,31 @@ test.describe("responsive UI safeguards", () => {
     expect(tabsBox?.width ?? 0).toBeGreaterThan(tabsBox?.height ?? 0);
   });
 
+  test("desktop shortcuts navigate and focus capture", async ({ page }) => {
+    await page.setViewportSize({ width: 1440, height: 1000 });
+    await page.goto("/schedule");
+
+    await page.keyboard.press("Meta+1");
+    await expect(page).toHaveURL(/\/$/);
+
+    await page.keyboard.press("Meta+K");
+    await expect(page.locator("#capture-input")).toBeFocused();
+
+    await page.keyboard.press("Meta+3");
+    await expect(page).toHaveURL(/\/archive$/);
+  });
+
+  test("input modality switches between pointer and keyboard", async ({ page }) => {
+    await page.setViewportSize({ width: 1024, height: 900 });
+    await page.goto("/");
+
+    await page.mouse.click(20, 20);
+    await expect(page.locator("html")).toHaveAttribute("data-input-modality", "pointer");
+
+    await page.keyboard.press("Tab");
+    await expect(page.locator("html")).toHaveAttribute("data-input-modality", "keyboard");
+  });
+
   test("bottom sheet backdrop covers desktop while panel remains readable", async ({
     page,
   }) => {
