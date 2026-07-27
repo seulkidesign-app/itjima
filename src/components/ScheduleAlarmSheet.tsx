@@ -31,11 +31,17 @@ export function ScheduleAlarmSheet({
   const userId = useUserId();
   if (!schedule) return null;
 
+  const eveningHasPassed = new Date().getHours() >= 18;
   const presets: { id: AlarmPreset; label: string }[] = [
     { id: "10m", label: t("10분 뒤", "In 10 min") },
     { id: "30m", label: t("30분 뒤", "In 30 min") },
     { id: "1h", label: t("1시간 뒤", "In 1 hour") },
-    { id: "tonight", label: t("오늘 저녁", "Tonight") },
+    {
+      id: "tonight",
+      label: eveningHasPassed
+        ? t("내일 저녁", "Tomorrow evening")
+        : t("오늘 저녁", "Tonight"),
+    },
     { id: "tomorrow_am", label: t("내일 아침", "Tomorrow AM") },
   ];
 
