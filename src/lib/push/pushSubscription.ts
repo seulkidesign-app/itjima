@@ -17,6 +17,12 @@ export type PushSubscriptionRecord = {
   platform: string;
 };
 
+export type DeviceNotificationTestResult = {
+  ok: boolean;
+  state: PushSupportState;
+  expired?: boolean;
+};
+
 function urlBase64ToUint8Array(base64: string): Uint8Array {
   const padding = "=".repeat((4 - (base64.length % 4)) % 4);
   const base64Safe = (base64 + padding).replace(/-/g, "+").replace(/_/g, "/");
@@ -86,7 +92,8 @@ export async function ensurePushSubscription(
       return { ok: false, state: "denied" };
     }
 
-    const reg = (await registerServiceWorker()) ??
+    const reg =
+      (await registerServiceWorker()) ??
       (await navigator.serviceWorker.ready.catch(() => null));
     if (!reg?.pushManager) return { ok: false, state: "unsupported" };
 
@@ -125,6 +132,36 @@ export async function ensurePushSubscription(
     );
 
     if (error) return { ok: false, state: "expired", expired: true };
+    return { ok: true, state: "granted" };
+  } catch {
+    return { ok: false, state: "expired", expired: true };
+  }
+}
+
+/**
+ * Verifies the device-side notification path only:
+ * installation, permission, service worker, push subscription, and local display.
+ * This does not claim that the scheduled server sender is running.
+ */
+export async function showDeviceNotificationTest(
+  userId: string,
+): Promise<DeviceNotificationTestResult> {
+  const setup = await ensurePushSubscription(userId);
+  if (!setup.ok) return setup;
+
+  try {
+    const reg =
+      (await registerServiceWorker()) ??
+      (await navigator.serviceWorker.ready.catch(() => null));
+    if (!reg) return { ok: false, state: "unsupported" };
+
+    await reg.showNotification("🔔 잊지마 알림 테스트", {
+      body: "이 기기에서 알림 표시가 준비됐어요.",
+      tag: "itjima-device-notification-test",
+      data: { url: "/schedule" },
+      icon: "/favicon.svg",
+      badge: "/favicon.svg",
+    });
     return { ok: true, state: "granted" };
   } catch {
     return { ok: false, state: "expired", expired: true };
