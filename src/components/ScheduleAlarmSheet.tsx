@@ -4,7 +4,10 @@ import type { AlarmPreset } from "@/lib/scheduleReminders";
 import type { ScheduleItem } from "@/lib/store";
 import { useUserId } from "@/lib/store";
 import { scheduleDisplayTitle } from "@/lib/thoughtProvenance";
-import { pushSupportState } from "@/lib/push/pushSubscription";
+import {
+  backgroundRemindersVerified,
+  pushSupportState,
+} from "@/lib/push/pushSubscription";
 import { alarmAvailabilityHint } from "@/lib/alarmAvailability";
 
 type Props = {
@@ -49,6 +52,7 @@ export function ScheduleAlarmSheet({
     pushSupportState(),
     Boolean(userId),
     lang === "en" ? "en" : "ko",
+    backgroundRemindersVerified(),
   );
 
   return (
