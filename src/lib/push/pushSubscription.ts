@@ -21,6 +21,7 @@ export type DeviceNotificationTestResult = {
   ok: boolean;
   state: PushSupportState;
   expired?: boolean;
+  error?: string;
 };
 
 function urlBase64ToUint8Array(base64: string): Uint8Array {
@@ -165,6 +166,44 @@ export async function showDeviceNotificationTest(
     return { ok: true, state: "granted" };
   } catch {
     return { ok: false, state: "expired", expired: true };
+  }
+}
+
+/** End-to-end check: browser subscription → database → Edge Function → push service. */
+export async function sendServerPushTest(
+  userId: string,
+): Promise<DeviceNotificationTestResult> {
+  const setup = await ensurePushSubscription(userId);
+  if (!setup.ok) return setup;
+
+  try {
+    const { data, error } = await supabase.functions.invoke("test-push", {
+      body: {},
+    });
+    if (error) {
+      return {
+        ok: false,
+        state: "expired",
+        expired: true,
+        error: error.message,
+      };
+    }
+    if (!data?.ok) {
+      return {
+        ok: false,
+        state: "expired",
+        expired: true,
+        error: typeof data?.error === "string" ? data.error : "push_test_failed",
+      };
+    }
+    return { ok: true, state: "granted" };
+  } catch (error) {
+    return {
+      ok: false,
+      state: "expired",
+      expired: true,
+      error: error instanceof Error ? error.message : "push_test_failed",
+    };
   }
 }
 
