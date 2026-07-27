@@ -1,0 +1,284 @@
+/*
+ * Itjima layout system
+ * Final layout layer: unified spacing, typography, content rails and responsive rhythm.
+ */
+
+:root {
+  --layout-space-1: 4px;
+  --layout-space-2: 8px;
+  --layout-space-3: 12px;
+  --layout-space-4: 16px;
+  --layout-space-5: 20px;
+  --layout-space-6: 24px;
+  --layout-space-8: 32px;
+  --layout-space-10: 40px;
+  --layout-space-12: 48px;
+
+  --layout-gutter: 16px;
+  --layout-reading: 620px;
+  --layout-work: 720px;
+  --layout-wide: 920px;
+
+  --layout-title-size: 32px;
+  --layout-title-line: 1.1;
+  --layout-body-size: 15px;
+  --layout-body-line: 1.58;
+  --layout-meta-size: 13px;
+}
+
+.phone-frame {
+  font-feature-settings: "kern" 1;
+  text-rendering: optimizeLegibility;
+}
+
+.phone-frame :is(p, li, label, input, textarea, button) {
+  text-wrap: pretty;
+}
+
+.phone-frame .page-title {
+  max-width: 14ch;
+  margin: 0;
+  font-size: var(--layout-title-size) !important;
+  line-height: var(--layout-title-line) !important;
+  letter-spacing: -0.042em !important;
+}
+
+.phone-frame .page-eyebrow {
+  max-width: 32rem !important;
+  margin-top: var(--layout-space-3) !important;
+  font-size: var(--layout-body-size) !important;
+  line-height: var(--layout-body-line) !important;
+  letter-spacing: -0.014em !important;
+}
+
+.phone-frame .section-title {
+  margin-bottom: var(--layout-space-2) !important;
+  font-size: var(--layout-meta-size) !important;
+  line-height: 1.35 !important;
+  letter-spacing: -0.008em !important;
+}
+
+/* Shared page headers and content rails. */
+.phone-frame .sticky:has(#schedule-tab-today) > div:first-of-type {
+  padding: var(--layout-space-8) var(--layout-gutter) var(--layout-space-5) !important;
+}
+
+.phone-frame .sticky:has(#schedule-tab-today) > div:nth-of-type(2) {
+  padding: 0 var(--layout-gutter) var(--layout-space-4) !important;
+}
+
+.phone-frame .sticky:has(#schedule-tab-today) + div {
+  padding-inline: var(--layout-gutter) !important;
+  padding-bottom: 104px !important;
+}
+
+.phone-frame .segment-nav {
+  gap: var(--layout-space-1) !important;
+  min-height: 50px !important;
+  padding: var(--layout-space-1) !important;
+  border-radius: 16px !important;
+}
+
+.phone-frame .segment-nav-item {
+  min-height: 42px !important;
+  padding-inline: var(--layout-space-3) !important;
+  border-radius: 12px !important;
+  font-size: 14px !important;
+  line-height: 1 !important;
+}
+
+/* Home: one calm vertical rhythm from conversation to composer. */
+.phone-frame .home-chat-lane {
+  gap: var(--layout-space-3) !important;
+  padding-top: var(--layout-space-3) !important;
+  padding-inline: var(--layout-gutter) !important;
+  padding-bottom: calc(112px + env(safe-area-inset-bottom)) !important;
+}
+
+.phone-frame .home-chat-turn {
+  gap: var(--layout-space-1) !important;
+}
+
+.phone-frame .chat-turn-group {
+  min-width: 0;
+}
+
+.phone-frame .chat-bubble {
+  padding: 13px 15px !important;
+  font-size: var(--layout-body-size) !important;
+  line-height: var(--layout-body-line) !important;
+}
+
+.phone-frame .decision-launcher-bar,
+.phone-frame [data-testid="decision-launcher"] {
+  min-height: 52px !important;
+  margin-top: var(--layout-space-3) !important;
+  padding: var(--layout-space-2) var(--layout-space-3) !important;
+}
+
+.phone-frame form.composer-hero {
+  padding-top: var(--layout-space-2) !important;
+}
+
+.phone-frame form.composer-hero .input-shell {
+  margin-inline: 0 !important;
+  padding: 10px 14px !important;
+  border-radius: 18px !important;
+}
+
+.phone-frame form.composer-hero textarea#capture-input {
+  line-height: 1.52 !important;
+}
+
+/* Lists: consistent row rhythm and group spacing. */
+.phone-frame [data-testid="schedule-today-list"],
+.phone-frame [data-testid="archive-grouped-list"],
+.phone-frame [data-testid="archive-search-results"] {
+  min-width: 0;
+}
+
+.phone-frame [data-testid="schedule-today-list"] > li,
+.phone-frame [data-testid="archive-grouped-list"] li,
+.phone-frame [data-testid="archive-search-results"] li {
+  min-height: 56px;
+}
+
+.phone-frame [data-testid="schedule-today-list"] > li {
+  padding-block: 12px !important;
+}
+
+.phone-frame [data-testid="archive-grouped-list"] > section + section {
+  margin-top: var(--layout-space-8) !important;
+}
+
+/* Empty, loading and error states align to the content rail. */
+.phone-frame [role="status"] {
+  max-width: var(--layout-reading);
+  margin-inline: auto;
+}
+
+/* Sheets and dialogs use predictable internal padding. */
+.bottom-sheet-panel > div:last-child > :is(div, form) {
+  min-width: 0;
+}
+
+.bottom-sheet-panel h2 {
+  letter-spacing: -0.025em;
+}
+
+.bottom-sheet-panel :is(input, textarea, select) {
+  line-height: 1.45;
+}
+
+/* Auth content should not feel stranded on larger screens. */
+.phone-frame > .relative.flex.h-full.min-h-full.flex-col {
+  padding-inline: var(--layout-gutter) !important;
+}
+
+@media (min-width: 390px) {
+  :root {
+    --layout-gutter: 20px;
+    --layout-title-size: 34px;
+  }
+}
+
+@media (min-width: 640px) {
+  :root {
+    --layout-gutter: 28px;
+    --layout-title-size: 36px;
+    --layout-body-size: 16px;
+    --layout-meta-size: 14px;
+  }
+
+  .phone-frame .sticky:has(#schedule-tab-today) > div:first-of-type {
+    max-width: var(--layout-work) !important;
+    padding-top: var(--layout-space-10) !important;
+    padding-bottom: var(--layout-space-6) !important;
+  }
+
+  .phone-frame .sticky:has(#schedule-tab-today) > div:nth-of-type(2),
+  .phone-frame .sticky:has(#schedule-tab-today) + div {
+    max-width: var(--layout-work) !important;
+  }
+
+  .phone-frame .home-chat-lane,
+  .phone-frame form.composer-hero {
+    max-width: var(--layout-reading) !important;
+  }
+
+  .phone-frame .home-chat-lane {
+    padding-top: var(--layout-space-5) !important;
+  }
+
+  .phone-frame .chat-bubble {
+    padding: 14px 17px !important;
+  }
+
+  .bottom-sheet-panel {
+    padding-inline: var(--layout-space-2);
+  }
+}
+
+@media (min-width: 900px) {
+  :root {
+    --layout-gutter: 36px;
+    --layout-title-size: 40px;
+  }
+
+  .phone-frame .page-title {
+    max-width: 16ch;
+  }
+
+  .phone-frame .sticky:has(#schedule-tab-today) > div:first-of-type {
+    padding-top: 44px !important;
+    padding-bottom: 24px !important;
+  }
+
+  .phone-frame .sticky:has(#schedule-tab-today) > div:nth-of-type(2) {
+    padding-bottom: 20px !important;
+  }
+
+  .phone-frame .segment-nav {
+    max-width: 480px !important;
+  }
+
+  .phone-frame .home-chat-lane {
+    padding-top: 28px !important;
+    padding-bottom: 128px !important;
+  }
+
+  .phone-frame .home-chat-turn + .home-chat-turn {
+    margin-top: 2px;
+  }
+
+  .phone-frame form.composer-hero {
+    padding-bottom: 12px !important;
+  }
+
+  .bottom-sheet-panel {
+    padding-inline: var(--layout-space-3);
+  }
+}
+
+@media (max-width: 359px) {
+  :root {
+    --layout-gutter: 14px;
+    --layout-title-size: 30px;
+    --layout-body-size: 15px;
+  }
+
+  .phone-frame .segment-nav-item {
+    padding-inline: 6px !important;
+    font-size: 13px !important;
+  }
+
+  .phone-frame .chat-bubble {
+    padding: 12px 14px !important;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .phone-frame {
+    scroll-behavior: auto;
+  }
+}
