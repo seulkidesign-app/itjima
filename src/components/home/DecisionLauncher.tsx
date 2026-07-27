@@ -1,3 +1,4 @@
+import { useEffect, useRef } from "react";
 import {
   DecisionDeck,
   type DecisionMeta,
@@ -8,6 +9,12 @@ import { useLang, useT } from "@/lib/i18n";
 import { track } from "@/lib/analytics";
 import { tap } from "@/lib/haptics";
 import type { DecisionOutcome, InboxItem } from "@/lib/store";
+import {
+  captureDecisionStorage,
+  clearInboxTombstones,
+  recoverLocallyCommittedDecision,
+  undoLocallyCommitted,
+} from "@/lib/decisionRecovery";
 
 type CardProps = {
   itemCount: number;
@@ -91,15 +98,58 @@ export function DecisionLauncher({
   onDecide,
   onUndo,
 }: DeckProps) {
+  const sessionItemsRef = useRef<InboxItem[]>(items);
+  const wasOpenRef = useRef(false);
+
+  // Freeze the card list for one sorting session. Parent storage updates after a
+  // decision must not prune the deck a second time and skip the next card.
+  if (open && !wasOpenRef.current) {
+    sessionItemsRef.current = [...items];
+  } else if (!open) {
+    sessionItemsRef.current = [...items];
+  }
+
+  useEffect(() => {
+    wasOpenRef.current = open;
+  }, [open]);
+
+  const handleDecideSafely = async (
+    outcome: DecisionOutcome,
+    item: InboxItem,
+    meta: DecisionMeta,
+  ): Promise<DecisionResult | void> => {
+    const before = captureDecisionStorage(item.id);
+    try {
+      return await onDecide(outcome, item, meta);
+    } catch (error) {
+      const recovered = recoverLocallyCommittedDecision(outcome, item.id, before);
+      if (recovered) return recovered;
+      throw error;
+    }
+  };
+
+  const handleUndoSafely = async (snapshot: UndoSnapshot) => {
+    // A failed cloud delete may have queued a tombstone. Undo means that
+    // tombstone is no longer valid, even when the original row still exists.
+    clearInboxTombstones(snapshot.item.id);
+    try {
+      await onUndo(snapshot);
+    } catch (error) {
+      if (!undoLocallyCommitted(snapshot)) throw error;
+    } finally {
+      clearInboxTombstones(snapshot.item.id);
+    }
+  };
+
   return (
     <DecisionDeck
       open={open}
       startItemId={startItemId}
-      items={items}
+      items={open ? sessionItemsRef.current : items}
       onClose={onClose}
       onCapture={onCapture}
-      onDecide={onDecide}
-      onUndo={onUndo}
+      onDecide={handleDecideSafely}
+      onUndo={handleUndoSafely}
     />
   );
 }
