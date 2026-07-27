@@ -21,9 +21,7 @@ describe("app deep link contract", () => {
   });
 
   it("keeps schedule identifiers encoded in reminder links", () => {
-    expect(workerSource).toMatch(
-      /encodeURIComponent\(\s*String\(scheduleId\)\s*\)/,
-    );
+    expect(workerSource).toContain("encodeURIComponent(String(scheduleId))");
     expect(workerSource).toContain("function safeAppPath");
     expect(workerSource).toContain("parsed.pathname");
     expect(workerSource).toContain("parsed.search");
@@ -31,15 +29,13 @@ describe("app deep link contract", () => {
   });
 
   it("allows only same-app reminder paths", () => {
-    expect(workerSource).toMatch(/startsWith\(\s*"\/\/"\s*\)/);
-    expect(workerSource).toMatch(
-      /parsed\.origin\s*!==\s*self\.location\.origin/,
-    );
+    expect(workerSource).toContain('value.startsWith("//")');
+    expect(workerSource).toContain("parsed.origin !== self.location.origin");
   });
 
   it("finishes reminder navigation before focusing the app", () => {
-    expect(workerSource).toMatch(/await\s+client\.navigate\(url\)/);
-    expect(workerSource).toMatch(/await\s+self\.clients\.matchAll/);
+    expect(workerSource).toContain("await self.clients.matchAll");
+    expect(workerSource).toContain("await client.navigate(url)");
     expect(workerSource).toContain("navigated.focus()");
   });
 
