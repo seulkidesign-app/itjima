@@ -1,0 +1,264 @@
+/*
+ * Itjima fields and states system
+ * Inputs, selection controls, rows, loading, empty, error and toast states.
+ */
+
+:root {
+  --field-height: 48px;
+  --field-radius: 14px;
+  --field-bg: rgba(255, 255, 255, 0.96);
+  --field-border: rgba(60, 60, 67, 0.14);
+  --field-border-hover: rgba(60, 60, 67, 0.22);
+  --field-focus: rgba(255, 211, 61, 0.42);
+  --field-placeholder: rgba(60, 60, 67, 0.38);
+  --row-hover: rgba(118, 118, 128, 0.07);
+  --row-pressed: rgba(118, 118, 128, 0.12);
+  --state-success: #34c759;
+  --state-warning: #ff9f0a;
+  --state-danger: #ff3b30;
+}
+
+/* Text fields */
+.phone-frame :is(input, textarea, select):not([type="checkbox"]):not([type="radio"]):not([type="file"]),
+.bottom-sheet-panel :is(input, textarea, select):not([type="checkbox"]):not([type="radio"]):not([type="file"]) {
+  min-width: 0;
+  max-width: 100%;
+  border-color: var(--field-border);
+  background-color: var(--field-bg);
+  color: var(--control-label, #111113);
+  caret-color: #111113;
+  font-size: 16px;
+  line-height: 1.45;
+  transition:
+    border-color 160ms ease,
+    box-shadow 160ms ease,
+    background-color 160ms ease;
+}
+
+.phone-frame input:not([type="checkbox"]):not([type="radio"]):not([type="file"]),
+.phone-frame select,
+.bottom-sheet-panel input:not([type="checkbox"]):not([type="radio"]):not([type="file"]),
+.bottom-sheet-panel select {
+  min-height: var(--field-height);
+}
+
+.phone-frame :is(input, textarea)::placeholder,
+.bottom-sheet-panel :is(input, textarea)::placeholder {
+  color: var(--field-placeholder);
+  opacity: 1;
+}
+
+.phone-frame :is(input, textarea, select):not([type="checkbox"]):not([type="radio"]):not([type="file"]):focus,
+.bottom-sheet-panel :is(input, textarea, select):not([type="checkbox"]):not([type="radio"]):not([type="file"]):focus {
+  border-color: rgba(188, 146, 0, 0.42);
+  box-shadow: 0 0 0 4px var(--field-focus);
+  outline: none;
+}
+
+.phone-frame :is(input, textarea, select):disabled,
+.bottom-sheet-panel :is(input, textarea, select):disabled {
+  background: rgba(118, 118, 128, 0.08);
+  color: rgba(60, 60, 67, 0.38);
+  cursor: default;
+}
+
+/* Search fields */
+.phone-frame input[type="search"] {
+  min-height: 44px;
+  border-radius: 13px;
+  padding-inline: 14px;
+  appearance: none;
+  -webkit-appearance: none;
+}
+
+.phone-frame input[type="search"]::-webkit-search-cancel-button {
+  opacity: 0.55;
+}
+
+/* Native checkbox and radio fallbacks */
+.phone-frame :is(input[type="checkbox"], input[type="radio"]),
+.bottom-sheet-panel :is(input[type="checkbox"], input[type="radio"]) {
+  width: 20px;
+  height: 20px;
+  flex: 0 0 auto;
+  accent-color: #ffd33d;
+}
+
+/* Switches and pressed selection controls */
+.phone-frame [role="switch"],
+.bottom-sheet-panel [role="switch"] {
+  min-width: 51px;
+  min-height: 31px;
+  border-radius: 999px;
+  transition:
+    background-color 180ms ease,
+    box-shadow 180ms ease;
+}
+
+.phone-frame :is(button, [role="button"])[aria-pressed="true"],
+.phone-frame :is(button, [role="button"])[aria-selected="true"] {
+  color: var(--control-label, #111113);
+}
+
+/* Chips, tags and badges */
+.phone-frame :is([data-chip], .status-chip, button.rounded-full.border),
+.bottom-sheet-panel :is([data-chip], .status-chip, button.rounded-full.border) {
+  max-width: 100%;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  overflow: hidden;
+}
+
+.phone-frame .status-chip {
+  display: inline-flex;
+  min-height: 24px;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 8px;
+  border: 1px solid rgba(60, 60, 67, 0.08);
+  border-radius: 999px;
+  background: rgba(118, 118, 128, 0.1);
+  color: rgba(60, 60, 67, 0.68);
+  font-size: 11px;
+  font-weight: 650;
+  line-height: 1;
+}
+
+.phone-frame .status-chip--overdue {
+  border-color: rgba(255, 59, 48, 0.12);
+  background: rgba(255, 59, 48, 0.09);
+  color: #d92d25;
+}
+
+/* Interactive rows and cards */
+.phone-frame :is(li, article)[role="button"],
+.phone-frame [data-interactive-row] {
+  border-radius: 12px;
+  transition:
+    background-color 140ms ease,
+    transform 140ms cubic-bezier(0.32, 0.72, 0, 1);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .phone-frame :is(li, article)[role="button"]:hover,
+  .phone-frame [data-interactive-row]:hover {
+    background: var(--row-hover);
+  }
+}
+
+.phone-frame :is(li, article)[role="button"]:active,
+.phone-frame [data-interactive-row]:active {
+  background: var(--row-pressed);
+}
+
+/* Skeleton and loading feedback */
+.phone-frame .skeleton-shimmer,
+.bottom-sheet-panel .skeleton-shimmer {
+  background-image: linear-gradient(
+    90deg,
+    rgba(118, 118, 128, 0.08) 0%,
+    rgba(118, 118, 128, 0.17) 50%,
+    rgba(118, 118, 128, 0.08) 100%
+  );
+  background-size: 220% 100%;
+  animation-duration: 1.35s;
+}
+
+.phone-frame [aria-busy="true"] {
+  cursor: progress;
+}
+
+/* Empty and error states */
+.phone-frame [data-empty-state],
+.phone-frame .empty-state,
+.phone-frame [role="status"]:not(.sync-indicator):not([data-sonner-toast]) {
+  text-wrap: pretty;
+}
+
+.phone-frame [role="alert"] {
+  border: 1px solid rgba(255, 159, 10, 0.12);
+  background: rgba(255, 159, 10, 0.08);
+  color: #7a4b00;
+}
+
+/* Toasts */
+[data-sonner-toaster] [data-sonner-toast] {
+  min-height: 52px;
+  border: 1px solid rgba(60, 60, 67, 0.1) !important;
+  border-radius: 16px !important;
+  background: rgba(255, 255, 255, 0.96) !important;
+  box-shadow:
+    0 16px 44px -24px rgba(0, 0, 0, 0.34),
+    0 2px 8px -4px rgba(0, 0, 0, 0.16) !important;
+  backdrop-filter: blur(22px) saturate(160%);
+  -webkit-backdrop-filter: blur(22px) saturate(160%);
+}
+
+[data-sonner-toaster] [data-sonner-toast] button {
+  min-height: 36px;
+  border-radius: 999px;
+  font-weight: 700;
+}
+
+/* Sheet chrome and drag affordance */
+.bottom-sheet-panel .bottom-sheet-handle {
+  min-height: 28px;
+}
+
+.bottom-sheet-panel .bottom-sheet-handle > div {
+  width: 36px;
+  height: 5px;
+  background: rgba(60, 60, 67, 0.2);
+}
+
+/* Scroll quality */
+.phone-frame #phone-scroll,
+.bottom-sheet-panel {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(60, 60, 67, 0.18) transparent;
+}
+
+.phone-frame #phone-scroll::-webkit-scrollbar,
+.bottom-sheet-panel::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+.phone-frame #phone-scroll::-webkit-scrollbar-thumb,
+.bottom-sheet-panel::-webkit-scrollbar-thumb {
+  border: 2px solid transparent;
+  border-radius: 999px;
+  background: rgba(60, 60, 67, 0.18);
+  background-clip: padding-box;
+}
+
+@media (hover: none), (pointer: coarse) {
+  .phone-frame #phone-scroll,
+  .bottom-sheet-panel {
+    scrollbar-width: none;
+  }
+
+  .phone-frame #phone-scroll::-webkit-scrollbar,
+  .bottom-sheet-panel::-webkit-scrollbar {
+    display: none;
+  }
+}
+
+@media (min-width: 640px) {
+  .bottom-sheet-panel :is(input, textarea, select):not([type="checkbox"]):not([type="radio"]):not([type="file"]) {
+    border-radius: var(--field-radius);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .phone-frame :is(input, textarea, select, [role="switch"], [data-interactive-row]),
+  .bottom-sheet-panel :is(input, textarea, select, [role="switch"]),
+  [data-sonner-toaster] [data-sonner-toast] {
+    transition-duration: 0.01ms !important;
+  }
+
+  .phone-frame .skeleton-shimmer,
+  .bottom-sheet-panel .skeleton-shimmer {
+    animation: none !important;
+  }
+}
