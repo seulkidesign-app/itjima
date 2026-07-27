@@ -1,10 +1,15 @@
 import { useEffect, useState } from "react";
 import { X } from "lucide-react";
+import { toast } from "sonner";
 import { BottomSheet } from "./BottomSheet";
 import { ScheduleChoiceFlow } from "./ScheduleChoiceFlow";
 import { useT, useLang } from "@/lib/i18n";
 import { calmSuggestionReason } from "@/lib/dateDetect";
 import type { RepeatRule } from "@/lib/store";
+import {
+  scheduleValidationMessage,
+  validateScheduleRange,
+} from "@/lib/scheduleValidation";
 
 export type ScheduleSaveOptions = {
   allDay?: boolean;
@@ -92,6 +97,18 @@ export function ScheduleSheet({
           initialRepeat={initialRepeat}
           editMode={!!saveLabel}
           onConfirm={(start, end, opts) => {
+            const validation = validateScheduleRange(start, end, {
+              editMode: Boolean(saveLabel),
+            });
+            if (!validation.ok) {
+              toast.message(
+                scheduleValidationMessage(
+                  validation.reason,
+                  lang === "en" ? "en" : "ko",
+                ),
+              );
+              return;
+            }
             onSave(text.trim() || t("그때", "When"), start, end, opts);
           }}
         />
