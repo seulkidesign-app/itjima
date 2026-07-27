@@ -3,6 +3,7 @@ import { understandNaturalLanguage } from "@/lib/nlSchedule";
 import { warmMirrorLine, warmResultHint } from "@/lib/warmMirrorCopy";
 import { primaryActionForIntent } from "@/lib/nlMirrorCopy";
 import { deckCompletionTitle } from "@/lib/deckCompletionCopy";
+import { appendFinalSpeech } from "@/lib/speechInput";
 
 describe("Itjima voice — clarity", () => {
   it("uses literal primary action labels", () => {
@@ -48,5 +49,25 @@ describe("Itjima voice — clarity", () => {
     const nl = understandNaturalLanguage("엄마한테 전화", "ko");
     const line = warmMirrorLine("엄마한테 전화", nl, "ko");
     expect(line).toContain("전화");
+  });
+
+  it("does not append the same final transcript twice", () => {
+    expect(appendFinalSpeech("내일 치과", "내일 치과")).toBe("내일 치과");
+    expect(appendFinalSpeech("내일 치과", "내일 치과.")).toBe("내일 치과");
+    expect(appendFinalSpeech("내일 치과", "내일  치과")).toBe("내일 치과");
+  });
+
+  it("replaces a shorter final transcript with the cumulative phrase", () => {
+    expect(appendFinalSpeech("내일", "내일 치과 가기")).toBe("내일 치과 가기");
+  });
+
+  it("suppresses repeated trailing speech fragments", () => {
+    expect(appendFinalSpeech("내일 치과", "치과")).toBe("내일 치과");
+  });
+
+  it("keeps genuinely new consecutive speech", () => {
+    expect(appendFinalSpeech("내일 치과", "오후 세 시")).toBe(
+      "내일 치과 오후 세 시",
+    );
   });
 });
