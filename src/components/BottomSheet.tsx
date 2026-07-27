@@ -3,6 +3,7 @@ import {
   type ReactNode,
   useEffect,
   useId,
+  useRef,
   useState,
 } from "react";
 import { motion, AnimatePresence, useDragControls } from "framer-motion";
@@ -13,6 +14,24 @@ import {
   SHEET_BACKDROP_CLASS,
   SHEET_BACKDROP_FADE,
 } from "@/lib/motion";
+
+const FOCUSABLE_SELECTOR = [
+  "button:not([disabled])",
+  "a[href]",
+  "input:not([disabled])",
+  "textarea:not([disabled])",
+  "select:not([disabled])",
+  "[tabindex]:not([tabindex='-1'])",
+  "[contenteditable='true']",
+].join(",");
+
+function focusableElements(container: HTMLElement): HTMLElement[] {
+  return Array.from(container.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTOR)).filter(
+    (element) =>
+      element.getAttribute("aria-hidden") !== "true" &&
+      element.getAttribute("hidden") === null,
+  );
+}
 
 type Props = {
   open: boolean;
@@ -33,6 +52,7 @@ export function BottomSheet({
   const t = useT();
   const dragControls = useDragControls();
   const titleId = useId();
+  const panelRef = useRef<HTMLDivElement | null>(null);
   const [keyboardInset, setKeyboardInset] = useState(0);
   const [wideLayout, setWideLayout] = useState(false);
 
@@ -63,11 +83,53 @@ export function BottomSheet({
 
   useEffect(() => {
     if (!open) return;
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") onClose();
+
+    const previousFocus =
+      document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    const focusFrame = window.requestAnimationFrame(() => {
+      const panel = panelRef.current;
+      if (!panel) return;
+      const first = focusableElements(panel)[0];
+      (first ?? panel).focus({ preventScroll: true });
+    });
+
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        event.preventDefault();
+        onClose();
+        return;
+      }
+      if (event.key !== "Tab") return;
+
+      const panel = panelRef.current;
+      if (!panel) return;
+      const focusable = focusableElements(panel);
+      if (focusable.length === 0) {
+        event.preventDefault();
+        panel.focus({ preventScroll: true });
+        return;
+      }
+
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+      const active = document.activeElement;
+      if (event.shiftKey && (active === first || !panel.contains(active))) {
+        event.preventDefault();
+        last.focus({ preventScroll: true });
+      } else if (!event.shiftKey && (active === last || !panel.contains(active))) {
+        event.preventDefault();
+        first.focus({ preventScroll: true });
+      }
     };
+
     window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
+    return () => {
+      window.cancelAnimationFrame(focusFrame);
+      window.removeEventListener("keydown", onKey);
+      window.requestAnimationFrame(() => {
+        if (previousFocus?.isConnected) previousFocus.focus({ preventScroll: true });
+      });
+    };
   }, [open, onClose]);
 
   useEffect(() => {
@@ -101,6 +163,7 @@ export function BottomSheet({
         >
           <motion.button
             type="button"
+            tabIndex={-1}
             aria-label={t("닫기", "Close")}
             className={`bottom-sheet-backdrop absolute inset-0 z-0 ${SHEET_BACKDROP_CLASS}`}
             initial={{ opacity: 0 }}
@@ -113,7 +176,9 @@ export function BottomSheet({
             }}
           />
           <motion.div
+            ref={panelRef}
             role="dialog"
+            tabIndex={-1}
             aria-modal="true"
             aria-labelledby={title ? titleId : undefined}
             drag={wideLayout ? false : "y"}
