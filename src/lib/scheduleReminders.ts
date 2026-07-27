@@ -69,10 +69,16 @@ export function presetToAlarmAt(preset: AlarmPreset, now = new Date()): Date {
   }
 }
 
+function validDate(value: Date): boolean {
+  return Number.isFinite(value.getTime());
+}
+
 export function effectiveAlarmAt(s: ScheduleItem): Date | null {
   if (!s.alarm) return null;
-  if (s.alarm_at) return new Date(s.alarm_at);
-  return reminderFireTime(s.start_time, getReminderOffset(s.id));
+  const at = s.alarm_at
+    ? new Date(s.alarm_at)
+    : reminderFireTime(s.start_time, getReminderOffset(s.id));
+  return validDate(at) ? at : null;
 }
 
 export function formatAlarmLabel(
@@ -80,11 +86,15 @@ export function formatAlarmLabel(
   lang: "ko" | "en",
   now = new Date(),
 ): string {
+  if (!validDate(at)) {
+    return lang === "en" ? "Check alarm time" : "알림 시간 확인 필요";
+  }
+
   const diffMs = at.getTime() - now.getTime();
   if (diffMs > 0 && diffMs < 24 * 60 * 60 * 1000) {
-    const mins = Math.round(diffMs / 60_000);
+    const mins = Math.max(1, Math.ceil(diffMs / 60_000));
     if (mins < 60) return lang === "en" ? `in ${mins}m` : `${mins}분 후`;
-    const hrs = Math.round(diffMs / 3_600_000);
+    const hrs = Math.max(1, Math.ceil(diffMs / 3_600_000));
     return lang === "en" ? `in ${hrs}h` : `${hrs}시간 후`;
   }
 
@@ -140,7 +150,7 @@ export function getActiveTimerEnd(scheduleId: string): Date | null {
   const raw = localStorage.getItem(TIMER_KEY(scheduleId));
   if (!raw) return null;
   const at = new Date(raw);
-  if (at.getTime() <= Date.now()) {
+  if (!validDate(at) || at.getTime() <= Date.now()) {
     localStorage.removeItem(TIMER_KEY(scheduleId));
     return null;
   }
@@ -148,6 +158,7 @@ export function getActiveTimerEnd(scheduleId: string): Date | null {
 }
 
 export function setActiveTimer(scheduleId: string, end: Date) {
+  if (!validDate(end) || end.getTime() <= Date.now()) return;
   localStorage.setItem(TIMER_KEY(scheduleId), end.toISOString());
   window.dispatchEvent(new CustomEvent("itjima:timers"));
 }
@@ -162,6 +173,7 @@ export function formatTimerLabel(
   lang: "ko" | "en",
   now = new Date(),
 ): string {
+  if (!validDate(end)) return lang === "en" ? "Check timer" : "타이머 확인 필요";
   const diffMs = end.getTime() - now.getTime();
   if (diffMs <= 0) return lang === "en" ? "Done" : "완료";
   const mins = Math.ceil(diffMs / 60_000);
@@ -186,7 +198,7 @@ export function bindInAppReminders(
     const fireAt = effectiveAlarmAt(s);
     if (!fireAt) continue;
     const delay = fireAt.getTime() - Date.now();
-    if (delay <= 0 || delay > HORIZON_MS) continue;
+    if (!Number.isFinite(delay) || delay <= 0 || delay > HORIZON_MS) continue;
     timers.push(
       window.setTimeout(() => {
         if (Notification.permission === "granted") {
@@ -201,7 +213,7 @@ export function bindInAppReminders(
     const timerEnd = getActiveTimerEnd(s.id);
     if (!timerEnd) continue;
     const delay = timerEnd.getTime() - Date.now();
-    if (delay <= 0 || delay > HORIZON_MS) continue;
+    if (!Number.isFinite(delay) || delay <= 0 || delay > HORIZON_MS) continue;
     timers.push(
       window.setTimeout(() => {
         clearActiveTimer(s.id);
