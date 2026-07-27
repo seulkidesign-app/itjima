@@ -16,6 +16,7 @@ import "./ui-decision-deck.css";
 import "./ui-interactions.css";
 import "./ui-layout-system.css";
 import "./ui-design-qa.css";
+import "./ui-controls-system.css";
 
 import { registerServiceWorker } from "@/lib/swReminders";
 
