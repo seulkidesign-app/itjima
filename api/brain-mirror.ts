@@ -3,6 +3,13 @@ import type { VercelRequest, VercelResponse } from "@vercel/node";
 /** Haiku 4.5 — https://platform.claude.com/docs/en/about-claude/models/overview */
 const ANTHROPIC_MODEL = "claude-haiku-4-5-20251001";
 
+/**
+ * AI is not part of the v1 product surface. The endpoint remains available for
+ * later private evaluation, but production calls are blocked unless the
+ * deployment explicitly opts in with ENABLE_AI_BETA=true.
+ */
+const AI_BETA_ENABLED = process.env.ENABLE_AI_BETA === "true";
+
 /** Layer 2 — minimal classify prompt (<150 tokens). JSON only. */
 const CLASSIFY_PROMPT = `JSON only: {"category":"","title":"","suggestedDate":"","suggestedStart":"","reason":"","confidence":""}
 category: schedule|shopping|reminder|task|list|note
@@ -158,6 +165,11 @@ async function callAnthropicJson(
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method !== "POST") {
     return res.status(405).json({ error: "Method not allowed" });
+  }
+
+  if (!AI_BETA_ENABLED) {
+    res.setHeader("Cache-Control", "no-store");
+    return res.status(404).json({ error: "AI beta disabled" });
   }
 
   const text = typeof req.body?.text === "string" ? req.body.text.trim() : "";
