@@ -1,8 +1,6 @@
 import { supabase } from "@/integrations/supabase/client";
 import type { ScheduleItem } from "@/lib/store";
-import {
-  reminderIdempotencyKey,
-} from "@/lib/push/reminderPayload";
+import { reminderIdempotencyKey } from "@/lib/push/reminderPayload";
 import { resolveUserTimezone } from "@/lib/push/timezone";
 import { effectiveAlarmAt } from "@/lib/scheduleReminders";
 
@@ -37,28 +35,43 @@ export function buildReminderUpsert(
 export async function cancelScheduleReminders(
   userId: string,
   scheduleId: string,
-): Promise<void> {
-  if (import.meta.env.VITE_E2E === "true") return;
-  await supabase
+): Promise<boolean> {
+  if (import.meta.env.VITE_E2E === "true") return true;
+  const { error } = await supabase
     .from("scheduled_reminders")
     .update({ status: "cancelled", updated_at: new Date().toISOString() })
     .eq("user_id", userId)
     .eq("schedule_id", scheduleId)
     .in("status", ["pending", "processing"]);
+  if (error) {
+    console.error("[reminders] cancel failed", error.message);
+    return false;
+  }
+  return true;
 }
 
 /** Replace server reminder when schedule alarm changes. */
 export async function syncScheduleReminder(
   userId: string,
   schedule: ScheduleItem,
-): Promise<void> {
-  if (import.meta.env.VITE_E2E === "true") return;
-  await cancelScheduleReminders(userId, schedule.id);
+): Promise<boolean> {
+  if (import.meta.env.VITE_E2E === "true") return true;
+  const cancelled = await cancelScheduleReminders(userId, schedule.id);
+  if (!cancelled) {
+    throw new Error("Could not replace the previous reminder");
+  }
+
   const row = buildReminderUpsert(userId, schedule);
-  if (!row) return;
-  await supabase.from("scheduled_reminders").upsert(row, {
+  if (!row) return true;
+
+  const { error } = await supabase.from("scheduled_reminders").upsert(row, {
     onConflict: "idempotency_key",
   });
+  if (error) {
+    console.error("[reminders] schedule failed", error.message);
+    throw new Error("Could not schedule reminder");
+  }
+  return true;
 }
 
 export async function syncAllScheduleReminders(
@@ -68,7 +81,11 @@ export async function syncAllScheduleReminders(
   if (import.meta.env.VITE_E2E === "true") return;
   for (const s of schedules) {
     if (s.alarm && s.status !== "done") {
-      await syncScheduleReminder(userId, s);
+      try {
+        await syncScheduleReminder(userId, s);
+      } catch (error) {
+        console.error("[reminders] bulk sync failed", s.id, error);
+      }
     }
   }
 }
