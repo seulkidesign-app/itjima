@@ -8,6 +8,8 @@ function source(path: string) {
 
 const push = source("src/lib/push/pushSubscription.ts");
 const sheet = source("src/components/ScheduleAlarmSheet.tsx");
+const edge = source("supabase/functions/test-push/index.ts");
+const supabaseConfig = source("supabase/config.toml");
 
 describe("iPhone notification setup safety", () => {
   it("requires the Home Screen app before iOS push setup", () => {
@@ -25,11 +27,15 @@ describe("iPhone notification setup safety", () => {
     expect(sheet).toContain("const chooseCustom");
   });
 
-  it("offers a device-only notification test without claiming server delivery", () => {
-    expect(push).toContain("export async function showDeviceNotificationTest");
-    expect(push).toContain("await reg.showNotification");
-    expect(push).toContain("This does not claim that the scheduled server sender is running");
-    expect(sheet).toContain("이 기기에서 테스트 알림 보내기");
-    expect(sheet).toContain("기기 연결은 정상이에요");
+  it("runs an authenticated end-to-end server push test", () => {
+    expect(push).toContain("export async function sendServerPushTest");
+    expect(push).toContain('supabase.functions.invoke("test-push"');
+    expect(edge).toContain("userClient.auth.getUser()");
+    expect(edge).toContain('from("push_subscriptions")');
+    expect(edge).toContain("webpush.sendNotification");
+    expect(supabaseConfig).toContain("[functions.test-push]");
+    expect(supabaseConfig).toContain("verify_jwt = true");
+    expect(sheet).toContain("서버까지 실제 푸시 테스트");
+    expect(sheet).toContain("10초 안에 알림이 보여야 해요");
   });
 });
