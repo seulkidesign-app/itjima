@@ -10,7 +10,7 @@
     "lint": "eslint .",
     "format": "prettier --write .",
     "test": "vitest run",
-    "test:release": "vitest run tests/decision-swipe.test.ts tests/itjima-voice.test.ts tests/decision-recovery.test.ts tests/cloud-merge-decision.test.ts tests/inbox-schedule-defaults.test.ts tests/alarm-availability.test.ts tests/schedule-reminders-safety.test.ts tests/schedule-validation.test.ts tests/thought-provenance-safety.test.ts",
+    "test:release": "vitest run tests/decision-swipe.test.ts tests/itjima-voice.test.ts tests/decision-recovery.test.ts tests/cloud-merge-decision.test.ts tests/inbox-schedule-defaults.test.ts tests/alarm-availability.test.ts tests/schedule-reminders-safety.test.ts tests/schedule-validation.test.ts tests/thought-provenance-safety.test.ts tests/reminder-sync-state.test.ts",
     "test:nl": "vitest run tests/nl-ko-regression.test.ts tests/nl-regression.test.ts tests/nl-guards.test.ts tests/nl-analytics.test.ts tests/nl-beta-guards.test.ts tests/decision-swipe.test.ts tests/itjima-voice.test.ts tests/decision-recovery.test.ts tests/cloud-merge-decision.test.ts tests/inbox-schedule-defaults.test.ts",
     "test:e2e": "playwright test",
     "test:e2e:ui": "playwright test --ui"
@@ -49,7 +49,7 @@
     "@tanstack/react-router": "^1.168.25",
     "@tanstack/router-plugin": "^1.167.28",
     "class-variance-authority": "^0.7.1",
-    "clsx": "^2.1.1",
+    "clsx": "^1.0.0",
     "cmdk": "^1.1.1",
     "date-fns": "^4.1.0",
     "embla-carousel-react": "^8.6.0",
