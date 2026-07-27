@@ -2,10 +2,13 @@ import { afterEach, describe, expect, it } from "vitest";
 import {
   composerSafetyState,
   focusComposer,
+  hasUnsentComposerContent,
 } from "@/lib/composerSafety";
+import { clearComposerDraft, writeComposerDraft } from "@/lib/composerDraft";
 
 afterEach(() => {
   document.body.innerHTML = "";
+  clearComposerDraft();
 });
 
 function renderComposer(text = "", imageSrc?: string) {
@@ -17,13 +20,14 @@ function renderComposer(text = "", imageSrc?: string) {
   `;
 }
 
-describe("composer update safety", () => {
-  it("allows an update when no composer is rendered", () => {
+describe("composer update and account safety", () => {
+  it("allows an update when no composer or persisted draft exists", () => {
     expect(composerSafetyState()).toEqual({
       hasText: false,
       hasImages: false,
       dirty: false,
     });
+    expect(hasUnsentComposerContent()).toBe(false);
   });
 
   it("blocks reload when unsent text remains", () => {
@@ -33,6 +37,7 @@ describe("composer update safety", () => {
       hasImages: false,
       dirty: true,
     });
+    expect(hasUnsentComposerContent()).toBe(true);
   });
 
   it("blocks reload when an attached image remains", () => {
@@ -42,6 +47,13 @@ describe("composer update safety", () => {
       hasImages: true,
       dirty: true,
     });
+    expect(hasUnsentComposerContent()).toBe(true);
+  });
+
+  it("blocks account changes for a persisted draft when home is not mounted", () => {
+    writeComposerDraft("다른 화면에서 아직 안 던진 초안");
+    expect(document.getElementById("capture-input")).toBeNull();
+    expect(hasUnsentComposerContent()).toBe(true);
   });
 
   it("ignores unrelated page images outside the composer", () => {
