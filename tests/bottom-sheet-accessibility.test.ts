@@ -6,6 +6,10 @@ const source = readFileSync(
   resolve(process.cwd(), "src/components/BottomSheet.tsx"),
   "utf8",
 );
+const loginSheetSource = readFileSync(
+  resolve(process.cwd(), "src/components/LoginSheet.tsx"),
+  "utf8",
+);
 
 describe("bottom sheet accessibility contract", () => {
   it("exposes a modal dialog with a programmatic focus target", () => {
@@ -33,5 +37,19 @@ describe("bottom sheet accessibility contract", () => {
     const panelStart = source.indexOf("<motion.div", backdropStart);
     const backdrop = source.slice(backdropStart, panelStart);
     expect(backdrop).toContain("tabIndex={-1}");
+  });
+
+  it("keeps sign-in inside the shared accessible modal lifecycle", () => {
+    expect(loginSheetSource).toContain(
+      'import { BottomSheet } from "@/components/BottomSheet"',
+    );
+    expect(loginSheetSource).toContain("<BottomSheet");
+    expect(loginSheetSource).toContain("onClose={closeSafely}");
+    expect(loginSheetSource).not.toContain('role="dialog"');
+  });
+
+  it("announces the blocking sign-in progress state", () => {
+    expect(loginSheetSource).toContain('role="status"');
+    expect(loginSheetSource).toContain('aria-live="polite"');
   });
 });
