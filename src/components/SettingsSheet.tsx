@@ -1,5 +1,5 @@
 import { Globe, LogOut, Shield, User } from "lucide-react";
-import { Link } from "@tanstack/react-router";
+import { Link, useNavigate } from "@tanstack/react-router";
 import { toast } from "sonner";
 import { BottomSheet } from "./BottomSheet";
 import { useT, LanguageToggle } from "@/lib/i18n";
@@ -8,6 +8,11 @@ import { useIsAdmin } from "@/hooks/useIsAdmin";
 import { supabase } from "@/integrations/supabase/client";
 import { authDebugSignOut } from "@/lib/authDebug";
 import { tap } from "@/lib/haptics";
+import {
+  focusComposer,
+  hasUnsentComposerContent,
+} from "@/lib/composerSafety";
+import { clearComposerDraft } from "@/lib/composerDraft";
 
 type Props = {
   open: boolean;
@@ -19,8 +24,44 @@ const rowClass =
 
 export function SettingsSheet({ open, onClose }: Props) {
   const t = useT();
+  const navigate = useNavigate();
   const userId = useUserId();
   const isAdmin = useIsAdmin();
+
+  const handleSignOut = async () => {
+    tap();
+
+    if (hasUnsentComposerContent()) {
+      toast.warning(
+        t(
+          "아직 던지지 않은 초안이 있어요. 먼저 확인해 주세요.",
+          "You still have an unsent draft. Check it before signing out.",
+        ),
+      );
+      onClose();
+      if (!focusComposer()) {
+        await navigate({ to: "/" });
+        window.setTimeout(() => focusComposer(), 120);
+      }
+      return;
+    }
+
+    authDebugSignOut("SettingsSheet.tsx");
+    const { error } = await supabase.auth.signOut();
+    if (error) {
+      toast.error(
+        t(
+          "로그아웃하지 못했어요. 연결을 확인하고 다시 시도해 주세요.",
+          "Couldn't sign out. Check your connection and try again.",
+        ),
+      );
+      return;
+    }
+
+    clearComposerDraft();
+    toast(t("로그아웃됨", "Signed out"));
+    onClose();
+  };
 
   return (
     <BottomSheet
@@ -84,13 +125,7 @@ export function SettingsSheet({ open, onClose }: Props) {
         {userId && (
           <button
             type="button"
-            onClick={async () => {
-              tap();
-              authDebugSignOut("SettingsSheet.tsx");
-              await supabase.auth.signOut();
-              toast(t("로그아웃됨", "Signed out"));
-              onClose();
-            }}
+            onClick={() => void handleSignOut()}
             className="mt-3 flex min-h-[50px] w-full items-center justify-center gap-2 rounded-[16px] border border-red-500/10 bg-red-500/[0.06] px-4 text-[14px] font-semibold text-red-600 transition-colors active:bg-red-500/[0.1]"
           >
             <LogOut size={17} strokeWidth={2.1} aria-hidden />
