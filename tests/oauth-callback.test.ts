@@ -78,6 +78,7 @@ describe("completeAuthCallback", () => {
   });
 
   it("returns existing session without re-exchanging the code", async () => {
+    window.history.replaceState({}, "", "/auth/callback");
     getSession.mockResolvedValue({
       data: { session: { user: { id: "user-1" } } },
     });

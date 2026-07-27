@@ -6,7 +6,7 @@ import { scheduleDisplayTitle } from "@/lib/thoughtProvenance";
 import { isMissed } from "@/lib/scheduleGroups";
 import { useT, useLang } from "@/lib/i18n";
 import { haptic, confirm as hapticConfirm } from "@/lib/haptics";
-import { Check } from "lucide-react";
+import { Check, Bell } from "lucide-react";
 
 export type ScheduleCompactRowProps = {
   s: ScheduleItem;
@@ -16,6 +16,7 @@ export type ScheduleCompactRowProps = {
   inPastSection?: boolean;
   onComplete: () => void;
   onEdit: () => void;
+  onAlarm?: () => void;
 };
 
 export function ScheduleCompactRow({
@@ -25,6 +26,7 @@ export function ScheduleCompactRow({
   inPastSection = false,
   onComplete,
   onEdit,
+  onAlarm,
 }: ScheduleCompactRowProps) {
   const t = useT();
   const { lang } = useLang();
@@ -183,6 +185,19 @@ export function ScheduleCompactRow({
           </span>
         )}
       </span>
+      {onAlarm && !done && (
+        <button
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation();
+            onAlarm();
+          }}
+          className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-ink-soft touch-press active:bg-ink/[0.06] active:text-ink"
+          aria-label={t("빠른 알림", "Quick alarm")}
+        >
+          <Bell size={17} strokeWidth={2} />
+        </button>
+      )}
     </li>
   );
 }

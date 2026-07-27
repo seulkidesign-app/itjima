@@ -101,6 +101,90 @@ export type Database = {
         };
         Relationships: [];
       };
+      push_subscriptions: {
+        Row: {
+          auth: string;
+          created_at: string;
+          endpoint: string;
+          failure_count: number;
+          id: string;
+          last_success_at: string | null;
+          p256dh: string;
+          platform: string | null;
+          revoked_at: string | null;
+          updated_at: string;
+          user_id: string;
+        };
+        Insert: {
+          auth: string;
+          created_at?: string;
+          endpoint: string;
+          failure_count?: number;
+          id?: string;
+          last_success_at?: string | null;
+          p256dh: string;
+          platform?: string | null;
+          revoked_at?: string | null;
+          updated_at?: string;
+          user_id: string;
+        };
+        Update: {
+          auth?: string;
+          created_at?: string;
+          endpoint?: string;
+          failure_count?: number;
+          id?: string;
+          last_success_at?: string | null;
+          p256dh?: string;
+          platform?: string | null;
+          revoked_at?: string | null;
+          updated_at?: string;
+          user_id?: string;
+        };
+        Relationships: [];
+      };
+      scheduled_reminders: {
+        Row: {
+          attempt_count: number;
+          created_at: string;
+          due_at_utc: string;
+          id: string;
+          idempotency_key: string;
+          schedule_id: string;
+          sent_at: string | null;
+          status: Database["public"]["Enums"]["reminder_status"];
+          timezone: string;
+          updated_at: string;
+          user_id: string;
+        };
+        Insert: {
+          attempt_count?: number;
+          created_at?: string;
+          due_at_utc: string;
+          id?: string;
+          idempotency_key: string;
+          schedule_id: string;
+          sent_at?: string | null;
+          status?: Database["public"]["Enums"]["reminder_status"];
+          timezone?: string;
+          updated_at?: string;
+          user_id: string;
+        };
+        Update: {
+          attempt_count?: number;
+          created_at?: string;
+          due_at_utc?: string;
+          id?: string;
+          idempotency_key?: string;
+          schedule_id?: string;
+          sent_at?: string | null;
+          status?: Database["public"]["Enums"]["reminder_status"];
+          timezone?: string;
+          updated_at?: string;
+          user_id?: string;
+        };
+        Relationships: [];
+      };
       memories: {
         Row: {
           content: Json;
@@ -274,6 +358,10 @@ export type Database = {
         Args: { _target_user_id: string };
         Returns: undefined;
       };
+      claim_due_reminders: {
+        Args: { p_batch_size?: number };
+        Returns: Database["public"]["Tables"]["scheduled_reminders"]["Row"][];
+      };
       get_admin_count: {
         Args: Record<PropertyKey, never>;
         Returns: number;
@@ -287,6 +375,12 @@ export type Database = {
       app_role: "admin" | "user";
       feedback_category: "bug" | "suggestion" | "praise" | "other" | "question";
       feedback_status: "new" | "reviewing" | "resolved" | "archived";
+      reminder_status:
+        | "pending"
+        | "processing"
+        | "sent"
+        | "cancelled"
+        | "failed";
     };
     CompositeTypes: {
       [_ in never]: never;
@@ -420,6 +514,13 @@ export const Constants = {
       app_role: ["admin", "user"],
       feedback_category: ["bug", "suggestion", "praise", "other", "question"],
       feedback_status: ["new", "reviewing", "resolved", "archived"],
+      reminder_status: [
+        "pending",
+        "processing",
+        "sent",
+        "cancelled",
+        "failed",
+      ],
     },
   },
 } as const;

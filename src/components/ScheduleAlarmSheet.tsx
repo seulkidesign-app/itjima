@@ -1,32 +1,58 @@
-import { useState } from "react";
-import { toast } from "sonner";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { BottomSheet } from "./BottomSheet";
 import { useT, useLang } from "@/lib/i18n";
 import type { AlarmPreset } from "@/lib/scheduleReminders";
 import type { ScheduleItem } from "@/lib/store";
-import { useUserId } from "@/lib/store";
 import { scheduleDisplayTitle } from "@/lib/thoughtProvenance";
 import {
-  backgroundRemindersVerified,
-  pushSupportState,
-  sendServerPushTest,
+  canRequestNotificationPermission,
+  canSelectAlarmPresets,
+  isIosSafariTab,
+  readNotificationPermission,
+  resolveAlarmSheetView,
+  type AlarmSheetView,
+} from "@/lib/alarmAvailability";
+import { completeAlarmEnableAfterGrant } from "@/lib/alarmPermissionFlow";
+import {
+  ensurePushSubscription,
+  showLocalTestNotification,
 } from "@/lib/push/pushSubscription";
-import { alarmAvailabilityHint } from "@/lib/alarmAvailability";
+import {
+  diagnoseServerPushTest,
+  fetchLatestActiveServerPushTest,
+  fetchServerPushTestRow,
+  finalizeServerPushTestSession,
+  isServerPushTestTerminalPhase,
+  readActiveServerPushTestId,
+  serverPushTestMessage,
+  startServerPushTest,
+  SERVER_PUSH_TEST_POLL_MS,
+  SERVER_PUSH_TEST_TIMEOUT_MS,
+  type ServerPushTestPhase,
+  type ServerPushTestRow,
+} from "@/lib/push/serverPushTest";
 
 type Props = {
   schedule: ScheduleItem | null;
   open: boolean;
   onClose: () => void;
-  onSelectPreset: (preset: AlarmPreset) => void;
-  onCustom: () => void;
+  userId: string | null;
+  onSelectPreset: (schedule: ScheduleItem, preset: AlarmPreset) => Promise<void>;
+  onCustom: (schedule: ScheduleItem) => void;
   onDisarm?: () => void;
   armed?: boolean;
 };
+
+const LOCAL_TEST_SUCCESS = {
+  ko: "이 기기에서 알림을 표시할 수 있어요.",
+  en: "This device can display notifications.",
+} as const;
 
 export function ScheduleAlarmSheet({
   schedule,
   open,
   onClose,
+  userId,
   onSelectPreset,
   onCustom,
   onDisarm,
@@ -34,144 +60,458 @@ export function ScheduleAlarmSheet({
 }: Props) {
   const t = useT();
   const { lang } = useLang();
-  const userId = useUserId();
-  const [testing, setTesting] = useState(false);
-  if (!schedule) return null;
+  const [view, setView] = useState<AlarmSheetView>("default");
+  const [pushReady, setPushReady] = useState(false);
+  const [requesting, setRequesting] = useState(false);
+  const [checking, setChecking] = useState(false);
+  const [enableError, setEnableError] = useState<string | null>(null);
+  const [showDeniedHelp, setShowDeniedHelp] = useState(false);
+  const [localStatusMessage, setLocalStatusMessage] = useState<string | null>(
+    null,
+  );
+  const [serverTestRow, setServerTestRow] = useState<ServerPushTestRow | null>(
+    null,
+  );
+  const [serverTestPhase, setServerTestPhase] =
+    useState<ServerPushTestPhase | null>(null);
+  const [serverTesting, setServerTesting] = useState(false);
+  const pollRef = useRef<number | null>(null);
+  const timeoutRef = useRef<number | null>(null);
+  const serverStartRef = useRef(false);
 
-  const eveningHasPassed = new Date().getHours() >= 18;
+  const refreshView = useCallback(() => {
+    const perm = readNotificationPermission();
+    const iosTab = isIosSafariTab();
+    setView(resolveAlarmSheetView(perm, iosTab));
+    return { perm, iosTab, view: resolveAlarmSheetView(perm, iosTab) };
+  }, []);
+
+  const applyEnableResult = useCallback(
+    (result: Awaited<ReturnType<typeof completeAlarmEnableAfterGrant>>) => {
+      if (result.pushSubscribed && result.testNotificationShown) {
+        setPushReady(true);
+        setLocalStatusMessage(LOCAL_TEST_SUCCESS[lang]);
+      } else {
+        setPushReady(false);
+        setLocalStatusMessage(null);
+        setEnableError(
+          t(
+            "알림 연결에 실패했어요. 다시 시도해 주세요.",
+            "Couldn't connect notifications. Please try again.",
+          ),
+        );
+      }
+    },
+    [lang, t],
+  );
+
+  const verifyGrantedState = useCallback(async () => {
+    if (!userId) {
+      setPushReady(false);
+      return;
+    }
+    setChecking(true);
+    setEnableError(null);
+    try {
+      const push = await ensurePushSubscription(userId);
+      setPushReady(push.ok);
+    } finally {
+      setChecking(false);
+    }
+  }, [userId]);
+
+  const stopServerPoll = useCallback(() => {
+    if (pollRef.current != null) {
+      window.clearInterval(pollRef.current);
+      pollRef.current = null;
+    }
+    if (timeoutRef.current != null) {
+      window.clearTimeout(timeoutRef.current);
+      timeoutRef.current = null;
+    }
+  }, []);
+
+  const refreshServerTestStatus = useCallback(
+    async (rowId: string) => {
+      if (!userId) return;
+      const row = await fetchServerPushTestRow(userId, rowId);
+      if (!row) return;
+      setServerTestRow(row);
+      const phase = diagnoseServerPushTest(row);
+      setServerTestPhase(phase);
+      if (isServerPushTestTerminalPhase(phase)) {
+        stopServerPoll();
+        setServerTesting(false);
+        await finalizeServerPushTestSession(userId, phase);
+      }
+    },
+    [userId, stopServerPoll],
+  );
+
+  const startServerPoll = useCallback(
+    (rowId: string) => {
+      stopServerPoll();
+      setServerTesting(true);
+      void refreshServerTestStatus(rowId);
+      pollRef.current = window.setInterval(() => {
+        void refreshServerTestStatus(rowId);
+      }, SERVER_PUSH_TEST_POLL_MS);
+      timeoutRef.current = window.setTimeout(() => {
+        void refreshServerTestStatus(rowId);
+      }, SERVER_PUSH_TEST_TIMEOUT_MS);
+    },
+    [refreshServerTestStatus, stopServerPoll],
+  );
+
+  const resumeServerPushTest = useCallback(async () => {
+    if (!userId) return;
+    const storedId = readActiveServerPushTestId(userId);
+    const row =
+      (storedId ? await fetchServerPushTestRow(userId, storedId) : null) ??
+      (await fetchLatestActiveServerPushTest(userId));
+    if (!row) return;
+
+    setServerTestRow(row);
+    const phase = diagnoseServerPushTest(row);
+    setServerTestPhase(phase);
+    if (phase === "waiting") {
+      startServerPoll(row.id);
+    } else if (isServerPushTestTerminalPhase(phase)) {
+      setServerTesting(false);
+    }
+  }, [userId, startServerPoll]);
+
+  useEffect(() => {
+    if (!open) return;
+    setEnableError(null);
+    setShowDeniedHelp(false);
+    setLocalStatusMessage(null);
+    setPushReady(false);
+
+    const { view: nextView } = refreshView();
+    if (nextView === "granted" && userId) {
+      void verifyGrantedState();
+      void resumeServerPushTest();
+    }
+  }, [open, userId, refreshView, verifyGrantedState, resumeServerPushTest]);
+
+  useEffect(() => {
+    if (!open) {
+      stopServerPoll();
+      setServerTesting(false);
+    }
+  }, [open, stopServerPoll]);
+
+  useEffect(() => () => stopServerPoll(), [stopServerPoll]);
+
+  const handleEnableNotifications = async () => {
+    if (requesting || !canRequestNotificationPermission(view)) return;
+    if (!userId) {
+      setEnableError(
+        t(
+          "알림을 켜려면 먼저 로그인해 주세요.",
+          "Sign in first to turn on notifications.",
+        ),
+      );
+      return;
+    }
+
+    setRequesting(true);
+    setEnableError(null);
+    setLocalStatusMessage(null);
+
+    try {
+      const permissionResult = await Notification.requestPermission();
+      setView(resolveAlarmSheetView(permissionResult, isIosSafariTab()));
+
+      if (permissionResult !== "granted") {
+        return;
+      }
+
+      const result = await completeAlarmEnableAfterGrant(userId);
+      applyEnableResult(result);
+    } catch {
+      setEnableError(
+        t(
+          "알림 권한 요청에 실패했어요.",
+          "Couldn't request notification permission.",
+        ),
+      );
+    } finally {
+      setRequesting(false);
+    }
+  };
+
+  const handleLocalDisplayTest = async () => {
+    if (!userId || requesting) return;
+    setRequesting(true);
+    setEnableError(null);
+    setLocalStatusMessage(null);
+    try {
+      const push = await ensurePushSubscription(userId);
+      if (!push.ok) {
+        setEnableError(
+          t(
+            "푸시 구독을 갱신하지 못했어요.",
+            "Couldn't refresh push subscription.",
+          ),
+        );
+        return;
+      }
+      const testOk = await showLocalTestNotification();
+      if (testOk) {
+        setPushReady(true);
+        setLocalStatusMessage(LOCAL_TEST_SUCCESS[lang]);
+      } else {
+        setEnableError(
+          t(
+            "이 기기에서 알림을 표시하지 못했어요.",
+            "Couldn't display a notification on this device.",
+          ),
+        );
+      }
+    } finally {
+      setRequesting(false);
+    }
+  };
+
+  const handleServerPushTest = async () => {
+    if (serverTesting || requesting || serverStartRef.current) return;
+    serverStartRef.current = true;
+    setServerTesting(true);
+    setServerTestPhase("waiting");
+
+    try {
+      const result = await startServerPushTest(userId);
+      if (!result.ok) {
+        setServerTestPhase(result.phase);
+        setServerTesting(false);
+        return;
+      }
+
+      setServerTestRow(result.row);
+      setServerTestPhase(diagnoseServerPushTest(result.row));
+      startServerPoll(result.row.id);
+    } finally {
+      serverStartRef.current = false;
+    }
+  };
+
   const presets: { id: AlarmPreset; label: string }[] = [
     { id: "10m", label: t("10분 뒤", "In 10 min") },
     { id: "30m", label: t("30분 뒤", "In 30 min") },
     { id: "1h", label: t("1시간 뒤", "In 1 hour") },
-    {
-      id: "tonight",
-      label: eveningHasPassed
-        ? t("내일 저녁", "Tomorrow evening")
-        : t("오늘 저녁", "Tonight"),
-    },
+    { id: "tonight", label: t("오늘 저녁", "Tonight") },
     { id: "tomorrow_am", label: t("내일 아침", "Tomorrow AM") },
   ];
 
-  const support = pushSupportState();
-  const installRequired = support === "not_installed";
-  const availability = alarmAvailabilityHint(
-    support,
-    Boolean(userId),
-    lang === "en" ? "en" : "ko",
-    backgroundRemindersVerified(),
-  );
+  const presetsEnabled = canSelectAlarmPresets(view, pushReady);
+  const isIos = isIosSafariTab() || /iPhone|iPad|iPod/i.test(navigator.userAgent);
 
-  const explainInstallation = () => {
-    toast.message(
-      t(
-        "Safari의 공유 버튼에서 ‘홈 화면에 추가’를 누른 뒤, 홈 화면의 잊지마 앱에서 다시 설정해 주세요.",
-        "In Safari, tap Share → Add to Home Screen, then reopen Itjima from its Home Screen icon.",
-      ),
-      { duration: 6500 },
-    );
+  if (!schedule) return null;
+
+  const titleForView = (): string => {
+    switch (view) {
+      case "ios_install":
+        return t(
+          "알림을 받으려면 홈 화면에 추가해 주세요",
+          "Add to Home Screen for notifications",
+        );
+      case "default":
+        return t("알림을 켜볼까요?", "Turn on notifications?");
+      case "granted":
+        return pushReady
+          ? t("알림이 켜져 있어요", "Notifications are on")
+          : t("알림을 확인하는 중", "Checking notifications");
+      case "denied":
+        return t("알림이 꺼져 있어요", "Notifications are off");
+      default:
+        return t("알림을 사용할 수 없어요", "Notifications unavailable");
+    }
   };
 
-  const choosePreset = (id: AlarmPreset) => {
-    if (installRequired) {
-      explainInstallation();
-      return;
-    }
-    onSelectPreset(id);
-    onClose();
-  };
-
-  const chooseCustom = () => {
-    if (installRequired) {
-      explainInstallation();
-      return;
-    }
-    onCustom();
-    onClose();
-  };
-
-  const testServerNotification = async () => {
-    if (!userId || testing) return;
-    if (installRequired) {
-      explainInstallation();
-      return;
-    }
-
-    setTesting(true);
-    try {
-      const result = await sendServerPushTest(userId);
-      if (result.ok) {
-        toast.success(
-          t(
-            "서버에서 실제 푸시를 보냈어요. 10초 안에 알림이 보여야 해요.",
-            "A real server push was sent. It should appear within 10 seconds.",
-          ),
-          { duration: 6500 },
+  const descriptionForView = (): string | null => {
+    switch (view) {
+      case "ios_install":
+        return t(
+          "아이폰에서는 홈 화면의 잊지마 앱에서만 알림을 받을 수 있어요.",
+          "On iPhone, notifications only work from the Itjima app on your Home Screen.",
         );
-      } else if (result.state === "denied") {
-        toast.error(
-          t(
-            "아이폰 설정 → 알림 → 잊지마에서 알림을 허용해 주세요.",
-            "Open iPhone Settings → Notifications → Itjima and allow notifications.",
-          ),
-          { duration: 6500 },
+      case "default":
+        return t(
+          "한 번만 허용하면, 정한 시간에 다시 알려드려요.",
+          "Allow once and we'll remind you at the time you pick.",
         );
-      } else if (result.state === "not_installed") {
-        explainInstallation();
-      } else {
-        toast.error(
-          t(
-            `서버 푸시 테스트에 실패했어요${result.error ? ` (${result.error})` : ""}.`,
-            `Server push test failed${result.error ? ` (${result.error})` : ""}.`,
-          ),
-          { duration: 8000 },
-        );
-      }
-    } finally {
-      setTesting(false);
+      case "denied":
+        return isIos
+          ? t(
+              "설정 → 알림 → 잊지마에서 알림을 허용해 주세요.",
+              "Settings → Notifications → Itjima → Allow Notifications.",
+            )
+          : t(
+              "주소창 왼쪽 사이트 설정 → 알림 → 허용으로 변경해 주세요.",
+              "Use site settings (left of the address bar) → Notifications → Allow.",
+            );
+      default:
+        return null;
     }
   };
 
   return (
-    <BottomSheet open={open} onClose={onClose} maxHeight="72dvh">
+    <BottomSheet open={open} onClose={onClose} maxHeight="78dvh">
       <div className="px-5 pb-[calc(env(safe-area-inset-bottom)+1.25rem)]">
-        <h2 className="text-[17px] font-bold text-ink">
-          {t("빠른 알림", "Quick alarm")}
-        </h2>
+        <h2 className="text-[17px] font-bold text-ink">{titleForView()}</h2>
         <p className="mt-1 line-clamp-2 text-[14px] text-ink-soft">
           {scheduleDisplayTitle(schedule)}
         </p>
+        {descriptionForView() && (
+          <p className="mt-2 text-[13px] leading-relaxed text-ink-soft">
+            {descriptionForView()}
+          </p>
+        )}
 
-        {installRequired && (
-          <div
-            className="mt-3 rounded-[18px] border border-primary/35 bg-primary/12 px-3.5 py-3 text-[12px] leading-relaxed text-ink"
-            role="alert"
+        {view === "ios_install" && (
+          <ol className="mt-4 space-y-2 text-[13px] text-ink-soft">
+            <li className="flex gap-2">
+              <span className="font-bold text-ink">1.</span>
+              {t("Safari 공유 버튼", "Safari Share button")}
+            </li>
+            <li className="flex gap-2">
+              <span className="font-bold text-ink">2.</span>
+              {t("홈 화면에 추가", "Add to Home Screen")}
+            </li>
+            <li className="flex gap-2">
+              <span className="font-bold text-ink">3.</span>
+              {t("홈 화면의 잊지마로 다시 열기", "Open Itjima from Home Screen")}
+            </li>
+          </ol>
+        )}
+
+        {localStatusMessage && (
+          <p
+            className="mt-3 rounded-[14px] bg-primary/20 px-3 py-2 text-[13px] font-medium text-ink"
+            data-testid="alarm-local-status"
           >
-            <p className="font-bold">
-              {t("아이폰 알림은 홈 화면 앱에서만 가능해요", "iPhone alerts require the Home Screen app")}
-            </p>
-            <ol className="mt-1.5 space-y-1 text-ink-soft">
-              <li>{t("1. Safari 하단의 공유 버튼 누르기", "1. Tap Share in Safari")}</li>
-              <li>{t("2. ‘홈 화면에 추가’ 선택하기", "2. Choose Add to Home Screen")}</li>
-              <li>{t("3. 홈 화면의 잊지마로 다시 열기", "3. Reopen Itjima from its Home Screen icon")}</li>
-            </ol>
+            {localStatusMessage}
+          </p>
+        )}
+
+        {enableError && (
+          <p className="mt-3 text-[13px] text-red-600">{enableError}</p>
+        )}
+
+        {view === "default" && (
+          <button
+            type="button"
+            data-testid="alarm-enable-button"
+            disabled={requesting}
+            onClick={() => void handleEnableNotifications()}
+            className="touch-press mt-4 w-full rounded-[20px] bg-ink py-3.5 text-[15px] font-semibold text-white disabled:opacity-50"
+          >
+            {requesting
+              ? t("연결하는 중…", "Connecting…")
+              : t("알림 켜기", "Turn on notifications")}
+          </button>
+        )}
+
+        {view === "denied" && (
+          <button
+            type="button"
+            data-testid="alarm-denied-help-button"
+            onClick={() => setShowDeniedHelp((v) => !v)}
+            className="touch-press mt-4 w-full rounded-[20px] bg-ink/[0.06] px-4 py-3.5 text-[15px] font-semibold text-ink"
+          >
+            {t("설정 방법 보기", "How to change settings")}
+          </button>
+        )}
+
+        {view === "denied" && showDeniedHelp && (
+          <div className="mt-3 rounded-[16px] bg-ink/[0.04] px-4 py-3 text-[13px] leading-relaxed text-ink-soft">
+            {isIos ? (
+              <>
+                <p>{t("1. iPhone 설정 앱을 엽니다", "1. Open iPhone Settings")}</p>
+                <p className="mt-1">
+                  {t("2. 알림 → 잊지마", "2. Notifications → Itjima")}
+                </p>
+                <p className="mt-1">
+                  {t("3. 알림 허용을 켭니다", "3. Turn on Allow Notifications")}
+                </p>
+                <p className="mt-2 text-[12px]">
+                  {t(
+                    "변경 후 홈 화면 앱에서 다시 열어 주세요.",
+                    "After changing, reopen from the Home Screen app.",
+                  )}
+                </p>
+              </>
+            ) : (
+              <>
+                <p>
+                  {t(
+                    "1. 주소창 왼쪽 자물쇠/설정 아이콘을 누릅니다",
+                    "1. Click the lock/settings icon left of the address bar",
+                  )}
+                </p>
+                <p className="mt-1">
+                  {t("2. 사이트 설정 → 알림", "2. Site settings → Notifications")}
+                </p>
+                <p className="mt-1">
+                  {t("3. 허용으로 변경합니다", "3. Change to Allow")}
+                </p>
+                <p className="mt-2 text-[12px]">
+                  {t("변경 후 이 페이지를 새로고침해 주세요.", "Refresh this page after changing.")}
+                </p>
+              </>
+            )}
           </div>
         )}
 
-        <p className="mt-2 rounded-[14px] bg-ink/[0.035] px-3 py-2.5 text-[12px] leading-relaxed text-ink-soft">
-          {availability}
-        </p>
-
-        {userId && !installRequired && (
-          <button
-            type="button"
-            onClick={() => void testServerNotification()}
-            disabled={testing}
-            className="touch-press mt-3 w-full rounded-[18px] border border-ink/[0.08] bg-white px-4 py-3 text-[13px] font-semibold text-ink shadow-card disabled:opacity-50"
-          >
-            {testing
-              ? t("서버 푸시 확인 중...", "Checking server push...")
-              : t("서버까지 실제 푸시 테스트", "Run a real server push test")}
-          </button>
+        {view === "granted" && (
+          <div className="mt-4 space-y-2">
+            <button
+              type="button"
+              data-testid="alarm-local-display-test-button"
+              disabled={requesting || checking}
+              onClick={() => void handleLocalDisplayTest()}
+              className="touch-press w-full rounded-[20px] bg-ink/[0.06] px-4 py-3 text-[14px] font-semibold text-ink disabled:opacity-50"
+            >
+              {checking || requesting
+                ? t("확인하는 중…", "Checking…")
+                : t(
+                    "이 기기에서 알림 표시 테스트",
+                    "Test notification display on this device",
+                  )}
+            </button>
+            <button
+              type="button"
+              data-testid="alarm-server-push-test-button"
+              disabled={serverTesting || requesting || !userId}
+              onClick={() => void handleServerPushTest()}
+              className="touch-press w-full rounded-[20px] bg-ink/[0.06] px-4 py-3 text-[14px] font-semibold text-ink disabled:opacity-50"
+            >
+              {serverTesting
+                ? t("서버 테스트 진행 중…", "Server test in progress…")
+                : t("1분 뒤 예약 알림 테스트", "Scheduled push test in 1 min")}
+            </button>
+            {serverTestPhase && (
+              <div
+                className="rounded-[14px] bg-ink/[0.04] px-3 py-2 text-[13px] text-ink-soft"
+                data-testid="alarm-server-status"
+              >
+                <p>{serverPushTestMessage(serverTestPhase, lang)}</p>
+                {serverTestRow && (
+                  <p className="mt-1 text-[11px] text-ink-soft/70">
+                    {t(
+                      `시도 ${serverTestRow.attempt_count}회`,
+                      `${serverTestRow.attempt_count} attempt(s)`,
+                    )}
+                    {serverTestRow.sent_at
+                      ? ` · ${t("보냄", "sent")} ${new Date(serverTestRow.sent_at).toLocaleTimeString()}`
+                      : ""}
+                  </p>
+                )}
+              </div>
+            )}
+          </div>
         )}
 
         <div className="mt-4 flex flex-col gap-2">
@@ -179,22 +519,26 @@ export function ScheduleAlarmSheet({
             <button
               key={id}
               type="button"
-              aria-disabled={installRequired}
-              onClick={() => choosePreset(id)}
-              className={`touch-press w-full rounded-[20px] px-4 py-3.5 text-left text-[15px] font-semibold text-ink ${
-                installRequired ? "bg-ink/[0.025] opacity-55" : "bg-ink/[0.04]"
-              }`}
+              data-testid={`alarm-preset-${id}`}
+              disabled={!presetsEnabled}
+              onClick={() => {
+                if (!presetsEnabled) return;
+                void onSelectPreset(schedule, id).then(() => onClose());
+              }}
+              className="touch-press w-full rounded-[20px] bg-ink/[0.04] px-4 py-3.5 text-left text-[15px] font-semibold text-ink disabled:opacity-40"
             >
               {label}
             </button>
           ))}
           <button
             type="button"
-            aria-disabled={installRequired}
-            onClick={chooseCustom}
-            className={`touch-press w-full rounded-[20px] px-4 py-3.5 text-left text-[15px] font-semibold text-ink ${
-              installRequired ? "bg-ink/[0.025] opacity-55" : "bg-ink/[0.04]"
-            }`}
+            data-testid="alarm-preset-custom"
+            disabled={!presetsEnabled}
+            onClick={() => {
+              if (!presetsEnabled) return;
+              onCustom(schedule);
+            }}
+            className="touch-press w-full rounded-[20px] bg-ink/[0.04] px-4 py-3.5 text-left text-[15px] font-semibold text-ink disabled:opacity-40"
           >
             {t("직접 설정", "Custom time")}
           </button>

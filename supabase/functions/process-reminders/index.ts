@@ -3,6 +3,8 @@ import webpush from "npm:web-push@3";
 
 const MAX_ATTEMPTS = 3;
 const REVOKE_AFTER_FAILURES = 5;
+const SERVER_PUSH_TEST_SCHEDULE_ID =
+  "00000000-0000-4000-a000-000000000001";
 
 type ReminderRow = {
   id: string;
@@ -20,13 +22,24 @@ type PushRow = {
   failure_count: number;
 };
 
+function assertRelativeAppUrl(url: string): string {
+  if (!url.startsWith("/") || url.startsWith("//")) {
+    throw new Error("external_notification_url_blocked");
+  }
+  return url;
+}
+
 function privacySafePayload(scheduleId: string) {
+  const isTest = scheduleId === SERVER_PUSH_TEST_SCHEDULE_ID;
+  const url = assertRelativeAppUrl(
+    isTest ? "/schedule" : `/schedule?open=${scheduleId}`,
+  );
   return JSON.stringify({
     title: "⏰ 잊지마",
-    body: "예정된 일정 알림",
-    tag: `schedule-${scheduleId}`,
+    body: isTest ? "서버 예약 알림 테스트" : "예정된 일정 알림",
+    tag: isTest ? "itjima-server-push-test" : `schedule-${scheduleId}`,
     data: {
-      url: `/schedule?open=${scheduleId}`,
+      url,
       scheduleId,
     },
   });

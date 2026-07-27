@@ -196,21 +196,27 @@ function Schedule() {
   }, [items]);
 
   const closedAppReminderReady = async (): Promise<boolean> => {
-    if (!userId) return false;
+    if (!userId || Notification.permission !== "granted") return false;
     const push = await ensurePushSubscription(userId);
     if (!push.ok) return false;
     return hasActivePushSubscription(userId);
   };
 
   const armAlarmAt = async (s: ScheduleItem, at: Date) => {
-    try {
-      let perm: NotificationPermission | "unsupported" = "unsupported";
-      if ("Notification" in window) {
-        perm =
-          Notification.permission === "default"
-            ? await Notification.requestPermission()
-            : Notification.permission;
+    if (typeof window !== "undefined" && "Notification" in window) {
+      if (Notification.permission !== "granted") {
+        toast.error(
+          t(
+            "알림을 켠 뒤 시간을 정해 주세요.",
+            "Turn on notifications before setting a time.",
+          ),
+          scheduleToast,
+        );
+        return;
       }
+    }
+
+    try {
       clearReminderOffset(s.id);
       await update(s.id, { alarm: true, alarm_at: at.toISOString() });
       const updated: ScheduleItem = {
@@ -233,7 +239,7 @@ function Schedule() {
           ),
           scheduleToast,
         );
-      } else if (perm === "granted") {
+      } else {
         toast.message(
           t(
             "앱을 열어두면 알려드릴게요",
@@ -241,16 +247,6 @@ function Schedule() {
           ),
           scheduleToast,
         );
-      } else if (perm === "denied") {
-        toast.message(
-          t(
-            "알림은 꺼져 있지만, 그때는 기억해 둘게요",
-            "Notifications off — we'll still remember when",
-          ),
-          scheduleToast,
-        );
-      } else {
-        toast.success(t("그때 다시 떠올릴게요", "I'll remember this for then"), scheduleToast);
       }
     } catch {
       toast.error(t("알림을 설정하지 못했어요", "Couldn't set reminder"));
@@ -524,6 +520,7 @@ function Schedule() {
               pins={pins}
               onComplete={markDone}
               onEdit={(s) => setSheet({ open: true, edit: s })}
+              onAlarm={(s) => setAlarmSheet(s)}
             />
           )
         ) : tab === "list" ? (
@@ -546,6 +543,7 @@ function Schedule() {
                         pinned={pins.has(s.id)}
                         onComplete={() => markDone(s)}
                         onEdit={() => setSheet({ open: true, edit: s })}
+                        onAlarm={() => setAlarmSheet(s)}
                       />
                     ))}
                   </ul>
@@ -609,6 +607,7 @@ function Schedule() {
             }}
             onDuplicate={duplicateSchedule}
             onDropToDate={moveEventsToDate}
+            onAlarm={(s) => setAlarmSheet(s)}
           />
         )}
           </motion.div>
@@ -636,6 +635,16 @@ function Schedule() {
           schedule={reminderSheet}
           onClose={() => setReminderSheet(null)}
           onConfirmAt={(iso) => {
+            if (Notification.permission !== "granted") {
+              toast.error(
+                t(
+                  "알림을 켠 뒤 시간을 정해 주세요.",
+                  "Turn on notifications before setting a time.",
+                ),
+                scheduleToast,
+              );
+              return;
+            }
             void armAlarmAt(reminderSheet, new Date(iso));
             setReminderSheet(null);
           }}
@@ -646,12 +655,14 @@ function Schedule() {
         schedule={alarmSheet}
         open={!!alarmSheet}
         onClose={() => setAlarmSheet(null)}
+        userId={userId}
         armed={alarmSheet?.alarm ?? false}
-        onSelectPreset={(preset) => {
-          if (alarmSheet) void armFromPreset(alarmSheet, preset);
+        onSelectPreset={async (schedule, preset) => {
+          await armFromPreset(schedule, preset);
         }}
-        onCustom={() => {
-          if (alarmSheet) setReminderSheet(alarmSheet);
+        onCustom={(schedule) => {
+          setReminderSheet(schedule);
+          setAlarmSheet(null);
         }}
         onDisarm={() => {
           if (alarmSheet) void disarmReminder(alarmSheet);
@@ -826,6 +837,7 @@ function ScheduleTodayPanel({
   pins,
   onComplete,
   onEdit,
+  onAlarm,
 }: {
   todayItems: ScheduleItem[];
   flowedItems: ScheduleItem[];
@@ -834,6 +846,7 @@ function ScheduleTodayPanel({
   pins: Set<string>;
   onComplete: (s: ScheduleItem) => void;
   onEdit: (s: ScheduleItem) => void;
+  onAlarm: (s: ScheduleItem) => void;
 }) {
   const t = useT();
 
@@ -848,6 +861,7 @@ function ScheduleTodayPanel({
               pinned={pins.has(s.id)}
               onComplete={() => onComplete(s)}
               onEdit={() => onEdit(s)}
+              onAlarm={() => onAlarm(s)}
             />
           ))}
         </ul>
@@ -949,6 +963,7 @@ function CalendarGrid({
   onDelete,
   onDuplicate,
   onDropToDate,
+  onAlarm,
 }: {
   items: ScheduleItem[];
   pins: Set<string>;
@@ -963,6 +978,7 @@ function CalendarGrid({
     month: number,
     year: number,
   ) => void;
+  onAlarm: (s: ScheduleItem) => void;
 }) {
   const t = useT();
   const { lang } = useLang();
@@ -1343,6 +1359,10 @@ function CalendarGrid({
               if (menuFor) onEdit(menuFor);
               setMenuFor(null);
             }}
+            onAlarm={() => {
+              if (menuFor) onAlarm(menuFor);
+              setMenuFor(null);
+            }}
             onMove={() => {
               setMenuFor(null);
               toast.message(
@@ -1379,6 +1399,7 @@ function ScheduleEventMenu({
   pinned,
   onClose,
   onEdit,
+  onAlarm,
   onMove,
   onMultiSelect,
   onDuplicate,
@@ -1389,6 +1410,7 @@ function ScheduleEventMenu({
   pinned: boolean;
   onClose: () => void;
   onEdit: () => void;
+  onAlarm: () => void;
   onMove: () => void;
   onMultiSelect: () => void;
   onDuplicate: () => void;
@@ -1401,6 +1423,12 @@ function ScheduleEventMenu({
 
   const actions = [
     { key: "edit", label: t("다듬기", "Refine"), icon: Pencil, onClick: onEdit },
+    {
+      key: "alarm",
+      label: t("빠른 알림", "Quick alarm"),
+      icon: Bell,
+      onClick: onAlarm,
+    },
     { key: "move", label: t("옮기기", "Move"), icon: Move, onClick: onMove },
     {
       key: "multi",
