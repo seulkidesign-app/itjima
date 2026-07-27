@@ -1,0 +1,195 @@
+/* Itjima cross-device interaction language */
+
+:root {
+  --ix-fast: 120ms;
+  --ix-micro: 180ms;
+  --ix-component: 240ms;
+  --ix-panel: 320ms;
+  --ix-ease: cubic-bezier(0.2, 0.8, 0.2, 1);
+  --ix-ease-out: cubic-bezier(0.32, 0.72, 0, 1);
+  --ix-press-scale: 0.975;
+  --ix-hover-lift: -1px;
+  --ix-focus: rgba(255, 204, 0, 0.48);
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+/* Pointer modality: refined hover only where hover actually exists. */
+@media (hover: hover) and (pointer: fine) {
+  .phone-frame :is(button, a, [role="button"], [role="tab"]):not(:disabled) {
+    transition:
+      transform var(--ix-micro) var(--ix-ease),
+      background-color var(--ix-micro) ease,
+      border-color var(--ix-micro) ease,
+      color var(--ix-micro) ease,
+      box-shadow var(--ix-micro) ease,
+      opacity var(--ix-fast) ease;
+  }
+
+  .phone-frame :is(.touch-press, .touch-target, .app-account-button, .app-brand-trigger):not(:disabled):hover {
+    transform: translateY(var(--ix-hover-lift));
+  }
+
+  .phone-frame .app-primary-tab:not([aria-current="page"]):hover {
+    background: rgba(17, 17, 17, 0.045);
+    color: rgba(17, 17, 17, 0.92);
+  }
+
+  .phone-frame .segment-nav-item-inactive:hover {
+    color: rgba(17, 17, 17, 0.78);
+    background: rgba(255, 255, 255, 0.56);
+  }
+
+  .phone-frame .chat-bubble:hover,
+  .phone-frame .apple-group-row:hover,
+  .phone-frame [data-testid="decision-launcher"]:hover {
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.035), 0 12px 32px -22px rgba(0, 0, 0, 0.28);
+  }
+}
+
+/* Press response: concise, consistent, no playful bounce. */
+.phone-frame :is(button, [role="button"], [role="tab"]):not(:disabled):active,
+.bottom-sheet-panel :is(button, [role="button"]):not(:disabled):active {
+  transform: scale(var(--ix-press-scale));
+  transition-duration: var(--ix-fast) !important;
+}
+
+.phone-frame .app-primary-tab:active,
+.phone-frame .segment-nav-item:active {
+  transform: scale(0.985);
+}
+
+/* Keyboard focus is visible only for keyboard navigation. */
+html:not([data-input-modality="keyboard"]) .phone-frame :focus-visible,
+html:not([data-input-modality="keyboard"]) .bottom-sheet-panel :focus-visible {
+  outline: none;
+}
+
+html[data-input-modality="keyboard"] .phone-frame :is(button, a, input, textarea, select, summary, [role="button"], [role="tab"]):focus-visible,
+html[data-input-modality="keyboard"] .bottom-sheet-panel :is(button, a, input, textarea, select, [role="button"]):focus-visible {
+  outline: 3px solid var(--ix-focus);
+  outline-offset: 3px;
+}
+
+/* Smooth scrolling surfaces and native-feeling momentum. */
+#phone-scroll,
+.chat-scroll,
+.bottom-sheet-panel,
+.focus-sort-card-active > div {
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+  scroll-behavior: smooth;
+}
+
+/* Composer reacts as one control, not disconnected buttons. */
+.phone-frame form.composer-hero .input-shell {
+  transition:
+    border-color var(--ix-micro) ease,
+    box-shadow var(--ix-micro) ease,
+    background-color var(--ix-micro) ease,
+    transform var(--ix-micro) var(--ix-ease);
+}
+
+.phone-frame form.composer-hero .input-shell-focused {
+  transform: translateY(-1px);
+  box-shadow:
+    0 0 0 4px rgba(255, 204, 0, 0.13),
+    0 14px 34px -26px rgba(0, 0, 0, 0.3);
+}
+
+.phone-frame form.composer-hero button[aria-label="던지기"]:not(:disabled),
+.phone-frame form.composer-hero button[aria-label="Drop it"]:not(:disabled) {
+  box-shadow: 0 10px 24px -16px rgba(255, 184, 0, 0.62);
+}
+
+/* Navigation and segmented controls communicate selection with movement and depth. */
+.phone-frame .app-primary-tab,
+.phone-frame .segment-nav-item {
+  will-change: transform;
+}
+
+.phone-frame .segment-nav-item-active {
+  box-shadow:
+    0 1px 2px rgba(0, 0, 0, 0.05),
+    0 10px 22px -18px rgba(0, 0, 0, 0.32);
+}
+
+/* List rows respond without jumping layout. */
+.phone-frame :is([data-testid="schedule-today-list"] li, [data-testid="archive-grouped-list"] li, .apple-group-row) {
+  transition:
+    background-color var(--ix-fast) ease,
+    opacity var(--ix-micro) ease,
+    transform var(--ix-micro) var(--ix-ease);
+}
+
+.phone-frame :is([data-testid="schedule-today-list"] li, [data-testid="archive-grouped-list"] li, .apple-group-row):active {
+  background: rgba(17, 17, 17, 0.04);
+}
+
+/* Overlay entrance quality. */
+.bottom-sheet-backdrop {
+  transition: opacity var(--ix-panel) var(--ix-ease-out), backdrop-filter var(--ix-panel) ease;
+}
+
+.bottom-sheet-panel {
+  transform-origin: center bottom;
+  will-change: transform, opacity;
+}
+
+@media (min-width: 640px) {
+  .bottom-sheet-panel {
+    transform-origin: center center;
+  }
+}
+
+/* Toasts feel attached to the product, not browser alerts. */
+[data-sonner-toast] {
+  animation-duration: var(--ix-component) !important;
+  animation-timing-function: var(--ix-ease-out) !important;
+  backdrop-filter: blur(20px) saturate(150%);
+  -webkit-backdrop-filter: blur(20px) saturate(150%);
+}
+
+/* Touch devices: eliminate sticky hover and favor direct response. */
+@media (hover: none), (pointer: coarse) {
+  .phone-frame :is(button, a, [role="button"], [role="tab"]) {
+    touch-action: manipulation;
+  }
+
+  .phone-frame .app-primary-tab,
+  .phone-frame .segment-nav-item,
+  .phone-frame .touch-target {
+    -webkit-user-select: none;
+    user-select: none;
+  }
+}
+
+/* Desktop shortcut affordance in sidebar without cluttering mobile. */
+@media (min-width: 900px) and (hover: hover) and (pointer: fine) {
+  .phone-frame .app-primary-tab::after {
+    position: absolute;
+    right: 12px;
+    color: rgba(17, 17, 17, 0.3);
+    font-size: 11px;
+    font-weight: 600;
+    opacity: 0;
+    transition: opacity var(--ix-micro) ease;
+  }
+
+  .phone-frame .app-primary-tab:nth-child(1)::after { content: "⌘1"; }
+  .phone-frame .app-primary-tab:nth-child(2)::after { content: "⌘2"; }
+  .phone-frame .app-primary-tab:nth-child(3)::after { content: "⌘3"; }
+  .phone-frame .app-primary-tab:hover::after { opacity: 1; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  *, *::before, *::after {
+    scroll-behavior: auto !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
