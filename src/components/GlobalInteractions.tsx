@@ -1,14 +1,25 @@
 import { useEffect } from "react";
 import { useNavigate, useRouterState } from "@tanstack/react-router";
+import { toast } from "sonner";
+import { useT } from "@/lib/i18n";
+import {
+  APP_UPDATE_READY_EVENT,
+  activateWaitingServiceWorker,
+  hasWaitingServiceWorker,
+} from "@/lib/swReminders";
+
+const APP_UPDATE_TOAST_ID = "itjima-app-update";
 
 /**
  * Cross-device interaction controller.
  * - Tracks keyboard vs pointer modality for precise focus/hover behavior.
  * - Adds desktop shortcuts without changing mobile/tablet behavior.
+ * - Offers app updates without reloading while the user is typing.
  */
 export function GlobalInteractions() {
   const navigate = useNavigate();
   const pathname = useRouterState({ select: (s) => s.location.pathname });
+  const t = useT();
 
   useEffect(() => {
     const root = document.documentElement;
@@ -60,6 +71,55 @@ export function GlobalInteractions() {
     window.addEventListener("keydown", onShortcut);
     return () => window.removeEventListener("keydown", onShortcut);
   }, [navigate, pathname]);
+
+  useEffect(() => {
+    let disposed = false;
+
+    const showUpdateToast = () => {
+      if (disposed) return;
+      toast(t("새 버전이 준비됐어요", "A new version is ready"), {
+        id: APP_UPDATE_TOAST_ID,
+        duration: Infinity,
+        description: t(
+          "작성 중인 내용은 그대로 두고, 준비됐을 때 업데이트하세요.",
+          "Your current work stays here. Update when you are ready.",
+        ),
+        action: {
+          label: t("업데이트", "Update"),
+          onClick: () => {
+            toast.loading(t("업데이트 중이에요", "Updating"), {
+              id: APP_UPDATE_TOAST_ID,
+            });
+            void activateWaitingServiceWorker().then((activated) => {
+              if (activated) {
+                window.location.reload();
+                return;
+              }
+              toast.error(
+                t(
+                  "업데이트를 적용하지 못했어요. 잠시 후 다시 시도해 주세요.",
+                  "The update could not be applied. Please try again shortly.",
+                ),
+                { id: APP_UPDATE_TOAST_ID, duration: 5_000 },
+              );
+            });
+          },
+        },
+      });
+    };
+
+    const onUpdateReady = () => showUpdateToast();
+    window.addEventListener(APP_UPDATE_READY_EVENT, onUpdateReady);
+    void hasWaitingServiceWorker().then((waiting) => {
+      if (waiting) showUpdateToast();
+    });
+
+    return () => {
+      disposed = true;
+      window.removeEventListener(APP_UPDATE_READY_EVENT, onUpdateReady);
+      toast.dismiss(APP_UPDATE_TOAST_ID);
+    };
+  }, [t]);
 
   return null;
 }
