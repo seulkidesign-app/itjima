@@ -14,6 +14,7 @@ import "./ui-desktop-fix.css";
 import "./ui-apple-system.css";
 import "./ui-decision-deck.css";
 import "./ui-interactions.css";
+import "./ui-layout-system.css";
 
 import { registerServiceWorker } from "@/lib/swReminders";
 
