@@ -25,13 +25,13 @@ describe("schedule reminder safety", () => {
   });
 
   it("never renders a positive reminder as zero minutes away", () => {
-    const now = new Date("2026-07-27T10:00:00.000Z");
+    const now = new Date(2026, 6, 27, 10, 0, 0);
     const at = new Date(now.getTime() + 10_000);
     expect(formatAlarmLabel(at, "ko", now)).toBe("1분 후");
   });
 
   it("moves the evening preset to the next day after 6pm", () => {
-    const now = new Date("2026-07-27T19:00:00+09:00");
+    const now = new Date(2026, 6, 27, 19, 0, 0);
     const at = presetToAlarmAt("tonight", now);
     expect(at.getDate()).toBe(28);
     expect(at.getHours()).toBe(18);
