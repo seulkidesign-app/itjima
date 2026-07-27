@@ -1,0 +1,245 @@
+/*
+ * Itjima control system
+ * Final control layer: buttons, icon buttons, chips, tabs, floating actions and status controls.
+ */
+
+:root {
+  --control-h-sm: 36px;
+  --control-h-md: 44px;
+  --control-h-lg: 50px;
+  --control-radius-sm: 10px;
+  --control-radius-md: 14px;
+  --control-radius-lg: 18px;
+  --control-fill: rgba(118, 118, 128, 0.12);
+  --control-fill-hover: rgba(118, 118, 128, 0.16);
+  --control-fill-pressed: rgba(118, 118, 128, 0.22);
+  --control-border: rgba(60, 60, 67, 0.12);
+  --control-border-strong: rgba(60, 60, 67, 0.18);
+  --control-label: #111113;
+  --control-label-secondary: rgba(60, 60, 67, 0.64);
+  --control-disabled: rgba(60, 60, 67, 0.34);
+  --control-accent: #ffd33d;
+  --control-accent-pressed: #f2c52e;
+  --control-danger: #ff3b30;
+  --control-shadow: 0 1px 2px rgba(0, 0, 0, 0.025), 0 8px 22px -18px rgba(0, 0, 0, 0.3);
+}
+
+.phone-frame button,
+.phone-frame [role="button"],
+.phone-frame a {
+  -webkit-tap-highlight-color: transparent;
+  text-decoration: none;
+}
+
+.phone-frame button,
+.phone-frame [role="button"] {
+  font: inherit;
+  letter-spacing: -0.01em;
+}
+
+.phone-frame button:not(:disabled),
+.phone-frame [role="button"]:not([aria-disabled="true"]) {
+  cursor: pointer;
+}
+
+.phone-frame button:disabled,
+.phone-frame [role="button"][aria-disabled="true"] {
+  cursor: default;
+  color: var(--control-disabled);
+  opacity: 1;
+}
+
+/* Shared geometry */
+.phone-frame .touch-target,
+.phone-frame .app-account-button,
+.phone-frame .app-primary-tab,
+.phone-frame .segment-nav-item,
+.phone-frame [data-testid="decision-launcher"],
+.phone-frame button[aria-label="할 일 추가"],
+.phone-frame button[aria-label="Add task"] {
+  min-height: var(--control-h-md) !important;
+}
+
+.phone-frame .touch-target,
+.phone-frame button.rounded-full:has(> svg:only-child) {
+  min-width: var(--control-h-md) !important;
+}
+
+/* Primary actions */
+.phone-frame :is(.pill-yellow, button.bg-primary, [data-control-variant="primary"]) {
+  border: 1px solid rgba(188, 146, 0, 0.08);
+  background: var(--control-accent);
+  color: var(--control-label);
+  box-shadow: var(--control-shadow);
+  font-weight: 700;
+}
+
+.phone-frame :is(.pill-yellow, button.bg-primary, [data-control-variant="primary"]):not(:disabled):active {
+  background: var(--control-accent-pressed);
+}
+
+/* Dark high-emphasis actions */
+.phone-frame :is(.pill-black, button.bg-ink, [data-control-variant="strong"]) {
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  background: #111113;
+  color: #fff;
+  box-shadow: var(--control-shadow);
+  font-weight: 700;
+}
+
+/* Secondary / neutral */
+.phone-frame :is(.pill-ghost, [data-control-variant="secondary"]) {
+  border: 1px solid var(--control-border);
+  background: rgba(255, 255, 255, 0.88);
+  color: var(--control-label);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.02);
+  font-weight: 650;
+}
+
+/* Icon buttons */
+.phone-frame button.rounded-full:has(> svg) {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+}
+
+.phone-frame button.rounded-full:has(> svg):not(.bg-primary):not(.bg-ink) {
+  color: var(--control-label-secondary);
+}
+
+/* Segmented controls and tabs */
+.phone-frame .segment-nav {
+  border: 0 !important;
+  background: var(--control-fill) !important;
+  box-shadow: inset 0 0 0 0.5px rgba(60, 60, 67, 0.06);
+}
+
+.phone-frame .segment-nav-item {
+  color: var(--control-label-secondary) !important;
+  font-weight: 650 !important;
+}
+
+.phone-frame .segment-nav-item-active {
+  background: rgba(255, 255, 255, 0.98) !important;
+  color: var(--control-label) !important;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08), 0 1px 1px rgba(0, 0, 0, 0.04) !important;
+}
+
+.phone-frame .app-primary-tab {
+  color: var(--control-label-secondary);
+}
+
+.phone-frame .app-primary-tab[aria-current="page"] {
+  color: var(--control-label);
+}
+
+/* Chips */
+.phone-frame button.rounded-full.border:not(.app-account-button):not([aria-label="던지기"]):not([aria-label="Drop it"]) {
+  min-height: var(--control-h-sm);
+  border-color: var(--control-border);
+  background: rgba(255, 255, 255, 0.88);
+  color: var(--control-label-secondary);
+  font-weight: 600;
+  line-height: 1.15;
+}
+
+/* Completion controls */
+.phone-frame button[aria-label="다녀옴"],
+.phone-frame button[aria-label="Mark done"],
+.phone-frame button[aria-label="완료됨"],
+.phone-frame button[aria-label="Done"] {
+  min-width: 28px !important;
+  min-height: 28px !important;
+  border-width: 1.5px;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.025);
+}
+
+/* Floating actions */
+.phone-frame button[aria-label="할 일 추가"],
+.phone-frame button[aria-label="Add task"] {
+  min-width: var(--control-h-lg) !important;
+  width: var(--control-h-lg) !important;
+  height: var(--control-h-lg) !important;
+  border: 1px solid rgba(188, 146, 0, 0.12);
+  box-shadow: 0 10px 30px -14px rgba(0, 0, 0, 0.34), 0 2px 8px -3px rgba(0, 0, 0, 0.12) !important;
+}
+
+/* Destructive controls */
+.phone-frame :is(.text-red-500, .text-red-600, [data-control-variant="danger"]) {
+  color: var(--control-danger) !important;
+}
+
+/* Hover belongs only to true pointer devices. */
+@media (hover: hover) and (pointer: fine) {
+  .phone-frame button:not(:disabled):hover,
+  .phone-frame [role="button"]:not([aria-disabled="true"]):hover {
+    filter: brightness(0.99);
+  }
+
+  .phone-frame :is(.pill-ghost, [data-control-variant="secondary"]):hover,
+  .phone-frame button.rounded-full.border:hover {
+    border-color: var(--control-border-strong);
+    background: rgba(255, 255, 255, 0.98);
+  }
+
+  .phone-frame button.rounded-full:has(> svg):not(.bg-primary):not(.bg-ink):hover {
+    background: var(--control-fill-hover);
+    color: var(--control-label);
+  }
+}
+
+/* Press feedback */
+.phone-frame button:not(:disabled):active,
+.phone-frame [role="button"]:not([aria-disabled="true"]):active {
+  transform: scale(0.975);
+}
+
+.phone-frame .segment-nav-item:active,
+.phone-frame .app-primary-tab:active {
+  transform: scale(0.985);
+}
+
+/* Keyboard focus remains visible without changing component geometry. */
+.phone-frame :is(button, [role="button"], a):focus-visible {
+  outline: none !important;
+  box-shadow: 0 0 0 3px rgba(255, 211, 61, 0.34), var(--control-shadow) !important;
+}
+
+/* Preserve a clean touch presentation. */
+@media (hover: none), (pointer: coarse) {
+  .phone-frame button,
+  .phone-frame [role="button"] {
+    user-select: none;
+    -webkit-user-select: none;
+  }
+
+  .phone-frame button:hover,
+  .phone-frame [role="button"]:hover {
+    filter: none;
+  }
+}
+
+@media (max-width: 359px) {
+  .phone-frame .segment-nav-item {
+    padding-inline: 6px !important;
+  }
+
+  .phone-frame button[aria-label="던지기"],
+  .phone-frame button[aria-label="Drop it"] {
+    min-width: 82px !important;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .phone-frame button,
+  .phone-frame [role="button"],
+  .phone-frame a {
+    transition-duration: 0.01ms !important;
+  }
+
+  .phone-frame button:active,
+  .phone-frame [role="button"]:active {
+    transform: none !important;
+  }
+}
