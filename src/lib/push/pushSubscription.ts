@@ -34,6 +34,10 @@ function detectPlatform(): string {
   return "web";
 }
 
+export function backgroundRemindersVerified(): boolean {
+  return import.meta.env.VITE_BACKGROUND_REMINDERS_VERIFIED === "true";
+}
+
 export function isStandalonePwa(): boolean {
   if (typeof window === "undefined") return false;
   return (
@@ -131,8 +135,9 @@ export async function hasActivePushSubscription(
   userId: string,
 ): Promise<boolean> {
   if (import.meta.env.VITE_E2E === "true") return false;
-  // A valid subscription is not enough when the current reminder failed to
-  // reach the server. Keep this interaction in honest in-app-only mode.
+  // A server row is not enough to claim background delivery. The complete
+  // closed-app path must first pass a real-device release check.
+  if (!backgroundRemindersVerified()) return false;
   if (wasRecentReminderSyncFailure()) return false;
 
   const { data, error } = await supabase
