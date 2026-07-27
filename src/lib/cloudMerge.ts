@@ -27,7 +27,7 @@ export function mergeCloudRow<T extends { id: string }>(
 ): T {
   if (!local) return cloud;
 
-  let merged: Record<string, unknown> = { ...cloud };
+  const merged: Record<string, unknown> = { ...cloud };
   const localRow = local as Record<string, unknown>;
   const cloudRow = cloud as Record<string, unknown>;
 
@@ -40,6 +40,19 @@ export function mergeCloudRow<T extends { id: string }>(
     const cloudStatus = cloudRow.status as ThoughtStatus | undefined;
     if (shouldPreferLocalInboxStatus(localStatus, cloudStatus)) {
       merged.status = localStatus;
+    }
+
+    // Decision Deck metadata is local-first in v1. Preserve it when the
+    // production cloud schema does not yet expose these optional columns.
+    for (const key of [
+      "decision",
+      "decided_at",
+      "decision_source",
+      "capture_state",
+    ] as const) {
+      if (localRow[key] !== undefined && cloudRow[key] === undefined) {
+        merged[key] = localRow[key];
+      }
     }
   }
 
