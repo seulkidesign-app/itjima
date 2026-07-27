@@ -1,3 +1,5 @@
+import { readComposerDraft } from "@/lib/composerDraft";
+
 export type ComposerSafetyState = {
   hasText: boolean;
   hasImages: boolean;
@@ -17,6 +19,11 @@ export function composerSafetyState(
     form?.querySelector("img[src^='data:'], img[src^='blob:']"),
   );
   return { hasText, hasImages, dirty: hasText || hasImages };
+}
+
+/** Includes the debounced local draft even when the home composer is not mounted. */
+export function hasUnsentComposerContent(doc: Document = document): boolean {
+  return composerSafetyState(doc).dirty || readComposerDraft().trim().length > 0;
 }
 
 export function focusComposer(doc: Document = document): boolean {
