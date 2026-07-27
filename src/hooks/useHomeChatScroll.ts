@@ -13,6 +13,32 @@ function isNearBottom(container: HTMLElement) {
   );
 }
 
+/**
+ * Scroll after React paint, motion layout and late content sizing.
+ * A single requestAnimationFrame was not sufficient when chat rows, images or
+ * the composer changed height after a capture.
+ */
+function settleAtBottom(
+  container: HTMLElement,
+  behavior: ScrollBehavior,
+  onSettled: () => void,
+) {
+  let frame = 0;
+  const run = () => {
+    const top = Math.max(0, container.scrollHeight - container.clientHeight);
+    if (behavior === "instant") container.scrollTop = top;
+    else container.scrollTo({ top, behavior: frame === 0 ? behavior : "auto" });
+
+    frame += 1;
+    if (frame < 3) {
+      requestAnimationFrame(run);
+      return;
+    }
+    onSettled();
+  };
+  requestAnimationFrame(run);
+}
+
 export function useHomeChatScroll(itemCount: number) {
   const nearBottomRef = useRef(true);
   const prevCountRef = useRef(itemCount);
@@ -24,18 +50,11 @@ export function useHomeChatScroll(itemCount: number) {
     (behavior: ScrollBehavior = "smooth") => {
       const container = getScrollContainer();
       if (!container) return;
-      const top = Math.max(0, container.scrollHeight - container.clientHeight);
 
-      if (behavior === "instant") {
-        container.scrollTop = top;
+      settleAtBottom(container, behavior, () => {
         nearBottomRef.current = true;
         setUnreadBelow(0);
-        return;
-      }
-
-      container.scrollTo({ top, behavior });
-      nearBottomRef.current = true;
-      setUnreadBelow(0);
+      });
     },
     [],
   );
@@ -56,24 +75,23 @@ export function useHomeChatScroll(itemCount: number) {
 
   useEffect(() => {
     if (initialScrollDoneRef.current) return;
-    requestAnimationFrame(() => {
-      requestAnimationFrame(() => {
-        scrollToBottom("instant");
-        nearBottomRef.current = true;
-        initialScrollDoneRef.current = true;
-      });
+    const container = getScrollContainer();
+    if (!container) return;
+
+    settleAtBottom(container, "instant", () => {
+      nearBottomRef.current = true;
+      initialScrollDoneRef.current = true;
     });
-  }, [scrollToBottom]);
+  }, []);
 
   useEffect(() => {
     const prev = prevCountRef.current;
     if (itemCount > prev) {
       const added = itemCount - prev;
-      if (submitScrollRef.current || nearBottomRef.current) {
-        requestAnimationFrame(() => {
-          scrollToBottom(submitScrollRef.current ? "smooth" : "smooth");
-          if (submitScrollRef.current) nearBottomRef.current = true;
-        });
+      const submittedByThisComposer = submitScrollRef.current;
+
+      if (submittedByThisComposer || nearBottomRef.current) {
+        scrollToBottom(submittedByThisComposer ? "smooth" : "auto");
       } else {
         setUnreadBelow((n) => n + added);
       }
@@ -83,13 +101,12 @@ export function useHomeChatScroll(itemCount: number) {
   }, [itemCount, scrollToBottom]);
 
   const notifyThoughtSubmitted = useCallback(() => {
+    // Keep this flag set until the item-count effect observes the new row.
+    // Clearing it in the next frame caused async captures to miss auto-scroll.
     submitScrollRef.current = true;
     nearBottomRef.current = true;
     setUnreadBelow(0);
-    requestAnimationFrame(() => {
-      scrollToBottom("smooth");
-      submitScrollRef.current = false;
-    });
+    scrollToBottom("smooth");
   }, [scrollToBottom]);
 
   return {
