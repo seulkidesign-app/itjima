@@ -1,5 +1,6 @@
 import { supabase } from "@/integrations/supabase/client";
 import { registerServiceWorker } from "@/lib/swReminders";
+import { wasRecentReminderSyncFailure } from "@/lib/push/scheduledRemindersSync";
 
 export type PushSupportState =
   | "unsupported"
@@ -130,6 +131,10 @@ export async function hasActivePushSubscription(
   userId: string,
 ): Promise<boolean> {
   if (import.meta.env.VITE_E2E === "true") return false;
+  // A valid subscription is not enough when the current reminder failed to
+  // reach the server. Keep this interaction in honest in-app-only mode.
+  if (wasRecentReminderSyncFailure()) return false;
+
   const { data, error } = await supabase
     .from("push_subscriptions")
     .select("id")
