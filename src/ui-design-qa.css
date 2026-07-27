@@ -1,0 +1,89 @@
+/* Design QA fixes — final safety layer for mobile, tablet, and desktop. */
+
+/* Text wrapping belongs to readable copy, not form controls or buttons. */
+.phone-frame :is(input, textarea, select, button, [role="button"]) {
+  text-wrap: wrap;
+}
+
+.phone-frame :is(.chat-bubble, .thought-card, .brain-mirror-card, .itjima-reply-bubble, [role="dialog"]) :is(p, span, li) {
+  overflow-wrap: anywhere;
+  word-break: keep-all;
+}
+
+/* Never constrain global status indicators such as sync progress bars. */
+.phone-frame [role="status"] {
+  max-width: none;
+}
+
+/* Reliable touch geometry on touch-first devices. */
+@media (hover: none), (pointer: coarse) {
+  .phone-frame .app-account-button,
+  .phone-frame .app-primary-tab,
+  .phone-frame .segment-nav-item,
+  .phone-frame form.composer-hero > div.flex.items-center.gap-1 > button,
+  .phone-frame form.composer-hero button[aria-label="던지기"],
+  .phone-frame form.composer-hero button[aria-label="Drop it"] {
+    min-width: 44px !important;
+    min-height: 44px !important;
+    height: 44px !important;
+  }
+
+  .phone-frame .segment-nav {
+    min-height: 52px !important;
+  }
+}
+
+/* Fine-pointer devices may remain visually compact while keeping keyboard access. */
+@media (hover: hover) and (pointer: fine) {
+  .phone-frame .app-account-button {
+    min-height: 40px;
+  }
+}
+
+/* Preserve component elevation when keyboard focus is visible. */
+.phone-frame :is(button, a, [role="button"], input, textarea, select, summary):focus-visible {
+  outline: 2px solid rgba(255, 211, 61, 0.72) !important;
+  outline-offset: 2px !important;
+  box-shadow: inherit;
+}
+
+/* Keep scrollable content clear of fixed composers and device safe areas. */
+.phone-frame .home-chat-lane {
+  scroll-padding-bottom: calc(132px + env(safe-area-inset-bottom));
+}
+
+/* Prevent long labels from forcing layout overflow. */
+.phone-frame :is(.app-primary-tab, .segment-nav-item, .pill-yellow, .pill-black, .pill-ghost) {
+  min-width: 0;
+  max-width: 100%;
+}
+
+.phone-frame :is(.app-primary-tab, .segment-nav-item) {
+  text-overflow: ellipsis;
+  overflow: hidden;
+  white-space: nowrap;
+}
+
+/* High zoom and narrow viewport resilience. */
+@media (max-width: 359px) {
+  .phone-frame .page-eyebrow {
+    max-width: 28ch !important;
+  }
+
+  .phone-frame form.composer-hero button[aria-label="던지기"],
+  .phone-frame form.composer-hero button[aria-label="Drop it"] {
+    min-width: 84px !important;
+    padding-inline: 12px !important;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .phone-frame *,
+  .phone-frame *::before,
+  .phone-frame *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
