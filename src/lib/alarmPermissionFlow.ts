@@ -1,12 +1,14 @@
 import {
   subscribePush,
   showLocalTestNotification,
+  type PushSubscribeResult,
 } from "@/lib/push/pushSubscription";
 
 export type AlarmEnableResult = {
   ok: boolean;
   pushSubscribed: boolean;
   testNotificationShown: boolean;
+  subscribe?: PushSubscribeResult;
 };
 
 export type AlarmEnableDeps = {
@@ -38,15 +40,17 @@ export async function completeAlarmEnableAfterGrant(
       ok: false,
       pushSubscribed: false,
       testNotificationShown: false,
+      subscribe: push,
     };
   }
 
   const testNotificationShown = await doTest();
 
   return {
-    ok: push.ok && testNotificationShown,
+    ok: push.ok,
     pushSubscribed: push.ok,
     testNotificationShown,
+    subscribe: push,
   };
 }
 

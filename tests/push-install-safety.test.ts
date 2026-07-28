@@ -39,6 +39,21 @@ describe("iPhone notification setup safety", () => {
     expect(sheet).toContain("이 기기에서 알림 표시 테스트");
   });
 
+  it("Settings exposes a direct device notification entry point", () => {
+    const settings = source("src/components/SettingsSheet.tsx");
+    const deviceSheet = source("src/components/DeviceNotificationSheet.tsx");
+    expect(settings).toContain("DeviceNotificationSheet");
+    expect(settings).toContain("이 기기에서 알림 켜기");
+    expect(deviceSheet).toContain('data-testid="settings-enable-notifications-button"');
+  });
+
+  it("subscribePush validates auth session and surfaces upsert diagnostics", () => {
+    expect(push).toContain("supabase.auth.getSession");
+    expect(push).toContain('code: "missing_vapid"');
+    expect(push).toContain('code: "not_authenticated"');
+    expect(push).toContain("logPushFailure");
+  });
+
   it("keeps authenticated immediate push test function available", () => {
     expect(push).toContain("export async function sendServerPushTest");
     expect(push).toContain('supabase.functions.invoke("test-push"');

@@ -20,6 +20,10 @@ import "./ui-controls-system.css";
 import "./ui-fields-and-states.css";
 
 import { registerServiceWorker } from "@/lib/swReminders";
+import {
+  logPushDiagnostic,
+  summarizePushEnvironment,
+} from "@/lib/push/pushDiagnostics";
 
 declare module "@tanstack/react-router" {
   interface Register {
@@ -32,6 +36,9 @@ if (typeof window !== "undefined") {
     installAuthDebugInstrumentation(router);
   }
   void registerServiceWorker();
+  if (import.meta.env.VITE_E2E !== "true") {
+    logPushDiagnostic("boot", summarizePushEnvironment());
+  }
 }
 
 createRoot(document.getElementById("root")!).render(

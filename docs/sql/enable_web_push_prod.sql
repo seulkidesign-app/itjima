@@ -247,4 +247,7 @@ WHERE table_schema = 'public'
   AND grantee IN ('authenticated', 'service_role')
 ORDER BY table_name, grantee, privilege_type;
 
+-- Refresh PostgREST schema cache so client upserts can reach push_subscriptions.
+NOTIFY pgrst, 'reload schema';
+
 COMMIT;

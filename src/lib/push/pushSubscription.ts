@@ -1,6 +1,10 @@
 import { supabase } from "@/integrations/supabase/client";
 import { registerServiceWorker } from "@/lib/swReminders";
 import { wasRecentReminderSyncFailure } from "@/lib/push/scheduledRemindersSync";
+import {
+  logPushDiagnostic,
+  logPushFailure,
+} from "@/lib/push/pushDiagnostics";
 
 export type PushSupportState =
   | "unsupported"
@@ -17,12 +21,15 @@ export type PushSubscriptionRecord = {
   platform: string;
 };
 
-export type DeviceNotificationTestResult = {
+export type PushSubscribeResult = {
   ok: boolean;
   state: PushSupportState;
   expired?: boolean;
   error?: string;
+  code?: string;
 };
+
+export type DeviceNotificationTestResult = PushSubscribeResult;
 
 function urlBase64ToUint8Array(base64: string): Uint8Array {
   const padding = "=".repeat((4 - (base64.length % 4)) % 4);
@@ -43,6 +50,12 @@ function detectPlatform(): string {
 
 export function backgroundRemindersVerified(): boolean {
   return import.meta.env.VITE_BACKGROUND_REMINDERS_VERIFIED === "true";
+}
+
+export function getVapidPublicKey(): string | null {
+  const value = import.meta.env.VITE_VAPID_PUBLIC_KEY as string | undefined;
+  const trimmed = value?.trim();
+  return trimmed ? trimmed : null;
 }
 
 export function isStandalonePwa(): boolean {
@@ -74,21 +87,38 @@ async function getPushRegistration(): Promise<ServiceWorkerRegistration | null> 
   return reg;
 }
 
+function classifyUpsertError(message: string): string {
+  if (/schema cache|PGRST205|Could not find the table/i.test(message)) {
+    return "schema_cache";
+  }
+  if (/JWT|auth|401|403|row-level security|RLS/i.test(message)) {
+    return "not_authenticated";
+  }
+  return "upsert_failed";
+}
+
 /** Subscribe and persist — caller must ensure Notification.permission === "granted". */
 export async function subscribePush(
   userId: string,
-): Promise<{ ok: boolean; state: PushSupportState; expired?: boolean }> {
+): Promise<PushSubscribeResult> {
   if (import.meta.env.VITE_E2E === "true") {
-    return { ok: false, state: "unsupported" };
+    return { ok: false, state: "unsupported", code: "e2e" };
   }
 
-  const vapidPublic = import.meta.env.VITE_VAPID_PUBLIC_KEY as
-    | string
-    | undefined;
-  if (!vapidPublic) return { ok: false, state: "unsupported" };
+  const vapidPublic = getVapidPublicKey();
+  if (!vapidPublic) {
+    logPushFailure("subscribe:vapid_missing");
+    return {
+      ok: false,
+      state: "unsupported",
+      code: "missing_vapid",
+      error: "VITE_VAPID_PUBLIC_KEY is not configured",
+    };
+  }
 
   const support = pushSupportState();
   if (support === "unsupported" || support === "not_installed") {
+    logPushFailure("subscribe:support_blocked", { support });
     return { ok: false, state: support };
   }
   if (Notification.permission === "denied") {
@@ -98,22 +128,78 @@ export async function subscribePush(
     return { ok: false, state: "default" };
   }
 
-  const reg = await getPushRegistration();
-  if (!reg) return { ok: false, state: "unsupported" };
+  const {
+    data: { session },
+  } = await supabase.auth.getSession();
+  if (!session?.user?.id || session.user.id !== userId) {
+    logPushFailure("subscribe:no_session", { userId });
+    return {
+      ok: false,
+      state: "expired",
+      expired: true,
+      code: "not_authenticated",
+      error: "No authenticated Supabase session",
+    };
+  }
 
-  let sub = await reg.pushManager.getSubscription();
-  if (!sub) {
-    sub = await reg.pushManager.subscribe({
-      userVisibleOnly: true,
-      applicationServerKey: urlBase64ToUint8Array(
-        vapidPublic,
-      ) as BufferSource,
+  let reg: ServiceWorkerRegistration | null = null;
+  try {
+    reg = await getPushRegistration();
+  } catch (error) {
+    logPushFailure("subscribe:service_worker_error", {
+      message: error instanceof Error ? error.message : String(error),
     });
+    return {
+      ok: false,
+      state: "unsupported",
+      code: "no_service_worker",
+      error: error instanceof Error ? error.message : "service_worker_failed",
+    };
+  }
+
+  if (!reg) {
+    logPushFailure("subscribe:no_registration");
+    return {
+      ok: false,
+      state: "unsupported",
+      code: "no_service_worker",
+      error: "Service worker registration unavailable",
+    };
+  }
+
+  let sub: PushSubscription | null = null;
+  try {
+    sub = await reg.pushManager.getSubscription();
+    if (!sub) {
+      sub = await reg.pushManager.subscribe({
+        userVisibleOnly: true,
+        applicationServerKey: urlBase64ToUint8Array(
+          vapidPublic,
+        ) as BufferSource,
+      });
+    }
+  } catch (error) {
+    logPushFailure("subscribe:push_manager_error", {
+      message: error instanceof Error ? error.message : String(error),
+    });
+    return {
+      ok: false,
+      state: "expired",
+      expired: true,
+      code: "subscribe_failed",
+      error: error instanceof Error ? error.message : "push_subscribe_failed",
+    };
   }
 
   const json = sub.toJSON();
   if (!json.endpoint || !json.keys?.p256dh || !json.keys?.auth) {
-    return { ok: false, state: "expired", expired: true };
+    logPushFailure("subscribe:invalid_subscription_json");
+    return {
+      ok: false,
+      state: "expired",
+      expired: true,
+      code: "invalid_subscription",
+    };
   }
 
   const record: PushSubscriptionRecord = {
@@ -122,6 +208,12 @@ export async function subscribePush(
     auth: json.keys.auth,
     platform: detectPlatform(),
   };
+
+  logPushDiagnostic("subscribe:upsert", {
+    userId,
+    platform: record.platform,
+    endpointPrefix: record.endpoint.slice(0, 48),
+  });
 
   const { error } = await supabase.from("push_subscriptions").upsert(
     {
@@ -137,14 +229,34 @@ export async function subscribePush(
     { onConflict: "user_id,endpoint" },
   );
 
-  if (error) return { ok: false, state: "expired", expired: true };
+  if (error) {
+    const code = classifyUpsertError(error.message);
+    logPushFailure("subscribe:upsert_failed", {
+      code,
+      message: error.message,
+      details: error.details,
+      hint: error.hint,
+    });
+    return {
+      ok: false,
+      state: "expired",
+      expired: true,
+      code,
+      error: error.message,
+    };
+  }
+
+  logPushDiagnostic("subscribe:upsert_ok", {
+    userId,
+    platform: record.platform,
+  });
   return { ok: true, state: "granted" };
 }
 
 /** Verify/resubscribe when permission is already granted — never calls requestPermission. */
 export async function ensurePushSubscription(
   userId: string,
-): Promise<{ ok: boolean; state: PushSupportState; expired?: boolean }> {
+): Promise<PushSubscribeResult> {
   if (Notification.permission !== "granted") {
     const state = pushSupportState();
     return { ok: false, state: state === "unsupported" ? "unsupported" : state };

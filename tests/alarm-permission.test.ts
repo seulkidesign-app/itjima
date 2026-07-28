@@ -122,14 +122,15 @@ describe("alarm preset gating", () => {
     expect(canSelectAlarmPresets("granted", true)).toBe(true);
   });
 
-  it("requires test notification success before presets after enable", async () => {
+  it("enables presets after push subscription even if local test fails", async () => {
     const result = await completeAlarmEnableAfterGrant("user-1", {
       subscribePush: async () => ({ ok: true, state: "granted" as const }),
       showTestNotification: async () => false,
     });
 
-    expect(result.ok).toBe(false);
-    expect(canSelectAlarmPresets("granted", result.ok)).toBe(false);
+    expect(result.ok).toBe(true);
+    expect(result.pushSubscribed).toBe(true);
+    expect(canSelectAlarmPresets("granted", result.pushSubscribed)).toBe(true);
   });
 });
 

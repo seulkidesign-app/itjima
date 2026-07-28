@@ -13,9 +13,13 @@ import {
   type AlarmSheetView,
 } from "@/lib/alarmAvailability";
 import { completeAlarmEnableAfterGrant } from "@/lib/alarmPermissionFlow";
+import { describePushFailure } from "@/lib/push/pushDiagnostics";
+import {
+  refreshDeviceRegistration,
+  requestPermissionAndRegisterDevice,
+} from "@/lib/push/deviceNotificationEnable";
 import {
   ensurePushSubscription,
-  showLocalTestNotification,
 } from "@/lib/push/pushSubscription";
 import {
   diagnoseServerPushTest,
@@ -88,19 +92,27 @@ export function ScheduleAlarmSheet({
 
   const applyEnableResult = useCallback(
     (result: Awaited<ReturnType<typeof completeAlarmEnableAfterGrant>>) => {
-      if (result.pushSubscribed && result.testNotificationShown) {
+      if (result.pushSubscribed) {
         setPushReady(true);
-        setLocalStatusMessage(LOCAL_TEST_SUCCESS[lang]);
-      } else {
-        setPushReady(false);
-        setLocalStatusMessage(null);
-        setEnableError(
-          t(
-            "알림 연결에 실패했어요. 다시 시도해 주세요.",
-            "Couldn't connect notifications. Please try again.",
-          ),
-        );
+        if (result.testNotificationShown) {
+          setLocalStatusMessage(LOCAL_TEST_SUCCESS[lang]);
+        } else {
+          setLocalStatusMessage(
+            t(
+              "이 기기가 등록됐어요. 테스트 알림은 표시되지 않았지만 서버 알림은 받을 수 있어요.",
+              "This device is registered. The test banner didn't show, but server alerts can still arrive.",
+            ),
+          );
+        }
+        setEnableError(null);
+        return;
       }
+
+      setPushReady(false);
+      setLocalStatusMessage(null);
+      setEnableError(
+        describePushFailure(result.subscribe ?? { state: "expired" }, lang),
+      );
     },
     [lang, t],
   );
@@ -221,15 +233,20 @@ export function ScheduleAlarmSheet({
     setLocalStatusMessage(null);
 
     try {
-      const permissionResult = await Notification.requestPermission();
-      setView(resolveAlarmSheetView(permissionResult, isIosSafariTab()));
+      const result = await requestPermissionAndRegisterDevice(userId, lang);
+      setView(resolveAlarmSheetView(readNotificationPermission(), isIosSafariTab()));
 
-      if (permissionResult !== "granted") {
+      if (result.permission !== "granted") {
+        if (result.errorMessage) setEnableError(result.errorMessage);
         return;
       }
 
-      const result = await completeAlarmEnableAfterGrant(userId);
-      applyEnableResult(result);
+      applyEnableResult({
+        ok: result.pushSubscribed,
+        pushSubscribed: result.pushSubscribed,
+        testNotificationShown: result.testNotificationShown,
+        subscribe: result.subscribe,
+      });
     } catch {
       setEnableError(
         t(
@@ -242,37 +259,27 @@ export function ScheduleAlarmSheet({
     }
   };
 
-  const handleLocalDisplayTest = async () => {
+  const handleRegisterThisDevice = async () => {
     if (!userId || requesting) return;
     setRequesting(true);
     setEnableError(null);
     setLocalStatusMessage(null);
     try {
-      const push = await ensurePushSubscription(userId);
-      if (!push.ok) {
-        setEnableError(
-          t(
-            "푸시 구독을 갱신하지 못했어요.",
-            "Couldn't refresh push subscription.",
-          ),
-        );
-        return;
-      }
-      const testOk = await showLocalTestNotification();
-      if (testOk) {
-        setPushReady(true);
-        setLocalStatusMessage(LOCAL_TEST_SUCCESS[lang]);
-      } else {
-        setEnableError(
-          t(
-            "이 기기에서 알림을 표시하지 못했어요.",
-            "Couldn't display a notification on this device.",
-          ),
-        );
-      }
+      const result = await refreshDeviceRegistration(userId, lang);
+      applyEnableResult({
+        ok: result.pushSubscribed,
+        pushSubscribed: result.pushSubscribed,
+        testNotificationShown: result.testNotificationShown,
+        subscribe: result.subscribe,
+      });
     } finally {
       setRequesting(false);
     }
+  };
+
+  const handleLocalDisplayTest = async () => {
+    if (!userId || requesting) return;
+    await handleRegisterThisDevice();
   };
 
   const handleServerPushTest = async () => {
@@ -410,7 +417,21 @@ export function ScheduleAlarmSheet({
           >
             {requesting
               ? t("연결하는 중…", "Connecting…")
-              : t("알림 켜기", "Turn on notifications")}
+              : t("이 기기에서 알림 켜기", "Turn on notifications on this device")}
+          </button>
+        )}
+
+        {view === "granted" && !pushReady && (
+          <button
+            type="button"
+            data-testid="alarm-register-device-button"
+            disabled={requesting || checking}
+            onClick={() => void handleRegisterThisDevice()}
+            className="touch-press mt-4 w-full rounded-[20px] bg-ink py-3.5 text-[15px] font-semibold text-white disabled:opacity-50"
+          >
+            {requesting || checking
+              ? t("등록하는 중…", "Registering…")
+              : t("이 기기에서 알림 켜기", "Turn on notifications on this device")}
           </button>
         )}
 
@@ -465,7 +486,7 @@ export function ScheduleAlarmSheet({
           </div>
         )}
 
-        {view === "granted" && (
+        {view === "granted" && pushReady && (
           <div className="mt-4 space-y-2">
             <button
               type="button"

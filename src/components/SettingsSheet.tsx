@@ -1,7 +1,9 @@
-import { Globe, LogOut, Shield, User } from "lucide-react";
+import { Globe, LogOut, Shield, User, Bell } from "lucide-react";
 import { Link, useNavigate } from "@tanstack/react-router";
 import { toast } from "sonner";
+import { useState } from "react";
 import { BottomSheet } from "./BottomSheet";
+import { DeviceNotificationSheet } from "./DeviceNotificationSheet";
 import { useT, LanguageToggle } from "@/lib/i18n";
 import { useUserId } from "@/lib/store";
 import { useIsAdmin } from "@/hooks/useIsAdmin";
@@ -27,6 +29,7 @@ export function SettingsSheet({ open, onClose }: Props) {
   const navigate = useNavigate();
   const userId = useUserId();
   const isAdmin = useIsAdmin();
+  const [notificationOpen, setNotificationOpen] = useState(false);
 
   const handleSignOut = async () => {
     tap();
@@ -113,6 +116,22 @@ export function SettingsSheet({ open, onClose }: Props) {
             </Link>
           )}
 
+          <button
+            type="button"
+            onClick={() => {
+              tap();
+              setNotificationOpen(true);
+            }}
+            className={`${rowClass} border-b border-ink/[0.06]`}
+          >
+            <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-[10px] bg-primary/20 text-ink">
+              <Bell size={17} strokeWidth={2.1} aria-hidden />
+            </span>
+            <span className="flex-1">
+              {t("이 기기에서 알림 켜기", "Turn on notifications on this device")}
+            </span>
+          </button>
+
           <div className={rowClass}>
             <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-[10px] bg-ink/[0.06] text-ink-soft">
               <Globe size={17} strokeWidth={2.1} aria-hidden />
@@ -133,6 +152,11 @@ export function SettingsSheet({ open, onClose }: Props) {
           </button>
         )}
       </div>
+      <DeviceNotificationSheet
+        open={notificationOpen}
+        onClose={() => setNotificationOpen(false)}
+        userId={userId}
+      />
     </BottomSheet>
   );
 }
