@@ -8,6 +8,7 @@ import {
   detectPlatform,
   getVapidPublicKey,
   isStandalonePwa,
+  requiresStandalonePwaForPush,
   type PushSubscribeResult,
 } from "@/lib/push/pushSubscription";
 
@@ -34,8 +35,15 @@ function step(
   detail: string,
 ): PushEnableStep {
   const entry = { id, label, ok, detail };
-  logPushDiagnostic(`direct_enable:${id}`, { ok, detail });
+  logPushDiagnostic(`direct_enable:${id}`, { ok, detail: redactStepDetail(detail) });
   return entry;
+}
+
+function redactStepDetail(detail: string): string {
+  if (/endpoint/i.test(detail) || /^https?:\/\//.test(detail)) {
+    return "[redacted]";
+  }
+  return detail;
 }
 
 function readPermission(): NotificationPermission | "unsupported" {
@@ -92,16 +100,21 @@ export async function executeDirectPushEnableFlow(
 
   const platform = detectPlatform();
   const standalone = isStandalonePwa();
+  const standaloneRequired = requiresStandalonePwaForPush();
   steps.push(
     step(
       "standalone",
       ko ? "PWA standalone" : "PWA standalone",
-      platform !== "ios" || standalone,
-      standaloneDetail(),
+      !standaloneRequired || standalone,
+      standaloneRequired
+        ? standaloneDetail()
+        : ko
+          ? "iOS/iPadOS만 홈 화면 설치 필요"
+          : "not required on this platform",
     ),
   );
 
-  if (platform === "ios" && !standalone) {
+  if (standaloneRequired && !standalone) {
     return {
       ok: false,
       pushSubscribed: false,
@@ -211,7 +224,7 @@ export async function executeDirectPushEnableFlow(
       "vapid",
       "VITE_VAPID_PUBLIC_KEY",
       Boolean(vapid),
-      vapid ? `${vapid.slice(0, 12)}…` : "missing",
+      vapid ? "configured" : "missing",
     ),
   );
   if (!vapid) {
@@ -279,7 +292,7 @@ export async function executeDirectPushEnableFlow(
       "get_subscription",
       ko ? "기존 구독" : "Existing subscription",
       true,
-      existing ? `endpoint=${existing.endpoint.slice(0, 40)}…` : "none",
+      existing ? (ko ? "있음" : "present") : (ko ? "없음" : "none"),
     ),
   );
 
@@ -302,7 +315,7 @@ export async function executeDirectPushEnableFlow(
           "subscribe",
           ko ? "pushManager.subscribe" : "pushManager.subscribe",
           true,
-          `endpoint=${existing.endpoint.slice(0, 40)}…`,
+          ko ? "생성됨" : "created",
         ),
       );
     } catch (error) {
@@ -352,7 +365,7 @@ export async function executeDirectPushEnableFlow(
       "auth_session",
       ko ? "로그인 세션" : "Auth session",
       Boolean(session?.user?.id === userId),
-      session?.user?.id ?? "none",
+      session?.user?.id ? (ko ? "확인됨" : "verified") : (ko ? "없음" : "none"),
     ),
   );
   if (!session?.user?.id || session.user.id !== userId) {
@@ -417,7 +430,7 @@ export async function executeDirectPushEnableFlow(
       "upsert",
       ko ? "DB 저장" : "DB upsert",
       true,
-      json.endpoint.slice(0, 48),
+      ko ? "저장됨" : "saved",
     ),
   );
 

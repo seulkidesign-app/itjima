@@ -50,6 +50,11 @@ function detectPlatform(): string {
 
 export { detectPlatform };
 
+/** Web Push on iOS/iPadOS requires Home Screen PWA; desktop/Android web do not. */
+export function requiresStandalonePwaForPush(): boolean {
+  return detectPlatform() === "ios";
+}
+
 export function backgroundRemindersVerified(): boolean {
   return import.meta.env.VITE_BACKGROUND_REMINDERS_VERIFIED === "true";
 }
@@ -74,7 +79,7 @@ export function isStandalonePwa(): boolean {
 
 export function pushSupportState(): PushSupportState {
   if (typeof window === "undefined") return "unsupported";
-  if (detectPlatform() === "ios" && !isStandalonePwa()) {
+  if (requiresStandalonePwaForPush() && !isStandalonePwa()) {
     return "not_installed";
   }
   if (!("Notification" in window) || !("PushManager" in window)) {
@@ -218,7 +223,6 @@ export async function subscribePush(
   logPushDiagnostic("subscribe:upsert", {
     userId,
     platform: record.platform,
-    endpointPrefix: record.endpoint.slice(0, 48),
   });
 
   const { error } = await supabase.from("push_subscriptions").upsert(

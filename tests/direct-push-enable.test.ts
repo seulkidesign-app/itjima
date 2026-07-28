@@ -16,8 +16,8 @@ describe("direct iOS push enable flow", () => {
     expect(direct).toContain("await Notification.requestPermission()");
     expect(direct).toContain("matchMedia(\"(display-mode: standalone)\")");
     expect(sheet).toContain("executeDirectPushEnableFlow");
-    expect(sheet).not.toContain("setRunning(true)");
-    expect(sheet).not.toContain("setRequesting(true)");
+    expect(sheet).toContain("PushProblemDetails");
+    expect(sheet).toContain("문제 확인하기");
     expect(settings).toContain("runDirectPushEnableFromSettings");
     expect(settings).not.toContain("setNotificationOpen(true);\n            tap();");
   });

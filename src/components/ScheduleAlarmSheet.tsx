@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { BottomSheet } from "./BottomSheet";
+import { PushProblemDetails } from "./PushProblemDetails";
 import { useT, useLang } from "@/lib/i18n";
 import type { AlarmPreset } from "@/lib/scheduleReminders";
 import type { ScheduleItem } from "@/lib/store";
@@ -80,6 +81,7 @@ export function ScheduleAlarmSheet({
     useState<ServerPushTestPhase | null>(null);
   const [serverTesting, setServerTesting] = useState(false);
   const [enableSteps, setEnableSteps] = useState<PushEnableStep[]>([]);
+  const [showEnableProblemDetails, setShowEnableProblemDetails] = useState(false);
   const pollRef = useRef<number | null>(null);
   const timeoutRef = useRef<number | null>(null);
   const serverStartRef = useRef(false);
@@ -231,6 +233,7 @@ export function ScheduleAlarmSheet({
 
     setEnableError(null);
     setLocalStatusMessage(null);
+    setShowEnableProblemDetails(false);
 
     void (async () => {
       const result = await executeDirectPushEnableFlow(userId, lang);
@@ -243,8 +246,9 @@ export function ScheduleAlarmSheet({
         testNotificationShown: result.pushSubscribed,
         subscribe: result.subscribe,
       });
-      if (!result.pushSubscribed && result.errorMessage) {
-        setEnableError(result.errorMessage);
+      if (!result.pushSubscribed) {
+        setEnableError(result.errorMessage ?? describePushFailure({ state: "expired" }, lang));
+        setShowEnableProblemDetails(false);
       }
     })();
   };
@@ -253,6 +257,7 @@ export function ScheduleAlarmSheet({
     if (!userId || requesting) return;
     setEnableError(null);
     setLocalStatusMessage(null);
+    setShowEnableProblemDetails(false);
 
     void (async () => {
       const result = await executeDirectPushEnableFlow(userId, lang);
@@ -264,8 +269,9 @@ export function ScheduleAlarmSheet({
         testNotificationShown: result.pushSubscribed,
         subscribe: result.subscribe,
       });
-      if (!result.pushSubscribed && result.errorMessage) {
-        setEnableError(result.errorMessage);
+      if (!result.pushSubscribed) {
+        setEnableError(result.errorMessage ?? describePushFailure({ state: "expired" }, lang));
+        setShowEnableProblemDetails(false);
       }
     })();
   };
@@ -400,17 +406,15 @@ export function ScheduleAlarmSheet({
           <p className="mt-3 text-[13px] text-red-600">{enableError}</p>
         )}
 
-        {enableSteps.length > 0 && (
-          <ol
-            className="mt-3 space-y-1 text-[12px] text-ink-soft"
-            data-testid="alarm-enable-steps"
-          >
-            {enableSteps.map((entry) => (
-              <li key={entry.id} className={entry.ok ? "" : "text-red-600"}>
-                {entry.ok ? "✓" : "✗"} {entry.label}: {entry.detail}
-              </li>
-            ))}
-          </ol>
+        {enableError && enableSteps.length > 0 && (
+          <PushProblemDetails
+            steps={enableSteps}
+            open={showEnableProblemDetails}
+            onToggle={() => setShowEnableProblemDetails((value) => !value)}
+            labels={{
+              toggle: t("문제 확인하기", "Check what went wrong"),
+            }}
+          />
         )}
 
         {view === "default" && (

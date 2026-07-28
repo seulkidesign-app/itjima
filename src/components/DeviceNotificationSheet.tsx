@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { Bell } from "lucide-react";
 import { BottomSheet } from "./BottomSheet";
+import { PushProblemDetails } from "./PushProblemDetails";
 import { useLang, useT } from "@/lib/i18n";
 import {
   isIosSafariTab,
@@ -12,27 +13,22 @@ import {
   executeDirectPushEnableFlow,
   type PushEnableStep,
 } from "@/lib/push/directPushEnableFlow";
-import { isStandalonePwa } from "@/lib/push/pushSubscription";
 import { probeStoredRegistration } from "@/lib/push/deviceNotificationEnable";
 
 type Props = {
   open: boolean;
   onClose: () => void;
   userId: string | null;
-  /** When set, render steps from a flow that already ran (e.g. Settings first tap). */
   initialSteps?: PushEnableStep[] | null;
+  initialFailed?: boolean;
 };
-
-function readStandaloneMatches(): boolean {
-  if (typeof window === "undefined") return false;
-  return window.matchMedia("(display-mode: standalone)").matches;
-}
 
 export function DeviceNotificationSheet({
   open,
   onClose,
   userId,
   initialSteps = null,
+  initialFailed = false,
 }: Props) {
   const t = useT();
   const { lang } = useLang();
@@ -42,40 +38,55 @@ export function DeviceNotificationSheet({
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
   const [showDeniedHelp, setShowDeniedHelp] = useState(false);
   const [steps, setSteps] = useState<PushEnableStep[]>([]);
+  const [showProblemDetails, setShowProblemDetails] = useState(false);
   const [running, setRunning] = useState(false);
-  const [permissionLabel, setPermissionLabel] = useState<string>("—");
-  const [standaloneLabel, setStandaloneLabel] = useState<string>("—");
 
-  const refreshDiagnostics = useCallback(() => {
+  const refreshView = useCallback(() => {
     const perm = readNotificationPermission();
     const iosTab = isIosSafariTab();
     setView(resolveAlarmSheetView(perm, iosTab));
-    const permission =
-      typeof window !== "undefined" && "Notification" in window
-        ? Notification.permission
-        : "unsupported";
-    setPermissionLabel(permission);
-    const standaloneInfo = JSON.stringify({
-      matchMediaStandalone: readStandaloneMatches(),
-      navigatorStandalone:
-        (navigator as Navigator & { standalone?: boolean }).standalone === true,
-      resolvedStandalone: isStandalonePwa(),
-    });
-    setStandaloneLabel(standaloneInfo);
-    console.info("[itjima:push] sheet_diagnostics", {
-      permission,
-      standalone: standaloneInfo,
-    });
   }, []);
 
   useEffect(() => {
     if (!open) return;
     setError(null);
     setStatusMessage(null);
-    refreshDiagnostics();
+    setShowProblemDetails(false);
+    refreshView();
     if (initialSteps?.length) setSteps(initialSteps);
+    if (initialFailed && initialSteps?.length) {
+      setShowProblemDetails(false);
+    }
     if (userId) void probeStoredRegistration(userId).then(setRegistered);
-  }, [open, userId, initialSteps, refreshDiagnostics]);
+  }, [open, userId, initialSteps, initialFailed, refreshView]);
+
+  const applyResult = (
+    result: Awaited<ReturnType<typeof executeDirectPushEnableFlow>>,
+  ) => {
+    setSteps(result.steps);
+    refreshView();
+    setView(resolveAlarmSheetView(readNotificationPermission(), isIosSafariTab()));
+
+    if (!result.pushSubscribed) {
+      setRegistered(false);
+      setError(
+        result.errorMessage ??
+          t("알림 연결에 실패했어요.", "Couldn't connect notifications."),
+      );
+      setShowProblemDetails(false);
+      return;
+    }
+
+    setRegistered(true);
+    setError(null);
+    setShowProblemDetails(false);
+    setStatusMessage(
+      t(
+        "이 기기에서 알림을 받을 수 있어요.",
+        "This device can receive notifications.",
+      ),
+    );
+  };
 
   const handleEnableClick = () => {
     if (running) return;
@@ -91,29 +102,12 @@ export function DeviceNotificationSheet({
 
     setError(null);
     setStatusMessage(null);
+    setShowProblemDetails(false);
 
     void (async () => {
       const result = await executeDirectPushEnableFlow(userId, lang);
-      setSteps(result.steps);
       setRunning(false);
-      refreshDiagnostics();
-      setView(
-        resolveAlarmSheetView(readNotificationPermission(), isIosSafariTab()),
-      );
-
-      if (!result.pushSubscribed) {
-        setRegistered(false);
-        setError(result.errorMessage ?? t("알림 연결에 실패했어요.", "Couldn't connect notifications."));
-        return;
-      }
-
-      setRegistered(true);
-      setStatusMessage(
-        t(
-          "이 기기가 등록됐어요. push_subscriptions에 저장됐습니다.",
-          "This device is registered and saved to push_subscriptions.",
-        ),
-      );
+      applyResult(result);
     })();
   };
 
@@ -140,25 +134,11 @@ export function DeviceNotificationSheet({
             </h2>
             <p className="mt-1 text-[13px] leading-relaxed text-ink-soft">
               {t(
-                "버튼을 누르면 iOS 권한창 → 푸시 구독 → DB 저장 순으로 진행돼요.",
-                "Tap the button to run iOS permission → push subscribe → DB save in one direct flow.",
+                "iPhone·iPad는 홈 화면 앱에서, Mac·Android·PC는 브라우저에서 바로 등록할 수 있어요.",
+                "Register from the Home Screen app on iPhone/iPad, or directly in the browser on Mac, Android, and desktop.",
               )}
             </p>
           </div>
-        </div>
-
-        <div
-          className="rounded-[14px] bg-ink/[0.04] px-3 py-2 text-[12px] leading-relaxed text-ink-soft"
-          data-testid="push-live-diagnostics"
-        >
-          <p>
-            <span className="font-semibold text-ink">standalone: </span>
-            {standaloneLabel}
-          </p>
-          <p className="mt-1">
-            <span className="font-semibold text-ink">Notification.permission: </span>
-            {permissionLabel}
-          </p>
         </div>
 
         {view === "ios_install" && (
@@ -177,20 +157,15 @@ export function DeviceNotificationSheet({
 
         {error && <p className="mt-3 text-[13px] text-red-600">{error}</p>}
 
-        {steps.length > 0 && (
-          <ol
-            className="mt-3 space-y-1.5 text-[12px] text-ink-soft"
-            data-testid="push-enable-steps"
-          >
-            {steps.map((entry) => (
-              <li
-                key={entry.id}
-                className={entry.ok ? "text-ink-soft" : "text-red-600"}
-              >
-                {entry.ok ? "✓" : "✗"} {entry.label}: {entry.detail}
-              </li>
-            ))}
-          </ol>
+        {error && steps.length > 0 && (
+          <PushProblemDetails
+            steps={steps}
+            open={showProblemDetails}
+            onToggle={() => setShowProblemDetails((value) => !value)}
+            labels={{
+              toggle: t("문제 확인하기", "Check what went wrong"),
+            }}
+          />
         )}
 
         {showEnableButton && (
@@ -240,7 +215,6 @@ export function DeviceNotificationSheet({
   );
 }
 
-/** Callable from Settings on first tap — no modal open before requestPermission. */
 export async function runDirectPushEnableFromSettings(
   userId: string,
   lang: "ko" | "en",

@@ -35,6 +35,7 @@ export function SettingsSheet({ open, onClose }: Props) {
   const [notificationSteps, setNotificationSteps] = useState<PushEnableStep[] | null>(
     null,
   );
+  const [notificationFailed, setNotificationFailed] = useState(false);
 
   const handleNotificationSettings = () => {
     tap();
@@ -51,17 +52,18 @@ export function SettingsSheet({ open, onClose }: Props) {
     void (async () => {
       const result = await runDirectPushEnableFromSettings(userId, lang);
       setNotificationSteps(result.steps);
-      setNotificationOpen(true);
-      if (result.pushSubscribed) {
-        toast.success(
-          t(
-            "이 기기 알림이 등록됐어요.",
-            "Notifications registered on this device.",
-          ),
-        );
-      } else if (result.errorMessage) {
-        toast.error(result.errorMessage);
+      setNotificationFailed(!result.pushSubscribed);
+      if (!result.pushSubscribed) {
+        setNotificationOpen(true);
+        if (result.errorMessage) toast.error(result.errorMessage);
+        return;
       }
+      toast.success(
+        t(
+          "이 기기에서 알림을 받을 수 있어요.",
+          "This device can receive notifications.",
+        ),
+      );
     })();
   };
 
@@ -187,6 +189,7 @@ export function SettingsSheet({ open, onClose }: Props) {
         onClose={() => setNotificationOpen(false)}
         userId={userId}
         initialSteps={notificationSteps}
+        initialFailed={notificationFailed}
       />
     </BottomSheet>
   );

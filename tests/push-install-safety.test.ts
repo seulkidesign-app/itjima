@@ -15,7 +15,7 @@ const supabaseConfig = source("supabase/config.toml");
 
 describe("iPhone notification setup safety", () => {
   it("requires the Home Screen app before iOS push setup", () => {
-    expect(push).toContain('detectPlatform() === "ios" && !isStandalonePwa()');
+    expect(push).toContain("requiresStandalonePwaForPush()");
     expect(push).toContain('return "not_installed"');
     expect(sheet).toContain("ios_install");
     expect(sheet).toContain("Safari 공유 버튼");
@@ -39,14 +39,22 @@ describe("iPhone notification setup safety", () => {
     expect(sheet).toContain("이 기기에서 알림 표시 테스트");
   });
 
-  it("Settings exposes a direct device notification entry point", () => {
+  it("Settings exposes notification settings with problem details on failure", () => {
     const settings = source("src/components/SettingsSheet.tsx");
     const deviceSheet = source("src/components/DeviceNotificationSheet.tsx");
     expect(settings).toContain("DeviceNotificationSheet");
     expect(settings).toContain("알림 설정");
     expect(settings).toContain('data-testid="settings-notification-settings-row"');
-    expect(deviceSheet).toContain('data-testid="settings-enable-notifications-button"');
-    expect(deviceSheet).toContain('data-testid="push-live-diagnostics"');
+    expect(deviceSheet).toContain("PushProblemDetails");
+    expect(deviceSheet).toContain("문제 확인하기");
+    expect(deviceSheet).not.toContain('data-testid="push-live-diagnostics"');
+  });
+
+  it("requires standalone PWA only on iOS for push setup", () => {
+    expect(push).toContain("requiresStandalonePwaForPush");
+    expect(source("src/lib/push/directPushEnableFlow.ts")).toContain(
+      "requiresStandalonePwaForPush",
+    );
   });
 
   it("subscribePush validates auth session and surfaces upsert diagnostics", () => {
