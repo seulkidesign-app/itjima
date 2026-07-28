@@ -3,8 +3,9 @@ import { Link, useNavigate } from "@tanstack/react-router";
 import { toast } from "sonner";
 import { useState } from "react";
 import { BottomSheet } from "./BottomSheet";
-import { DeviceNotificationSheet } from "./DeviceNotificationSheet";
-import { useT, LanguageToggle } from "@/lib/i18n";
+import { DeviceNotificationSheet, runDirectPushEnableFromSettings } from "./DeviceNotificationSheet";
+import { useT, LanguageToggle, useLang } from "@/lib/i18n";
+import type { PushEnableStep } from "@/lib/push/directPushEnableFlow";
 import { useUserId } from "@/lib/store";
 import { useIsAdmin } from "@/hooks/useIsAdmin";
 import { supabase } from "@/integrations/supabase/client";
@@ -26,10 +27,43 @@ const rowClass =
 
 export function SettingsSheet({ open, onClose }: Props) {
   const t = useT();
+  const { lang } = useLang();
   const navigate = useNavigate();
   const userId = useUserId();
   const isAdmin = useIsAdmin();
   const [notificationOpen, setNotificationOpen] = useState(false);
+  const [notificationSteps, setNotificationSteps] = useState<PushEnableStep[] | null>(
+    null,
+  );
+
+  const handleNotificationSettings = () => {
+    tap();
+    if (!userId) {
+      toast.error(
+        t(
+          "알림을 켜려면 먼저 로그인해 주세요.",
+          "Sign in first to turn on notifications.",
+        ),
+      );
+      return;
+    }
+
+    void (async () => {
+      const result = await runDirectPushEnableFromSettings(userId, lang);
+      setNotificationSteps(result.steps);
+      setNotificationOpen(true);
+      if (result.pushSubscribed) {
+        toast.success(
+          t(
+            "이 기기 알림이 등록됐어요.",
+            "Notifications registered on this device.",
+          ),
+        );
+      } else if (result.errorMessage) {
+        toast.error(result.errorMessage);
+      }
+    })();
+  };
 
   const handleSignOut = async () => {
     tap();
@@ -118,18 +152,14 @@ export function SettingsSheet({ open, onClose }: Props) {
 
           <button
             type="button"
-            onClick={() => {
-              tap();
-              setNotificationOpen(true);
-            }}
+            data-testid="settings-notification-settings-row"
+            onClick={handleNotificationSettings}
             className={`${rowClass} border-b border-ink/[0.06]`}
           >
             <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-[10px] bg-primary/20 text-ink">
               <Bell size={17} strokeWidth={2.1} aria-hidden />
             </span>
-            <span className="flex-1">
-              {t("이 기기에서 알림 켜기", "Turn on notifications on this device")}
-            </span>
+            <span className="flex-1">{t("알림 설정", "Notification settings")}</span>
           </button>
 
           <div className={rowClass}>
@@ -156,6 +186,7 @@ export function SettingsSheet({ open, onClose }: Props) {
         open={notificationOpen}
         onClose={() => setNotificationOpen(false)}
         userId={userId}
+        initialSteps={notificationSteps}
       />
     </BottomSheet>
   );

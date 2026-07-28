@@ -48,6 +48,8 @@ function detectPlatform(): string {
   return "web";
 }
 
+export { detectPlatform };
+
 export function backgroundRemindersVerified(): boolean {
   return import.meta.env.VITE_BACKGROUND_REMINDERS_VERIFIED === "true";
 }
@@ -60,9 +62,13 @@ export function getVapidPublicKey(): string | null {
 
 export function isStandalonePwa(): boolean {
   if (typeof window === "undefined") return false;
+  const iosStandalone =
+    (navigator as Navigator & { standalone?: boolean }).standalone === true;
   return (
+    iosStandalone ||
     window.matchMedia("(display-mode: standalone)").matches ||
-    (navigator as Navigator & { standalone?: boolean }).standalone === true
+    window.matchMedia("(display-mode: fullscreen)").matches ||
+    window.matchMedia("(display-mode: minimal-ui)").matches
   );
 }
 

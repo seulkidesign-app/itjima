@@ -43,8 +43,10 @@ describe("iPhone notification setup safety", () => {
     const settings = source("src/components/SettingsSheet.tsx");
     const deviceSheet = source("src/components/DeviceNotificationSheet.tsx");
     expect(settings).toContain("DeviceNotificationSheet");
-    expect(settings).toContain("이 기기에서 알림 켜기");
+    expect(settings).toContain("알림 설정");
+    expect(settings).toContain('data-testid="settings-notification-settings-row"');
     expect(deviceSheet).toContain('data-testid="settings-enable-notifications-button"');
+    expect(deviceSheet).toContain('data-testid="push-live-diagnostics"');
   });
 
   it("subscribePush validates auth session and surfaces upsert diagnostics", () => {

@@ -15,9 +15,9 @@ import {
 import { completeAlarmEnableAfterGrant } from "@/lib/alarmPermissionFlow";
 import { describePushFailure } from "@/lib/push/pushDiagnostics";
 import {
-  refreshDeviceRegistration,
-  requestPermissionAndRegisterDevice,
-} from "@/lib/push/deviceNotificationEnable";
+  executeDirectPushEnableFlow,
+  type PushEnableStep,
+} from "@/lib/push/directPushEnableFlow";
 import {
   ensurePushSubscription,
 } from "@/lib/push/pushSubscription";
@@ -79,6 +79,7 @@ export function ScheduleAlarmSheet({
   const [serverTestPhase, setServerTestPhase] =
     useState<ServerPushTestPhase | null>(null);
   const [serverTesting, setServerTesting] = useState(false);
+  const [enableSteps, setEnableSteps] = useState<PushEnableStep[]>([]);
   const pollRef = useRef<number | null>(null);
   const timeoutRef = useRef<number | null>(null);
   const serverStartRef = useRef(false);
@@ -216,7 +217,7 @@ export function ScheduleAlarmSheet({
 
   useEffect(() => () => stopServerPoll(), [stopServerPoll]);
 
-  const handleEnableNotifications = async () => {
+  const handleEnableNotifications = () => {
     if (requesting || !canRequestNotificationPermission(view)) return;
     if (!userId) {
       setEnableError(
@@ -228,53 +229,45 @@ export function ScheduleAlarmSheet({
       return;
     }
 
-    setRequesting(true);
     setEnableError(null);
     setLocalStatusMessage(null);
 
-    try {
-      const result = await requestPermissionAndRegisterDevice(userId, lang);
+    void (async () => {
+      const result = await executeDirectPushEnableFlow(userId, lang);
+      setEnableSteps(result.steps);
+      setRequesting(false);
       setView(resolveAlarmSheetView(readNotificationPermission(), isIosSafariTab()));
-
-      if (result.permission !== "granted") {
-        if (result.errorMessage) setEnableError(result.errorMessage);
-        return;
-      }
-
       applyEnableResult({
         ok: result.pushSubscribed,
         pushSubscribed: result.pushSubscribed,
-        testNotificationShown: result.testNotificationShown,
+        testNotificationShown: result.pushSubscribed,
         subscribe: result.subscribe,
       });
-    } catch {
-      setEnableError(
-        t(
-          "알림 권한 요청에 실패했어요.",
-          "Couldn't request notification permission.",
-        ),
-      );
-    } finally {
-      setRequesting(false);
-    }
+      if (!result.pushSubscribed && result.errorMessage) {
+        setEnableError(result.errorMessage);
+      }
+    })();
   };
 
-  const handleRegisterThisDevice = async () => {
+  const handleRegisterThisDevice = () => {
     if (!userId || requesting) return;
-    setRequesting(true);
     setEnableError(null);
     setLocalStatusMessage(null);
-    try {
-      const result = await refreshDeviceRegistration(userId, lang);
+
+    void (async () => {
+      const result = await executeDirectPushEnableFlow(userId, lang);
+      setEnableSteps(result.steps);
+      setRequesting(false);
       applyEnableResult({
         ok: result.pushSubscribed,
         pushSubscribed: result.pushSubscribed,
-        testNotificationShown: result.testNotificationShown,
+        testNotificationShown: result.pushSubscribed,
         subscribe: result.subscribe,
       });
-    } finally {
-      setRequesting(false);
-    }
+      if (!result.pushSubscribed && result.errorMessage) {
+        setEnableError(result.errorMessage);
+      }
+    })();
   };
 
   const handleLocalDisplayTest = async () => {
@@ -407,12 +400,25 @@ export function ScheduleAlarmSheet({
           <p className="mt-3 text-[13px] text-red-600">{enableError}</p>
         )}
 
+        {enableSteps.length > 0 && (
+          <ol
+            className="mt-3 space-y-1 text-[12px] text-ink-soft"
+            data-testid="alarm-enable-steps"
+          >
+            {enableSteps.map((entry) => (
+              <li key={entry.id} className={entry.ok ? "" : "text-red-600"}>
+                {entry.ok ? "✓" : "✗"} {entry.label}: {entry.detail}
+              </li>
+            ))}
+          </ol>
+        )}
+
         {view === "default" && (
           <button
             type="button"
             data-testid="alarm-enable-button"
             disabled={requesting}
-            onClick={() => void handleEnableNotifications()}
+            onClick={handleEnableNotifications}
             className="touch-press mt-4 w-full rounded-[20px] bg-ink py-3.5 text-[15px] font-semibold text-white disabled:opacity-50"
           >
             {requesting
@@ -426,7 +432,7 @@ export function ScheduleAlarmSheet({
             type="button"
             data-testid="alarm-register-device-button"
             disabled={requesting || checking}
-            onClick={() => void handleRegisterThisDevice()}
+            onClick={handleRegisterThisDevice}
             className="touch-press mt-4 w-full rounded-[20px] bg-ink py-3.5 text-[15px] font-semibold text-white disabled:opacity-50"
           >
             {requesting || checking
