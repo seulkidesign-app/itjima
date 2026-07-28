@@ -200,7 +200,7 @@ export function BottomSheet({
                 ? { duration: 0.22, ease: [0.2, 0.8, 0.2, 1] }
                 : SPRING_SHEET
             }
-            className="bottom-sheet-panel sheet-chrome relative z-[1] mx-auto mt-auto flex w-full max-h-[var(--sheet-max-h)] shrink-0 flex-col overflow-hidden bg-white/98 shadow-[0_-20px_60px_-10px_rgba(0,0,0,0.22)] backdrop-blur-2xl"
+            className="bottom-sheet-panel itjima-glass-panel sheet-chrome relative z-[1] mx-auto mt-auto flex w-full max-h-[var(--sheet-max-h)] shrink-0 flex-col overflow-hidden"
             style={
               {
                 "--sheet-max-h": maxHeight,

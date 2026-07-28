@@ -39,7 +39,7 @@ export function TopNav() {
   return (
     <>
       <div
-        className={`app-top-nav shrink-0 z-40 bg-white/95 backdrop-blur-md transition-shadow ${
+        className={`app-top-nav itjima-glass-chrome shrink-0 z-40 transition-shadow ${
           scrolled ? "border-b border-ink/10 shadow-card" : ""
         }`}
         style={{ paddingTop: "env(safe-area-inset-top)" }}
@@ -100,7 +100,7 @@ export function TopNav() {
                   }`}
                 >
                   <Icon
-                    className="app-primary-tab-icon hidden shrink-0"
+                    className="app-primary-tab-icon hidden shrink-0 sm:inline-flex"
                     size={17}
                     strokeWidth={2}
                     aria-hidden

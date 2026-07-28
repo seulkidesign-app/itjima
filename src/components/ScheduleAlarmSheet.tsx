@@ -423,7 +423,7 @@ export function ScheduleAlarmSheet({
             data-testid="alarm-enable-button"
             disabled={requesting}
             onClick={handleEnableNotifications}
-            className="touch-press mt-4 w-full rounded-[20px] bg-ink py-3.5 text-[15px] font-semibold text-white disabled:opacity-50"
+            className="itjima-cta-primary touch-press mt-4 w-full py-3.5 text-[15px] font-semibold text-ink disabled:opacity-50"
           >
             {requesting
               ? t("연결하는 중…", "Connecting…")
@@ -437,7 +437,7 @@ export function ScheduleAlarmSheet({
             data-testid="alarm-register-device-button"
             disabled={requesting || checking}
             onClick={handleRegisterThisDevice}
-            className="touch-press mt-4 w-full rounded-[20px] bg-ink py-3.5 text-[15px] font-semibold text-white disabled:opacity-50"
+            className="itjima-cta-primary touch-press mt-4 w-full py-3.5 text-[15px] font-semibold text-ink disabled:opacity-50"
           >
             {requesting || checking
               ? t("등록하는 중…", "Registering…")
@@ -450,7 +450,7 @@ export function ScheduleAlarmSheet({
             type="button"
             data-testid="alarm-denied-help-button"
             onClick={() => setShowDeniedHelp((v) => !v)}
-            className="touch-press mt-4 w-full rounded-[20px] bg-ink/[0.06] px-4 py-3.5 text-[15px] font-semibold text-ink"
+            className="itjima-cta-secondary touch-press mt-4 w-full px-4 py-3.5 text-[15px] font-semibold text-ink"
           >
             {t("설정 방법 보기", "How to change settings")}
           </button>
@@ -503,7 +503,7 @@ export function ScheduleAlarmSheet({
               data-testid="alarm-local-display-test-button"
               disabled={requesting || checking}
               onClick={() => void handleLocalDisplayTest()}
-              className="touch-press w-full rounded-[20px] bg-ink/[0.06] px-4 py-3 text-[14px] font-semibold text-ink disabled:opacity-50"
+              className="itjima-cta-secondary touch-press w-full px-4 py-3 text-[14px] font-semibold text-ink disabled:opacity-50"
             >
               {checking || requesting
                 ? t("확인하는 중…", "Checking…")
@@ -517,7 +517,7 @@ export function ScheduleAlarmSheet({
               data-testid="alarm-server-push-test-button"
               disabled={serverTesting || requesting || !userId}
               onClick={() => void handleServerPushTest()}
-              className="touch-press w-full rounded-[20px] bg-ink/[0.06] px-4 py-3 text-[14px] font-semibold text-ink disabled:opacity-50"
+              className="itjima-cta-secondary touch-press w-full px-4 py-3 text-[14px] font-semibold text-ink disabled:opacity-50"
             >
               {serverTesting
                 ? t("서버 테스트 진행 중…", "Server test in progress…")
@@ -556,7 +556,7 @@ export function ScheduleAlarmSheet({
                 if (!presetsEnabled) return;
                 void onSelectPreset(schedule, id).then(() => onClose());
               }}
-              className="touch-press w-full rounded-[20px] bg-ink/[0.04] px-4 py-3.5 text-left text-[15px] font-semibold text-ink disabled:opacity-40"
+              className="itjima-card touch-press w-full px-4 py-3.5 text-left text-[15px] font-semibold text-ink disabled:opacity-40"
             >
               {label}
             </button>
@@ -569,7 +569,7 @@ export function ScheduleAlarmSheet({
               if (!presetsEnabled) return;
               onCustom(schedule);
             }}
-            className="touch-press w-full rounded-[20px] bg-ink/[0.04] px-4 py-3.5 text-left text-[15px] font-semibold text-ink disabled:opacity-40"
+            className="itjima-card touch-press w-full px-4 py-3.5 text-left text-[15px] font-semibold text-ink disabled:opacity-40"
           >
             {t("직접 설정", "Custom time")}
           </button>
@@ -580,7 +580,7 @@ export function ScheduleAlarmSheet({
                 onDisarm();
                 onClose();
               }}
-              className="touch-press mt-1 w-full rounded-[20px] bg-ink/[0.06] px-4 py-3.5 text-[15px] font-semibold text-ink"
+              className="itjima-cta-secondary touch-press mt-1 w-full px-4 py-3.5 text-[15px] font-semibold text-ink"
             >
               {t("알림 끄기", "Turn off alarm")}
             </button>

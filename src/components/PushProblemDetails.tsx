@@ -18,7 +18,7 @@ export function PushProblemDetails({ steps, open, onToggle, labels }: Props) {
         type="button"
         data-testid="push-problem-details-button"
         onClick={onToggle}
-        className="touch-press w-full rounded-[20px] bg-ink/[0.06] px-4 py-3 text-[14px] font-semibold text-ink"
+        className="itjima-cta-secondary touch-press w-full px-4 py-3 text-[14px] font-semibold text-ink"
       >
         {labels.toggle}
       </button>

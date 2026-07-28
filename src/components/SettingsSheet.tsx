@@ -23,7 +23,7 @@ type Props = {
 };
 
 const rowClass =
-  "flex min-h-[52px] w-full items-center gap-3 px-3.5 text-left text-[14px] font-medium text-ink transition-colors active:bg-ink/[0.04]";
+  "itjima-settings-row flex min-h-[52px] w-full items-center gap-3 px-3.5 text-left text-[14px] font-medium text-ink transition-colors active:bg-ink/[0.04]";
 
 export function SettingsSheet({ open, onClose }: Props) {
   const t = useT();
@@ -122,7 +122,7 @@ export function SettingsSheet({ open, onClose }: Props) {
           </p>
         </div>
 
-        <div className="overflow-hidden rounded-[18px] border border-ink/[0.07] bg-white shadow-[0_1px_2px_rgba(0,0,0,0.02)]">
+        <div className="itjima-settings-group overflow-hidden">
           {!userId && (
             <Link
               to="/auth"

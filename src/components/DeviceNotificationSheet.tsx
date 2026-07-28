@@ -174,7 +174,7 @@ export function DeviceNotificationSheet({
             data-testid="settings-enable-notifications-button"
             disabled={running}
             onClick={handleEnableClick}
-            className="touch-press mt-4 w-full rounded-[20px] bg-ink py-3.5 text-[15px] font-semibold text-white disabled:opacity-50"
+            className="itjima-cta-primary touch-press mt-4 w-full py-3.5 text-[15px] font-semibold text-ink disabled:opacity-50"
           >
             {running
               ? t("진행 중…", "Working…")
@@ -188,7 +188,7 @@ export function DeviceNotificationSheet({
               type="button"
               data-testid="settings-denied-help-button"
               onClick={() => setShowDeniedHelp((value) => !value)}
-              className="touch-press mt-3 w-full rounded-[20px] bg-ink/[0.06] px-4 py-3.5 text-[15px] font-semibold text-ink"
+              className="itjima-card touch-press mt-3 w-full rounded-[20px] bg-ink/[0.04] px-4 py-3.5 text-[15px] font-semibold text-ink"
             >
               {t("설정 방법 보기", "How to change settings")}
             </button>
