@@ -63,6 +63,8 @@ describe("iPhone notification setup safety", () => {
     expect(push).toContain('code: "not_authenticated"');
     expect(push).toContain("logPushFailure");
     expect(push).toContain("detectPushPlatform");
+    expect(push).toContain('onConflict: "user_id,endpoint"');
+    expect(push).toContain("platform: record.platform");
   });
 
   it("keeps authenticated immediate push test function available", () => {

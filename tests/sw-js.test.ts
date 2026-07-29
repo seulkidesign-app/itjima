@@ -45,6 +45,8 @@ describe("service worker (public/sw.js)", () => {
     expect(publicSw).toContain('"/icons/icon-192.png"');
     expect(publicSw).toContain('"/icons/badge-72.png"');
     expect(publicSw).toContain("showNotification:fallback_ok");
+    expect(publicSw).toContain("sanitizePushLogMessage");
+    expect(publicSw).not.toContain("itjima-push-fallback");
     expect(publicSw).toContain("[itjima:sw:push]");
   });
 });

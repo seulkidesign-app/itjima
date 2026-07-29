@@ -112,6 +112,14 @@ function parsePushPayload(event) {
   }
 }
 
+function sanitizePushLogMessage(error) {
+  const raw = error instanceof Error ? error.message : String(error);
+  return raw
+    .replace(/https?:\/\/[^\s]+/g, "[redacted]")
+    .replace(/[A-Za-z0-9+/=_-]{32,}/g, "[redacted]")
+    .slice(0, 160);
+}
+
 function buildNotificationOptions(payload, url) {
   const scheduleId = payload.data?.scheduleId;
   return {
@@ -152,18 +160,22 @@ async function showPushNotification(payload, parseMode) {
   } catch (error) {
     console.warn(PUSH_LOG, "showNotification:failed", {
       tag: options.tag,
-      message: error instanceof Error ? error.message : String(error),
+      message: sanitizePushLogMessage(error),
     });
 
-    await self.registration.showNotification(DEFAULT_TITLE, {
-      body: DEFAULT_BODY,
-      icon: NOTIFICATION_ICON,
-      badge: NOTIFICATION_BADGE,
-      tag: "itjima-push-fallback",
-      data: { url: "/schedule" },
-      renotify: true,
-    });
-    console.info(PUSH_LOG, "showNotification:fallback_ok");
+    try {
+      await self.registration.showNotification(title, {
+        body: options.body,
+        tag: options.tag,
+        data: options.data,
+      });
+      console.info(PUSH_LOG, "showNotification:fallback_ok", { tag: options.tag });
+    } catch (fallbackError) {
+      console.warn(PUSH_LOG, "showNotification:fallback_failed", {
+        tag: options.tag,
+        message: sanitizePushLogMessage(fallbackError),
+      });
+    }
     return false;
   }
 }
