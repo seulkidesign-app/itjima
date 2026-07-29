@@ -185,7 +185,7 @@ export function ScheduleCompactRow({
           </span>
         )}
       </span>
-      {onAlarm && !done && (
+      {onAlarm && !done && s.alarm && (
         <button
           type="button"
           onClick={(e) => {

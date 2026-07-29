@@ -10,8 +10,18 @@ import {
   detectPushPlatform,
   requiresStandalonePwaForPush,
 } from "@/lib/push/detectPushPlatform";
+import {
+  getSessionUserId,
+  isDevicePushRegisteredForCurrentUser,
+  persistPushSubscriptionViaRpc,
+} from "@/lib/push/pushSubscriptionAccount";
 
 export { detectPlatform, detectPushPlatform, requiresStandalonePwaForPush };
+export {
+  getSessionUserId,
+  isDevicePushRegisteredForCurrentUser,
+  readBrowserPushRecord,
+} from "@/lib/push/pushSubscriptionAccount";
 
 export type PushSupportState =
   | "unsupported"
@@ -91,17 +101,7 @@ async function getPushRegistration(): Promise<ServiceWorkerRegistration | null> 
   return reg;
 }
 
-function classifyUpsertError(message: string): string {
-  if (/schema cache|PGRST205|Could not find the table/i.test(message)) {
-    return "schema_cache";
-  }
-  if (/JWT|auth|401|403|row-level security|RLS/i.test(message)) {
-    return "not_authenticated";
-  }
-  return "upsert_failed";
-}
-
-/** Subscribe and persist — caller must ensure Notification.permission === "granted". */
+/** Subscribe and persist — always registers for the JWT user via RPC. */
 export async function subscribePush(
   userId: string,
 ): Promise<PushSubscribeResult> {
@@ -132,11 +132,9 @@ export async function subscribePush(
     return { ok: false, state: "default" };
   }
 
-  const {
-    data: { session },
-  } = await supabase.auth.getSession();
-  if (!session?.user?.id || session.user.id !== userId) {
-    logPushFailure("subscribe:no_session", { userId });
+  const sessionUserId = await getSessionUserId();
+  if (!sessionUserId || sessionUserId !== userId) {
+    logPushFailure("subscribe:no_session", { userId: sessionUserId ?? "none" });
     return {
       ok: false,
       state: "expired",
@@ -213,47 +211,44 @@ export async function subscribePush(
     platform: detectPushPlatform(),
   };
 
-  logPushDiagnostic("subscribe:upsert", {
-    userId,
+  logPushDiagnostic("subscribe:register_rpc", {
+    userId: sessionUserId,
     platform: record.platform,
+    hadExistingBrowserSubscription: Boolean(sub),
   });
 
-  const { error } = await supabase.from("push_subscriptions").upsert(
-    {
-      user_id: userId,
-      endpoint: record.endpoint,
-      p256dh: record.p256dh,
-      auth: record.auth,
-      platform: record.platform,
-      revoked_at: null,
-      failure_count: 0,
-      updated_at: new Date().toISOString(),
-    },
-    { onConflict: "user_id,endpoint" },
-  );
-
-  if (error) {
-    const code = classifyUpsertError(error.message);
-    logPushFailure("subscribe:upsert_failed", {
-      code,
-      message: error.message,
-      details: error.details,
-      hint: error.hint,
-    });
+  const registered = await persistPushSubscriptionViaRpc(record);
+  if (!registered.ok) {
+    const code = registered.code ?? "register_failed";
     return {
       ok: false,
       state: "expired",
       expired: true,
       code,
-      error: error.message,
+      error: registered.error ?? "push_register_failed",
     };
   }
 
-  logPushDiagnostic("subscribe:upsert_ok", {
-    userId,
+  logPushDiagnostic("subscribe:register_ok", {
+    userId: sessionUserId,
     platform: record.platform,
   });
   return { ok: true, state: "granted" };
+}
+
+/** JWT-scoped ensure — never trusts caller user id without session match. */
+export async function ensurePushSubscriptionForCurrentUser(): Promise<PushSubscribeResult> {
+  const sessionUserId = await getSessionUserId();
+  if (!sessionUserId) {
+    return {
+      ok: false,
+      state: "expired",
+      expired: true,
+      code: "not_authenticated",
+      error: "No authenticated Supabase session",
+    };
+  }
+  return ensurePushSubscription(sessionUserId);
 }
 
 /** Verify/resubscribe when permission is already granted — never calls requestPermission. */
@@ -342,19 +337,14 @@ export async function sendServerPushTest(
   }
 }
 
-/** Raw DB check — used by server push diagnostics, not closed-app delivery claims. */
+/** True only when this browser endpoint is actively registered for the user. */
 export async function hasStoredPushSubscription(
   userId: string,
 ): Promise<boolean> {
   if (import.meta.env.VITE_E2E === "true") return false;
-  const { data, error } = await supabase
-    .from("push_subscriptions")
-    .select("id")
-    .eq("user_id", userId)
-    .is("revoked_at", null)
-    .limit(1);
-  if (error) return false;
-  return (data?.length ?? 0) > 0;
+  const sessionUserId = await getSessionUserId();
+  if (!sessionUserId || sessionUserId !== userId) return false;
+  return isDevicePushRegisteredForCurrentUser();
 }
 
 export async function hasActivePushSubscription(

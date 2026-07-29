@@ -29,17 +29,66 @@ function assertRelativeAppUrl(url: string): string {
   return url;
 }
 
-function privacySafePayload(scheduleId: string) {
+type ScheduleRow = {
+  id: string;
+  text: string | null;
+  start_time: string;
+  end_time: string;
+  all_day: boolean | null;
+  start_all_day: boolean | null;
+  end_all_day: boolean | null;
+  alarm: boolean | null;
+  alarm_at: string | null;
+};
+
+function formatKoTime(date: Date): string {
+  const hours = date.getHours();
+  const minutes = date.getMinutes();
+  const period = hours < 12 ? "오전" : "오후";
+  const h12 = hours % 12 || 12;
+  const min = minutes.toString().padStart(2, "0");
+  return `${period} ${h12}:${min}`;
+}
+
+function resolveAllDay(schedule: ScheduleRow): boolean {
+  if (schedule.start_all_day != null || schedule.end_all_day != null) {
+    return Boolean(schedule.start_all_day && schedule.end_all_day);
+  }
+  return Boolean(schedule.all_day);
+}
+
+function buildReminderPayload(
+  scheduleId: string,
+  schedule: ScheduleRow | null,
+): string {
   const isTest = scheduleId === SERVER_PUSH_TEST_SCHEDULE_ID;
-  const url = assertRelativeAppUrl(
-    isTest ? "/schedule" : `/schedule?open=${scheduleId}`,
-  );
+  if (isTest) {
+    return JSON.stringify({
+      title: "잊지마",
+      body: "서버 예약 알림 테스트",
+      tag: "itjima-server-push-test",
+      data: {
+        url: assertRelativeAppUrl("/schedule"),
+        scheduleId,
+      },
+    });
+  }
+
+  const title = (schedule?.text ?? "").trim() || "잊지마";
+  let body = "예정된 일정이에요.";
+  if (schedule && !resolveAllDay(schedule)) {
+    const start = new Date(schedule.start_time);
+    if (!Number.isNaN(start.getTime())) {
+      body = `${formatKoTime(start)} 일정이에요.`;
+    }
+  }
+
   return JSON.stringify({
-    title: "⏰ 잊지마",
-    body: isTest ? "서버 예약 알림 테스트" : "예정된 일정 알림",
-    tag: isTest ? "itjima-server-push-test" : `schedule-${scheduleId}`,
+    title,
+    body,
+    tag: `schedule-${scheduleId}`,
     data: {
-      url,
+      url: assertRelativeAppUrl(`/schedule?open=${scheduleId}`),
       scheduleId,
     },
   });
@@ -121,7 +170,18 @@ Deno.serve(async (req) => {
       continue;
     }
 
-    const payload = privacySafePayload(reminder.schedule_id);
+    const { data: schedule } = await supabase
+      .from("schedules")
+      .select(
+        "id, text, start_time, end_time, all_day, start_all_day, end_all_day, alarm, alarm_at",
+      )
+      .eq("id", reminder.schedule_id)
+      .maybeSingle();
+
+    const payload = buildReminderPayload(
+      reminder.schedule_id,
+      (schedule as ScheduleRow | null) ?? null,
+    );
     let anySuccess = false;
     let hardFail = false;
 

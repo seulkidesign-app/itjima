@@ -8,8 +8,8 @@ import { useT, LanguageToggle, useLang } from "@/lib/i18n";
 import type { PushEnableStep } from "@/lib/push/directPushEnableFlow";
 import { useUserId } from "@/lib/store";
 import { useIsAdmin } from "@/hooks/useIsAdmin";
-import { supabase } from "@/integrations/supabase/client";
-import { authDebugSignOut } from "@/lib/authDebug";
+import { signOutWithPushCleanup } from "@/lib/push/pushSignOut";
+import { isDevicePushRegisteredForCurrentUser } from "@/lib/push/pushSubscription";
 import { tap } from "@/lib/haptics";
 import {
   focusComposer,
@@ -58,6 +58,18 @@ export function SettingsSheet({ open, onClose }: Props) {
         if (result.errorMessage) toast.error(result.errorMessage);
         return;
       }
+      const verified = await isDevicePushRegisteredForCurrentUser();
+      if (!verified) {
+        setNotificationFailed(true);
+        setNotificationOpen(true);
+        toast.error(
+          t(
+            "등록을 확인하지 못했어요. 다시 시도해 주세요.",
+            "Couldn't verify registration. Please try again.",
+          ),
+        );
+        return;
+      }
       toast.success(
         t(
           "이 기기에서 알림을 받을 수 있어요.",
@@ -85,8 +97,7 @@ export function SettingsSheet({ open, onClose }: Props) {
       return;
     }
 
-    authDebugSignOut("SettingsSheet.tsx");
-    const { error } = await supabase.auth.signOut();
+    const { error } = await signOutWithPushCleanup("SettingsSheet.tsx");
     if (error) {
       toast.error(
         t(

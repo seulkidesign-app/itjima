@@ -82,12 +82,13 @@ describe("buildReminderUpsert", () => {
 });
 
 describe("privacy-safe push payload", () => {
-  it("never includes raw thought text", () => {
-    const payload = buildReminderPushPayload("sched-abc-123");
+  it("uses schedule title and time in push payload", () => {
+    const schedule = makeSchedule();
+    const payload = buildReminderPushPayload(schedule, "ko");
     const json = JSON.stringify(payload);
-    expect(json).not.toContain("치과");
-    expect(payload.title).toBe("⏰ 잊지마");
-    expect(payload.body).toBe("예정된 일정 알림");
+    expect(json).toContain("치과");
+    expect(payload.title).toBe("치과");
+    expect(payload.body).toMatch(/일정이에요\./);
     expect(payload.data.scheduleId).toBe("sched-abc-123");
   });
 
@@ -95,7 +96,7 @@ describe("privacy-safe push payload", () => {
     expect(reminderClickUrl("sched-abc-123")).toBe(
       "/schedule?open=sched-abc-123",
     );
-    expect(buildReminderPushPayload("sched-abc-123").data.url).toBe(
+    expect(buildReminderPushPayload(makeSchedule()).data.url).toBe(
       "/schedule?open=sched-abc-123",
     );
   });

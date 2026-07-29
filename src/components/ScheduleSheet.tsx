@@ -30,6 +30,7 @@ export function ScheduleSheet({
   initialStartAllDay,
   initialEndAllDay,
   initialRepeat,
+  initialReminderKey,
   saveLabel,
   onClose,
   onSave,
@@ -42,6 +43,7 @@ export function ScheduleSheet({
   initialStartAllDay?: boolean;
   initialEndAllDay?: boolean;
   initialRepeat?: RepeatRule | null;
+  initialReminderKey?: import("@/lib/scheduleChoices").ReminderKey;
   saveLabel?: string;
   onClose: () => void;
   onSave: (
@@ -96,6 +98,7 @@ export function ScheduleSheet({
           initialEndAllDay={initialEndAllDay}
           initialRepeat={initialRepeat}
           editMode={!!saveLabel}
+          initialReminderKey={initialReminderKey}
           onConfirm={(start, end, opts) => {
             const validation = validateScheduleRange(start, end, {
               editMode: Boolean(saveLabel),

@@ -14,8 +14,7 @@ import { useState } from "react";
 import { useT, LanguageToggle } from "@/lib/i18n";
 import { useUserId } from "@/lib/store";
 import { useIsAdmin } from "@/hooks/useIsAdmin";
-import { supabase } from "@/integrations/supabase/client";
-import { authDebugSignOut } from "@/lib/authDebug";
+import { signOutWithPushCleanup } from "@/lib/push/pushSignOut";
 import { AboutSheet } from "@/components/AboutSheet";
 import { FeedbackSheet } from "@/components/FeedbackSheet";
 import { tap } from "@/lib/haptics";
@@ -102,8 +101,16 @@ export function SideNav() {
         {userId ? (
           <button
             onClick={async () => {
-              authDebugSignOut("SideNav.tsx");
-              await supabase.auth.signOut();
+              const { error } = await signOutWithPushCleanup("SideNav.tsx");
+              if (error) {
+                toast.error(
+                  t(
+                    "로그아웃하지 못했어요. 연결을 확인하고 다시 시도해 주세요.",
+                    "Couldn't sign out. Check your connection and try again.",
+                  ),
+                );
+                return;
+              }
               toast(t("로그아웃됨", "Signed out"));
             }}
             className="flex items-center gap-2 rounded-full glass shadow-card px-3 py-2.5 text-[13px] font-semibold text-ink-soft"

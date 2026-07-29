@@ -20,7 +20,8 @@ import {
   type PushEnableStep,
 } from "@/lib/push/directPushEnableFlow";
 import {
-  ensurePushSubscription,
+  ensurePushSubscriptionForCurrentUser,
+  isDevicePushRegisteredForCurrentUser,
 } from "@/lib/push/pushSubscription";
 import {
   diagnoseServerPushTest,
@@ -128,12 +129,21 @@ export function ScheduleAlarmSheet({
     setChecking(true);
     setEnableError(null);
     try {
-      const push = await ensurePushSubscription(userId);
-      setPushReady(push.ok);
+      const push = await ensurePushSubscriptionForCurrentUser();
+      const registered = await isDevicePushRegisteredForCurrentUser();
+      setPushReady(push.ok && registered);
+      if (push.ok && !registered) {
+        setEnableError(
+          t(
+            "등록을 확인하지 못했어요. 「이 기기에서 알림 켜기」를 다시 눌러 주세요.",
+            "Couldn't verify registration. Tap “Turn on notifications on this device” again.",
+          ),
+        );
+      }
     } finally {
       setChecking(false);
     }
-  }, [userId]);
+  }, [userId, t]);
 
   const stopServerPoll = useCallback(() => {
     if (pollRef.current != null) {

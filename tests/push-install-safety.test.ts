@@ -34,7 +34,8 @@ describe("iPhone notification setup safety", () => {
     expect(serverTest).toContain("SERVER_PUSH_TEST_SCHEDULE_ID");
     expect(serverTest).toContain("push-test:");
     expect(processReminders).toContain("SERVER_PUSH_TEST_SCHEDULE_ID");
-    expect(processReminders).toContain('isTest ? "/schedule"');
+    expect(processReminders).toContain('assertRelativeAppUrl("/schedule")');
+    expect(processReminders).toContain('.from("schedules")');
     expect(sheet).toContain("1분 뒤 예약 알림 테스트");
     expect(sheet).toContain("이 기기에서 알림 표시 테스트");
   });
@@ -47,6 +48,10 @@ describe("iPhone notification setup safety", () => {
     expect(settings).toContain('data-testid="settings-notification-settings-row"');
     expect(deviceSheet).toContain("PushProblemDetails");
     expect(deviceSheet).toContain("문제 확인하기");
+    expect(deviceSheet).toContain("getNotificationSettingsStatus");
+    expect(deviceSheet).toContain("테스트 알림 보내기");
+    expect(deviceSheet).toContain("이 기기 알림 다시 연결");
+    expect(deviceSheet).toContain("이 기기 알림 끄기");
     expect(deviceSheet).not.toContain('data-testid="push-live-diagnostics"');
   });
 
@@ -57,14 +62,14 @@ describe("iPhone notification setup safety", () => {
     );
   });
 
-  it("subscribePush validates auth session and surfaces upsert diagnostics", () => {
-    expect(push).toContain("supabase.auth.getSession");
+  it("subscribePush validates auth session and registers via RPC", () => {
+    expect(push).toContain("getSessionUserId");
     expect(push).toContain('code: "missing_vapid"');
     expect(push).toContain('code: "not_authenticated"');
     expect(push).toContain("logPushFailure");
     expect(push).toContain("detectPushPlatform");
-    expect(push).toContain('onConflict: "user_id,endpoint"');
-    expect(push).toContain("platform: record.platform");
+    expect(push).toContain("persistPushSubscriptionViaRpc");
+    expect(push).toContain("ensurePushSubscriptionForCurrentUser");
   });
 
   it("keeps authenticated immediate push test function available", () => {

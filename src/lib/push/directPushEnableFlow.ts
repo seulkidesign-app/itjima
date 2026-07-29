@@ -1,4 +1,3 @@
-import { supabase } from "@/integrations/supabase/client";
 import { registerServiceWorker } from "@/lib/swReminders";
 import {
   logPushDiagnostic,
@@ -11,6 +10,10 @@ import {
   requiresStandalonePwaForPush,
   type PushSubscribeResult,
 } from "@/lib/push/pushSubscription";
+import {
+  getSessionUserId,
+  persistPushSubscriptionViaRpc,
+} from "@/lib/push/pushSubscriptionAccount";
 
 export type PushEnableStep = {
   id: string;
@@ -357,18 +360,16 @@ export async function executeDirectPushEnableFlow(
     };
   }
 
-  const {
-    data: { session },
-  } = await supabase.auth.getSession();
+  const sessionUserId = await getSessionUserId();
   steps.push(
     step(
       "auth_session",
       ko ? "로그인 세션" : "Auth session",
-      Boolean(session?.user?.id === userId),
-      session?.user?.id ? (ko ? "확인됨" : "verified") : (ko ? "없음" : "none"),
+      Boolean(sessionUserId === userId),
+      sessionUserId ? (ko ? "확인됨" : "verified") : (ko ? "없음" : "none"),
     ),
   );
-  if (!session?.user?.id || session.user.id !== userId) {
+  if (!sessionUserId || sessionUserId !== userId) {
     return {
       ok: false,
       pushSubscribed: false,
@@ -380,32 +381,24 @@ export async function executeDirectPushEnableFlow(
     };
   }
 
-  const { error } = await supabase.from("push_subscriptions").upsert(
-    {
-      user_id: userId,
-      endpoint: json.endpoint,
-      p256dh: json.keys.p256dh,
-      auth: json.keys.auth,
-      platform: detectPushPlatform(),
-      revoked_at: null,
-      failure_count: 0,
-      updated_at: new Date().toISOString(),
-    },
-    { onConflict: "user_id,endpoint" },
-  );
+  const registered = await persistPushSubscriptionViaRpc({
+    endpoint: json.endpoint,
+    p256dh: json.keys.p256dh,
+    auth: json.keys.auth,
+    platform: detectPushPlatform(),
+  });
 
-  if (error) {
-    logPushFailure("direct_enable:upsert", {
-      message: error.message,
-      details: error.details,
-      hint: error.hint,
+  if (!registered.ok) {
+    logPushFailure("direct_enable:register_rpc", {
+      code: registered.code,
+      message: registered.error,
     });
     steps.push(
       step(
         "upsert",
-        ko ? "DB 저장" : "DB upsert",
+        ko ? "DB 저장" : "DB register",
         false,
-        error.message,
+        registered.error ?? "register_failed",
       ),
     );
     return {
@@ -416,12 +409,10 @@ export async function executeDirectPushEnableFlow(
       subscribe: {
         ok: false,
         state: "expired",
-        code: /schema cache|PGRST205/i.test(error.message)
-          ? "schema_cache"
-          : "upsert_failed",
-        error: error.message,
+        code: registered.code ?? "register_failed",
+        error: registered.error,
       },
-      errorMessage: error.message,
+      errorMessage: registered.error ?? "register_failed",
     };
   }
 

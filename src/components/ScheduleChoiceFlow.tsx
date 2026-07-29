@@ -27,6 +27,10 @@ import {
   formatScheduleConfigSummary,
 } from "@/lib/scheduleTime";
 import type { RepeatRule } from "@/lib/store";
+import {
+  defaultReminderForNewSchedule,
+  scheduleHasSpecificTime,
+} from "@/lib/push/scheduleNotificationDefaults";
 import { EASE_OUT_APP } from "@/lib/motion";
 import { confirm as confirmHaptic, tick } from "@/lib/haptics";
 
@@ -61,6 +65,7 @@ type Props = {
   /** High-confidence AI reason banner — no date claims. */
   guidanceReason?: string | null;
   editMode?: boolean;
+  initialReminderKey?: ReminderKey;
   onConfirm: (start: Date, end: Date, options: ScheduleConfirmOptions) => void;
 };
 
@@ -313,6 +318,7 @@ export function ScheduleChoiceFlow({
   thoughtText,
   guidanceReason,
   editMode,
+  initialReminderKey,
   onConfirm,
 }: Props) {
   const t = useT();
@@ -323,7 +329,7 @@ export function ScheduleChoiceFlow({
   const [startAllDay, setStartAllDay] = useState(false);
   const [endAllDay, setEndAllDay] = useState(false);
   const [repeat, setRepeat] = useState<RepeatKey>("none");
-  const [reminder, setReminder] = useState<ReminderKey>("30m");
+  const [reminder, setReminder] = useState<ReminderKey>("at");
   const [calendarView, setCalendarView] = useState(() => {
     const now = new Date();
     return { y: now.getFullYear(), m: now.getMonth() };
@@ -369,7 +375,15 @@ export function ScheduleChoiceFlow({
     setRepeat(repeatRuleToKey(initialRepeat));
     setStartTime([seed.getHours(), snapMinute(seed.getMinutes())]);
     setEndTime([seedEnd.getHours(), snapMinute(seedEnd.getMinutes())]);
-    setReminder("30m");
+    if (editMode) {
+      setReminder(initialReminderKey ?? "off");
+    } else {
+      setReminder(
+        defaultReminderForNewSchedule(
+          scheduleHasSpecificTime(resolved.startAllDay, resolved.endAllDay),
+        ),
+      );
+    }
     setStep("when");
   }, [
     open,
@@ -379,6 +393,7 @@ export function ScheduleChoiceFlow({
     initialStartAllDay,
     initialEndAllDay,
     initialRepeat,
+    initialReminderKey,
     editMode,
   ]);
 
@@ -480,7 +495,16 @@ export function ScheduleChoiceFlow({
   const goNext = () => {
     if (step === "when" && when === "pick_date" && !pickedCalendarDate) return;
     if (step === "when") setStep("time");
-    else if (step === "time") setStep("reminder");
+    else if (step === "time") {
+      if (!editMode) {
+        setReminder(
+          defaultReminderForNewSchedule(
+            scheduleHasSpecificTime(startAllDay, endAllDay),
+          ),
+        );
+      }
+      setStep("reminder");
+    }
   };
 
   const goBack = () => {

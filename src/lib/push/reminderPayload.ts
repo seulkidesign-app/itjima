@@ -1,4 +1,7 @@
-/** Privacy-safe Web Push payload — never includes raw thought text. */
+import type { ScheduleItem } from "@/lib/store";
+import { buildReminderNotificationCopy } from "@/lib/push/scheduleNotificationContent";
+
+/** Web Push payload for a schedule reminder. */
 export type ReminderPushPayload = {
   title: string;
   body: string;
@@ -9,14 +12,29 @@ export type ReminderPushPayload = {
   };
 };
 
-export function buildReminderPushPayload(scheduleId: string): ReminderPushPayload {
+export function buildReminderPushPayload(
+  schedule: Pick<
+    ScheduleItem,
+    | "id"
+    | "text"
+    | "start_time"
+    | "end_time"
+    | "all_day"
+    | "start_all_day"
+    | "end_all_day"
+    | "alarm"
+    | "alarm_at"
+  >,
+  lang: "ko" | "en" = "ko",
+): ReminderPushPayload {
+  const copy = buildReminderNotificationCopy(schedule, lang);
   return {
-    title: "⏰ 잊지마",
-    body: "예정된 일정 알림",
-    tag: `schedule-${scheduleId}`,
+    title: copy.title,
+    body: copy.body,
+    tag: `schedule-${schedule.id}`,
     data: {
-      url: `/schedule?open=${scheduleId}`,
-      scheduleId,
+      url: copy.url,
+      scheduleId: schedule.id,
     },
   };
 }

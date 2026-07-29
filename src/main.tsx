@@ -21,6 +21,7 @@ import "./ui-fields-and-states.css";
 import "./ui-premium.css";
 
 import { registerServiceWorker } from "@/lib/swReminders";
+import { installPushSubscriptionAuthSync } from "@/lib/push/pushAuthSync";
 import {
   logPushDiagnostic,
   summarizePushEnvironment,
@@ -37,6 +38,7 @@ if (typeof window !== "undefined") {
     installAuthDebugInstrumentation(router);
   }
   void registerServiceWorker();
+  installPushSubscriptionAuthSync();
   if (import.meta.env.VITE_E2E !== "true") {
     logPushDiagnostic("boot", summarizePushEnvironment());
   }

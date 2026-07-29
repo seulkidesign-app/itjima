@@ -83,6 +83,17 @@ import {
   syncScheduleReminder,
 } from "@/lib/push/scheduledRemindersSync";
 import {
+  buildDeniedSaveCopy,
+  completeScheduleSaveWithNotifications,
+  markNotificationOnboardingSeen,
+  shouldOfferNotificationOnboarding,
+  type PendingScheduleSave,
+  type ScheduleSaveOutcome,
+} from "@/lib/push/scheduleNotificationSave";
+import { inferReminderKeyFromSchedule, scheduleHasSpecificTime } from "@/lib/push/scheduleNotificationDefaults";
+import { ScheduleNotificationOnboardingSheet } from "@/components/ScheduleNotificationOnboardingSheet";
+import { NotificationDeniedHelpSheet } from "@/components/NotificationDeniedHelpSheet";
+import {
   ensurePushSubscription,
   hasActivePushSubscription,
 } from "@/lib/push/pushSubscription";
@@ -175,6 +186,12 @@ function Schedule() {
   const [reminderSheet, setReminderSheet] = useState<ScheduleItem | null>(null);
   const [alarmSheet, setAlarmSheet] = useState<ScheduleItem | null>(null);
   const [timerSheet, setTimerSheet] = useState<ScheduleItem | null>(null);
+  const [notificationOnboarding, setNotificationOnboarding] = useState<{
+    pending: PendingScheduleSave;
+    fireAt: Date;
+  } | null>(null);
+  const [onboardingBusy, setOnboardingBusy] = useState(false);
+  const [deniedHelpOpen, setDeniedHelpOpen] = useState(false);
   useTimerTick();
   const { pins, toggle: togglePin } = usePins();
 
@@ -200,6 +217,112 @@ function Schedule() {
     const push = await ensurePushSubscription(userId);
     if (!push.ok) return false;
     return hasActivePushSubscription(userId);
+  };
+
+  const persistScheduleItem = async (
+    pending: PendingScheduleSave,
+    alarmPayload: { alarm: boolean; alarm_at?: string | null },
+  ): Promise<ScheduleItem> => {
+    const allDayFields = scheduleAllDayFieldsFromConfirm({
+      allDay: pending.allDay,
+      startAllDay: pending.startAllDay,
+      endAllDay: pending.endAllDay,
+    });
+
+    if (pending.edit) {
+      await update(pending.edit.id, {
+        text: pending.text,
+        start_time: pending.start.toISOString(),
+        end_time: pending.end.toISOString(),
+        ...allDayFields,
+        repeat: pending.repeat ?? null,
+        ...alarmPayload,
+      });
+      return {
+        ...pending.edit,
+        text: pending.text,
+        start_time: pending.start.toISOString(),
+        end_time: pending.end.toISOString(),
+        ...allDayFields,
+        repeat: pending.repeat ?? null,
+        ...alarmPayload,
+      };
+    }
+
+    const { item } = await add({
+      text: pending.text,
+      start_time: pending.start.toISOString(),
+      end_time: pending.end.toISOString(),
+      ...allDayFields,
+      repeat: pending.repeat ?? null,
+      ...alarmPayload,
+    });
+    track("schedule_created", {
+      source: "manual",
+      text_length: pending.text.length,
+    });
+    return item as ScheduleItem;
+  };
+
+  const applySaveOutcome = (outcome: ScheduleSaveOutcome, isEdit: boolean) => {
+    if (!outcome.ok) {
+      toast.error(
+        outcome.errorMessage ??
+          t("남기지 못했어요", "Couldn't keep it"),
+        scheduleToast,
+      );
+      return;
+    }
+
+    if (outcome.showDeniedGuide) {
+      const denied = buildDeniedSaveCopy(lang === "en" ? "en" : "ko");
+      toast.warning(denied.headline, {
+        ...scheduleToast,
+        description: denied.detail,
+        action: {
+          label: lang === "ko" ? "방법 보기" : "How to enable",
+          onClick: () => setDeniedHelpOpen(true),
+        },
+      });
+    } else if (outcome.successCopy?.detail) {
+      toast.success(outcome.successCopy.headline, {
+        ...scheduleToast,
+        description: outcome.successCopy.detail,
+      });
+    } else if (outcome.successCopy?.headline) {
+      toast.success(outcome.successCopy.headline, scheduleToast);
+    } else {
+      toast.success(
+        isEdit
+          ? t("다듬었어요", "Refined")
+          : t("그때 다시 떠올릴게요", "I'll remember this for then"),
+        scheduleToast,
+      );
+    }
+
+    setSheet({ open: false });
+    setNotificationOnboarding(null);
+  };
+
+  const runScheduleSave = async (
+    pending: PendingScheduleSave,
+    opts?: {
+      requestPermission?: () => Promise<NotificationPermission>;
+      skipNotificationPrep?: boolean;
+    },
+  ) => {
+    try {
+      const outcome = await completeScheduleSaveWithNotifications(
+        userId,
+        pending,
+        lang === "en" ? "en" : "ko",
+        (alarm) => persistScheduleItem(pending, alarm),
+        opts,
+      );
+      applySaveOutcome(outcome, Boolean(pending.edit));
+    } catch {
+      toast.error(t("남기지 못했어요", "Couldn't keep it"), scheduleToast);
+    }
   };
 
   const armAlarmAt = async (s: ScheduleItem, at: Date) => {
@@ -703,73 +826,87 @@ function Schedule() {
             : undefined
         }
         initialRepeat={sheet.edit?.repeat}
+        initialReminderKey={
+          sheet.edit ? inferReminderKeyFromSchedule(sheet.edit) : undefined
+        }
         saveLabel={sheet.edit ? t("다듬기", "Refine") : undefined}
         onClose={() => setSheet({ open: false })}
         onSave={async (text, start, end, opts) => {
-          try {
-            const reminderMin =
-              opts?.reminderMinutes ?? opts?.alarmMinutesBefore ?? null;
-            const alarmPayload =
-              reminderMin != null
-                ? {
-                    alarm: true,
-                    alarm_at: new Date(
-                      start.getTime() - reminderMin * 60 * 1000,
-                    ).toISOString(),
-                  }
-                : { alarm: false };
+          const reminderMin =
+            opts?.reminderMinutes ?? opts?.alarmMinutesBefore ?? null;
+          const startAllDay = opts?.startAllDay ?? opts?.allDay ?? false;
+          const endAllDay = opts?.endAllDay ?? opts?.allDay ?? false;
+          const hasTime = scheduleHasSpecificTime(startAllDay, endAllDay);
+          const wantsAlarm = reminderMin != null;
+          const pending: PendingScheduleSave = {
+            text,
+            start,
+            end,
+            reminderMinutes: reminderMin,
+            allDay: opts?.allDay ?? false,
+            startAllDay,
+            endAllDay,
+            repeat: opts?.repeat ?? null,
+            isNew: !sheet.edit,
+            edit: sheet.edit,
+          };
 
-            const allDayFields = scheduleAllDayFieldsFromConfirm({
-              allDay: opts?.allDay ?? false,
-              startAllDay: opts?.startAllDay ?? opts?.allDay ?? false,
-              endAllDay: opts?.endAllDay ?? opts?.allDay ?? false,
-            });
-
-            if (sheet.edit) {
-              await update(sheet.edit.id, {
-                text,
-                start_time: start.toISOString(),
-                end_time: end.toISOString(),
-                ...allDayFields,
-                repeat: opts?.repeat ?? null,
-                ...alarmPayload,
-              });
-              if (userId) {
-                const edited: ScheduleItem = {
-                  ...sheet.edit,
-                  text,
-                  start_time: start.toISOString(),
-                  end_time: end.toISOString(),
-                  ...allDayFields,
-                  repeat: opts?.repeat ?? null,
-                  ...alarmPayload,
-                };
-                await syncScheduleReminder(userId, edited);
-              }
-              toast.success(t("다듬었어요", "Refined"), scheduleToast);
-            } else {
-              const { item } = await add({
-                text,
-                start_time: start.toISOString(),
-                end_time: end.toISOString(),
-                ...allDayFields,
-                repeat: opts?.repeat ?? null,
-                ...alarmPayload,
-              });
-              if (userId && alarmPayload.alarm) {
-                await syncScheduleReminder(userId, item as ScheduleItem);
-              }
-              track("schedule_created", {
-                source: "manual",
-                text_length: text.length,
-              });
-              toast.success(t("그때 다시 떠올릴게요", "I'll remember this for then"), scheduleToast);
-            }
+          if (
+            shouldOfferNotificationOnboarding(wantsAlarm, hasTime, pending.isNew)
+          ) {
+            const fireAt = new Date(
+              start.getTime() - reminderMin! * 60 * 1000,
+            );
+            setNotificationOnboarding({ pending, fireAt });
             setSheet({ open: false });
-          } catch {
-            toast.error(t("남기지 못했어요", "Couldn't keep it"));
+            return;
           }
+
+          await runScheduleSave(pending);
         }}
+      />
+
+      <ScheduleNotificationOnboardingSheet
+        open={notificationOnboarding != null}
+        fireAt={notificationOnboarding?.fireAt ?? null}
+        lang={lang === "en" ? "en" : "ko"}
+        busy={onboardingBusy}
+        onClose={() => {
+          if (!onboardingBusy) setNotificationOnboarding(null);
+        }}
+        onEnableAndSave={() => {
+          if (!notificationOnboarding || onboardingBusy) return;
+          setOnboardingBusy(true);
+          void (async () => {
+            try {
+              await runScheduleSave(notificationOnboarding.pending, {
+                requestPermission: () => Notification.requestPermission(),
+              });
+            } finally {
+              setOnboardingBusy(false);
+            }
+          })();
+        }}
+        onSaveWithoutNotification={() => {
+          if (!notificationOnboarding || onboardingBusy) return;
+          setOnboardingBusy(true);
+          markNotificationOnboardingSeen();
+          void (async () => {
+            try {
+              await runScheduleSave(
+                { ...notificationOnboarding.pending, reminderMinutes: null },
+                { skipNotificationPrep: true },
+              );
+            } finally {
+              setOnboardingBusy(false);
+            }
+          })();
+        }}
+      />
+
+      <NotificationDeniedHelpSheet
+        open={deniedHelpOpen}
+        onClose={() => setDeniedHelpOpen(false)}
       />
     </div>
   );

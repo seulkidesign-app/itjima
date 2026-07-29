@@ -362,6 +362,19 @@ export type Database = {
         Args: { p_batch_size?: number };
         Returns: Database["public"]["Tables"]["scheduled_reminders"]["Row"][];
       };
+      register_push_subscription: {
+        Args: {
+          p_endpoint: string;
+          p_p256dh: string;
+          p_auth: string;
+          p_platform?: string | null;
+        };
+        Returns: undefined;
+      };
+      revoke_push_subscription: {
+        Args: { p_endpoint: string };
+        Returns: undefined;
+      };
       get_admin_count: {
         Args: Record<PropertyKey, never>;
         Returns: number;
