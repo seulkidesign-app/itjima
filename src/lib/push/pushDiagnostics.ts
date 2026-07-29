@@ -1,4 +1,5 @@
 import type { PushSubscribeResult, PushSupportState } from "@/lib/push/pushSubscription";
+import { detectPushPlatform } from "@/lib/push/detectPushPlatform";
 
 const LOG_PREFIX = "[itjima:push]";
 
@@ -85,11 +86,7 @@ export function summarizePushEnvironment(): Record<string, unknown> {
     standalone:
       window.matchMedia("(display-mode: standalone)").matches ||
       (navigator as Navigator & { standalone?: boolean }).standalone === true,
-    platform: /iPhone|iPad|iPod/i.test(navigator.userAgent)
-      ? "ios"
-      : /Android/i.test(navigator.userAgent)
-        ? "android"
-        : "web",
+    platform: detectPushPlatform(),
     vapidConfigured: Boolean(
       (import.meta.env.VITE_VAPID_PUBLIC_KEY as string | undefined)?.trim(),
     ),

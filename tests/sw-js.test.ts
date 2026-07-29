@@ -37,6 +37,16 @@ describe("service worker (public/sw.js)", () => {
     expect(publicSw).toContain('addEventListener("push"');
     expect(publicSw).toContain('addEventListener("notificationclick"');
   });
+
+  it("shows notifications with PNG icons and fallback handling", () => {
+    expect(publicSw).toContain("event.waitUntil(showPushNotification");
+    expect(publicSw).toContain("self.registration.showNotification");
+    expect(publicSw).toContain('icon: NOTIFICATION_ICON');
+    expect(publicSw).toContain('"/icons/icon-192.png"');
+    expect(publicSw).toContain('"/icons/badge-72.png"');
+    expect(publicSw).toContain("showNotification:fallback_ok");
+    expect(publicSw).toContain("[itjima:sw:push]");
+  });
 });
 
 describe("service worker (dist/sw.js after build)", () => {

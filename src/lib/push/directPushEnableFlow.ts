@@ -5,7 +5,7 @@ import {
   logPushFailure,
 } from "@/lib/push/pushDiagnostics";
 import {
-  detectPlatform,
+  detectPushPlatform,
   getVapidPublicKey,
   isStandalonePwa,
   requiresStandalonePwaForPush,
@@ -98,7 +98,7 @@ export async function executeDirectPushEnableFlow(
     };
   }
 
-  const platform = detectPlatform();
+  const platform = detectPushPlatform();
   const standalone = isStandalonePwa();
   const standaloneRequired = requiresStandalonePwaForPush();
   steps.push(
@@ -386,7 +386,7 @@ export async function executeDirectPushEnableFlow(
       endpoint: json.endpoint,
       p256dh: json.keys.p256dh,
       auth: json.keys.auth,
-      platform: detectPlatform(),
+      platform: detectPushPlatform(),
       revoked_at: null,
       failure_count: 0,
       updated_at: new Date().toISOString(),

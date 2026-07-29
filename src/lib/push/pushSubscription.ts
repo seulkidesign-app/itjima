@@ -5,6 +5,13 @@ import {
   logPushDiagnostic,
   logPushFailure,
 } from "@/lib/push/pushDiagnostics";
+import {
+  detectPlatform,
+  detectPushPlatform,
+  requiresStandalonePwaForPush,
+} from "@/lib/push/detectPushPlatform";
+
+export { detectPlatform, detectPushPlatform, requiresStandalonePwaForPush };
 
 export type PushSupportState =
   | "unsupported"
@@ -40,20 +47,6 @@ function urlBase64ToUint8Array(base64: string): Uint8Array {
   return out;
 }
 
-function detectPlatform(): string {
-  if (typeof navigator === "undefined") return "unknown";
-  const ua = navigator.userAgent;
-  if (/iPhone|iPad|iPod/i.test(ua)) return "ios";
-  if (/Android/i.test(ua)) return "android";
-  return "web";
-}
-
-export { detectPlatform };
-
-/** Web Push on iOS/iPadOS requires Home Screen PWA; desktop/Android web do not. */
-export function requiresStandalonePwaForPush(): boolean {
-  return detectPlatform() === "ios";
-}
 
 export function backgroundRemindersVerified(): boolean {
   return import.meta.env.VITE_BACKGROUND_REMINDERS_VERIFIED === "true";
@@ -217,7 +210,7 @@ export async function subscribePush(
     endpoint: json.endpoint,
     p256dh: json.keys.p256dh,
     auth: json.keys.auth,
-    platform: detectPlatform(),
+    platform: detectPushPlatform(),
   };
 
   logPushDiagnostic("subscribe:upsert", {
@@ -285,8 +278,8 @@ export async function showLocalTestNotification(): Promise<boolean> {
     await reg.showNotification("⏰ 잊지마", {
       body: "이 기기에서 알림을 표시할 수 있어요.",
       tag: "itjima-local-display-test",
-      icon: "/favicon.svg",
-      badge: "/favicon.svg",
+      icon: "/icons/icon-192.png",
+      badge: "/icons/badge-72.png",
     });
     return true;
   } catch {

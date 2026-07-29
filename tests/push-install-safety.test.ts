@@ -62,6 +62,7 @@ describe("iPhone notification setup safety", () => {
     expect(push).toContain('code: "missing_vapid"');
     expect(push).toContain('code: "not_authenticated"');
     expect(push).toContain("logPushFailure");
+    expect(push).toContain("detectPushPlatform");
   });
 
   it("keeps authenticated immediate push test function available", () => {

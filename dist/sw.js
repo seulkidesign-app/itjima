@@ -1,5 +1,16 @@
-const CACHE = "itjima-shell-v2";
-const SHELL = ["/index.html", "/manifest.webmanifest", "/favicon.svg"];
+const CACHE = "itjima-shell-v3";
+const SHELL = [
+  "/index.html",
+  "/manifest.webmanifest",
+  "/favicon.svg",
+  "/icons/icon-192.png",
+  "/icons/badge-72.png",
+];
+const PUSH_LOG = "[itjima:sw:push]";
+const DEFAULT_TITLE = "잊지마";
+const DEFAULT_BODY = "예정된 일정이 있어요.";
+const NOTIFICATION_ICON = "/icons/icon-192.png";
+const NOTIFICATION_BADGE = "/icons/badge-72.png";
 
 self.addEventListener("install", (event) => {
   event.waitUntil(caches.open(CACHE).then((cache) => cache.addAll(SHELL)));
@@ -83,6 +94,80 @@ function safeAppPath(value, fallback = "/schedule") {
   }
 }
 
+function parsePushPayload(event) {
+  if (!event.data) {
+    return { payload: {}, parseMode: "empty" };
+  }
+
+  try {
+    return { payload: event.data.json(), parseMode: "json" };
+  } catch {
+    try {
+      const text = event.data.text();
+      if (!text) return { payload: {}, parseMode: "empty-text" };
+      return { payload: JSON.parse(text), parseMode: "text-json" };
+    } catch {
+      return { payload: {}, parseMode: "fallback" };
+    }
+  }
+}
+
+function buildNotificationOptions(payload, url) {
+  const scheduleId = payload.data?.scheduleId;
+  return {
+    body: payload.body || DEFAULT_BODY,
+    icon: NOTIFICATION_ICON,
+    badge: NOTIFICATION_BADGE,
+    tag: payload.tag || (scheduleId ? `schedule-${scheduleId}` : "itjima-reminder"),
+    data: {
+      ...(payload.data && typeof payload.data === "object" ? payload.data : {}),
+      url,
+      scheduleId,
+    },
+    renotify: true,
+  };
+}
+
+async function showPushNotification(payload, parseMode) {
+  const scheduleId = payload.data?.scheduleId;
+  const fallbackUrl = scheduleId
+    ? `/schedule?open=${encodeURIComponent(String(scheduleId))}`
+    : "/schedule";
+  const url = safeAppPath(payload.data?.url, fallbackUrl);
+  const title = payload.title || DEFAULT_TITLE;
+  const options = buildNotificationOptions(payload, url);
+
+  console.info(PUSH_LOG, "received", {
+    parseMode,
+    hasTitle: Boolean(payload.title),
+    hasBody: Boolean(payload.body),
+    hasUrl: Boolean(payload.data?.url),
+    tag: options.tag,
+  });
+
+  try {
+    await self.registration.showNotification(title, options);
+    console.info(PUSH_LOG, "showNotification:ok", { tag: options.tag, url });
+    return true;
+  } catch (error) {
+    console.warn(PUSH_LOG, "showNotification:failed", {
+      tag: options.tag,
+      message: error instanceof Error ? error.message : String(error),
+    });
+
+    await self.registration.showNotification(DEFAULT_TITLE, {
+      body: DEFAULT_BODY,
+      icon: NOTIFICATION_ICON,
+      badge: NOTIFICATION_BADGE,
+      tag: "itjima-push-fallback",
+      data: { url: "/schedule" },
+      renotify: true,
+    });
+    console.info(PUSH_LOG, "showNotification:fallback_ok");
+    return false;
+  }
+}
+
 self.addEventListener("fetch", (event) => {
   const { request } = event;
   if (request.method !== "GET") return;
@@ -108,36 +193,16 @@ self.addEventListener("fetch", (event) => {
 
 /** Server-triggered Web Push — no in-memory scheduling. */
 self.addEventListener("push", (event) => {
-  let payload = {};
+  const { payload, parseMode } = parsePushPayload(event);
 
-  try {
-    payload = event.data?.json() ?? {};
-  } catch {
-    payload = {};
-  }
-
-  const title = payload.title ?? "⏰ 잊지마";
-  const body = payload.body ?? "예정된 일정 알림";
-  const scheduleId = payload.data?.scheduleId;
-  const fallbackUrl = scheduleId
-    ? `/schedule?open=${encodeURIComponent(String(scheduleId))}`
-    : "/schedule";
-  const url = safeAppPath(payload.data?.url, fallbackUrl);
-
-  event.waitUntil(
-    self.registration.showNotification(title, {
-      body,
-      tag: payload.tag ?? (scheduleId ? `schedule-${scheduleId}` : "itjima-reminder"),
-      data: { url, scheduleId },
-      icon: "/favicon.svg",
-      badge: "/favicon.svg",
-    }),
-  );
+  event.waitUntil(showPushNotification(payload, parseMode));
 });
 
 self.addEventListener("notificationclick", (event) => {
   event.notification.close();
   const url = safeAppPath(event.notification.data?.url, "/schedule");
+
+  console.info(PUSH_LOG, "notificationclick", { url });
 
   event.waitUntil(
     (async () => {
