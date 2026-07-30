@@ -37,6 +37,13 @@ import {
   type ServerPushTestPhase,
   type ServerPushTestRow,
 } from "@/lib/push/serverPushTest";
+import { detectPushPlatform } from "@/lib/push/detectPushPlatform";
+import {
+  formatIosPwaDeliverySummary,
+  iosPwaDeliverySucceeded,
+  pollIosPwaScheduledPushTest,
+  runIosPwaImmediatePushTest,
+} from "@/lib/push/iosPwaPushTest";
 
 type Props = {
   schedule: ScheduleItem | null;
@@ -162,6 +169,45 @@ export function ScheduleAlarmSheet({
       const row = await fetchServerPushTestRow(userId, rowId);
       if (!row) return;
       setServerTestRow(row);
+
+      if (detectPushPlatform() === "ios-pwa") {
+        const probe = await pollIosPwaScheduledPushTest(userId, rowId);
+        if (!probe) return;
+
+        if (probe.iosDeliveredAfterDue) {
+          setServerTestPhase("sent");
+          setLocalStatusMessage(
+            t(
+              "ios-pwa 기기에서 예약 알림을 받았어요.",
+              "The ios-pwa device received the scheduled notification.",
+            ),
+          );
+          stopServerPoll();
+          setServerTesting(false);
+          await finalizeServerPushTestSession(userId, "sent");
+          return;
+        }
+
+        if (probe.macMaskedSent) {
+          setServerTestPhase("waiting");
+          setLocalStatusMessage(
+            t(
+              "Mac은 성공했지만 ios-pwa는 아직이에요. ios-pwa last_success_at을 확인 중이에요.",
+              "Mac succeeded, but ios-pwa hasn't yet. Checking ios-pwa last_success_at.",
+            ),
+          );
+          return;
+        }
+
+        setServerTestPhase(probe.reminderPhase);
+        if (isServerPushTestTerminalPhase(probe.reminderPhase)) {
+          stopServerPoll();
+          setServerTesting(false);
+          await finalizeServerPushTestSession(userId, probe.reminderPhase);
+        }
+        return;
+      }
+
       const phase = diagnoseServerPushTest(row);
       setServerTestPhase(phase);
       if (isServerPushTestTerminalPhase(phase)) {
@@ -170,7 +216,7 @@ export function ScheduleAlarmSheet({
         await finalizeServerPushTestSession(userId, phase);
       }
     },
-    [userId, stopServerPoll],
+    [userId, stopServerPoll, t],
   );
 
   const startServerPoll = useCallback(
@@ -298,6 +344,32 @@ export function ScheduleAlarmSheet({
     setServerTestPhase("waiting");
 
     try {
+      if (detectPushPlatform() === "ios-pwa") {
+        const minimal = await runIosPwaImmediatePushTest("minimal");
+        if (!minimal.ok || !iosPwaDeliverySucceeded(minimal.deliveries)) {
+          setServerTestPhase("failed");
+          setLocalStatusMessage(
+            formatIosPwaDeliverySummary(minimal.deliveries, lang),
+          );
+          setServerTesting(false);
+          return;
+        }
+
+        setLocalStatusMessage(
+          formatIosPwaDeliverySummary(minimal.deliveries, lang),
+        );
+
+        const schedulePayload = await runIosPwaImmediatePushTest("schedule");
+        if (!schedulePayload.ok || !iosPwaDeliverySucceeded(schedulePayload.deliveries)) {
+          setServerTestPhase("failed");
+          setLocalStatusMessage(
+            formatIosPwaDeliverySummary(schedulePayload.deliveries, lang),
+          );
+          setServerTesting(false);
+          return;
+        }
+      }
+
       const result = await startServerPushTest(userId);
       if (!result.ok) {
         setServerTestPhase(result.phase);
@@ -306,7 +378,17 @@ export function ScheduleAlarmSheet({
       }
 
       setServerTestRow(result.row);
-      setServerTestPhase(diagnoseServerPushTest(result.row));
+      if (detectPushPlatform() === "ios-pwa") {
+        setServerTestPhase("waiting");
+        setLocalStatusMessage(
+          t(
+            "ios-pwa 예약 알림을 기다리는 중이에요.",
+            "Waiting for the ios-pwa scheduled notification.",
+          ),
+        );
+      } else {
+        setServerTestPhase(diagnoseServerPushTest(result.row));
+      }
       startServerPoll(result.row.id);
     } finally {
       serverStartRef.current = false;

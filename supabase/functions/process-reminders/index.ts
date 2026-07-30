@@ -20,6 +20,15 @@ type PushRow = {
   p256dh: string;
   auth: string;
   failure_count: number;
+  platform: string | null;
+};
+
+type DeliveryResult = {
+  platform: string;
+  attempted: boolean;
+  accepted: boolean;
+  statusCode: number | null;
+  errorType: string | null;
 };
 
 function assertRelativeAppUrl(url: string): string {
@@ -94,6 +103,21 @@ function buildReminderPayload(
   });
 }
 
+function classifyPushError(error: unknown): {
+  statusCode: number | null;
+  errorType: string;
+} {
+  const statusCode = (error as { statusCode?: number }).statusCode ?? null;
+  let errorType = "unknown";
+  if (statusCode === 404) errorType = "subscription_gone";
+  else if (statusCode === 410) errorType = "subscription_expired";
+  else if (statusCode === 401 || statusCode === 403) errorType = "push_auth_rejected";
+  else if (statusCode === 413) errorType = "payload_too_large";
+  else if (statusCode === 429) errorType = "rate_limited";
+  else if (statusCode != null && statusCode >= 500) errorType = "push_service_error";
+  return { statusCode, errorType };
+}
+
 function json(body: unknown, status = 200) {
   return new Response(JSON.stringify(body), {
     status,
@@ -150,11 +174,17 @@ Deno.serve(async (req) => {
   const reminders = (claimed ?? []) as ReminderRow[];
   let sent = 0;
   let failed = 0;
+  const reminderDeliveries: Array<{
+    reminderId: string;
+    scheduleId: string;
+    deliveries: DeliveryResult[];
+    reminderMarkedSent: boolean;
+  }> = [];
 
   for (const reminder of reminders) {
     const { data: subs, error: subsError } = await supabase
       .from("push_subscriptions")
-      .select("id, endpoint, p256dh, auth, failure_count")
+      .select("id, endpoint, p256dh, auth, failure_count, platform")
       .eq("user_id", reminder.user_id)
       .is("revoked_at", null);
 
@@ -184,8 +214,18 @@ Deno.serve(async (req) => {
     );
     let anySuccess = false;
     let hardFail = false;
+    const deliveries: DeliveryResult[] = [];
 
     for (const sub of subs as PushRow[]) {
+      const platform = sub.platform ?? "unknown";
+      const delivery: DeliveryResult = {
+        platform,
+        attempted: true,
+        accepted: false,
+        statusCode: null,
+        errorType: null,
+      };
+
       try {
         await webpush.sendNotification(
           {
@@ -195,6 +235,7 @@ Deno.serve(async (req) => {
           payload,
           { TTL: 86400 },
         );
+        delivery.accepted = true;
         anySuccess = true;
         await supabase
           .from("push_subscriptions")
@@ -205,7 +246,11 @@ Deno.serve(async (req) => {
           })
           .eq("id", sub.id);
       } catch (err) {
-        const statusCode = (err as { statusCode?: number }).statusCode;
+        const classified = classifyPushError(err);
+        delivery.statusCode = classified.statusCode;
+        delivery.errorType = classified.errorType;
+
+        const statusCode = classified.statusCode;
         const nextFailures = sub.failure_count + 1;
         const revoke =
           statusCode === 404 ||
@@ -223,7 +268,24 @@ Deno.serve(async (req) => {
 
         if (statusCode === 404 || statusCode === 410) hardFail = true;
       }
+
+      deliveries.push(delivery);
+      console.info("[process-reminders] delivery", {
+        scheduleId: reminder.schedule_id,
+        platform,
+        accepted: delivery.accepted,
+        statusCode: delivery.statusCode,
+        errorType: delivery.errorType,
+      });
     }
+
+    const reminderMarkedSent = anySuccess;
+    reminderDeliveries.push({
+      reminderId: reminder.id,
+      scheduleId: reminder.schedule_id,
+      deliveries,
+      reminderMarkedSent,
+    });
 
     if (anySuccess) {
       await supabase
@@ -263,5 +325,6 @@ Deno.serve(async (req) => {
     claimed: reminders.length,
     sent,
     failed,
+    reminders: reminderDeliveries,
   });
 });

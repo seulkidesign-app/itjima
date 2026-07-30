@@ -11,6 +11,7 @@ const sheet = source("src/components/ScheduleAlarmSheet.tsx");
 const serverTest = source("src/lib/push/serverPushTest.ts");
 const processReminders = source("supabase/functions/process-reminders/index.ts");
 const edge = source("supabase/functions/test-push/index.ts");
+const iosEdge = source("supabase/functions/test-push-ios/index.ts");
 const supabaseConfig = source("supabase/config.toml");
 
 describe("iPhone notification setup safety", () => {
@@ -79,6 +80,9 @@ describe("iPhone notification setup safety", () => {
     expect(edge).toContain('from("push_subscriptions")');
     expect(edge).toContain("webpush.sendNotification");
     expect(supabaseConfig).toContain("[functions.test-push]");
+    expect(supabaseConfig).toContain("[functions.test-push-ios]");
+    expect(iosEdge).toContain("ios-pwa");
+    expect(iosEdge).toContain("deliveries");
     expect(supabaseConfig).toContain("verify_jwt = true");
   });
 });

@@ -5,7 +5,7 @@ import { authDebug, authDebugAuthStateChange, authDebugGetSession } from "@/lib/
 export const AUTH_REDIRECT_PATHS = {
   production: "https://itjima.app/auth/callback",
   local: "http://localhost:5173/auth/callback",
-  supabaseCallback: "https://qikgvovbzliqcfcfgvcd.supabase.co/auth/v1/callback",
+  supabaseCallback: "https://bopiuworvbjsowfjbmfx.supabase.co/auth/v1/callback",
 } as const;
 
 const AUTH_NEXT_KEY = "itjima.auth.next";
@@ -158,7 +158,7 @@ export function validateSupabaseConfig():
     return {
       ok: false,
       message:
-        "Supabase URL 오타예요. qikgvovbzliqcfcfgvcd (fg)로 수정한 뒤 Vercel에서 Redeploy 해 주세요.",
+        "Supabase URL 오타예요. bopiuworvbjsowfjbmfx (Itjima production)로 수정한 뒤 Vercel에서 Redeploy 해 주세요.",
     };
   }
 
