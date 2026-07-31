@@ -73,57 +73,46 @@ jobs:
               "$url"
           }
 
-          # Mobile coverage: smallest supported width and a modern phone.
           capture 320 568 home-mobile-small-en.png "http://127.0.0.1:4173/?lang=en"
           capture 390 844 home-mobile-en.png "http://127.0.0.1:4173/?lang=en"
           capture 390 844 home-mobile-ko.png "http://127.0.0.1:4173/?lang=ko"
           capture 390 844 about-mobile-en.png "http://127.0.0.1:4173/about?lang=en"
 
-          # Tablet coverage: portrait iPad-class layouts and bilingual rendering.
           capture 768 1024 home-tablet-en.png "http://127.0.0.1:4173/?lang=en"
           capture 834 1112 home-tablet-ko.png "http://127.0.0.1:4173/?lang=ko"
           capture 768 1024 schedule-tablet-en.png "http://127.0.0.1:4173/schedule?lang=en"
           capture 834 1112 about-tablet-en.png "http://127.0.0.1:4173/about?lang=en"
 
-          # Desktop coverage: dedicated sidebar app shell and full launch page.
           capture 1440 1000 home-desktop-en.png "http://127.0.0.1:4173/?lang=en"
           capture 1440 1000 schedule-desktop-en.png "http://127.0.0.1:4173/schedule?lang=en"
           capture 1440 1000 archive-desktop-ko.png "http://127.0.0.1:4173/archive?lang=ko"
           capture 1440 1000 about-desktop-en.png "http://127.0.0.1:4173/about?lang=en"
           capture 1440 1000 about-desktop-ko.png "http://127.0.0.1:4173/about?lang=ko"
 
-      - name: Verify screenshot dimensions
+      - name: Verify screenshot files and dimensions
         run: |
-          python - <<'PY'
-          from pathlib import Path
-          from PIL import Image
-
-          expected = {
-              "home-mobile-small-en.png": (320, 568),
-              "home-mobile-en.png": (390, 844),
-              "home-mobile-ko.png": (390, 844),
-              "about-mobile-en.png": (390, 844),
-              "home-tablet-en.png": (768, 1024),
-              "home-tablet-ko.png": (834, 1112),
-              "schedule-tablet-en.png": (768, 1024),
-              "about-tablet-en.png": (834, 1112),
-              "home-desktop-en.png": (1440, 1000),
-              "schedule-desktop-en.png": (1440, 1000),
-              "archive-desktop-ko.png": (1440, 1000),
-              "about-desktop-en.png": (1440, 1000),
-              "about-desktop-ko.png": (1440, 1000),
+          verify_png() {
+            local file_name="$1"
+            local width="$2"
+            local height="$3"
+            local path="visual-artifacts/${file_name}"
+            test -s "$path"
+            file "$path" | grep -Eq "PNG image data, ${width} x ${height}(,| )"
           }
 
-          for filename, size in expected.items():
-              path = Path("visual-artifacts") / filename
-              if not path.exists():
-                  raise SystemExit(f"Missing screenshot: {filename}")
-              with Image.open(path) as image:
-                  if image.size != size:
-                      raise SystemExit(
-                          f"Unexpected size for {filename}: {image.size}, expected {size}"
-                      )
-          PY
+          verify_png home-mobile-small-en.png 320 568
+          verify_png home-mobile-en.png 390 844
+          verify_png home-mobile-ko.png 390 844
+          verify_png about-mobile-en.png 390 844
+          verify_png home-tablet-en.png 768 1024
+          verify_png home-tablet-ko.png 834 1112
+          verify_png schedule-tablet-en.png 768 1024
+          verify_png about-tablet-en.png 834 1112
+          verify_png home-desktop-en.png 1440 1000
+          verify_png schedule-desktop-en.png 1440 1000
+          verify_png archive-desktop-ko.png 1440 1000
+          verify_png about-desktop-en.png 1440 1000
+          verify_png about-desktop-ko.png 1440 1000
 
       - name: Upload screenshots
         uses: actions/upload-artifact@v4
