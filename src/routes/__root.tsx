@@ -10,17 +10,18 @@ import { GlobalInteractions } from "@/components/GlobalInteractions";
 import { ScheduleDeepLinkBridge } from "@/components/ScheduleDeepLinkBridge";
 import { LanguageProvider } from "@/lib/i18n";
 import { useArchiveMetaSync } from "@/hooks/useArchiveMetaSync";
+import { useTimezoneChangeSync } from "@/hooks/useTimezoneChangeSync";
 
 const calmToastOptions = {
   style: {
-    background: "rgba(255,255,255,0.96)",
-    color: "#111111",
-    border: "1px solid oklch(0 0 0 / 0.06)",
+    background: "var(--ij-surface-elevated, rgba(255,255,255,0.96))",
+    color: "var(--ij-label, #111111)",
+    border: "1px solid var(--ij-separator-soft, rgba(0,0,0,0.06))",
     borderRadius: 20,
     boxShadow:
-      "0 2px 8px oklch(0 0 0 / 0.04), 0 12px 32px -8px oklch(0 0 0 / 0.1)",
+      "0 2px 8px rgba(0,0,0,0.04), 0 12px 32px -8px rgba(0,0,0,0.1)",
     fontSize: 14,
-    fontWeight: 500,
+    fontWeight: 560,
   },
 } as const;
 
@@ -28,8 +29,18 @@ export const Route = createRootRoute({
   component: RootLayout,
 });
 
+function AppRuntimeServices() {
+  useTimezoneChangeSync();
+  return (
+    <>
+      <GlobalInteractions />
+      <ScheduleDeepLinkBridge />
+    </>
+  );
+}
+
 function RootLayout() {
-  const pathname = useRouterState({ select: (s) => s.location.pathname });
+  const pathname = useRouterState({ select: (state) => state.location.pathname });
   const isFullPage = pathname.startsWith("/about");
   const isAdmin = pathname.startsWith("/admin");
   const isAuth = pathname.startsWith("/auth");
@@ -57,7 +68,7 @@ function RootLayout() {
           <Outlet />
           <Toaster
             position="top-center"
-            theme="light"
+            theme="system"
             toastOptions={calmToastOptions}
             offset={72}
           />
@@ -68,15 +79,14 @@ function RootLayout() {
 
   return (
     <LanguageProvider>
-      <GlobalInteractions />
-      <ScheduleDeepLinkBridge />
+      <AppRuntimeServices />
       {isFullPage ? (
         <>
           <Outlet />
-          <Toaster position="top-center" richColors closeButton />
+          <Toaster position="top-center" theme="system" richColors closeButton />
         </>
       ) : isAdmin ? (
-        <div className="md:flex min-h-dvh w-full md:items-start">
+        <div className="min-h-dvh w-full md:flex md:items-start">
           <SideNav />
           <div className="flex min-w-0 flex-1 flex-col">
             <div className="md:hidden">
@@ -89,7 +99,7 @@ function RootLayout() {
               <Outlet />
             </main>
           </div>
-          <Toaster position="top-center" richColors closeButton />
+          <Toaster position="top-center" theme="system" richColors closeButton />
         </div>
       ) : (
         <div className="flex min-h-dvh w-full items-start justify-center">
@@ -106,7 +116,7 @@ function RootLayout() {
           </div>
           <Toaster
             position="top-center"
-            theme="light"
+            theme="system"
             toastOptions={calmToastOptions}
             offset={72}
           />
