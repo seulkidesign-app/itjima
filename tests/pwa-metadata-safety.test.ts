@@ -18,12 +18,12 @@ describe("PWA product metadata safety", () => {
   const html = read("index.html");
   const icon = read("public/favicon.svg");
 
-  it("describes the released product as a memory inbox without AI promises", () => {
+  it("describes the released product as natural-language schedule capture without AI promises", () => {
     const publicMetadata = `${manifestSource}\n${html}\n${icon}`;
     expect(publicMetadata).not.toMatch(/AI\s*(기억|메모|일정|관리)/i);
-    expect(manifest.name).toContain("기억 인박스");
-    expect(manifest.description).toContain("정리 없이");
-    expect(manifest.description).toContain("기억 인박스");
+    expect(manifest.name).toContain("일정 캡처");
+    expect(manifest.description).toContain("자연어");
+    expect(manifest.description).toContain("애매한 부분만 확인");
   });
 
   it("supports both portrait and landscape without forcing orientation", () => {
@@ -43,9 +43,10 @@ describe("PWA product metadata safety", () => {
     expect(html).toContain('rel="manifest" href="/manifest.webmanifest"');
   });
 
-  it("keeps search and share descriptions aligned with the v1 promise", () => {
-    expect(html).toContain("정리 없이 던져두고");
-    expect(html).toContain("기억 인박스");
-    expect(icon).toContain("기억 인박스 앱");
+  it("keeps search and share descriptions aligned with the focused promise", () => {
+    expect(html).toContain("자연어로 말하듯 남기면");
+    expect(html).toContain("애매한 부분만 확인");
+    expect(html).toContain("말하듯 남기는 일정 캡처");
+    expect(icon).toContain("자연어 일정 캡처 도구");
   });
 });
