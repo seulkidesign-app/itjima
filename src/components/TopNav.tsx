@@ -1,5 +1,5 @@
 import { Link, useRouterState } from "@tanstack/react-router";
-import { Archive, CalendarDays, SendHorizontal, User } from "lucide-react";
+import { Archive, CalendarDays, MessageSquareText, User } from "lucide-react";
 import { useEffect, useState } from "react";
 import { motion, LayoutGroup } from "framer-motion";
 import { useT } from "@/lib/i18n";
@@ -11,10 +11,10 @@ import { BrandHubSheet } from "./BrandHubSheet";
 
 export function TopNav() {
   const t = useT();
-  const path = useRouterState({ select: (s) => s.location.pathname });
+  const path = useRouterState({ select: (state) => state.location.pathname });
   const userId = useUserId();
   const tabs = [
-    { to: "/", label: t("던지기", "Throw"), Icon: SendHorizontal },
+    { to: "/", label: t("남기기", "Capture"), Icon: MessageSquareText },
     { to: "/schedule", label: t("일정", "Schedule"), Icon: CalendarDays },
     { to: "/archive", label: t("보관함", "Archive"), Icon: Archive },
   ] as const;
@@ -29,11 +29,11 @@ export function TopNav() {
   }, [isHome]);
 
   useEffect(() => {
-    const el = document.getElementById("phone-scroll");
-    if (!el) return;
-    const onScroll = () => setScrolled(el.scrollTop > 4);
-    el.addEventListener("scroll", onScroll, { passive: true });
-    return () => el.removeEventListener("scroll", onScroll);
+    const element = document.getElementById("phone-scroll");
+    if (!element) return;
+    const onScroll = () => setScrolled(element.scrollTop > 4);
+    element.addEventListener("scroll", onScroll, { passive: true });
+    return () => element.removeEventListener("scroll", onScroll);
   }, []);
 
   return (
@@ -48,12 +48,12 @@ export function TopNav() {
           {isHome ? (
             <button
               type="button"
-              aria-label={t("Itjima (잊지마)", "Itjima (잊지마)")}
+              aria-label={t("Itjima 제품 정보 열기", "Open Itjima product information")}
               onClick={() => {
                 tap();
                 setBrandHubOpen(true);
               }}
-              className="app-brand-trigger shrink-0 font-display text-[19px] uppercase leading-none tracking-wide text-ink"
+              className="app-brand-trigger shrink-0 rounded-[12px] px-1 py-1 font-display text-[19px] uppercase leading-none tracking-wide text-ink"
             >
               ITJIMA
               <span className="ml-1 inline-block h-1.5 w-1.5 -translate-y-1 rounded-full bg-primary align-middle" />
@@ -61,7 +61,8 @@ export function TopNav() {
           ) : (
             <Link
               to="/"
-              className="app-brand-trigger shrink-0 font-display text-[19px] uppercase leading-none tracking-wide text-ink"
+              aria-label={t("남기기 화면으로 이동", "Go to Capture")}
+              className="app-brand-trigger shrink-0 rounded-[12px] px-1 py-1 font-display text-[19px] uppercase leading-none tracking-wide text-ink"
             >
               ITJIMA
               <span className="ml-1 inline-block h-1.5 w-1.5 -translate-y-1 rounded-full bg-primary align-middle" />
@@ -69,12 +70,14 @@ export function TopNav() {
           )}
           <button
             type="button"
-            aria-label={t("설정", "Settings")}
+            aria-label={t("설정 열기", "Open settings")}
+            aria-haspopup="dialog"
+            aria-expanded={settingsOpen}
             onClick={() => {
               tap();
               setSettingsOpen(true);
             }}
-            className="app-account-button touch-target flex h-9 shrink-0 items-center gap-1.5 rounded-full border border-ink/10 bg-white px-2.5 py-1.5 text-ink-soft shadow-card"
+            className="app-account-button touch-target flex h-10 shrink-0 items-center gap-1.5 rounded-full border border-ink/10 bg-white px-3 py-1.5 text-ink-soft shadow-card"
           >
             <User size={16} strokeWidth={2.1} aria-hidden />
             <span className="max-w-[4.5rem] truncate text-[11px] font-semibold">
