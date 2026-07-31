@@ -43,9 +43,11 @@ export function useTimezoneChangeSync() {
   const schedules = useSchedules();
   const runningRef = useRef(false);
   const schedulesRef = useRef(schedules.items);
+  const syncStateRef = useRef(schedules.syncState);
   const userIdRef = useRef(userId);
 
   schedulesRef.current = schedules.items;
+  syncStateRef.current = schedules.syncState;
   userIdRef.current = userId;
 
   useEffect(() => {
@@ -61,10 +63,15 @@ export function useTimezoneChangeSync() {
         return;
       }
 
+      const currentUserId = userIdRef.current;
+      if (currentUserId && syncStateRef.current === "syncing") {
+        // Wait until cloud schedules have been merged before changing the stored
+        // timezone; the effect reruns when syncState becomes ready or error.
+        return;
+      }
+
       runningRef.current = true;
-      writeStoredTimezone(current);
       try {
-        const currentUserId = userIdRef.current;
         if (currentUserId) {
           await syncAllScheduleReminders(
             currentUserId,
@@ -73,6 +80,7 @@ export function useTimezoneChangeSync() {
             ),
           );
         }
+        writeStoredTimezone(current);
         toast.success(
           t(
             `시간대를 ${current} 기준으로 업데이트했어요`,
@@ -99,5 +107,5 @@ export function useTimezoneChangeSync() {
       document.removeEventListener("visibilitychange", onVisibility);
       window.removeEventListener("focus", onFocus);
     };
-  }, [t]);
+  }, [schedules.syncState, t, userId]);
 }
