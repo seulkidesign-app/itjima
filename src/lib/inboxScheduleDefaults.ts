@@ -9,7 +9,7 @@ import type { ScheduleConfirmOptions } from "@/components/ScheduleChoiceFlow";
 import type { InboxItem } from "@/lib/store";
 
 const EXPLICIT_TIME_RE =
-  /(?:오전|오후|아침|점심|저녁|밤|새벽|\d{1,2}\s*시(?:\s*\d{1,2}\s*분)?|\b(?:morning|afternoon|evening|tonight|noon|midnight)\b|\b\d{1,2}(?::\d{2})?\s*(?:am|pm)\b|\b(?:[01]?\d|2[0-3]):[0-5]\d\b)/i;
+  /(?:오전|오후|아침|점심|저녁|밤|새벽|퇴근\s*후|\d{1,2}\s*시(?:\s*\d{1,2}\s*분)?|\b(?:morning|afternoon|evening|tonight|noon|midnight)\b|\b\d{1,2}(?::\d{2})?\s*(?:am|pm)\b|\b(?:[01]?\d|2[0-3]):[0-5]\d\b)/i;
 
 export function hasExplicitScheduleTime(text: string): boolean {
   return EXPLICIT_TIME_RE.test(text.trim());

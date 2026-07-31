@@ -1,4 +1,5 @@
 import { detectDate, isAbsoluteDateReference, isRelativeDateReference } from "@/lib/dateDetect";
+import { hasExplicitScheduleTime } from "@/lib/inboxScheduleDefaults";
 import { classifyLocally } from "@/lib/localClassifier";
 import { analyzeThought, type ThoughtCategory } from "@/lib/ruleEngine";
 import { thoughtFirstLine } from "@/lib/brainMirror";
@@ -101,8 +102,7 @@ export function isSensitiveContent(text: string): boolean {
 }
 
 function hasExplicitTime(text: string): boolean {
-  if (!detectDate(text)) return false;
-  return TIME_RE.test(text);
+  return hasExplicitScheduleTime(text);
 }
 
 function isReferenceNote(text: string): boolean {
@@ -149,21 +149,21 @@ function isTimeOnlyPhrase(text: string): boolean {
 function isClarifySchedule(text: string): boolean {
   if (NEXT_MONTH_EARLY_RE.test(text)) return true;
   if (/이번\s*주\s*안/i.test(text)) return true;
-  if (
-    /(?:주말|weekend)/i.test(text) &&
-    MEETING_RE.test(text) &&
-    !hasExplicitTime(text)
-  ) {
-    return true;
-  }
+  // Vague timing always asks; resolved weekend (e.g. 주말에 만나기) can be exact all-day
   if (VAGUE_WHEN_RE.test(text)) return true;
   const det = detectDate(text);
   if (!det) {
     if (isRelativeDateReference(text) && WATCH_READ_RE.test(text)) return true;
     if (/다음\s*주|next\s+week/i.test(text) && !TIME_RE.test(text)) return true;
+    if (/(?:주말|weekend)/i.test(text) && MEETING_RE.test(text)) return true;
     return false;
   }
-  if (!hasExplicitTime(text) && /(?:다음\s*주|next\s+week|주말|weekend)/i.test(text)) {
+  // "다음 주" without a clock time is still wide — ask once
+  if (
+    !hasExplicitTime(text) &&
+    /(?:다음\s*주|next\s+week)/i.test(text) &&
+    !/(?:주말|weekend)/i.test(text)
+  ) {
     return true;
   }
   if (!hasExplicitTime(text) && WEEKDAY_IN_TEXT_RE.test(text) && /약속|미팅|meeting|appointment/i.test(text)) {
@@ -226,6 +226,23 @@ export function understandNaturalLanguage(
     };
   }
 
+  // Weekend word alone — keep; "내일" alone can still be a one-tap all-day
+  if (/^(주말|weekend)$/i.test(trimmed)) {
+    return {
+      intent: "keep",
+      confidence: "low",
+      category: "note",
+      detectedDate: null,
+      hasExplicitTime: false,
+      mirrorLine: lang === "en" ? "Saved for you" : "맡아뒀어요",
+      mirrorDetail:
+        lang === "en" ? "Keep it here for now." : "일단 여기에 둘게요.",
+      primaryLabelKo: "그대로 두기",
+      primaryLabelEn: "Keep here",
+      isSensitive: false,
+    };
+  }
+
   if (dateHit && !isClarifySchedule(trimmed) && !isTimeOnlyPhrase(trimmed)) {
     const moment = formatSuggestedMoment(dateHit.start, lang);
     const explicit = hasExplicitTime(trimmed);
@@ -241,8 +258,8 @@ export function understandNaturalLanguage(
           ? "Tap to add — calendar only if you want to change it."
           : "한 번 누르면 일정에 들어가요 — 바꾸고 싶을 때만 날짜를 고르면 돼요."
         : lang === "en"
-          ? "Defaults to 9:00 — change only if you want."
-          : "시간은 9시로 잡을게요 — 바꾸고 싶을 때만 수정해요.",
+          ? "Saved as an all-day plan — add a time only if you want."
+          : "하루 일정으로 넣을게요 — 시간 넣고 싶을 때만 수정하면 돼요.",
       primaryLabelKo: scheduleLabels.ko,
       primaryLabelEn: scheduleLabels.en,
       isSensitive: false,

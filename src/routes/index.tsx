@@ -415,18 +415,14 @@ function Inbox() {
         return;
       }
       try {
+        // Same defaults as Decision Deck — date-only → all-day, timed → parsed hour
+        const { start, end, text, options } = inboxScheduleDefaults(it);
         await commitInboxSchedule(
           it,
-          thoughtFirstLine(it.text),
-          det.start,
-          det.end,
-          {
-            reminderMinutes: null,
-            allDay: false,
-            startAllDay: false,
-            endAllDay: false,
-            repeat: null,
-          },
+          text,
+          start,
+          end,
+          options,
           "promise_card",
         );
         trackNlScheduleCreated();
@@ -445,17 +441,22 @@ function Inbox() {
   ) => {
     await withNlConfirmGuard(it.id, async () => {
       const { start, end } = dateFromClarifyPick(pick);
+      // Clarify chips pick a day, not a clock time → all-day
+      const dayStart = new Date(start);
+      dayStart.setHours(0, 0, 0, 0);
+      const dayEnd = new Date(start);
+      dayEnd.setHours(23, 59, 0, 0);
       try {
         await commitInboxSchedule(
           it,
           thoughtFirstLine(it.text),
-          start,
-          end,
+          dayStart,
+          dayEnd,
           {
             reminderMinutes: null,
-            allDay: false,
-            startAllDay: false,
-            endAllDay: false,
+            allDay: true,
+            startAllDay: true,
+            endAllDay: true,
             repeat: null,
           },
           "promise_clarify",

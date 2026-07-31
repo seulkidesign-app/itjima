@@ -31,9 +31,9 @@
     "expected_intent": "schedule_exact",
     "expected_confidence_tier": "high",
     "expected_date_presence": true,
-    "expected_time_presence": false,
+    "expected_time_presence": true,
     "sensitive": false,
-    "notes": "Today with activity, defaults time"
+    "notes": "Today with evening activity (퇴근 후 → 18:00)"
   },
   {
     "input": "모레 점심에 민지 만나기",
@@ -82,12 +82,12 @@
   },
   {
     "input": "주말에 만나기",
-    "expected_intent": "schedule_clarify",
-    "expected_confidence_tier": "medium",
-    "expected_date_presence": false,
+    "expected_intent": "schedule_exact",
+    "expected_confidence_tier": "high",
+    "expected_date_presence": true,
     "expected_time_presence": false,
     "sensitive": false,
-    "notes": "Weekend meeting without exact time"
+    "notes": "Weekend meeting → Saturday all-day"
   },
   {
     "input": "엄마한테 전화하기",
@@ -399,10 +399,10 @@
     "input": "이번 주말쯤 약속",
     "expected_intent": "schedule_clarify",
     "expected_confidence_tier": "medium",
-    "expected_date_presence": false,
+    "expected_date_presence": true,
     "expected_time_presence": false,
     "sensitive": false,
-    "notes": "Vague weekend appointment — clarify without parsed date"
+    "notes": "Vague weekend (쯤) — clarify even if weekend day is guessed"
   },
   {
     "input": "장보기",

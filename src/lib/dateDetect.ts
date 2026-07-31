@@ -141,11 +141,23 @@ export function detectDate(
     label = label || "Day after tomorrow";
   }
 
-  // Next week
+  // Next week (skip when only "이번 주" — too vague alone)
   if (/다음\s*주/.test(text) || /\bnext\s+week\b/i.test(text)) {
     target.setDate(now.getDate() + 7);
     matched = true;
     label = label || (/next/i.test(text) ? "Next week" : "다음 주");
+  }
+
+  // Weekend → upcoming Saturday (Sunday still counts as this weekend)
+  if (!matched && (/주말|\bweekend\b/i.test(text))) {
+    if (now.getDay() === 0) {
+      target = new Date(now);
+      target.setHours(0, 0, 0, 0);
+    } else {
+      target = nextWeekday(6, now, true);
+    }
+    matched = true;
+    label = /weekend/i.test(text) && !/주말/.test(text) ? "Weekend" : "주말";
   }
 
   // Early next month (다음 달 초)
@@ -211,20 +223,28 @@ export function detectDate(
     }
   }
 
-  // Korean time: 오후 N시
+  // Korean time: 오후 N시 / bare N시 (1–6 → afternoon when meridiem omitted)
   const hmKo = text.match(
     /(오전|오후)?\s*(\d{1,2})\s*시(?:\s*(\d{1,2})\s*분)?/,
   );
   if (hmKo) {
     let h = parseInt(hmKo[2], 10);
     const mn = hmKo[3] ? parseInt(hmKo[3], 10) : 0;
-    if (hmKo[1] === "오후" && h < 12) h += 12;
-    if (hmKo[1] === "오전" && h === 12) h = 0;
+    const meridiem = hmKo[1] as "오전" | "오후" | undefined;
+    if (meridiem === "오후" && h < 12) h += 12;
+    else if (meridiem === "오전" && h === 12) h = 0;
+    else if (!meridiem && h >= 1 && h <= 6) {
+      // "내일 3시" → 15:00 (appointments), not 03:00
+      h += 12;
+    }
+    if (h > 23) h = 23;
     target.setHours(h, mn, 0, 0);
     matched = true;
     timeSet = true;
+    const hour12 = h % 12 || 12;
+    const meridiemLabel = meridiem ?? (h < 12 ? "오전" : "오후");
     label =
-      `${label ? label + " " : ""}${hmKo[1] ?? ""}${h % 12 || 12}시${mn ? ` ${mn}분` : ""}`.trim();
+      `${label ? `${label} ` : ""}${meridiemLabel} ${hour12}시${mn ? ` ${mn}분` : ""}`.trim();
   }
 
   // English time: 3pm, 3:30 pm, 15:00
@@ -249,7 +269,7 @@ export function detectDate(
   }
 
   if (matched && !timeSet) {
-    if (/저녁|\bevening\b/i.test(text)) {
+    if (/저녁|\bevening\b|퇴근\s*후|tonight/i.test(text)) {
       target.setHours(18, 0, 0, 0);
       timeSet = true;
       label = `${label ? `${label} ` : ""}저녁`.trim();
@@ -262,11 +282,18 @@ export function detectDate(
       timeSet = true;
       label = `${label ? `${label} ` : ""}점심`.trim();
     } else {
+      // Date-only: keep a daytime anchor; callers may still promote to all-day.
       target.setHours(9, 0, 0, 0);
     }
   }
 
   if (!matched) return null;
+
+  // Timed suggestions in the past (e.g. "오늘 3시" after 3pm) → next day
+  if (timeSet && target.getTime() <= now.getTime()) {
+    target.setDate(target.getDate() + 1);
+  }
+
   const end = new Date(target);
   end.setHours(end.getHours() + 1);
   return { label, start: target, end };
