@@ -110,6 +110,7 @@ export function DesktopAppNav() {
         <div className="mt-auto p-3 pb-4">
           <button
             type="button"
+            data-testid="open-settings"
             onClick={() => {
               tap();
               setSettingsOpen(true);
