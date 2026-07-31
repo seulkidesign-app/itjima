@@ -1,4 +1,4 @@
-﻿/**
+/**
  * TEMPORARY OAuth investigation instrumentation — remove after root cause is confirmed.
  */
 import type { AuthChangeEvent, Session } from "@supabase/supabase-js";
@@ -6,9 +6,16 @@ import type { AnyRouter } from "@tanstack/react-router";
 
 const PREFIX = "[auth-debug]";
 
-/** Dev-only; never install hooks or log in production builds. */
-const AUTH_DEBUG_ENABLED =
-  import.meta.env.DEV && import.meta.env.VITE_E2E !== "true";
+type ViteLikeEnv = {
+  DEV?: boolean;
+  VITE_E2E?: string;
+};
+
+/** Dev-only; safe in Vite, Vitest, Playwright, SSR, and plain Node imports. */
+const viteEnv = (import.meta as ImportMeta & { env?: ViteLikeEnv }).env;
+const AUTH_DEBUG_ENABLED = Boolean(
+  viteEnv?.DEV && viteEnv?.VITE_E2E !== "true",
+);
 
 /** Every automatic /auth destination in the codebase (for audit). */
 export const AUTH_LOGIN_ROUTE_SOURCES = [
@@ -164,8 +171,8 @@ export function installAuthDebugInstrumentation(router: AnyRouter) {
 
   authDebug("instrumentation installed", {
     href: window.location.href,
-    loginRouteSources: AUTH_LOGIN_ROUTE_SOURCES.map((s) => s.id),
-    signOutSources: AUTH_SIGN_OUT_SOURCES.map((s) => s.id),
+    loginRouteSources: AUTH_LOGIN_ROUTE_SOURCES.map((source) => source.id),
+    signOutSources: AUTH_SIGN_OUT_SOURCES.map((source) => source.id),
   });
 
   void import("@/integrations/supabase/client").then(({ supabase }) => {
