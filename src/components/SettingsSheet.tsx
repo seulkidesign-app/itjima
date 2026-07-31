@@ -1,10 +1,11 @@
 import {
+  Bell,
+  Clock3,
+  Database,
   Globe,
   LogOut,
   Shield,
   User,
-  Bell,
-  Database,
 } from "lucide-react";
 import { Link, useNavigate } from "@tanstack/react-router";
 import { toast } from "sonner";
@@ -17,6 +18,7 @@ import {
 import { DataPrivacySheet } from "./DataPrivacySheet";
 import { useT, LanguageToggle, useLang } from "@/lib/i18n";
 import type { PushEnableStep } from "@/lib/push/directPushEnableFlow";
+import { resolveUserTimezone } from "@/lib/push/timezone";
 import { useUserId } from "@/lib/store";
 import { useIsAdmin } from "@/hooks/useIsAdmin";
 import { signOutWithPushCleanup } from "@/lib/push/pushSignOut";
@@ -34,7 +36,7 @@ type Props = {
 };
 
 const rowClass =
-  "itjima-settings-row flex min-h-[52px] w-full items-center gap-3 px-3.5 text-left text-[14px] font-medium text-ink transition-colors active:bg-ink/[0.04]";
+  "itjima-settings-row flex min-h-[54px] w-full items-center gap-3 px-3.5 text-left text-[14px] font-medium text-ink transition-colors active:bg-ink/[0.04]";
 
 export function SettingsSheet({ open, onClose }: Props) {
   const t = useT();
@@ -42,6 +44,7 @@ export function SettingsSheet({ open, onClose }: Props) {
   const navigate = useNavigate();
   const userId = useUserId();
   const isAdmin = useIsAdmin();
+  const timezone = resolveUserTimezone();
   const [notificationOpen, setNotificationOpen] = useState(false);
   const [dataPrivacyOpen, setDataPrivacyOpen] = useState(false);
   const [notificationSteps, setNotificationSteps] = useState<
@@ -97,8 +100,8 @@ export function SettingsSheet({ open, onClose }: Props) {
     if (hasUnsentComposerContent()) {
       toast.warning(
         t(
-          "아직 던지지 않은 초안이 있어요. 먼저 확인해 주세요.",
-          "You still have an unsent draft. Check it before signing out.",
+          "아직 남기지 않은 초안이 있어요. 먼저 확인해 주세요.",
+          "You still have an uncaptured draft. Check it before signing out.",
         ),
       );
       onClose();
@@ -129,7 +132,7 @@ export function SettingsSheet({ open, onClose }: Props) {
     <BottomSheet
       open={open}
       onClose={onClose}
-      maxHeight="74dvh"
+      maxHeight="78dvh"
       title={t("설정", "Settings")}
     >
       <div className="px-5 pb-8 pt-1">
@@ -139,8 +142,8 @@ export function SettingsSheet({ open, onClose }: Props) {
           </h2>
           <p className="mt-1 text-[13px] leading-relaxed text-ink-soft">
             {t(
-              "계정과 잊지마의 기본 사용 환경을 관리해요.",
-              "Manage your account and Itjima preferences.",
+              "계정, 알림, 언어와 데이터 통제를 관리해요.",
+              "Manage your account, reminders, language, and data controls.",
             )}
           </p>
         </div>
@@ -188,6 +191,27 @@ export function SettingsSheet({ open, onClose }: Props) {
               {t("알림 설정", "Notification settings")}
             </span>
           </button>
+
+          <div
+            className={`${rowClass} border-b border-ink/[0.06]`}
+            aria-label={t(`현재 시간대 ${timezone}`, `Current time zone ${timezone}`)}
+          >
+            <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-[10px] bg-ink/[0.06] text-ink-soft">
+              <Clock3 size={17} strokeWidth={2.1} aria-hidden />
+            </span>
+            <span className="min-w-0 flex-1">
+              <span className="block">{t("시간대", "Time zone")}</span>
+              <span className="mt-0.5 block truncate text-[11px] font-normal text-ink-soft">
+                {t(
+                  "기기 변경 시 알림을 자동 업데이트해요",
+                  "Reminders update automatically when this changes",
+                )}
+              </span>
+            </span>
+            <span className="max-w-[8.5rem] truncate text-[11px] font-semibold text-ink-soft">
+              {timezone}
+            </span>
+          </div>
 
           <button
             type="button"
