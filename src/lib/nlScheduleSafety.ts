@@ -4,14 +4,31 @@ export type ScheduleConfirmationReason =
   | "after_work_time"
   | "assumed_meridiem";
 
-function parseMentionedTime(text: string): { hour: number; minute: number } | null {
+export type ScheduleConfirmationChoiceId =
+  | "tomorrow_same_time"
+  | "saturday"
+  | "sunday"
+  | "after_work_18"
+  | "after_work_19"
+  | "morning"
+  | "afternoon";
+
+export type ScheduleConfirmationChoice = {
+  id: ScheduleConfirmationChoiceId;
+  label: string;
+  resolvedText: string;
+};
+
+type MentionedTime = { hour: number; minute: number };
+type BareClock = { hour: number; minute: number | null };
+
+function parseMentionedTime(text: string): MentionedTime | null {
   const ko = text.match(/(오전|오후)?\s*(\d{1,2})\s*시(?:\s*(\d{1,2})\s*분)?/);
   if (ko) {
     let hour = Number(ko[2]);
     const minute = ko[3] ? Number(ko[3]) : 0;
     if (ko[1] === "오후" && hour < 12) hour += 12;
     else if (ko[1] === "오전" && hour === 12) hour = 0;
-    else if (!ko[1] && hour >= 1 && hour <= 6) hour += 12;
     if (hour >= 0 && hour <= 23 && minute >= 0 && minute <= 59) {
       return { hour, minute };
     }
@@ -32,38 +49,185 @@ function parseMentionedTime(text: string): { hour: number; minute: number } | nu
     : null;
 }
 
-function hasBareAfternoonGuess(text: string): boolean {
-  for (const match of text.matchAll(/(\d{1,2})\s*시/g)) {
+function extractBareClock(text: string): BareClock | null {
+  for (const match of text.matchAll(/(\d{1,2})\s*시(?:\s*(\d{1,2})\s*분)?/g)) {
     const hour = Number(match[1]);
     if (hour < 1 || hour > 6) continue;
     const prefix = text.slice(Math.max(0, (match.index ?? 0) - 4), match.index);
-    if (!/(오전|오후)\s*$/.test(prefix)) return true;
+    if (/(오전|오후)\s*$/.test(prefix)) continue;
+    return { hour, minute: match[2] ? Number(match[2]) : null };
   }
-  return false;
+
+  const en = text.match(
+    /\bat\s+(1[0-2]|[1-9])(?::([0-5]\d))?(?!\s*(?:am|pm)\b)/i,
+  );
+  return en
+    ? { hour: Number(en[1]), minute: en[2] ? Number(en[2]) : null }
+    : null;
+}
+
+function hasBareMeridiemGuess(text: string): boolean {
+  return extractBareClock(text) !== null;
+}
+
+function replaceTodayWithTomorrow(text: string): string {
+  if (/오늘/.test(text)) return text.replace(/오늘/, "내일");
+  return text.replace(/\btoday\b/i, "tomorrow");
+}
+
+function replaceWeekend(
+  text: string,
+  day: "saturday" | "sunday",
+): string {
+  const koDay = day === "saturday" ? "이번 주 토요일" : "이번 주 일요일";
+  const enDay = day === "saturday" ? "this Saturday" : "this Sunday";
+  if (/주말/.test(text)) return text.replace(/주말/, koDay);
+  return text.replace(/\bweekend\b/i, enDay);
+}
+
+function replaceAfterWork(text: string, hour: 18 | 19): string {
+  const koTime = hour === 18 ? "오후 6시" : "오후 7시";
+  const enTime = hour === 18 ? "at 6pm" : "at 7pm";
+  if (/퇴근\s*후/.test(text)) return text.replace(/퇴근\s*후/, koTime);
+  return text.replace(/\bafter\s+work\b/i, enTime);
+}
+
+function replaceBareMeridiem(text: string, period: "am" | "pm"): string {
+  const koPeriod = period === "am" ? "오전" : "오후";
+  const koResolved = text.replace(
+    /(^|[\s(])(\d{1,2})\s*시(?:\s*(\d{1,2})\s*분)?/,
+    (_match, prefix: string, hour: string, minute?: string) =>
+      `${prefix}${koPeriod} ${hour}시${minute ? ` ${minute}분` : ""}`,
+  );
+  if (koResolved !== text) return koResolved;
+
+  return text.replace(
+    /\bat\s+(1[0-2]|[1-9])(?::([0-5]\d))?(?!\s*(?:am|pm)\b)/i,
+    (_match, hour: string, minute?: string) =>
+      `at ${hour}${minute ? `:${minute}` : ""}${period}`,
+  );
+}
+
+function clockChoiceLabel(
+  clock: BareClock,
+  period: "am" | "pm",
+  lang: "ko" | "en",
+): string {
+  const minute = clock.minute === null ? "" : `:${String(clock.minute).padStart(2, "0")}`;
+  if (lang === "en") return `${clock.hour}${minute} ${period.toUpperCase()}`;
+  const koPeriod = period === "am" ? "오전" : "오후";
+  const koMinute = clock.minute === null ? "" : ` ${clock.minute}분`;
+  return `${koPeriod} ${clock.hour}시${koMinute}`;
+}
+
+export function scheduleConfirmationReasons(
+  text: string,
+  now = new Date(),
+): ScheduleConfirmationReason[] {
+  const trimmed = text.trim();
+  const reasons: ScheduleConfirmationReason[] = [];
+  const bareMeridiem = hasBareMeridiemGuess(trimmed);
+
+  // Resolve AM/PM before evaluating whether a time has already passed.
+  if (bareMeridiem) reasons.push("assumed_meridiem");
+
+  if (!bareMeridiem && /(오늘|\btoday\b)/i.test(trimmed)) {
+    const time = parseMentionedTime(trimmed);
+    if (time) {
+      const mentioned = new Date(now);
+      mentioned.setHours(time.hour, time.minute, 0, 0);
+      if (mentioned.getTime() <= now.getTime()) reasons.push("past_today");
+    }
+  }
+
+  if (/(주말|\bweekend\b)/i.test(trimmed)) reasons.push("weekend_day");
+  if (/(퇴근\s*후|\bafter\s+work\b)/i.test(trimmed)) {
+    reasons.push("after_work_time");
+  }
+
+  return reasons;
 }
 
 /**
- * Returns a reason when a parsed schedule contains a product assumption that
- * should be confirmed before one-tap creation.
+ * Returns the first unsafe assumption. Inputs with multiple assumptions should
+ * fall back to the manual schedule sheet instead of stacking silent fixes.
  */
 export function scheduleConfirmationReason(
   text: string,
   now = new Date(),
 ): ScheduleConfirmationReason | null {
-  const trimmed = text.trim();
+  return scheduleConfirmationReasons(text, now)[0] ?? null;
+}
 
-  if (/(오늘|\btoday\b)/i.test(trimmed)) {
-    const time = parseMentionedTime(trimmed);
-    if (time) {
-      const mentioned = new Date(now);
-      mentioned.setHours(time.hour, time.minute, 0, 0);
-      if (mentioned.getTime() <= now.getTime()) return "past_today";
-    }
+/**
+ * Contextual one-tap fixes for a single ambiguity. The returned text is fed
+ * back through the existing deterministic parser, so no new scheduling path is
+ * introduced.
+ */
+export function scheduleConfirmationChoices(
+  text: string,
+  reason: ScheduleConfirmationReason,
+  lang: "ko" | "en",
+  now = new Date(),
+): ScheduleConfirmationChoice[] {
+  const reasons = scheduleConfirmationReasons(text, now);
+  if (reasons.length !== 1 || reasons[0] !== reason) return [];
+
+  if (reason === "past_today") {
+    const resolvedText = replaceTodayWithTomorrow(text);
+    return resolvedText === text
+      ? []
+      : [
+          {
+            id: "tomorrow_same_time",
+            label: lang === "en" ? "Tomorrow, same time" : "내일 같은 시간",
+            resolvedText,
+          },
+        ];
   }
 
-  if (/(주말|\bweekend\b)/i.test(trimmed)) return "weekend_day";
-  if (/(퇴근\s*후|\bafter\s+work\b)/i.test(trimmed)) return "after_work_time";
-  if (hasBareAfternoonGuess(trimmed)) return "assumed_meridiem";
+  if (reason === "weekend_day") {
+    return [
+      {
+        id: "saturday",
+        label: lang === "en" ? "Saturday" : "토요일",
+        resolvedText: replaceWeekend(text, "saturday"),
+      },
+      {
+        id: "sunday",
+        label: lang === "en" ? "Sunday" : "일요일",
+        resolvedText: replaceWeekend(text, "sunday"),
+      },
+    ];
+  }
 
-  return null;
+  if (reason === "after_work_time") {
+    return [
+      {
+        id: "after_work_18",
+        label: lang === "en" ? "6 PM" : "오후 6시",
+        resolvedText: replaceAfterWork(text, 18),
+      },
+      {
+        id: "after_work_19",
+        label: lang === "en" ? "7 PM" : "오후 7시",
+        resolvedText: replaceAfterWork(text, 19),
+      },
+    ];
+  }
+
+  const clock = extractBareClock(text);
+  if (!clock) return [];
+  return [
+    {
+      id: "morning",
+      label: clockChoiceLabel(clock, "am", lang),
+      resolvedText: replaceBareMeridiem(text, "am"),
+    },
+    {
+      id: "afternoon",
+      label: clockChoiceLabel(clock, "pm", lang),
+      resolvedText: replaceBareMeridiem(text, "pm"),
+    },
+  ];
 }
