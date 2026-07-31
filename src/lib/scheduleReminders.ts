@@ -202,7 +202,7 @@ export function bindInAppReminders(
     timers.push(
       window.setTimeout(() => {
         if (Notification.permission === "granted") {
-          notify("⏰ 잊지마", s.text);
+          notify("⏰ Itjima", s.text);
         }
       }, delay),
     );
@@ -218,7 +218,7 @@ export function bindInAppReminders(
       window.setTimeout(() => {
         clearActiveTimer(s.id);
         if (Notification.permission === "granted") {
-          notify("⏱ 잊지마", s.text);
+          notify("⏱ Itjima", s.text);
         }
       }, delay),
     );

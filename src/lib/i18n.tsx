@@ -11,17 +11,37 @@ import {
 
 export type Lang = "ko" | "en";
 
-const STORAGE_KEY = "itjima_lang";
+export const LANGUAGE_STORAGE_KEY = "itjima_lang";
+
+export function languageFromBrowser(
+  languages: readonly string[] | null | undefined,
+): Lang {
+  const normalized = (languages ?? [])
+    .map((value) => value.trim().toLowerCase())
+    .filter(Boolean);
+  return normalized.some(
+    (value) => value === "ko" || value.startsWith("ko-"),
+  )
+    ? "ko"
+    : "en";
+}
 
 function detectInitial(): Lang {
-  if (typeof window === "undefined") return "ko";
+  if (typeof window === "undefined") return "en";
   try {
-    const stored = window.localStorage.getItem(STORAGE_KEY);
-    if (stored === "en") return "en";
+    const stored = window.localStorage.getItem(LANGUAGE_STORAGE_KEY);
+    if (stored === "ko" || stored === "en") return stored;
   } catch {
-    // ignore
+    // Browser language is still a safe fallback.
   }
-  return "ko";
+
+  const languages =
+    typeof navigator === "undefined"
+      ? []
+      : navigator.languages?.length
+        ? navigator.languages
+        : [navigator.language];
+  return languageFromBrowser(languages);
 }
 
 type Ctx = {
@@ -34,14 +54,14 @@ type Ctx = {
 const LanguageContext = createContext<Ctx | null>(null);
 
 export function LanguageProvider({ children }: { children: ReactNode }) {
-  const [lang, setLangState] = useState<Lang>("ko");
+  const [lang, setLangState] = useState<Lang>("en");
 
-  // Hydrate from storage / browser on mount (client only)
+  // Hydrate from the user's saved choice or browser locale on mount.
   useEffect(() => {
     setLangState(detectInitial());
   }, []);
 
-  // Reflect on <html lang>
+  // Reflect on <html lang> for screen readers, search, and browser translation.
   useEffect(() => {
     if (typeof document !== "undefined") {
       document.documentElement.setAttribute("lang", lang);
@@ -51,9 +71,9 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
   const setLang = useCallback((l: Lang) => {
     setLangState(l);
     try {
-      window.localStorage.setItem(STORAGE_KEY, l);
+      window.localStorage.setItem(LANGUAGE_STORAGE_KEY, l);
     } catch {
-      // ignore
+      // Keep the current session language even if storage is unavailable.
     }
   }, []);
 

@@ -1,5 +1,9 @@
 import { createClient } from "npm:@supabase/supabase-js@2";
 import webpush from "npm:web-push@3";
+import {
+  reminderBody,
+  reminderLanguageForText,
+} from "../_shared/reminderCopy.ts";
 
 const MAX_ATTEMPTS = 5;
 const REVOKE_AFTER_FAILURES = 5;
@@ -56,28 +60,6 @@ type ScheduleRow = {
   alarm_at: string | null;
 };
 
-/** Format in the user's timezone — Deno/UTC getHours() would show 11:00 for 20:00 KST. */
-function formatTimeInZone(iso: string, timeZone: string | null): string {
-  const date = new Date(iso);
-  if (Number.isNaN(date.getTime())) return "";
-  const tz = timeZone && timeZone.trim() ? timeZone : "Asia/Seoul";
-  try {
-    return new Intl.DateTimeFormat("ko-KR", {
-      timeZone: tz,
-      hour: "numeric",
-      minute: "2-digit",
-      hour12: true,
-    }).format(date);
-  } catch {
-    return new Intl.DateTimeFormat("ko-KR", {
-      timeZone: "Asia/Seoul",
-      hour: "numeric",
-      minute: "2-digit",
-      hour12: true,
-    }).format(date);
-  }
-}
-
 function resolveAllDay(schedule: ScheduleRow): boolean {
   if (schedule.start_all_day != null || schedule.end_all_day != null) {
     return Boolean(schedule.start_all_day && schedule.end_all_day);
@@ -93,8 +75,8 @@ function buildReminderPayload(
   const isTest = scheduleId === SERVER_PUSH_TEST_SCHEDULE_ID;
   if (isTest) {
     return JSON.stringify({
-      title: "잊지마",
-      body: "서버 예약 알림 테스트",
+      title: "Itjima",
+      body: "Server reminder test · 서버 예약 알림 테스트",
       tag: "itjima-server-push-test",
       data: {
         url: assertRelativeAppUrl("/schedule"),
@@ -103,14 +85,18 @@ function buildReminderPayload(
     });
   }
 
-  const title = (schedule?.text ?? "").trim() || "잊지마";
-  let body = "예정된 일정이에요.";
-  if (schedule && !resolveAllDay(schedule)) {
-    const timeLabel = formatTimeInZone(schedule.start_time, timeZone);
-    if (timeLabel) {
-      body = `${timeLabel} 일정이에요.`;
-    }
-  }
+  const title = (schedule?.text ?? "").trim() || "Itjima";
+  const language = reminderLanguageForText(schedule?.text);
+  const body = schedule
+    ? reminderBody({
+        startIso: schedule.start_time,
+        timeZone,
+        language,
+        allDay: resolveAllDay(schedule),
+      })
+    : language === "en"
+      ? "Scheduled reminder."
+      : "예정된 일정이에요.";
 
   return JSON.stringify({
     title,
