@@ -38,7 +38,7 @@ export function AboutSheet({
             {t("Itjima (잊지마)", "Itjima (잊지마)")}
           </div>
           <div className="text-sm text-ink-soft">
-            {t("AI 기억 관리 · 생각 정리", "AI memory · thought organization")}
+            {t("기억 인박스 · 정리 전, 기억부터", "Memory inbox · Remember before you organize")}
           </div>
           <p className="mt-4 text-[14px] leading-[1.6] text-ink/90">
             {t(

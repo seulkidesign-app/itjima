@@ -53,7 +53,7 @@ export function AboutLandingRefined() {
       >
         <div className="mobile-sticky-inner">
           <div className="mobile-sticky-copy">
-            <strong>{t("생각 하나만 던져보세요", "Drop one thought")}</strong>
+            <strong>{t("첫 생각 던져보세요", "Drop your first thought")}</strong>
             <span>{t("설치 없이 바로 시작", "Start instantly, no install")}</span>
           </div>
           <Link
@@ -73,7 +73,7 @@ export function AboutLandingRefined() {
 
 const REFINEMENT_CSS = `
 .about-v2 .site-header{
-  border-bottom-color:rgba(23,23,19,.08);
+  border-bottom-color:rgba(17,17,17,.08);
 }
 .about-v2 a:focus-visible,
 .mobile-sticky-cta a:focus-visible{
@@ -125,10 +125,10 @@ const REFINEMENT_CSS = `
   justify-content:space-between;
   gap:12px;
   padding:10px 10px 10px 15px;
-  border:1.5px solid #171713;
+  border:1px solid rgba(17,17,17,.08);
   border-radius:18px;
-  background:rgba(255,254,250,.96);
-  box-shadow:5px 6px 0 #171713,0 18px 45px rgba(23,23,19,.18);
+  background:rgba(255,255,255,.96);
+  box-shadow:0 12px 40px rgba(17,17,17,.12);
   backdrop-filter:blur(16px);
   -webkit-backdrop-filter:blur(16px);
 }
@@ -142,13 +142,13 @@ const REFINEMENT_CSS = `
   overflow:hidden;
   text-overflow:ellipsis;
   white-space:nowrap;
-  color:#171713;
+  color:#111111;
   font-size:13px;
   font-weight:900;
   letter-spacing:-.025em;
 }
 .mobile-sticky-copy span{
-  color:#77736a;
+  color:#9a9a90;
   font-size:10px;
   font-weight:700;
 }
@@ -161,10 +161,10 @@ const REFINEMENT_CSS = `
   gap:7px;
   flex-shrink:0;
   padding:0 15px;
-  border:1.5px solid #171713;
+  border:none;
   border-radius:13px;
-  background:#ffd92f;
-  color:#171713;
+  background:#ffd43b;
+  color:#111111;
   text-decoration:none;
   font-size:13px;
   font-weight:900;
@@ -218,7 +218,7 @@ const REFINEMENT_CSS = `
   }
   .about-v2 .floating-note{
     padding:8px 10px;
-    box-shadow:3px 3px 0 #171713;
+    box-shadow:0 6px 18px rgba(17,17,17,.08);
   }
   .about-v2 .comparison-strip{
     margin-bottom:48px;

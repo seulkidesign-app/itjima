@@ -9,7 +9,10 @@ export const BRAND = {
   landingPath: "/",
   landingUrl: "https://itjima.app/",
   logoUrl: "https://itjima.app/favicon.svg",
-  logoAlt: "잊지마(Itjima) AI 기억 관리 앱",
+  ogImageUrl: "https://itjima.app/og-card.svg",
+  logoAlt: "잊지마(Itjima) 기억 인박스",
+  taglineKo: "정리하기 전에, 먼저 잊지 않게.",
+  taglineEn: "Remember before you organize.",
   /** Verified external profiles that describe the same product entity. */
   sameAs: [
     "https://itjima.app",
@@ -23,10 +26,10 @@ export const BRAND = {
   foundingDate: "2026",
   softwareVersion: "Beta",
   appVersionLabel: "Beta · 2026.07",
-  category: "AI memory management app",
+  category: "Memory inbox app",
   aboutIntro: {
-    ko: "잊지마(Itjima)는 떠오른 생각을 AI 메모와 일정으로 정리하는 기억 관리 앱입니다. 기억하지 말고, 여기에 맡기세요.",
-    en: "Itjima (잊지마) organizes thoughts with AI notes and schedules. Don't memorize — offload here.",
+    ko: "잊지마(Itjima)는 정리하기 전에 생각을 잊지 않게 해주는 기억 인박스입니다. 떠오르면 던지고, 필요할 때 다시 꺼내세요.",
+    en: "Itjima (잊지마) is a memory inbox that keeps thoughts safe before you organize them. Drop it now, resurface when you need it.",
   },
   releaseNotes: {
     version: "Beta",
@@ -36,23 +39,23 @@ export const BRAND = {
       ko: [
         "홈에서 생각을 바로 던지기",
         "일정 · 보관함으로 정리",
-        "AI 기억 관리 · 생각 정리",
+        "정리 전, 기억부터",
       ],
       en: [
         "Drop thoughts from Home",
         "Schedule and Archive views",
-        "AI memory · thought organization",
+        "Remember before you organize",
       ],
     },
   },
 } as const;
 
 export function brandTitle(page?: string) {
-  const base = `${BRAND.displayKo} | AI 기억 관리 앱`;
+  const base = `${BRAND.displayKo} | 기억 인박스`;
   return page ? `${page} — ${BRAND.displayKo}` : base;
 }
 
 export function brandTitleEn(page?: string) {
-  const base = `${BRAND.displayEn} | AI memory app`;
+  const base = `${BRAND.displayEn} | Memory inbox`;
   return page ? `${page} — ${BRAND.displayEn}` : base;
 }

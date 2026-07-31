@@ -6,16 +6,16 @@ export const SITE_URL = BRAND.siteUrl;
 export const SEO = {
   siteName: BRAND.name,
   alternateNames: BRAND.alternateNames,
-  landingTitle: "잊지마 Itjima | 생각을 던지고 안심하고 잊는 기억 관리 앱",
+  landingTitle: "잊지마 Itjima | 정리하기 전에, 먼저 잊지 않게",
   landingDescription:
-    "잊지마 Itjima는 떠오른 생각을 빠르게 기록하고 일정, 할 일, 보관으로 정리해주는 기억 관리 앱입니다. 대충 던지고 안심하고 잊으세요.",
-  ogTitle: "잊지마 Itjima",
+    "잊지마 Itjima는 떠오른 생각을 정리 없이 던져두고, 필요할 때 일정과 보관함으로 꺼내는 기억 인박스입니다. 카톡 나에게 보내기 대신, 던지고 안심하세요.",
+  ogTitle: "잊지마 Itjima | 기억 인박스",
   ogDescription:
-    "떠오른 생각을 빠르게 기록하고 일정, 할 일, 보관으로 정리해주는 기억 관리 앱입니다.",
+    "정리하기 전에, 먼저 잊지 않게. 떠오른 생각을 던지고, 필요할 때 일정·보관함으로 꺼내세요.",
   appDescription:
-    "잊지마 Itjima는 떠오른 생각을 빠르게 기록하고 일정, 할 일, 보관으로 정리해주는 기억 관리 웹앱입니다.",
+    "잊지마 Itjima는 정리하기 전에 생각을 잊지 않게 해주는 기억 인박스 웹앱입니다.",
   keywords:
-    "잊지마, Itjima, ItJima, 잊지마 앱, 잊지마 메모, 잊지마 일정, AI 메모, AI 일정, 기억 관리 앱, 생각 정리 앱",
+    "잊지마, Itjima, ItJima, 잊지마 앱, 기억 인박스, 나에게 보내기, 메모 앱, 일정 앱, 생각 정리 앱",
 } as const;
 
 const ORG_ID = `${SITE_URL}/#organization`;
@@ -109,13 +109,13 @@ export function applyLandingSeo(options: LandingSeoOptions = {}) {
   upsertMeta("og:url", canonical, "property");
   upsertMeta("og:locale", "ko_KR", "property");
   upsertMeta("og:site_name", BRAND.displayKo, "property");
-  upsertMeta("og:image", BRAND.logoUrl, "property");
+  upsertMeta("og:image", BRAND.ogImageUrl, "property");
   upsertMeta("og:image:alt", BRAND.logoAlt, "property");
 
-  upsertMeta("twitter:card", "summary");
+  upsertMeta("twitter:card", "summary_large_image");
   upsertMeta("twitter:title", SEO.ogTitle);
   upsertMeta("twitter:description", SEO.ogDescription);
-  upsertMeta("twitter:image", BRAND.logoUrl);
+  upsertMeta("twitter:image", BRAND.ogImageUrl);
   upsertMeta("twitter:image:alt", BRAND.logoAlt);
 }
 
@@ -136,9 +136,9 @@ export function landingOrganizationLd() {
       caption: BRAND.logoAlt,
     },
     knowsAbout: [
-      "AI memory management",
-      "AI notes",
-      "AI scheduling",
+      "memory inbox",
+      "note taking",
+      "scheduling",
       "productivity software",
       "잊지마",
       "Itjima",
@@ -177,7 +177,7 @@ export function landingWebPageLd() {
     about: [{ "@id": ORG_ID }, { "@id": APP_ID }],
     primaryImageOfPage: {
       "@type": "ImageObject",
-      url: BRAND.logoUrl,
+      url: BRAND.ogImageUrl,
       name: BRAND.logoAlt,
     },
     breadcrumb: { "@id": BREADCRUMB_ID },
@@ -224,10 +224,10 @@ export function landingSoftwareApplicationLd() {
     publisher: { "@id": ORG_ID },
     isPartOf: { "@id": WEBSITE_ID },
     featureList: [
-      "AI 메모",
-      "AI 일정",
-      "기억 관리",
-      "생각 정리",
+      "생각 던지기",
+      "일정 정리",
+      "보관함",
+      "알림",
     ],
     offers: {
       "@type": "Offer",

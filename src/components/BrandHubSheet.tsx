@@ -145,7 +145,7 @@ export function BrandHubSheet({
                   {t("Itjima (잊지마)", "Itjima (잊지마)")}
                 </h2>
                 <p className="text-[13px] text-ink-soft">
-                  {t("AI 기억 관리 · 생각 정리", "Offload now, resurface later")}
+                  {t("기억 인박스 · 정리 전, 기억부터", "Memory inbox · Remember before you organize")}
                 </p>
               </div>
             </div>

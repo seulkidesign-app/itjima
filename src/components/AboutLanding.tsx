@@ -2,13 +2,11 @@ import { Link } from "@tanstack/react-router";
 import {
   Archive,
   ArrowRight,
-  Brain,
   CalendarDays,
   Check,
   Clock3,
   Instagram,
   MessageCircleMore,
-  Sparkles,
 } from "lucide-react";
 import { useEffect, useMemo } from "react";
 import { BRAND } from "@/lib/brand";
@@ -62,11 +60,11 @@ export function AboutLanding() {
     },
     {
       number: "02",
-      icon: Sparkles,
-      title: t("AI가 먼저 이해하기", "Let AI understand first"),
+      icon: CalendarDays,
+      title: t("나중에 정리하기", "Sort when you're ready"),
       body: t(
-        "잊지마가 일정인지, 기억해둘 생각인지 제안합니다. 원본은 그대로 남습니다.",
-        "Itjima suggests whether it is a schedule or something to remember. Your original stays intact.",
+        "일정, 보관함, 그대로 두기 중에서 고르세요. 지금 결정하지 않아도 됩니다.",
+        "Choose schedule, archive, or leave it. You do not have to decide right now.",
       ),
     },
     {
@@ -93,15 +91,15 @@ export function AboutLanding() {
       {
         q: t("잊지마(Itjima)는 어떤 앱인가요?", "What is Itjima (잊지마)?"),
         a: t(
-          "잊지마는 떠오른 생각을 빠르게 남기고, AI가 일정과 기억으로 가볍게 정리해주는 기억 관리 웹앱입니다.",
-          "Itjima is a memory web app for quickly capturing thoughts and lightly organizing them into schedules and memories with AI.",
+          "잊지마는 정리하기 전에 생각을 잊지 않게 해주는 기억 인박스입니다. 떠오르면 던지고, 필요할 때 일정이나 보관함으로 꺼낼 수 있어요.",
+          "Itjima is a memory inbox that keeps thoughts safe before you organize them. Drop a thought now and resurface it to schedule or archive later.",
         ),
       },
       {
         q: t("메모앱이나 캘린더와 무엇이 다른가요?", "How is it different from notes or calendars?"),
         a: t(
-          "처음부터 완벽하게 분류하거나 날짜를 정하지 않아도 됩니다. 잊지마가 먼저 이해하고, 사용자는 제안을 확인하거나 그대로 둘 수 있습니다.",
-          "You do not need to classify everything or pick a date upfront. Itjima interprets first, and you can accept the suggestion or leave it as-is.",
+          "처음부터 완벽하게 분류하거나 날짜를 정하지 않아도 됩니다. 카톡 나에게 보내기보다 빠르게 던지고, 캘린더보다 부담 없이 시작할 수 있어요.",
+          "You do not need to classify everything or pick a date upfront. Faster than messaging yourself, lighter than a calendar.",
         ),
       },
       {
@@ -190,22 +188,22 @@ export function AboutLanding() {
             <div className="hero-copy" data-reveal>
               <div className="eyebrow-pill">
                 <span className="status-dot" />
-                {t("AI 기억 관리 웹앱 · Beta", "AI memory web app · Beta")}
+                {t("생각 인박스 · Early access", "Memory inbox · Early access")}
               </div>
               <h1>
-                {t("대충 던져도,", "Drop it messy.")}
+                {t("정리하기 전에,", "Before you organize,")}
                 <br />
-                <span>{t("잊지 않게.", "Keep it remembered.")}</span>
+                <span>{t("먼저 잊지 않게.", "remember first.")}</span>
               </h1>
               <p className="hero-description">
                 {t(
-                  "메모를 정리할 에너지까지 필요하진 않아요. 떠오른 생각을 남기면 잊지마(Itjima)가 일정과 기억으로 가볍게 정리합니다.",
-                  "You should not need extra energy just to organize a note. Drop a thought, and Itjima lightly turns it into a schedule or memory.",
+                  "카톡 나에게 보내기 대신. 떠오른 생각을 던지면 잊지마(Itjima)가 일정과 보관함으로 다시 꺼내줍니다.",
+                  "Instead of messaging yourself. Drop a thought, and Itjima brings it back to schedule or archive when you need it.",
                 )}
               </p>
               <div className="hero-actions">
                 <Link to="/" className="primary-button">
-                  {t("무료로 시작하기", "Start for free")}
+                  {t("첫 생각 던지기", "Drop your first thought")}
                   <ArrowRight size={18} aria-hidden="true" />
                 </Link>
                 <a href="#how" className="secondary-button">
@@ -242,27 +240,26 @@ export function AboutLanding() {
                       "Book the dentist next Wednesday and call Mom",
                     )}
                   </div>
-                  <div className="understood-card">
-                    <div className="understood-head">
-                      <span><Sparkles size={15} />{t("이렇게 이해했어요", "Here’s what I understood")}</span>
-                      <span className="ai-label">AI</span>
+                  <div className="pending-card">
+                    <div className="pending-head">
+                      <span>{t("하나, 정리해 볼까요?", "Ready to sort one?")}</span>
                     </div>
-                    <div className="understood-row">
+                    <div className="pending-row">
                       <span className="row-icon calendar"><CalendarDays size={16} /></span>
                       <div>
                         <small>{t("일정", "Schedule")}</small>
-                        <strong>{t("다음 주 수요일 · 치과 예약", "Next Wednesday · Book dentist")}</strong>
+                        <strong>{t("다음 주 수요일 · 치과", "Next Wed · Dentist")}</strong>
                       </div>
                     </div>
-                    <div className="understood-row">
-                      <span className="row-icon memory"><Brain size={16} /></span>
+                    <div className="pending-row">
+                      <span className="row-icon archive"><Archive size={16} /></span>
                       <div>
-                        <small>{t("기억", "Memory")}</small>
+                        <small>{t("보관함", "Archive")}</small>
                         <strong>{t("엄마에게 전화하기", "Call Mom")}</strong>
                       </div>
                     </div>
                     <div className="preview-buttons">
-                      <button type="button">{t("일정으로", "Schedule")}</button>
+                      <button type="button">{t("정리하기", "Sort")}</button>
                       <button type="button" className="quiet">{t("그냥 둘게요", "Leave it")}</button>
                     </div>
                   </div>
@@ -282,6 +279,25 @@ export function AboutLanding() {
           <div>{t("카톡 나에게 보내기보다", "Faster than messaging yourself")} <strong>{t("빠르게", "capture")}</strong></div>
           <div>{t("캘린더보다", "Lighter than a calendar")} <strong>{t("부담 없이", "to start")}</strong></div>
           <div>{t("노션보다", "Simpler than Notion")} <strong>{t("가볍게", "to keep")}</strong></div>
+        </section>
+
+        <section className="section before-after-section" aria-label={t("Before / After", "Before / After")}>
+          <div className="section-heading" data-reveal>
+            <span className="section-label">BEFORE / AFTER</span>
+            <h2>{t("기록은 했는데,\n왜 다시 못 찾을까요?", "You saved it.\nWhy can't you find it?")}</h2>
+          </div>
+          <div className="before-after-grid" data-reveal>
+            <article className="before-after-card before">
+              <span>{t("Before", "Before")}</span>
+              <strong>{t("카톡 나에게", "Message yourself")}</strong>
+              <p>{t("기록은 했지만, 필요할 때 다시 못 찾음", "Saved, but lost when you need it")}</p>
+            </article>
+            <article className="before-after-card after">
+              <span>{t("After", "After")}</span>
+              <strong>{t("잊지마", "Itjima")}</strong>
+              <p>{t("던지면, 필요할 때 일정·보관함으로 다시", "Drop it — resurface to schedule or archive")}</p>
+            </article>
+          </div>
         </section>
 
         <section className="section pain-section">
@@ -334,10 +350,10 @@ export function AboutLanding() {
               <div className="mini-composer"><span>{t("여행 가기 전에…", "Before the trip…")}</span><ArrowRight size={17} /></div>
             </article>
             <article className="bento-card" data-reveal>
-              <div className="bento-icon yellow"><Sparkles size={22} /></div>
-              <span className="bento-label">BRAIN MIRROR</span>
-              <h3>{t("AI가 먼저 이해해요.", "AI understands first.")}</h3>
-              <p>{t("질문부터 던지지 않고, 이해한 내용을 먼저 보여줍니다.", "It shows its understanding before asking you more questions.")}</p>
+              <div className="bento-icon yellow"><CalendarDays size={22} /></div>
+              <span className="bento-label">SORT</span>
+              <h3>{t("나중에 정리해도 돼요.", "Sort when you're ready.")}</h3>
+              <p>{t("일정, 보관함, 그대로 두기. 지금 결정하지 않아도 됩니다.", "Schedule, archive, or leave it. No decision required now.")}</p>
             </article>
             <article className="bento-card" data-reveal>
               <div className="bento-icon blue"><Clock3 size={22} /></div>
@@ -350,7 +366,7 @@ export function AboutLanding() {
                 <div className="bento-icon ink"><Archive size={22} /></div>
                 <span className="bento-label">YOUR WORDS, INTACT</span>
                 <h3>{t("원본은 바꾸지 않습니다.", "Your original stays yours.")}</h3>
-                <p>{t("AI의 해석은 제안일 뿐입니다. 처음 남긴 생각은 언제든 그대로 확인할 수 있어요.", "AI interpretation is only a suggestion. Your first words remain available exactly as you wrote them.")}</p>
+                <p>{t("정리는 제안일 뿐입니다. 처음 남긴 생각은 언제든 그대로 확인할 수 있어요.", "Sorting is only a suggestion. Your first words remain available exactly as you wrote them.")}</p>
               </div>
               <div className="original-card">
                 <small>{t("내가 남긴 원본", "Your original")}</small>
@@ -406,8 +422,8 @@ export function AboutLanding() {
           <div className="final-cta" data-reveal>
             <span className="final-kicker">YOUR MIND CAN LET GO</span>
             <h2>{t("지금 머릿속에 있는 것부터\n하나만 던져보세요.", "Start with the one thing\non your mind right now.")}</h2>
-            <p>{t("정리는 잊지마가 먼저 해볼게요.", "Let Itjima take the first pass at organizing it.")}</p>
-            <Link to="/" className="primary-button large">{t("뇌 비우러 가기", "Empty your head")}<ArrowRight size={19} /></Link>
+            <p>{t("정리는 나중에 해도 괜찮아요.", "You can organize later.")}</p>
+            <Link to="/" className="primary-button large">{t("첫 생각 던지기", "Drop your first thought")}<ArrowRight size={19} /></Link>
           </div>
         </section>
 
@@ -427,7 +443,7 @@ export function AboutLanding() {
         <div className="footer-main">
           <div>
             <div className="brand footer-brand"><span className="brand-mark">잊</span><span className="brand-name">Itjima <small>잊지마</small></span></div>
-            <p>{t("기억하지 말고, 맡겨라.", "Do not memorize. Offload it.")}</p>
+            <p>{t("정리 전, 기억부터.", "Remember before you organize.")}</p>
           </div>
           <div className="footer-links">
             <Link to="/">{t("앱 열기", "Open app")}</Link>
@@ -445,15 +461,15 @@ export function AboutLanding() {
 
 const ABOUT_CSS = `
 .about-v2{
-  --ink:#171713;
-  --ink-soft:#5f5f55;
-  --paper:#f7f5ee;
-  --paper-strong:#efede3;
-  --white:#fffefa;
-  --yellow:#ffd92f;
-  --yellow-soft:#fff3a8;
-  --blue:#cfe7ff;
-  --line:rgba(23,23,19,.12);
+  --ink:#111111;
+  --ink-soft:#9a9a90;
+  --paper:#ffffff;
+  --paper-strong:#f5f5f3;
+  --white:#ffffff;
+  --yellow:#ffd43b;
+  --yellow-soft:#fff6c8;
+  --blue:#e8f2ff;
+  --line:rgba(17,17,17,.08);
   min-height:100vh;
   overflow-x:hidden;
   background:var(--paper);
@@ -466,10 +482,10 @@ const ABOUT_CSS = `
 .about-v2 button,.about-v2 a{-webkit-tap-highlight-color:transparent}
 .about-v2 [data-reveal]{opacity:0;transform:translateY(22px);transition:opacity .7s cubic-bezier(.2,.7,.2,1),transform .7s cubic-bezier(.2,.7,.2,1)}
 .about-v2 [data-reveal].is-visible{opacity:1;transform:none}
-.about-v2 .site-header{position:sticky;top:0;z-index:50;border-bottom:1px solid transparent;background:rgba(247,245,238,.86);backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px)}
+.about-v2 .site-header{position:sticky;top:0;z-index:50;border-bottom:1px solid var(--line);background:rgba(255,255,255,.88);backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px)}
 .about-v2 .header-inner{width:min(1180px,calc(100% - 32px));height:72px;margin:0 auto;display:flex;align-items:center;justify-content:space-between}
 .about-v2 .brand{display:inline-flex;align-items:center;gap:10px;text-decoration:none}
-.about-v2 .brand-mark{display:grid;place-items:center;width:35px;height:35px;border:1.5px solid var(--ink);border-radius:11px;background:var(--yellow);font-size:16px;font-weight:900;box-shadow:3px 3px 0 var(--ink)}
+.about-v2 .brand-mark{display:grid;place-items:center;width:35px;height:35px;border-radius:11px;background:var(--yellow);font-size:16px;font-weight:900}
 .about-v2 .brand-name{font-size:18px;font-weight:900;letter-spacing:-.04em;line-height:1}
 .about-v2 .brand-name small{display:block;margin-top:5px;color:var(--ink-soft);font-size:10px;font-weight:700;letter-spacing:.08em}
 .about-v2 .header-actions{display:flex;align-items:center;gap:8px}
@@ -478,37 +494,44 @@ const ABOUT_CSS = `
 .about-v2 .hero-section{position:relative;padding:72px 0 66px}
 .about-v2 .hero-grid{width:min(1180px,calc(100% - 32px));margin:0 auto;display:grid;grid-template-columns:minmax(0,1fr);gap:54px;align-items:center}
 .about-v2 .hero-copy{text-align:left}
-.about-v2 .eyebrow-pill{display:inline-flex;align-items:center;gap:8px;margin-bottom:25px;padding:8px 12px;border:1px solid var(--line);border-radius:999px;background:rgba(255,254,250,.7);font-size:11px;font-weight:800;letter-spacing:.08em;text-transform:uppercase}
+.about-v2 .eyebrow-pill{display:inline-flex;align-items:center;gap:8px;margin-bottom:25px;padding:8px 12px;border:1px solid var(--line);border-radius:999px;background:rgba(255,255,255,.85);font-size:11px;font-weight:800;letter-spacing:.08em;text-transform:uppercase}
 .about-v2 .status-dot{width:7px;height:7px;border-radius:50%;background:#37a766;box-shadow:0 0 0 4px rgba(55,167,102,.12)}
 .about-v2 h1{margin:0;font-size:clamp(50px,14vw,78px);font-weight:900;line-height:.98;letter-spacing:-.065em}
 .about-v2 h1 span{display:inline-block;position:relative;z-index:0}
 .about-v2 h1 span:after{content:'';position:absolute;z-index:-1;left:-.03em;right:-.08em;bottom:.05em;height:.24em;border-radius:99px;background:var(--yellow);transform:rotate(-1deg)}
 .about-v2 .hero-description{max-width:620px;margin:27px 0 0;color:var(--ink-soft);font-size:17px;font-weight:520;line-height:1.7;letter-spacing:-.02em}
 .about-v2 .hero-actions{display:flex;flex-direction:column;gap:10px;margin-top:30px}
-.about-v2 .primary-button,.about-v2 .secondary-button{display:inline-flex;align-items:center;justify-content:center;gap:9px;min-height:54px;padding:0 24px;border-radius:15px;text-decoration:none;font-size:15px;font-weight:850;transition:transform .2s ease,box-shadow .2s ease}
-.about-v2 .primary-button{background:var(--yellow);border:1.5px solid var(--ink);box-shadow:4px 4px 0 var(--ink)}
-.about-v2 .primary-button:hover{transform:translate(-1px,-2px);box-shadow:6px 6px 0 var(--ink)}
-.about-v2 .secondary-button{border:1px solid var(--line);background:rgba(255,254,250,.65)}
+.about-v2 .primary-button,.about-v2 .secondary-button{display:inline-flex;align-items:center;justify-content:center;gap:9px;min-height:54px;padding:0 24px;border-radius:20px;text-decoration:none;font-size:15px;font-weight:850;transition:transform .2s ease,box-shadow .2s ease}
+.about-v2 .primary-button{background:var(--yellow);border:none;box-shadow:0 4px 20px rgba(255,212,59,.35)}
+.about-v2 .primary-button:hover{transform:translateY(-1px);box-shadow:0 8px 28px rgba(255,212,59,.4)}
+.about-v2 .secondary-button{border:1px solid var(--line);background:var(--white)}
 .about-v2 .hero-meta{display:flex;flex-wrap:wrap;gap:10px 17px;margin-top:23px;color:var(--ink-soft);font-size:12px;font-weight:700}
 .about-v2 .hero-meta span{display:inline-flex;align-items:center;gap:5px}
 .about-v2 .hero-meta svg{color:#25844d}
 .about-v2 .product-stage{position:relative;isolation:isolate;min-height:545px;display:grid;place-items:center}
 .about-v2 .stage-glow{position:absolute;z-index:-1;width:88%;aspect-ratio:1;border-radius:50%;background:radial-gradient(circle,var(--yellow-soft),rgba(255,243,168,0) 68%);filter:blur(8px)}
-.about-v2 .browser-card{width:min(100%,520px);overflow:hidden;border:1.5px solid var(--ink);border-radius:25px;background:var(--white);box-shadow:10px 12px 0 var(--ink),0 30px 80px rgba(23,23,19,.14);transform:rotate(1.2deg)}
-.about-v2 .browser-top{height:45px;display:grid;grid-template-columns:70px 1fr 70px;align-items:center;padding:0 13px;border-bottom:1px solid var(--line);background:#ece9df}
+.about-v2 .browser-card{width:min(100%,520px);overflow:hidden;border:1px solid var(--line);border-radius:25px;background:var(--white);box-shadow:0 24px 64px rgba(17,17,17,.12);transform:rotate(.6deg)}
+.about-v2 .browser-top{height:45px;display:grid;grid-template-columns:70px 1fr 70px;align-items:center;padding:0 13px;border-bottom:1px solid var(--line);background:var(--paper-strong)}
 .about-v2 .browser-dots{display:flex;gap:5px}.about-v2 .browser-dots span{width:8px;height:8px;border-radius:50%;background:#c1beb4}.about-v2 .browser-dots span:first-child{background:#ff806d}.about-v2 .browser-dots span:nth-child(2){background:#f7c94b}.about-v2 .browser-dots span:nth-child(3){background:#65c56f}
 .about-v2 .browser-url{justify-self:center;width:min(100%,185px);padding:6px 12px;border:1px solid rgba(0,0,0,.07);border-radius:8px;background:rgba(255,255,255,.75);color:#77736a;text-align:center;font-size:10px;font-weight:700}
-.about-v2 .app-preview{position:relative;min-height:480px;padding:24px 20px 20px;background:linear-gradient(180deg,#fffefa 0%,#f7f5ee 100%)}
+.about-v2 .app-preview{position:relative;min-height:480px;padding:24px 20px 20px;background:linear-gradient(180deg,#ffffff 0%,#fafafa 100%)}
 .about-v2 .app-preview-nav{display:flex;align-items:center;justify-content:space-between}.about-v2 .app-preview-nav>div:first-child{display:flex;flex-direction:column;gap:3px}.about-v2 .preview-kicker{font-size:9px;font-weight:900;letter-spacing:.18em;color:#a09c91}.about-v2 .app-preview-nav strong{font-size:21px;letter-spacing:-.04em}.about-v2 .preview-avatar{display:grid;place-items:center;width:34px;height:34px;border-radius:50%;background:var(--ink);color:white;font-size:12px;font-weight:850}
 .about-v2 .preview-date{margin:22px 0 9px;text-align:center;color:#aaa69d;font-size:9px;font-weight:700}
 .about-v2 .thought-bubble{max-width:82%;margin-left:auto;padding:12px 15px;border-radius:17px 17px 4px 17px;background:var(--yellow);font-size:12px;font-weight:750;line-height:1.45;box-shadow:0 6px 20px rgba(102,88,0,.09)}
-.about-v2 .understood-card{margin-top:14px;padding:16px;border:1px solid var(--line);border-radius:18px;background:white;box-shadow:0 10px 30px rgba(23,23,19,.07)}
-.about-v2 .understood-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:13px;font-size:11px;font-weight:850}.about-v2 .understood-head>span:first-child{display:flex;align-items:center;gap:6px}.about-v2 .ai-label{padding:3px 7px;border-radius:99px;background:var(--ink);color:white;font-size:8px;letter-spacing:.1em}
-.about-v2 .understood-row{display:flex;align-items:center;gap:10px;padding:10px 0;border-top:1px solid var(--line)}.about-v2 .row-icon{display:grid;place-items:center;width:31px;height:31px;border-radius:10px}.about-v2 .row-icon.calendar{background:var(--yellow-soft)}.about-v2 .row-icon.memory{background:var(--blue)}.about-v2 .understood-row div{display:flex;flex-direction:column;gap:3px}.about-v2 .understood-row small{color:#98948b;font-size:8px;font-weight:750}.about-v2 .understood-row strong{font-size:10px;letter-spacing:-.01em}
-.about-v2 .preview-buttons{display:grid;grid-template-columns:1fr 1fr;gap:7px;margin-top:12px}.about-v2 .preview-buttons button{height:34px;border:1px solid var(--ink);border-radius:10px;background:var(--yellow);font:inherit;font-size:9px;font-weight:850}.about-v2 .preview-buttons button.quiet{border-color:var(--line);background:white;color:#77736a}
+.about-v2 .pending-card{margin-top:14px;padding:16px;border:1px solid var(--line);border-radius:18px;background:white;box-shadow:0 10px 30px rgba(17,17,17,.06)}
+.about-v2 .pending-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:13px;font-size:11px;font-weight:850}
+.about-v2 .pending-row{display:flex;align-items:center;gap:10px;padding:10px 0;border-top:1px solid var(--line)}.about-v2 .row-icon{display:grid;place-items:center;width:31px;height:31px;border-radius:10px}.about-v2 .row-icon.calendar{background:var(--yellow-soft)}.about-v2 .row-icon.archive{background:#e8f8ec}.about-v2 .pending-row div{display:flex;flex-direction:column;gap:3px}.about-v2 .pending-row small{color:var(--ink-soft);font-size:8px;font-weight:750}.about-v2 .pending-row strong{font-size:10px;letter-spacing:-.01em}
+.about-v2 .preview-buttons{display:grid;grid-template-columns:1fr 1fr;gap:7px;margin-top:12px}.about-v2 .preview-buttons button{height:34px;border:none;border-radius:10px;background:var(--yellow);font:inherit;font-size:9px;font-weight:850}.about-v2 .preview-buttons button.quiet{border:1px solid var(--line);background:white;color:var(--ink-soft)}
 .about-v2 .composer-preview{position:absolute;left:20px;right:20px;bottom:18px;height:48px;display:flex;align-items:center;justify-content:space-between;padding:0 9px 0 15px;border:1px solid var(--line);border-radius:16px;background:white;color:#aaa69d;font-size:10px;font-weight:650;box-shadow:0 7px 20px rgba(23,23,19,.05)}.about-v2 .send-preview{display:grid;place-items:center;width:32px;height:32px;border-radius:11px;background:var(--ink);color:white}
-.about-v2 .floating-note{position:absolute;z-index:3;display:flex;align-items:center;gap:7px;padding:10px 12px;border:1px solid var(--ink);border-radius:11px;background:var(--white);font-size:10px;font-weight:850;box-shadow:4px 4px 0 var(--ink)}.about-v2 .note-one{left:-3px;top:95px;transform:rotate(-5deg)}.about-v2 .note-two{right:-2px;bottom:82px;transform:rotate(4deg);background:var(--blue)}
-.about-v2 .comparison-strip{width:min(1180px,calc(100% - 32px));margin:0 auto 96px;display:grid;border:1px solid var(--line);border-radius:18px;overflow:hidden;background:rgba(255,254,250,.7)}
+.about-v2 .floating-note{position:absolute;z-index:3;display:flex;align-items:center;gap:7px;padding:10px 12px;border:1px solid var(--line);border-radius:11px;background:var(--white);font-size:10px;font-weight:850;box-shadow:0 8px 24px rgba(17,17,17,.08)}.about-v2 .note-one{left:-3px;top:95px;transform:rotate(-5deg)}.about-v2 .note-two{right:-2px;bottom:82px;transform:rotate(4deg);background:var(--yellow-soft)}
+.about-v2 .comparison-strip{width:min(1180px,calc(100% - 32px));margin:0 auto 48px;display:grid;border:1px solid var(--line);border-radius:18px;overflow:hidden;background:var(--white)}
+.about-v2 .before-after-section{padding-top:0;padding-bottom:80px}
+.about-v2 .before-after-grid{display:grid;gap:12px}
+.about-v2 .before-after-card{padding:24px;border:1px solid var(--line);border-radius:20px;background:var(--white)}
+.about-v2 .before-after-card>span{display:block;margin-bottom:12px;color:var(--ink-soft);font-size:10px;font-weight:900;letter-spacing:.14em}
+.about-v2 .before-after-card strong{display:block;margin-bottom:10px;font-size:22px;font-weight:900;letter-spacing:-.03em}
+.about-v2 .before-after-card p{margin:0;color:var(--ink-soft);font-size:14px;line-height:1.6}
+.about-v2 .before-after-card.after{border-color:rgba(255,212,59,.55);background:linear-gradient(180deg,#fffef8 0%,#ffffff 100%)}
 .about-v2 .comparison-strip div{padding:18px 20px;border-bottom:1px solid var(--line);color:var(--ink-soft);font-size:13px;text-align:center}.about-v2 .comparison-strip div:last-child{border-bottom:0}.about-v2 .comparison-strip strong{color:var(--ink)}
 .about-v2 .section{width:min(1180px,calc(100% - 32px));margin:0 auto;padding:100px 0}
 .about-v2 .section-heading{max-width:780px;margin-bottom:46px}.about-v2 .section-label{display:block;margin-bottom:16px;color:#7d796f;font-size:10px;font-weight:900;letter-spacing:.18em}.about-v2 .section-heading h2,.about-v2 .faq-heading h2{margin:0;font-size:clamp(36px,9vw,64px);font-weight:900;line-height:1.05;letter-spacing:-.055em;white-space:pre-line}.about-v2 .section-heading p{margin:20px 0 0;color:var(--ink-soft);font-size:16px;line-height:1.7}
@@ -518,17 +541,17 @@ const ABOUT_CSS = `
 .about-v2 .manifesto-section{padding:120px 16px;background:var(--yellow)}.about-v2 .manifesto-inner{width:min(1000px,100%);margin:0 auto;text-align:center}.about-v2 .manifesto-section .section-label{color:rgba(23,23,19,.55)}.about-v2 blockquote{margin:0;font-size:clamp(38px,10vw,76px);font-weight:900;line-height:1.08;letter-spacing:-.06em}.about-v2 blockquote em{font-style:normal;text-decoration:underline;text-decoration-thickness:.08em;text-underline-offset:.12em}
 .about-v2 .audience-list{border-top:1px solid var(--ink)}.about-v2 .audience-list div{display:grid;grid-template-columns:42px 1fr 24px;align-items:center;gap:8px;padding:19px 4px;border-bottom:1px solid var(--line)}.about-v2 .audience-list span{color:#918d83;font-size:10px;font-weight:850}.about-v2 .audience-list strong{font-size:16px;letter-spacing:-.02em}.about-v2 .audience-list svg{color:#25844d}
 .about-v2 .faq-layout{display:grid;gap:48px}.about-v2 .faq-heading h2{white-space:pre-line}.about-v2 .text-link{display:inline-flex;align-items:center;gap:7px;margin-top:24px;font-size:14px;font-weight:850}.about-v2 .faq-list{border-top:1px solid var(--ink)}.about-v2 .faq-item{border-bottom:1px solid var(--line)}.about-v2 .faq-item summary{list-style:none;display:flex;align-items:center;justify-content:space-between;gap:15px;padding:22px 0;cursor:pointer;font-size:17px;font-weight:850;letter-spacing:-.025em}.about-v2 .faq-item summary::-webkit-details-marker{display:none}.about-v2 .faq-plus{font-size:25px;font-weight:400;transition:transform .2s ease}.about-v2 .faq-item[open] .faq-plus{transform:rotate(45deg)}.about-v2 .faq-item p{margin:0;padding:0 36px 24px 0;color:var(--ink-soft);font-size:14px;line-height:1.75}
-.about-v2 .final-cta-section{padding:34px 16px 100px}.about-v2 .final-cta{width:min(1180px,100%);margin:0 auto;padding:60px 24px;border:1.5px solid var(--ink);border-radius:28px;background:var(--white);text-align:center;box-shadow:8px 8px 0 var(--ink)}.about-v2 .final-kicker{color:#878378;font-size:10px;font-weight:900;letter-spacing:.18em}.about-v2 .final-cta h2{margin:18px 0;font-size:clamp(38px,10vw,70px);font-weight:900;line-height:1.03;letter-spacing:-.06em;white-space:pre-line}.about-v2 .final-cta p{margin:0 0 28px;color:var(--ink-soft);font-size:16px}.about-v2 .primary-button.large{min-height:58px;padding:0 27px}
+.about-v2 .final-cta-section{padding:34px 16px 100px}.about-v2 .final-cta{width:min(1180px,100%);margin:0 auto;padding:60px 24px;border:1px solid var(--line);border-radius:28px;background:var(--white);text-align:center;box-shadow:0 20px 60px rgba(17,17,17,.08)}.about-v2 .final-kicker{color:#878378;font-size:10px;font-weight:900;letter-spacing:.18em}.about-v2 .final-cta h2{margin:18px 0;font-size:clamp(38px,10vw,70px);font-weight:900;line-height:1.03;letter-spacing:-.06em;white-space:pre-line}.about-v2 .final-cta p{margin:0 0 28px;color:var(--ink-soft);font-size:16px}.about-v2 .primary-button.large{min-height:58px;padding:0 27px}
 .about-v2 .legal-section{width:min(1180px,calc(100% - 32px));margin:0 auto;padding:20px 0 70px;display:grid;gap:26px;color:#7d796f}.about-v2 .legal-section h2{margin:0 0 8px;color:var(--ink);font-size:13px}.about-v2 .legal-section p{margin:0;font-size:11px;line-height:1.65}
-.about-v2 .site-footer{border-top:1px solid var(--line);padding:45px max(16px,calc((100% - 1180px)/2)) 34px;background:#eeece3}.about-v2 .footer-main{display:flex;flex-direction:column;gap:30px}.about-v2 .footer-brand{pointer-events:none}.about-v2 .footer-main p{margin:15px 0 0;color:var(--ink-soft);font-size:13px;font-weight:650}.about-v2 .footer-links{display:flex;flex-wrap:wrap;align-items:center;gap:17px}.about-v2 .footer-links a{color:var(--ink-soft);font-size:12px;font-weight:750;text-decoration:none}.about-v2 .footer-bottom{display:flex;flex-direction:column;gap:6px;margin-top:40px;padding-top:20px;border-top:1px solid var(--line);color:#928e84;font-size:10px}
+.about-v2 .site-footer{border-top:1px solid var(--line);padding:45px max(16px,calc((100% - 1180px)/2)) 34px;background:var(--white)}.about-v2 .footer-main{display:flex;flex-direction:column;gap:30px}.about-v2 .footer-brand{pointer-events:none}.about-v2 .footer-main p{margin:15px 0 0;color:var(--ink-soft);font-size:13px;font-weight:650}.about-v2 .footer-links{display:flex;flex-wrap:wrap;align-items:center;gap:17px}.about-v2 .footer-links a{color:var(--ink-soft);font-size:12px;font-weight:750;text-decoration:none}.about-v2 .footer-bottom{display:flex;flex-direction:column;gap:6px;margin-top:40px;padding-top:20px;border-top:1px solid var(--line);color:#928e84;font-size:10px}
 @media (min-width:640px){
-  .about-v2 .hero-actions{flex-direction:row}.about-v2 .primary-button,.about-v2 .secondary-button{width:auto}.about-v2 .comparison-strip{grid-template-columns:repeat(3,1fr)}.about-v2 .comparison-strip div{border-right:1px solid var(--line);border-bottom:0}.about-v2 .comparison-strip div:last-child{border-right:0}.about-v2 .pain-grid,.about-v2 .steps-grid{grid-template-columns:repeat(3,1fr)}.about-v2 .pain-card{padding:28px}.about-v2 .bento-grid{grid-template-columns:repeat(2,1fr)}.about-v2 .bento-large{grid-row:span 2}.about-v2 .bento-wide{grid-column:1/-1;grid-template-columns:1.15fr .85fr}.about-v2 .legal-section{grid-template-columns:repeat(2,1fr)}.about-v2 .footer-main,.about-v2 .footer-bottom{flex-direction:row;justify-content:space-between;align-items:flex-start}.about-v2 .footer-bottom{align-items:center}
+  .about-v2 .hero-actions{flex-direction:row}.about-v2 .primary-button,.about-v2 .secondary-button{width:auto}.about-v2 .comparison-strip{grid-template-columns:repeat(3,1fr)}.about-v2 .comparison-strip div{border-right:1px solid var(--line);border-bottom:0}.about-v2 .comparison-strip div:last-child{border-right:0}.about-v2 .before-after-grid{grid-template-columns:repeat(2,1fr)}.about-v2 .pain-grid,.about-v2 .steps-grid{grid-template-columns:repeat(3,1fr)}.about-v2 .pain-card{padding:28px}.about-v2 .bento-grid{grid-template-columns:repeat(2,1fr)}.about-v2 .bento-large{grid-row:span 2}.about-v2 .bento-wide{grid-column:1/-1;grid-template-columns:1.15fr .85fr}.about-v2 .legal-section{grid-template-columns:repeat(2,1fr)}.about-v2 .footer-main,.about-v2 .footer-bottom{flex-direction:row;justify-content:space-between;align-items:flex-start}.about-v2 .footer-bottom{align-items:center}
 }
 @media (min-width:900px){
   .about-v2 .header-inner{height:82px}.about-v2 .hero-section{padding:92px 0 78px}.about-v2 .hero-grid{grid-template-columns:minmax(0,.92fr) minmax(460px,1.08fr);gap:70px}.about-v2 h1{font-size:clamp(68px,7vw,96px)}.about-v2 .product-stage{min-height:610px}.about-v2 .browser-card{width:500px}.about-v2 .section{padding:130px 0}.about-v2 .pain-grid,.about-v2 .steps-grid{gap:16px}.about-v2 .pain-card{min-height:390px;padding:32px}.about-v2 .pain-card h3{margin-top:75px;font-size:30px}.about-v2 .step-card{min-height:370px;padding:30px}.about-v2 .step-card h3{margin-top:130px;font-size:28px}.about-v2 .bento-card{padding:32px;min-height:330px}.about-v2 .bento-large{min-height:672px}.about-v2 .bento-wide{min-height:300px}.about-v2 .faq-layout{grid-template-columns:.72fr 1.28fr;gap:100px}.about-v2 .faq-heading{position:sticky;top:120px;align-self:start}.about-v2 .final-cta{padding:95px 40px}.about-v2 .legal-section{padding-bottom:90px}
 }
 @media (max-width:520px){
-  .about-v2 .header-inner{width:min(100% - 24px,1180px)}.about-v2 .header-cta{width:43px;padding:0}.about-v2 .header-cta span{display:none}.about-v2 .hero-grid,.about-v2 .section,.about-v2 .comparison-strip,.about-v2 .legal-section{width:calc(100% - 24px)}.about-v2 .hero-section{padding-top:50px}.about-v2 .hero-description{font-size:15px}.about-v2 .product-stage{min-height:480px}.about-v2 .browser-card{width:calc(100% - 14px);box-shadow:7px 8px 0 var(--ink)}.about-v2 .app-preview{min-height:415px;padding:20px 16px}.about-v2 .composer-preview{left:16px;right:16px}.about-v2 .floating-note{font-size:9px}.about-v2 .note-one{left:0;top:62px}.about-v2 .note-two{right:0;bottom:40px}.about-v2 .section{padding:86px 0}.about-v2 .section-heading{margin-bottom:35px}.about-v2 .comparison-strip{margin-bottom:70px}.about-v2 .pain-card{min-height:270px}.about-v2 .how-section{padding-top:86px;padding-bottom:86px}.about-v2 .manifesto-section{padding:88px 16px}.about-v2 .final-cta-section{padding-bottom:80px}.about-v2 .final-cta{padding:54px 18px;border-radius:22px;box-shadow:6px 6px 0 var(--ink)}
+  .about-v2 .header-inner{width:min(100% - 24px,1180px)}.about-v2 .header-cta{width:43px;padding:0}.about-v2 .header-cta span{display:none}.about-v2 .hero-grid,.about-v2 .section,.about-v2 .comparison-strip,.about-v2 .legal-section{width:calc(100% - 24px)}.about-v2 .hero-section{padding-top:50px}.about-v2 .hero-description{font-size:15px}.about-v2 .product-stage{min-height:480px}.about-v2 .browser-card{width:calc(100% - 14px);box-shadow:0 16px 40px rgba(17,17,17,.1)}.about-v2 .app-preview{min-height:415px;padding:20px 16px}.about-v2 .composer-preview{left:16px;right:16px}.about-v2 .floating-note{font-size:9px}.about-v2 .note-one{left:0;top:62px}.about-v2 .note-two{right:0;bottom:40px}.about-v2 .section{padding:86px 0}.about-v2 .section-heading{margin-bottom:35px}.about-v2 .comparison-strip{margin-bottom:40px}.about-v2 .pain-card{min-height:270px}.about-v2 .how-section{padding-top:86px;padding-bottom:86px}.about-v2 .manifesto-section{padding:88px 16px}.about-v2 .final-cta-section{padding-bottom:80px}.about-v2 .final-cta{padding:54px 18px;border-radius:22px}
 }
 @media (prefers-reduced-motion:reduce){.about-v2 *{scroll-behavior:auto!important}.about-v2 [data-reveal]{opacity:1;transform:none;transition:none}.about-v2 .primary-button,.about-v2 .pain-card{transition:none}}
 `;
