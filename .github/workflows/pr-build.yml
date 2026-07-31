@@ -1,21 +1,21 @@
-name: Sync Lockfile
+name: CI
 
 on:
   pull_request:
     branches: [main]
+  push:
+    branches: [main]
+  workflow_dispatch:
 
 permissions:
-  contents: write
+  contents: read
 
 jobs:
-  sync-and-build:
-    if: github.event.pull_request.head.repo.full_name == github.repository
+  build:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout PR branch
+      - name: Checkout
         uses: actions/checkout@v4
-        with:
-          ref: ${{ github.head_ref }}
 
       - name: Setup Node
         uses: actions/setup-node@v4
@@ -23,23 +23,34 @@ jobs:
           node-version: 22
           cache: npm
 
-      - name: Regenerate lockfile
-        run: npm install --package-lock-only
-
-      - name: Commit synchronized lockfile
-        run: |
-          if git diff --quiet -- package-lock.json; then
-            echo "package-lock.json is already synchronized"
-            exit 0
-          fi
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add package-lock.json
-          git commit -m "Synchronize npm lockfile"
-          git push origin HEAD:${{ github.head_ref }}
-
       - name: Clean install
         run: npm ci
 
       - name: Run release build
         run: npm run build
+
+  production-smoke:
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Verify focused production metadata
+        shell: bash
+        run: |
+          set -euo pipefail
+          for attempt in {1..20}; do
+            html="$(curl -fsSL --max-time 20 https://itjima.app/ || true)"
+            manifest="$(curl -fsSL --max-time 20 https://itjima.app/manifest.webmanifest || true)"
+
+            if grep -Fq "말하듯 남기는 일정 캡처" <<<"$html" \
+              && grep -Fq "애매한 부분만 확인" <<<"$manifest"; then
+              echo "Production smoke check passed"
+              exit 0
+            fi
+
+            echo "Production is not updated yet (attempt $attempt/20)"
+            sleep 15
+          done
+
+          echo "::error::Production did not serve the focused Itjima metadata"
+          exit 1
