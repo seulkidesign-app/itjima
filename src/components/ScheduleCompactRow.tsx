@@ -6,6 +6,7 @@ import { scheduleDisplayTitle } from "@/lib/thoughtProvenance";
 import { isMissed } from "@/lib/scheduleGroups";
 import { useT, useLang } from "@/lib/i18n";
 import { haptic, confirm as hapticConfirm } from "@/lib/haptics";
+import { SPRING_ROW, SPRING_SNAP_BACK } from "@/lib/motion";
 import { Check, Bell } from "lucide-react";
 
 export type ScheduleCompactRowProps = {
@@ -72,9 +73,7 @@ export function ScheduleCompactRow({
     if (!done && dxRef.current >= 64) {
       setActing(true);
       animate(dxRef.current, 120, {
-        type: "spring",
-        stiffness: 340,
-        damping: 28,
+        ...SPRING_ROW,
         onUpdate: (v) => {
           dxRef.current = v;
           setDx(v);
@@ -91,9 +90,7 @@ export function ScheduleCompactRow({
     }
     if (dxRef.current < 8) onEdit();
     animate(dxRef.current, 0, {
-      type: "spring",
-      stiffness: 420,
-      damping: 32,
+      ...SPRING_SNAP_BACK,
       onUpdate: (v) => {
         dxRef.current = v;
         setDx(v);
@@ -109,9 +106,11 @@ export function ScheduleCompactRow({
       role="button"
       tabIndex={0}
       aria-label={`${title}. ${t("탭하면 다듬기", "Tap to refine")}`}
+      data-gesture={dragging.current || acting ? "true" : undefined}
       style={{
-        transform: `translateX(${dx}px)`,
+        transform: `translate3d(${dx}px, 0, 0)`,
         transition: dragging.current || acting ? "none" : undefined,
+        willChange: dragging.current || acting ? "transform" : "auto",
       }}
       onPointerDown={onDown}
       onPointerMove={onMove}

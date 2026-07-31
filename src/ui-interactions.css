@@ -1,14 +1,15 @@
-/* Itjima cross-device interaction language */
+/* Itjima cross-device interaction language — motion tokens only */
 
 :root {
-  --ix-fast: 120ms;
-  --ix-micro: 180ms;
-  --ix-component: 240ms;
-  --ix-panel: 320ms;
-  --ix-ease: cubic-bezier(0.2, 0.8, 0.2, 1);
-  --ix-ease-out: cubic-bezier(0.32, 0.72, 0, 1);
-  --ix-press-scale: 0.975;
-  --ix-hover-lift: -1px;
+  --ix-fast: var(--dur-fast);
+  --ix-micro: var(--dur-fast);
+  --ix-component: var(--dur-base);
+  --ix-panel: var(--dur-slow);
+  --ix-ease: var(--ease-out);
+  --ix-ease-out: var(--ease-out);
+  --ix-ease-in-out: var(--ease-in-out);
+  --ix-press-scale: var(--press-scale);
+  --ix-hover-lift: 0px;
   --ix-focus: rgba(255, 204, 0, 0.48);
 }
 
@@ -20,16 +21,12 @@ html {
 @media (hover: hover) and (pointer: fine) {
   .phone-frame :is(button, a, [role="button"], [role="tab"]):not(:disabled) {
     transition:
-      transform var(--ix-micro) var(--ix-ease),
-      background-color var(--ix-micro) ease,
-      border-color var(--ix-micro) ease,
-      color var(--ix-micro) ease,
-      box-shadow var(--ix-micro) ease,
-      opacity var(--ix-fast) ease;
-  }
-
-  .phone-frame :is(.touch-press, .touch-target, .app-account-button, .app-brand-trigger):not(:disabled):hover {
-    transform: translateY(var(--ix-hover-lift));
+      transform var(--dur-fast) var(--ease-out),
+      background-color var(--dur-fast) ease,
+      border-color var(--dur-fast) ease,
+      color var(--dur-fast) ease,
+      box-shadow var(--dur-fast) ease,
+      opacity var(--dur-fast) ease;
   }
 
   .phone-frame .app-primary-tab:not([aria-current="page"]):hover {
@@ -41,24 +38,20 @@ html {
     color: rgba(17, 17, 17, 0.78);
     background: rgba(255, 255, 255, 0.56);
   }
-
-  .phone-frame .chat-bubble:hover,
-  .phone-frame .apple-group-row:hover,
-  .phone-frame [data-testid="decision-launcher"]:hover {
-    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.035), 0 12px 32px -22px rgba(0, 0, 0, 0.28);
-  }
 }
 
-/* Press response: concise, consistent, no playful bounce. */
+/* Press response: scale 0.96 + --dur-fast, spring-feel via ease-out. */
 .phone-frame :is(button, [role="button"], [role="tab"]):not(:disabled):active,
-.bottom-sheet-panel :is(button, [role="button"]):not(:disabled):active {
-  transform: scale(var(--ix-press-scale));
-  transition-duration: var(--ix-fast) !important;
+.bottom-sheet-panel :is(button, [role="button"]):not(:disabled):active,
+.about-v2 :is(button, a.primary-button, a.secondary-button, a.header-cta):not(:disabled):active,
+.mobile-sticky-button:active {
+  transform: scale(var(--press-scale));
+  transition-duration: var(--dur-fast) !important;
 }
 
 .phone-frame .app-primary-tab:active,
 .phone-frame .segment-nav-item:active {
-  transform: scale(0.985);
+  transform: scale(var(--press-scale));
 }
 
 /* Keyboard focus is visible only for keyboard navigation. */
@@ -86,14 +79,12 @@ html[data-input-modality="keyboard"] .bottom-sheet-panel :is(button, a, input, t
 /* Composer reacts as one control, not disconnected buttons. */
 .phone-frame form.composer-hero .input-shell {
   transition:
-    border-color var(--ix-micro) ease,
-    box-shadow var(--ix-micro) ease,
-    background-color var(--ix-micro) ease,
-    transform var(--ix-micro) var(--ix-ease);
+    border-color var(--dur-base) var(--ease-out),
+    box-shadow var(--dur-base) var(--ease-out),
+    background-color var(--dur-base) var(--ease-out);
 }
 
 .phone-frame form.composer-hero .input-shell-focused {
-  transform: translateY(-1px);
   box-shadow:
     0 0 0 4px rgba(255, 204, 0, 0.13),
     0 14px 34px -26px rgba(0, 0, 0, 0.3);
@@ -102,12 +93,6 @@ html[data-input-modality="keyboard"] .bottom-sheet-panel :is(button, a, input, t
 .phone-frame form.composer-hero button[aria-label="던지기"]:not(:disabled),
 .phone-frame form.composer-hero button[aria-label="Drop it"]:not(:disabled) {
   box-shadow: 0 10px 24px -16px rgba(255, 184, 0, 0.62);
-}
-
-/* Navigation and segmented controls communicate selection with movement and depth. */
-.phone-frame .app-primary-tab,
-.phone-frame .segment-nav-item {
-  will-change: transform;
 }
 
 .phone-frame .segment-nav-item-active {
@@ -119,22 +104,27 @@ html[data-input-modality="keyboard"] .bottom-sheet-panel :is(button, a, input, t
 /* List rows respond without jumping layout. */
 .phone-frame :is([data-testid="schedule-today-list"] li, [data-testid="archive-grouped-list"] li, .apple-group-row) {
   transition:
-    background-color var(--ix-fast) ease,
-    opacity var(--ix-micro) ease,
-    transform var(--ix-micro) var(--ix-ease);
+    background-color var(--dur-fast) ease,
+    opacity var(--dur-base) var(--ease-out),
+    transform var(--dur-fast) var(--ease-out);
 }
 
 .phone-frame :is([data-testid="schedule-today-list"] li, [data-testid="archive-grouped-list"] li, .apple-group-row):active {
   background: rgba(17, 17, 17, 0.04);
+  transform: scale(var(--press-scale));
 }
 
-/* Overlay entrance quality. */
+/* Overlay entrance — will-change only while sheet is open/dragging via [data-dragging]. */
 .bottom-sheet-backdrop {
-  transition: opacity var(--ix-panel) var(--ix-ease-out), backdrop-filter var(--ix-panel) ease;
+  transition: opacity var(--dur-slow) var(--ease-out);
 }
 
 .bottom-sheet-panel {
   transform-origin: center bottom;
+}
+
+.bottom-sheet-panel[data-dragging="true"],
+[data-gesture="true"] {
   will-change: transform, opacity;
 }
 
@@ -146,10 +136,8 @@ html[data-input-modality="keyboard"] .bottom-sheet-panel :is(button, a, input, t
 
 /* Toasts feel attached to the product, not browser alerts. */
 [data-sonner-toast] {
-  animation-duration: var(--ix-component) !important;
-  animation-timing-function: var(--ix-ease-out) !important;
-  backdrop-filter: blur(20px) saturate(150%);
-  -webkit-backdrop-filter: blur(20px) saturate(150%);
+  animation-duration: var(--dur-base) !important;
+  animation-timing-function: var(--ease-out) !important;
 }
 
 /* Touch devices: eliminate sticky hover and favor direct response. */
@@ -175,7 +163,7 @@ html[data-input-modality="keyboard"] .bottom-sheet-panel :is(button, a, input, t
     font-size: 11px;
     font-weight: 600;
     opacity: 0;
-    transition: opacity var(--ix-micro) ease;
+    transition: opacity var(--dur-fast) ease;
   }
 
   .phone-frame .app-primary-tab:nth-child(1)::after { content: "⌘1"; }
@@ -186,10 +174,14 @@ html[data-input-modality="keyboard"] .bottom-sheet-panel :is(button, a, input, t
 
 @media (prefers-reduced-motion: reduce) {
   html { scroll-behavior: auto; }
-  *, *::before, *::after {
-    scroll-behavior: auto !important;
-    animation-duration: 0.01ms !important;
-    animation-iteration-count: 1 !important;
-    transition-duration: 0.01ms !important;
+  .phone-frame :is(button, [role="button"], [role="tab"]):not(:disabled):active,
+  .bottom-sheet-panel :is(button, [role="button"]):not(:disabled):active,
+  .phone-frame :is([data-testid="schedule-today-list"] li, [data-testid="archive-grouped-list"] li, .apple-group-row):active {
+    transform: none;
+  }
+  .list-stagger > * {
+    animation: none !important;
+    opacity: 1 !important;
+    transform: none !important;
   }
 }

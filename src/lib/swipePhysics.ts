@@ -10,6 +10,14 @@ export { dragProgress, cardScale, cardShadowBlur };
 /** Rubber-band resistance beyond drag limit (iOS-style). */
 export const SWIPE_RUBBER = 0.18;
 
+/** Distance commit: 30% of card/screen width. */
+export const SWIPE_DISTANCE_RATIO = 0.3;
+
+/**
+ * Fling commit — 0.5 px/ms ≡ 500 px/s (gesture libs often report ~0.5).
+ */
+export const SWIPE_VELOCITY_COMMIT = 500;
+
 export function rubberBand(
   value: number,
   limit: number,
@@ -30,17 +38,21 @@ export function swipeRotation(dx: number, cardWidth: number): number {
   );
 }
 
-/** Card opacity fades slightly at extreme drag. */
+/** Card opacity fades with drag progress. */
 export function swipeOpacity(absDx: number, maxDrag: number): number {
   return Math.max(0.72, 1 - absDx / (maxDrag * 3.5));
 }
 
-/** Commit when past threshold or fling velocity exceeds px/s. */
+/** Commit when past 30% width or fling velocity > 0.5 (px/ms → 500 px/s). */
 export function shouldSwipeCommit(
   absDx: number,
   threshold: number,
   velocityX: number,
-  velocityThreshold = 420,
+  velocityThreshold = SWIPE_VELOCITY_COMMIT,
 ): boolean {
   return absDx >= threshold || Math.abs(velocityX) >= velocityThreshold;
+}
+
+export function swipeThreshold(cardWidth: number): number {
+  return cardWidth * SWIPE_DISTANCE_RATIO;
 }

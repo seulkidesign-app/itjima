@@ -16,13 +16,14 @@ import {
   cardScale,
   cardShadowBlur,
   shouldSwipeCommit,
+  swipeThreshold,
+  SWIPE_VELOCITY_COMMIT,
 } from "@/lib/swipePhysics";
 import { SPRING_SNAP_BACK, SPRING_CARD_EXIT } from "@/lib/motion";
 import { Check, X } from "lucide-react";
 
 type Direction = "left" | "right";
 
-const THRESHOLD = 95;
 const MAX_DRAG = 160;
 const LONG_PRESS_MS = 450;
 const MOVE_CANCEL = 10;
@@ -166,7 +167,7 @@ export function SwipeCard({
       lastTone.current = tone;
       if (tone) tickDebounced();
     }
-    if (!crossed.current && Math.abs(next) >= THRESHOLD) {
+    if (!crossed.current && Math.abs(next) >= swipeThreshold(cardW())) {
       crossed.current = true;
       tickDebounced(120);
     }
@@ -204,7 +205,12 @@ export function SwipeCard({
 
     const abs = Math.abs(dxRef.current);
     if (
-      shouldSwipeCommit(abs, THRESHOLD, velocityX.current) &&
+      shouldSwipeCommit(
+        abs,
+        swipeThreshold(cardW()),
+        velocityX.current,
+        SWIPE_VELOCITY_COMMIT,
+      ) &&
       !pending
     ) {
       const dir: Direction = dxRef.current > 0 ? "right" : "left";
@@ -272,11 +278,14 @@ export function SwipeCard({
         onPointerMove={onMove}
         onPointerUp={onUp}
         onPointerCancel={onUp}
-        className={`relative touch-pan-y select-none will-change-transform ${className}`}
+        data-gesture={dragging.current || acting.current ? "true" : undefined}
+        className={`relative touch-pan-y select-none ${className}`}
         style={{
-          transform: `translateX(${dx}px) rotate(${rotate}deg) scale(${scale})`,
+          transform: `translate3d(${dx}px, 0, 0) rotate(${rotate}deg) scale(${scale})`,
           opacity,
           transition: dragging.current || acting.current ? "none" : undefined,
+          willChange:
+            dragging.current || acting.current ? "transform, opacity" : "auto",
         }}
       >
         <div

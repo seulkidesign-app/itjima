@@ -26,10 +26,10 @@
     0 10px 34px -24px rgba(0, 0, 0, 0.3);
   --apple-shadow-float: 0 18px 60px -28px rgba(0, 0, 0, 0.34),
     0 2px 12px -5px rgba(0, 0, 0, 0.12);
-  --apple-motion: cubic-bezier(0.32, 0.72, 0, 1);
-  --apple-sidebar-width: 216px;
-  --apple-reading-width: 720px;
-  --apple-chat-width: 620px;
+  --apple-motion: var(--ease-out, cubic-bezier(0.22, 1, 0.36, 1));
+  --apple-sidebar-width: 0px;
+  --apple-reading-width: 430px;
+  --apple-chat-width: 430px;
 }
 
 html {
@@ -61,11 +61,11 @@ body {
 .phone-frame button:not(:disabled),
 .phone-frame [role="button"]:not([aria-disabled="true"]) {
   transition:
-    transform 160ms var(--apple-motion),
-    background-color 160ms ease,
-    border-color 160ms ease,
-    box-shadow 160ms ease,
-    opacity 160ms ease;
+    transform var(--dur-fast, 140ms) var(--apple-motion),
+    background-color var(--dur-fast, 140ms) ease,
+    border-color var(--dur-fast, 140ms) ease,
+    box-shadow var(--dur-fast, 140ms) ease,
+    opacity var(--dur-fast, 140ms) ease;
 }
 
 .phone-frame button:disabled,
@@ -477,7 +477,7 @@ body {
   -webkit-backdrop-filter: blur(22px) saturate(160%);
 }
 
-/* Desktop adaptation: real sidebar + focused workspace, not a stretched phone. */
+/* Desktop: keep locked 430px phone frame (no sidebar). */
 @media (min-width: 900px) {
   body {
     display: grid;
@@ -493,12 +493,11 @@ body {
   }
 
   .phone-frame {
-    display: grid !important;
-    grid-template-columns: var(--apple-sidebar-width) minmax(0, 1fr);
-    grid-template-rows: minmax(0, 1fr);
-    width: min(calc(100vw - 32px), 1180px) !important;
-    max-width: 1180px !important;
-    height: min(calc(100dvh - 32px), 940px);
+    display: flex !important;
+    flex-direction: column !important;
+    width: 100% !important;
+    max-width: 430px !important;
+    height: min(100dvh - 32px, 932px);
     margin: auto;
     overflow: hidden;
     border: 1px solid rgba(60, 60, 67, 0.12);
@@ -509,91 +508,15 @@ body {
   }
 
   .phone-frame .app-top-nav {
-    grid-column: 1;
-    grid-row: 1;
-    display: flex;
-    min-width: 0;
-    height: 100%;
     flex-direction: column;
-    padding: 22px 12px 16px !important;
-    border-right: 1px solid var(--apple-separator-soft);
-    border-bottom: 0;
-    background: rgba(245, 245, 247, 0.86);
-  }
-
-  .phone-frame .app-top-nav-bar {
-    display: contents;
-  }
-
-  .phone-frame .app-brand-trigger {
-    order: 0;
-    min-height: 44px;
-    margin: 0 10px 24px;
-    padding: 0;
-    font-size: 20px;
-  }
-
-  .phone-frame .app-primary-tabs {
-    order: 1;
-    display: flex;
-    width: 100% !important;
-    max-width: none !important;
-    min-height: 0;
-    flex-direction: column;
-    align-items: stretch;
-    gap: 5px;
-    margin: 0;
-    padding: 0;
-  }
-
-  .phone-frame .app-primary-tab {
-    flex: 0 0 auto;
-    width: 100%;
-    min-height: 44px;
-    justify-content: flex-start;
-    padding: 0 14px !important;
-    border-radius: 10px;
-    font-size: 14px;
-  }
-
-  .phone-frame .app-primary-tab > span.absolute {
-    display: none;
-  }
-
-  .phone-frame .app-primary-tab:hover {
-    background: rgba(118, 118, 128, 0.08);
-  }
-
-  .phone-frame .app-primary-tab[aria-current="page"] {
-    background: rgba(118, 118, 128, 0.14);
-    box-shadow: inset 0 0 0 0.5px rgba(60, 60, 67, 0.04);
-  }
-
-  .phone-frame .app-primary-tab:focus-visible {
-    box-shadow: inset 0 0 0 2px rgba(255, 211, 61, 0.55) !important;
-  }
-
-  .phone-frame .app-account-button {
-    order: 3;
-    width: calc(100% - 8px);
-    min-height: 44px;
-    justify-content: flex-start;
-    margin: auto 4px 0;
-    padding-inline: 12px;
-    background: rgba(255, 255, 255, 0.68);
-  }
-
-  .phone-frame .app-account-button span {
-    max-width: none;
-    font-size: 12px;
+    border-right: 0;
+    border-bottom: 1px solid var(--apple-separator-soft);
   }
 
   .phone-frame #phone-scroll {
-    grid-column: 2;
-    grid-row: 1;
     width: 100%;
-    height: 100%;
     min-height: 0;
+    flex: 1;
     background: var(--apple-surface-solid);
   }
 
@@ -601,95 +524,22 @@ body {
     min-height: 100%;
   }
 
-  .phone-frame .home-chat-lane,
-  .phone-frame:has(.app-primary-tab[href="/"][aria-current="page"]) .chat-scroll {
-    width: min(100%, var(--apple-chat-width)) !important;
-    max-width: var(--apple-chat-width) !important;
-    margin-inline: auto;
-    padding-inline: 24px !important;
-  }
-
-  .phone-frame .home-chat-turn {
-    max-width: 540px;
-  }
-
-  .phone-frame .chat-turn-group {
-    max-width: min(390px, 78%);
-  }
-
-  .phone-frame form.composer-hero {
-    width: min(calc(100% - 40px), var(--apple-chat-width)) !important;
-    max-width: var(--apple-chat-width) !important;
-    margin-inline: auto;
-    padding-inline: 0 !important;
-  }
-
-  .phone-frame .decision-launcher-bar,
-  .phone-frame [data-testid="decision-launcher"] {
-    width: min(calc(100% - 40px), var(--apple-chat-width)) !important;
-    max-width: var(--apple-chat-width) !important;
-    margin-inline: auto !important;
-  }
-
-  .phone-frame .sticky:has(#schedule-tab-today) > div:first-of-type,
-  .phone-frame .sticky:has(#schedule-tab-today) > div:nth-of-type(2),
-  .phone-frame .sticky:has(#schedule-tab-today) + div {
-    width: min(100%, var(--apple-reading-width));
-    max-width: var(--apple-reading-width) !important;
-    margin-inline: auto;
-    padding-inline: 28px !important;
-  }
-
   .phone-frame .segment-nav {
     max-width: 430px !important;
   }
 
-  .phone-frame:has(.app-primary-tab[href="/archive"][aria-current="page"])
-    .page-shell
-    > div
-    > .sticky
-    > div,
-  .phone-frame:has(.app-primary-tab[href="/archive"][aria-current="page"])
-    .page-shell
-    > div
-    > .sticky
-    + div {
-    width: min(100%, 780px);
-    max-width: 780px !important;
-    margin-inline: auto;
-    padding-inline: 28px !important;
-  }
-
   .bottom-sheet-root {
-    padding: 28px;
+    padding: 0;
   }
 
   .bottom-sheet-panel {
-    width: min(100%, 680px);
-    max-width: 680px;
+    width: min(100%, 430px);
+    max-width: 430px;
     max-height: min(var(--sheet-max-h), calc(100dvh - 56px));
-    border-radius: var(--apple-radius-panel);
-  }
-
-  .bottom-sheet-handle {
-    padding-block: 10px 4px;
   }
 
   .phone-frame .focus-sort-card {
-    max-width: 420px;
-  }
-
-  .phone-frame > .relative.flex.h-full.min-h-full.flex-col {
-    align-self: center;
-    width: min(100%, 560px);
-    height: auto;
-    min-height: min(760px, calc(100dvh - 80px));
-    margin: auto;
-    padding: 36px 44px;
-    border: 1px solid var(--apple-separator-soft);
-    border-radius: 24px;
-    background: var(--apple-surface-solid);
-    box-shadow: var(--apple-shadow-float);
+    max-width: 400px;
   }
 }
 
@@ -699,8 +549,8 @@ body {
   }
 
   .phone-frame {
-    width: 100vw !important;
-    max-width: none !important;
+    width: 100% !important;
+    max-width: 430px !important;
     height: 100dvh;
     border: 0;
     border-radius: 0;

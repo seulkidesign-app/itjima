@@ -62,7 +62,17 @@
 :root {
   --radius: 24px;
 
-  /* Spacing scale */
+  /* Motion tokens — use everywhere; transform/opacity only */
+  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
+  --dur-fast: 140ms;
+  --dur-base: 240ms;
+  --dur-slow: 360ms;
+  --press-scale: 0.96;
+  --list-stagger: 24ms;
+  --sheet-dim-max: 0.4;
+
+  /* Spacing scale — 4pt */
   --space-1: 4px;
   --space-2: 8px;
   --space-3: 12px;
@@ -279,9 +289,9 @@
   font-weight: 600;
   letter-spacing: -0.008em;
   transition:
-    background-color 0.2s cubic-bezier(0.32, 0.72, 0, 1),
-    color 0.2s cubic-bezier(0.32, 0.72, 0, 1),
-    box-shadow 0.2s cubic-bezier(0.32, 0.72, 0, 1);
+    background-color var(--dur-base) var(--ease-out),
+    color var(--dur-base) var(--ease-out),
+    box-shadow var(--dur-base) var(--ease-out);
 }
 @utility segment-nav-item-active {
   background: #ffffff;
@@ -539,20 +549,17 @@
   border-radius: var(--radius-card);
   background: oklch(1 0 0 / 0.96);
   border: 1px solid oklch(0 0 0 / 0.05);
-  backdrop-filter: blur(16px) saturate(150%);
   box-shadow:
     0 1px 0 oklch(1 0 0 / 0.6) inset,
     0 2px 12px oklch(0 0 0 / 0.05),
     var(--shadow-card);
   transition:
-    box-shadow 0.22s cubic-bezier(0.32, 0.72, 0, 1),
-    transform 0.22s cubic-bezier(0.32, 0.72, 0, 1);
+    box-shadow var(--dur-base) var(--ease-out),
+    transform var(--dur-fast) var(--ease-out),
+    opacity var(--dur-base) var(--ease-out);
 }
 .thought-card:active {
-  transform: scale(0.992);
-  box-shadow:
-    0 2px 8px oklch(0 0 0 / 0.06),
-    0 10px 28px -8px oklch(0 0 0 / 0.1);
+  transform: scale(var(--press-scale));
 }
 
 .input-shell {
@@ -560,8 +567,8 @@
   background: #ffffff;
   border: 1px solid oklch(0 0 0 / 0.07);
   transition:
-    box-shadow 0.2s cubic-bezier(0.32, 0.72, 0, 1),
-    border-color 0.2s cubic-bezier(0.32, 0.72, 0, 1);
+    box-shadow var(--dur-base) var(--ease-out),
+    border-color var(--dur-base) var(--ease-out);
 }
 .input-shell-focused {
   background: #ffffff;
@@ -586,12 +593,14 @@
   justify-content: center;
   width: 48px;
   height: 48px;
+  min-width: 44px;
+  min-height: 44px;
   border-radius: 9999px;
   flex-shrink: 0;
   box-shadow: var(--shadow-card);
   transition:
-    opacity 0.1s linear,
-    transform 0.12s ease;
+    opacity var(--dur-fast) var(--ease-out),
+    transform var(--dur-fast) var(--ease-out);
 }
 
 .swipe-pill-schedule {
@@ -678,10 +687,11 @@
 }
 
 .touch-press {
-  transition: transform 0.12s cubic-bezier(0.34, 1.2, 0.64, 1);
+  transition: transform var(--dur-fast) var(--ease-out);
+  min-height: 44px;
 }
 .touch-press:active {
-  transform: scale(0.97);
+  transform: scale(var(--press-scale));
 }
 
 @utility touch-target {
@@ -921,7 +931,7 @@
 }
 @keyframes pop {
   0% {
-    transform: scale(0.92);
+    transform: scale(0.96);
     opacity: 0;
   }
   100% {
@@ -929,28 +939,38 @@
     opacity: 1;
   }
 }
+@keyframes list-item-enter {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
 @utility animate-fade-in {
-  animation: fade-in 0.25s ease-out both;
+  animation: fade-in var(--dur-base) var(--ease-out) both;
 }
 @utility animate-craft-in {
-  animation: fade-in 0.48s cubic-bezier(0.22, 1, 0.36, 1) both;
+  animation: fade-in var(--dur-slow) var(--ease-out) both;
 }
 @utility animate-bm-enter {
-  animation: bm-enter 0.4s ease-out both;
+  animation: bm-enter var(--dur-slow) var(--ease-out) both;
 }
 @utility animate-swipe-label {
-  animation: swipe-label-in 0.25s ease-out both;
+  animation: swipe-label-in var(--dur-base) var(--ease-out) both;
 }
 @utility animate-slide-up {
-  animation: slide-up 0.3s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+  animation: slide-up var(--dur-slow) var(--ease-out) both;
 }
 @utility animate-pop {
-  animation: pop 0.2s ease-out both;
+  animation: pop var(--dur-fast) var(--ease-out) both;
 }
 @keyframes scale-in {
   from {
     opacity: 0;
-    transform: scale(0.94);
+    transform: scale(0.96);
   }
   to {
     opacity: 1;
@@ -958,10 +978,32 @@
   }
 }
 @utility animate-scale-in {
-  animation: scale-in 0.25s ease-out both;
+  animation: scale-in var(--dur-base) var(--ease-out) both;
+}
+
+/* List stagger — first visit only; set data-stagger="off" on revisit/scroll restore */
+.list-stagger > * {
+  animation: list-item-enter var(--dur-base) var(--ease-out) both;
+}
+.list-stagger > *:nth-child(1) { animation-delay: calc(var(--list-stagger) * 0); }
+.list-stagger > *:nth-child(2) { animation-delay: calc(var(--list-stagger) * 1); }
+.list-stagger > *:nth-child(3) { animation-delay: calc(var(--list-stagger) * 2); }
+.list-stagger > *:nth-child(4) { animation-delay: calc(var(--list-stagger) * 3); }
+.list-stagger > *:nth-child(5) { animation-delay: calc(var(--list-stagger) * 4); }
+.list-stagger > *:nth-child(6) { animation-delay: calc(var(--list-stagger) * 5); }
+.list-stagger > *:nth-child(7) { animation-delay: calc(var(--list-stagger) * 6); }
+.list-stagger > *:nth-child(8) { animation-delay: calc(var(--list-stagger) * 7); }
+.list-stagger > *:nth-child(n + 9) { animation-delay: calc(var(--list-stagger) * 8); }
+.list-stagger[data-stagger="off"] > * {
+  animation: none;
+  opacity: 1;
+  transform: none;
 }
 
 @media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
   *,
   *::before,
   *::after {
@@ -969,6 +1011,11 @@
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
     scroll-behavior: auto !important;
+  }
+  .list-stagger > *,
+  .touch-press:active,
+  .thought-card:active {
+    transform: none !important;
   }
 }
 

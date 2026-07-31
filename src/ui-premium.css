@@ -94,8 +94,8 @@ html {
 }
 
 .itjima-card:active {
-  transform: scale(0.985);
-  transition-duration: 100ms;
+  transform: scale(var(--press-scale, 0.96));
+  transition-duration: var(--dur-fast, 140ms);
 }
 
 .itjima-settings-group {

@@ -1,15 +1,23 @@
 /**
- * Semantic motion — calm confidence, 180–240ms.
+ * Semantic motion — iOS tokens (--dur-fast/base/slow + --ease-out).
  */
 
+import {
+  MOTION_DURATION,
+  MOTION_DURATION_SLOW,
+  MOTION_EASE,
+  MOTION_EASE_IN_OUT,
+  SPRING_DEFAULT,
+} from "@/lib/motion";
+
 export const MOTION_CALM = {
-  duration: 0.2,
-  ease: [0.32, 0.72, 0, 1] as const,
+  duration: MOTION_DURATION,
+  ease: MOTION_EASE,
 };
 
 export const MOTION_CALM_SLOW = {
-  duration: 0.24,
-  ease: [0.32, 0.72, 0, 1] as const,
+  duration: MOTION_DURATION_SLOW,
+  ease: MOTION_EASE,
 };
 
 export const MOTION_THINKING = MOTION_CALM_SLOW;
@@ -25,24 +33,29 @@ export const MOTION_DELETE = MOTION_CALM;
 
 export const MOTION_UNDO = MOTION_CALM;
 
-export const MOTION_SETTLE = {
-  type: "spring" as const,
-  stiffness: 380,
-  damping: 34,
-  mass: 0.8,
-};
+export const MOTION_SETTLE = SPRING_DEFAULT;
 
 export const MOTION_SUCCESS = {
-  duration: 0.28,
-  ease: [0.2, 0.8, 0.2, 1] as const,
+  duration: MOTION_DURATION_SLOW,
+  ease: MOTION_EASE,
 };
 
 export const MOTION_SHEET = {
-  duration: 0.24,
-  ease: [0.32, 0.72, 0, 1] as const,
+  duration: MOTION_DURATION,
+  ease: MOTION_EASE,
 };
 
 export const MOTION_STEP = MOTION_CALM;
+
+export const MOTION_PAGE = {
+  duration: MOTION_DURATION_SLOW,
+  ease: MOTION_EASE,
+};
+
+export const MOTION_EXIT = {
+  duration: MOTION_DURATION,
+  ease: MOTION_EASE_IN_OUT,
+};
 
 /** Exit targets per swipe direction in Focus Mode */
 export function exitSpring(dir: "left" | "right" | "up") {

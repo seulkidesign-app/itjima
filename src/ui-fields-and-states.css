@@ -30,9 +30,9 @@
   font-size: 16px;
   line-height: 1.45;
   transition:
-    border-color 160ms ease,
-    box-shadow 160ms ease,
-    background-color 160ms ease;
+    border-color var(--dur-fast, 140ms) var(--ease-out, ease),
+    box-shadow var(--dur-fast, 140ms) var(--ease-out, ease),
+    background-color var(--dur-fast, 140ms) var(--ease-out, ease);
 }
 
 .phone-frame input:not([type="checkbox"]):not([type="radio"]):not([type="file"]),
@@ -91,8 +91,8 @@
   min-height: 31px;
   border-radius: 999px;
   transition:
-    background-color 180ms ease,
-    box-shadow 180ms ease;
+    background-color var(--dur-base, 240ms) var(--ease-out, ease),
+    box-shadow var(--dur-base, 240ms) var(--ease-out, ease);
 }
 
 .phone-frame :is(button, [role="button"])[aria-pressed="true"],

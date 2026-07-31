@@ -831,11 +831,13 @@ export function DecisionDeck({
                     onPointerMove={onMove}
                     onPointerUp={onUp}
                     onPointerCancel={onUp}
-                    className={`focus-sort-card focus-sort-card-active relative z-10 mx-auto flex min-h-[min(320px,48dvh)] w-full touch-pan-y select-none flex-col overflow-hidden will-change-transform ${
+                    data-gesture={dragging || locked ? "true" : undefined}
+                    className={`focus-sort-card focus-sort-card-active relative z-10 mx-auto flex min-h-[min(320px,48dvh)] w-full touch-pan-y select-none flex-col overflow-hidden ${
                       dragging || locked ? "is-dragging" : ""
                     }`}
                     style={{
                       transform: `translate3d(${offset.x}px, ${offset.y}px, 0) rotate(${rotate}deg) scale(${scale})`,
+                      willChange: dragging || locked ? "transform, opacity" : "auto",
                       opacity: cardOpacity,
                       boxShadow: `0 ${8 + previewProgress * 16}px ${24 + previewProgress * 28}px -10px rgba(0,0,0,${0.07 + previewProgress * 0.1})`,
                     }}

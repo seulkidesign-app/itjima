@@ -1,7 +1,10 @@
-/** Calm UI transitions — 180–240ms, no playful spring. */
-export const MOTION_EASE = [0.32, 0.72, 0, 1] as const;
-export const MOTION_DURATION = 0.2;
-export const MOTION_DURATION_SLOW = 0.24;
+/** iOS-native motion tokens — transform/opacity only, GPU-composited. */
+
+export const MOTION_EASE = [0.22, 1, 0.36, 1] as const;
+export const MOTION_EASE_IN_OUT = [0.65, 0, 0.35, 1] as const;
+export const MOTION_DURATION = 0.24;
+export const MOTION_DURATION_FAST = 0.14;
+export const MOTION_DURATION_SLOW = 0.36;
 
 export const TRANSITION_CALM = {
   duration: MOTION_DURATION,
@@ -13,34 +16,39 @@ export const TRANSITION_CALM_SLOW = {
   ease: MOTION_EASE,
 } as const;
 
-/** @deprecated Prefer TRANSITION_CALM for chrome; kept for drag snap-back only. */
+export const TRANSITION_FAST = {
+  duration: MOTION_DURATION_FAST,
+  ease: MOTION_EASE,
+} as const;
+
+/** Gesture spring — stiffness ~320 / damping ~30, velocity-aware. */
 export const SPRING_DEFAULT = {
   type: "spring" as const,
   stiffness: 320,
-  damping: 28,
-  mass: 0.8,
+  damping: 30,
+  mass: 0.85,
 };
 
 export const SPRING_SNAP_BACK = {
   type: "spring" as const,
-  stiffness: 360,
-  damping: 34,
+  stiffness: 320,
+  damping: 30,
   mass: 0.82,
 };
 
 export const SPRING_SHEET = {
   type: "spring" as const,
-  stiffness: 380,
-  damping: 34,
-  mass: 0.85,
+  stiffness: 320,
+  damping: 30,
+  mass: 0.9,
 };
 
 /** iOS UITableView row snap */
 export const SPRING_ROW = {
   type: "spring" as const,
-  stiffness: 520,
-  damping: 38,
-  mass: 0.65,
+  stiffness: 320,
+  damping: 30,
+  mass: 0.7,
 };
 
 export const SPRING_CARD_EXIT = {
@@ -53,43 +61,51 @@ export const SPRING_CARD_EXIT = {
 /** Tab underline / small UI chrome */
 export const SPRING_TAB = {
   type: "spring" as const,
-  stiffness: 480,
-  damping: 36,
+  stiffness: 380,
+  damping: 32,
   mass: 0.55,
 };
 
 /** Input focus / micro scale */
 export const SPRING_MICRO = {
   type: "spring" as const,
-  stiffness: 520,
-  damping: 32,
-  mass: 0.5,
+  stiffness: 320,
+  damping: 30,
+  mass: 0.55,
 };
 
-export const EASE_OUT_APP = [0.32, 0.72, 0, 1] as const;
+export const EASE_OUT_APP = MOTION_EASE;
 
 export const SWIPE_PREVIEW = 0.3;
 export const SWIPE_COMMIT = 0.6;
-export const MAX_ROTATE = 6;
+/** Tinder-style max tilt during drag. */
+export const MAX_ROTATE = 12;
 
-/** Motion duration tiers (ms) */
-export const MOTION_INSTANT_MS = 120;
-export const MOTION_MICRO_MS = 180;
-export const MOTION_COMPONENT_MS = 250;
-export const MOTION_SHEET_MS = 320;
+/** Motion duration tiers (ms) — mirror CSS --dur-* */
+export const MOTION_INSTANT_MS = 140;
+export const MOTION_MICRO_MS = 140;
+export const MOTION_COMPONENT_MS = 240;
+export const MOTION_SHEET_MS = 360;
+export const MOTION_FAST_MS = 140;
+export const MOTION_BASE_MS = 240;
+export const MOTION_SLOW_MS = 360;
 
-/** Shared bottom-sheet backdrop — keep opacity/blur aligned across sheets. */
-export const SHEET_BACKDROP_CLASS =
-  "bg-ink/35 backdrop-blur-md backdrop-saturate-150";
+/** Shared sheet backdrop for consumers that animate opacity 0→1. */
+export const SHEET_BACKDROP_CLASS = "bg-ink/40";
+
+/** Solid ink for proportional dim (opacity driven to SHEET_DIM_MAX). */
+export const SHEET_BACKDROP_SOLID_CLASS = "bg-ink";
 
 export const SHEET_BACKDROP_FADE = {
-  duration: 0.28,
+  duration: MOTION_DURATION_SLOW,
   ease: EASE_OUT_APP,
 } as const;
 
-/** Standard easing curves */
-export const EASE_STANDARD = [0.2, 0.8, 0.2, 1] as const;
-export const EASE_EXIT = [0.4, 0, 1, 1] as const;
+/** Max backdrop dim while sheet is fully open (0 → 0.4). */
+export const SHEET_DIM_MAX = 0.4;
+
+export const EASE_STANDARD = MOTION_EASE;
+export const EASE_EXIT = MOTION_EASE_IN_OUT;
 
 export function dragProgress(absPx: number, cardWidth: number) {
   return Math.min(1, absPx / (cardWidth * SWIPE_COMMIT));
@@ -106,9 +122,9 @@ export function indicatorScale(progress: number) {
 }
 
 export function cardShadowBlur(progress: number) {
-  return 12 + progress * 24;
+  return 8 + progress * 16;
 }
 
 export function cardScale(progress: number) {
-  return 1 + progress * 0.03;
+  return 1 + progress * 0.02;
 }

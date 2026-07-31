@@ -11,6 +11,7 @@ import { animate } from "framer-motion";
 import { useT } from "@/lib/i18n";
 import { tickDebounced, confirm as confirmHaptic, tap as tapHaptic } from "@/lib/haptics";
 import { SPRING_ROW, SPRING_SNAP_BACK } from "@/lib/motion";
+import { rubberBand, SWIPE_VELOCITY_COMMIT } from "@/lib/swipePhysics";
 
 /** Shared with `.swipe-pill-btn` width in styles.css */
 const BTN = 48;
@@ -19,19 +20,12 @@ const BTN_GAP = 8;
 /** 10 + 48 + 8 + 48 — full tray width behind the bubble */
 export const CHAT_SWIPE_OPEN_DISTANCE = GAP_BUBBLE + BTN + BTN_GAP + BTN;
 const OPEN_AT = Math.round(CHAT_SWIPE_OPEN_DISTANCE * 0.4);
+/** Past this → Apple Mail full-swipe commits archive immediately */
+const FULL_SWIPE_AT = Math.round(CHAT_SWIPE_OPEN_DISTANCE * 1.15);
 
-function rubber(value: number, limit: number) {
-  const abs = Math.abs(value);
-  if (abs <= limit) return value;
-  return Math.sign(value) * (limit + (abs - limit) * 0.15);
-}
-
-function clampOffset(value: number, isOpen: boolean) {
-  if (value > 0) return 0;
-  const banded = rubber(value, CHAT_SWIPE_OPEN_DISTANCE);
-  const clamped = Math.max(-CHAT_SWIPE_OPEN_DISTANCE, Math.min(0, banded));
-  if (isOpen) return clamped;
-  return clamped;
+function clampOffset(value: number, _isOpen: boolean) {
+  if (value > 0) return rubberBand(value, 24);
+  return rubberBand(value, FULL_SWIPE_AT);
 }
 
 function clamp01(v: number) {
@@ -68,6 +62,9 @@ export function ChatSwipeRow({
   const draggingRef = useRef(false);
   const offsetRef = useRef(0);
   const startX = useRef(0);
+  const lastX = useRef(0);
+  const lastT = useRef(0);
+  const velocityX = useRef(0);
   const longTimer = useRef<number | null>(null);
   const longFired = useRef(false);
   const moved = useRef(false);
@@ -155,6 +152,9 @@ export function ChatSwipeRow({
     longFired.current = false;
     moved.current = false;
     startX.current = e.clientX - offsetRef.current;
+    lastX.current = e.clientX;
+    lastT.current = performance.now();
+    velocityX.current = 0;
     clearLongPress();
     if (onLongPress) {
       longTimer.current = window.setTimeout(() => {
@@ -171,6 +171,12 @@ export function ChatSwipeRow({
   const onMove = (e: PointerEvent<HTMLDivElement>) => {
     if (!draggingRef.current || acting) return;
     let x = e.clientX - startX.current;
+
+    const now = performance.now();
+    const dt = Math.max(1, now - lastT.current);
+    velocityX.current = ((e.clientX - lastX.current) / dt) * 1000;
+    lastX.current = e.clientX;
+    lastT.current = now;
 
     if (Math.abs(x - offsetRef.current) > 6) {
       moved.current = true;
@@ -193,10 +199,21 @@ export function ChatSwipeRow({
     if (longFired.current) return;
 
     const x = offsetRef.current;
+    const flingLeft = velocityX.current < -SWIPE_VELOCITY_COMMIT;
 
     if (isOpen) {
+      if (x <= -FULL_SWIPE_AT || (flingLeft && x < -CHAT_SWIPE_OPEN_DISTANCE * 0.9)) {
+        commit("archive");
+        return;
+      }
       if (x > -OPEN_AT * 0.45) dismiss();
       else springX(-CHAT_SWIPE_OPEN_DISTANCE);
+      return;
+    }
+
+    // Full swipe / fast fling → immediate archive (Apple Mail)
+    if (x <= -FULL_SWIPE_AT || (flingLeft && x <= -OPEN_AT)) {
+      commit("archive");
       return;
     }
 
@@ -279,10 +296,12 @@ export function ChatSwipeRow({
           onPointerMove={onMove}
           onPointerUp={onUp}
           onPointerCancel={onUp}
-          className="relative z-[2] min-w-0 shrink-0 touch-none select-none will-change-transform"
+          data-gesture={dragging || acting ? "true" : undefined}
+          className="relative z-[2] min-w-0 shrink-0 touch-none select-none"
           style={{
             transform:
               offsetX === 0 ? undefined : `translate3d(${offsetX}px, 0, 0)`,
+            willChange: dragging || acting ? "transform" : "auto",
           }}
         >
           {children}

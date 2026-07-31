@@ -1,4 +1,4 @@
-import { motion } from "framer-motion";
+import { motion, useReducedMotion } from "framer-motion";
 import { useT } from "@/lib/i18n";
 import { MOTION_CALM, MOTION_CALM_SLOW } from "@/lib/motionLanguage";
 
@@ -20,16 +20,23 @@ export function EmptyState({
   variant = "default",
 }: Props) {
   const t = useT();
+  const reduced = useReducedMotion();
   const transition = variant === "success" ? MOTION_CALM_SLOW : MOTION_CALM;
   const showEmoji = Boolean(emoji);
+  const enter = reduced
+    ? { opacity: 0 }
+    : { opacity: 0, y: 8 };
+  const settled = reduced
+    ? { opacity: 1 }
+    : { opacity: 1, y: 0 };
 
   return (
     <motion.div
-        className="flex min-h-[36dvh] flex-col items-center justify-center px-7 text-center"
+      className="flex min-h-[36dvh] flex-col items-center justify-center px-8 text-center"
       role="status"
-      initial={{ opacity: 0, y: 8 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ ...transition, duration: 0.32 }}
+      initial={enter}
+      animate={settled}
+      transition={transition}
     >
       {showEmoji && (
         <motion.div
@@ -39,9 +46,9 @@ export function EmptyState({
               : "text-[2.75rem] leading-none opacity-90"
           }
           aria-hidden
-          initial={{ opacity: 0, scale: 0.96 }}
-          animate={{ opacity: 1, scale: 1 }}
-          transition={{ ...transition, delay: 0.04 }}
+          initial={reduced ? { opacity: 0 } : { opacity: 0, scale: 0.96 }}
+          animate={reduced ? { opacity: 1 } : { opacity: 1, scale: 1 }}
+          transition={{ ...transition, delay: reduced ? 0 : 0.024 }}
         >
           <span className={variant === "success" ? "text-[1.5rem]" : ""}>
             {emoji}
@@ -50,17 +57,17 @@ export function EmptyState({
       )}
       <motion.p
         className={`${showEmoji ? "mt-4" : ""} text-[19px] font-semibold tracking-[-0.025em] text-ink`}
-        initial={{ opacity: 0, y: 4 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ ...transition, delay: 0.08 }}
+        initial={enter}
+        animate={settled}
+        transition={{ ...transition, delay: reduced ? 0 : 0.048 }}
       >
         {t(titleKo, titleEn)}
       </motion.p>
       <motion.p
         className="mt-2 max-w-[280px] text-secondary leading-relaxed"
-        initial={{ opacity: 0, y: 4 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ ...transition, delay: 0.12 }}
+        initial={enter}
+        animate={settled}
+        transition={{ ...transition, delay: reduced ? 0 : 0.072 }}
       >
         {t(hintKo, hintEn)}
       </motion.p>

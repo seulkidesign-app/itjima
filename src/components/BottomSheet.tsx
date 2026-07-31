@@ -11,9 +11,13 @@ import { useT } from "@/lib/i18n";
 import { light } from "@/lib/haptics";
 import {
   SPRING_SHEET,
-  SHEET_BACKDROP_CLASS,
+  SHEET_BACKDROP_SOLID_CLASS,
   SHEET_BACKDROP_FADE,
+  SHEET_DIM_MAX,
+  MOTION_DURATION,
+  MOTION_EASE,
 } from "@/lib/motion";
+import { rubberBand } from "@/lib/swipePhysics";
 
 const FOCUSABLE_SELECTOR = [
   "button:not([disabled])",
@@ -24,6 +28,13 @@ const FOCUSABLE_SELECTOR = [
   "[tabindex]:not([tabindex='-1'])",
   "[contenteditable='true']",
 ].join(",");
+
+/** Sheet open height fractions — Apple Maps–style detents (single open uses half). */
+const DETENT = {
+  collapsed: 0.28,
+  half: 0.55,
+  full: 0.92,
+} as const;
 
 function focusableElements(container: HTMLElement): HTMLElement[] {
   return Array.from(container.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTOR)).filter(
@@ -55,6 +66,9 @@ export function BottomSheet({
   const panelRef = useRef<HTMLDivElement | null>(null);
   const [keyboardInset, setKeyboardInset] = useState(0);
   const [wideLayout, setWideLayout] = useState(false);
+  const [dragY, setDragY] = useState(0);
+  const [dragging, setDragging] = useState(false);
+  const panelHeightRef = useRef(420);
 
   useEffect(() => {
     const media = window.matchMedia("(min-width: 640px)");
@@ -65,7 +79,11 @@ export function BottomSheet({
   }, []);
 
   useEffect(() => {
-    if (!open) return;
+    if (!open) {
+      setDragY(0);
+      setDragging(false);
+      return;
+    }
     const vv = window.visualViewport;
     if (!vv) return;
     const sync = () => {
@@ -89,6 +107,7 @@ export function BottomSheet({
     const focusFrame = window.requestAnimationFrame(() => {
       const panel = panelRef.current;
       if (!panel) return;
+      panelHeightRef.current = panel.offsetHeight || 420;
       const first = focusableElements(panel)[0];
       (first ?? panel).focus({ preventScroll: true });
     });
@@ -153,6 +172,14 @@ export function BottomSheet({
     ? { opacity: 0, y: 12, scale: 0.99 }
     : { opacity: 1, y: "100%", scale: 1 };
 
+  const h = panelHeightRef.current;
+  const dismissAt = h * DETENT.collapsed;
+  const dimProgress = Math.max(
+    0,
+    Math.min(1, 1 - dragY / Math.max(1, h * DETENT.half)),
+  );
+  const backdropOpacity = SHEET_DIM_MAX * dimProgress;
+
   return (
     <AnimatePresence>
       {open && (
@@ -165,11 +192,11 @@ export function BottomSheet({
             type="button"
             tabIndex={-1}
             aria-label={t("닫기", "Close")}
-            className={`bottom-sheet-backdrop absolute inset-0 z-0 ${SHEET_BACKDROP_CLASS}`}
+            className={`bottom-sheet-backdrop absolute inset-0 z-0 ${SHEET_BACKDROP_SOLID_CLASS}`}
             initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
+            animate={{ opacity: backdropOpacity }}
             exit={{ opacity: 0 }}
-            transition={SHEET_BACKDROP_FADE}
+            transition={dragging ? { duration: 0 } : SHEET_BACKDROP_FADE}
             onClick={() => {
               light();
               onClose();
@@ -181,23 +208,43 @@ export function BottomSheet({
             tabIndex={-1}
             aria-modal="true"
             aria-labelledby={title ? titleId : undefined}
+            data-dragging={dragging ? "true" : "false"}
             drag={wideLayout ? false : "y"}
             dragControls={dragControls}
             dragConstraints={{ top: 0, bottom: 0 }}
-            dragElastic={{ top: 0.05, bottom: 0.32 }}
+            dragElastic={{ top: 0.08, bottom: 0.42 }}
+            onDragStart={() => {
+              setDragging(true);
+              if (panelRef.current) {
+                panelHeightRef.current = panelRef.current.offsetHeight || 420;
+              }
+            }}
+            onDrag={(_, info) => {
+              const raw = Math.max(0, info.offset.y);
+              setDragY(rubberBand(raw, h * 0.55, 0.22));
+            }}
             onDragEnd={(_, info) => {
-              if (wideLayout) return;
-              if (info.offset.y > 88 || info.velocity.y > 520) {
+              setDragging(false);
+              if (wideLayout) {
+                setDragY(0);
+                return;
+              }
+              const vy = info.velocity.y;
+              const y = Math.max(0, info.offset.y);
+              // Velocity snap: fling down or past collapsed detent → dismiss
+              if (y > dismissAt || vy > 500) {
                 light();
                 onClose();
+                return;
               }
+              setDragY(0);
             }}
             initial={panelInitial}
             animate={panelAnimate}
             exit={panelExit}
             transition={
               wideLayout
-                ? { duration: 0.22, ease: [0.2, 0.8, 0.2, 1] }
+                ? { duration: MOTION_DURATION, ease: MOTION_EASE }
                 : SPRING_SHEET
             }
             className="bottom-sheet-panel itjima-glass-panel sheet-chrome relative z-[1] mx-auto mt-auto flex w-full max-h-[var(--sheet-max-h)] shrink-0 flex-col overflow-hidden"

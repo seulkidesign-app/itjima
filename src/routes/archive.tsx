@@ -65,6 +65,7 @@ import { scheduleAllDayFieldsFromConfirm } from "@/lib/scheduleTime";
 import { track } from "@/lib/analytics";
 import { showUndoToast } from "@/lib/undoToast";
 import { SPRING_DEFAULT } from "@/lib/motion";
+import { useListStagger } from "@/lib/listStagger";
 
 export const Route = createFileRoute("/archive")({
   component: Archive,
@@ -115,6 +116,7 @@ function vaultCategoryLabel(key: string, lang: "ko" | "en"): string {
 function Archive() {
   const t = useT();
   const { lang } = useLang();
+  const listStagger = useListStagger("archive-list");
   const { items, remove, add, syncState, retrySync } = useArchive();
   const schedules = useSchedules();
   const [q, setQ] = useState("");
@@ -1002,7 +1004,11 @@ function Archive() {
             />
           </>
         ) : featureEnabled("ARCHIVE_AI_GROUPING") ? (
-          <div data-testid="archive-grouped-list">
+          <div
+            data-testid="archive-grouped-list"
+            className={listStagger.className}
+            data-stagger={listStagger["data-stagger"]}
+          >
             {featureEnabled("REDISCOVERY") &&
               revival &&
               revival.sourceKind === "archive" && (

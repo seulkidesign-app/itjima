@@ -119,12 +119,12 @@ function IosSwitch({
         tick();
         onChange(!checked);
       }}
-      className={`relative h-[31px] w-[51px] shrink-0 rounded-full transition-colors duration-200 ${
+      className={`relative h-[31px] w-[51px] shrink-0 rounded-full transition-[background-color] duration-[var(--dur-base)] ease-[var(--ease-out)] ${
         checked ? "bg-primary" : "bg-ink/15"
       }`}
     >
       <span
-        className={`absolute top-[2px] h-[27px] w-[27px] rounded-full bg-white shadow-[0_1px_4px_oklch(0_0_0/0.18)] transition-transform duration-200 ${
+        className={`absolute top-[2px] h-[27px] w-[27px] rounded-full bg-white shadow-[0_1px_4px_oklch(0_0_0/0.18)] transition-transform duration-[var(--dur-base)] ease-[var(--ease-out)] ${
           checked ? "translate-x-[22px]" : "translate-x-[2px]"
         }`}
       />

@@ -1,16 +1,19 @@
 /** Shared Decision Deck interaction tokens — tune here, not in components. */
 
-/** Horizontal commit zone — 28–34% of card width. */
-export const SWIPE_DISTANCE_RATIO = 0.31;
+/** Horizontal commit zone — 30% of card width. */
+export const SWIPE_DISTANCE_RATIO = 0.3;
 
 /** Downward keep zone — 22–28% of card height. */
 export const SWIPE_KEEP_RATIO = 0.25;
 
-/** Fling velocity (px/s) for horizontal commit. */
-export const SWIPE_VELOCITY_X = 720;
+/**
+ * Fling velocity (px/s) for horizontal commit.
+ * Spec velocity>0.5 (px/ms) → 500 px/s.
+ */
+export const SWIPE_VELOCITY_X = 500;
 
 /** Fling velocity (px/s) for downward keep. */
-export const SWIPE_VELOCITY_Y = 680;
+export const SWIPE_VELOCITY_Y = 500;
 
 /** Max horizontal rubber-band drag (px). */
 export const SWIPE_MAX_DRAG_X = 340;
@@ -18,8 +21,8 @@ export const SWIPE_MAX_DRAG_X = 340;
 /** Max vertical rubber-band drag (px). */
 export const SWIPE_MAX_DRAG_Y = 160;
 
-/** Max card rotation during horizontal drag (degrees). */
-export const SWIPE_MAX_ROTATE = 6;
+/** Max card rotation during horizontal drag (degrees) — Tinder ±12°. */
+export const SWIPE_MAX_ROTATE = 12;
 
 /** Preview label appears after this progress fraction. */
 export const SWIPE_PREVIEW_PROGRESS = 0.28;

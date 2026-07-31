@@ -76,6 +76,7 @@ import {
 } from "@/lib/scheduleGroups";
 import { scheduleDisplayTitle, rawPreview } from "@/lib/thoughtProvenance";
 import { SPRING_SNAP_BACK, SHEET_BACKDROP_CLASS, SHEET_BACKDROP_FADE } from "@/lib/motion";
+import { useListStagger } from "@/lib/listStagger";
 import { toast } from "sonner";
 import { useT, useLang } from "@/lib/i18n";
 import {
@@ -1024,11 +1025,16 @@ function ScheduleTodayPanel({
   onAlarm: (s: ScheduleItem) => void;
 }) {
   const t = useT();
+  const stagger = useListStagger("schedule-today");
 
   return (
     <div className="flex flex-col animate-fade-in pb-2 pt-1">
       {todayItems.length > 0 ? (
-        <ul className="flex flex-col" data-testid="schedule-today-list">
+        <ul
+          className={`flex flex-col ${stagger.className}`}
+          data-stagger={stagger["data-stagger"]}
+          data-testid="schedule-today-list"
+        >
           {todayItems.map((s) => (
             <ScheduleCompactRow
               key={s.id}
