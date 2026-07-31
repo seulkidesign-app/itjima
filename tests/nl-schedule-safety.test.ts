@@ -3,7 +3,8 @@ import { scheduleConfirmationReason } from "@/lib/nlScheduleSafety";
 import { shouldShowInlinePromise } from "@/lib/promiseCard";
 
 describe("natural-language schedule safety", () => {
-  const now = new Date("2026-07-31T20:00:00+09:00");
+  // Construct local wall-clock time so the test is stable in UTC and Asia/Seoul CI.
+  const now = new Date(2026, 6, 31, 20, 0, 0);
 
   it("asks before silently moving a past time", () => {
     expect(scheduleConfirmationReason("오늘 오후 3시 치과", now)).toBe(
