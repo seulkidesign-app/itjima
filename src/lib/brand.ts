@@ -10,9 +10,9 @@ export const BRAND = {
   landingUrl: "https://itjima.app/",
   logoUrl: "https://itjima.app/favicon.svg",
   ogImageUrl: "https://itjima.app/og-card.svg",
-  logoAlt: "잊지마(Itjima) 기억 인박스",
-  taglineKo: "정리하기 전에, 먼저 잊지 않게.",
-  taglineEn: "Remember before you organize.",
+  logoAlt: "잊지마(Itjima) 자연어 일정 캡처 도구",
+  taglineKo: "말하듯 남기면 일정이 돼요.",
+  taglineEn: "Say it naturally. Turn it into a schedule.",
   /** Verified external profiles that describe the same product entity. */
   sameAs: [
     "https://itjima.app",
@@ -21,41 +21,41 @@ export const BRAND = {
     "https://www.instagram.com/itjima.app",
   ] as const,
   instagramUrl: "https://www.instagram.com/itjima.app",
-  privacyUrl: "https://itjima.app/about#privacy",
-  termsUrl: "https://itjima.app/about#terms",
+  privacyUrl: "https://itjima.app/privacy.html",
+  termsUrl: "https://itjima.app/terms.html",
   foundingDate: "2026",
   softwareVersion: "Beta",
   appVersionLabel: "Beta · 2026.07",
-  category: "Memory inbox app",
+  category: "Natural-language schedule capture app",
   aboutIntro: {
-    ko: "잊지마(Itjima)는 정리하기 전에 생각을 잊지 않게 해주는 기억 인박스입니다. 떠오르면 던지고, 필요할 때 다시 꺼내세요.",
-    en: "Itjima (잊지마) is a memory inbox that keeps thoughts safe before you organize them. Drop it now, resurface when you need it.",
+    ko: "잊지마(Itjima)는 자연어로 말하듯 남기면 확실한 일정 정보는 채우고, 애매한 부분만 확인하는 일정 캡처 도구입니다.",
+    en: "Itjima (잊지마) turns rough natural-language input into usable schedules and asks only about details that are still ambiguous.",
   },
   releaseNotes: {
     version: "Beta",
-    date: "2026-07-18",
-    title: { ko: "첫 공개 베타", en: "First public beta" },
+    date: "2026-07-31",
+    title: { ko: "자연어 일정 캡처 베타", en: "Natural-language schedule beta" },
     highlights: {
       ko: [
-        "홈에서 생각을 바로 던지기",
-        "일정 · 보관함으로 정리",
-        "정리 전, 기억부터",
+        "말하듯 일정과 할 일 남기기",
+        "애매한 날짜와 시간만 확인",
+        "데이터 내려받기와 계정 삭제",
       ],
       en: [
-        "Drop thoughts from Home",
-        "Schedule and Archive views",
-        "Remember before you organize",
+        "Capture schedules and tasks naturally",
+        "Confirm only ambiguous date and time details",
+        "Download data and delete your account",
       ],
     },
   },
 } as const;
 
 export function brandTitle(page?: string) {
-  const base = `${BRAND.displayKo} | 기억 인박스`;
+  const base = `${BRAND.displayKo} | 자연어 일정 캡처`;
   return page ? `${page} — ${BRAND.displayKo}` : base;
 }
 
 export function brandTitleEn(page?: string) {
-  const base = `${BRAND.displayEn} | Memory inbox`;
+  const base = `${BRAND.displayEn} | Natural-language schedule capture`;
   return page ? `${page} — ${BRAND.displayEn}` : base;
 }
