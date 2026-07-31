@@ -26,8 +26,17 @@ export function languageFromBrowser(
     : "en";
 }
 
+export function languageFromSearch(search: string): Lang | null {
+  const value = new URLSearchParams(search).get("lang")?.toLowerCase();
+  return value === "ko" || value === "en" ? value : null;
+}
+
 function detectInitial(): Lang {
   if (typeof window === "undefined") return "en";
+
+  const requested = languageFromSearch(window.location.search);
+  if (requested) return requested;
+
   try {
     const stored = window.localStorage.getItem(LANGUAGE_STORAGE_KEY);
     if (stored === "ko" || stored === "en") return stored;
@@ -44,9 +53,17 @@ function detectInitial(): Lang {
   return languageFromBrowser(languages);
 }
 
+function reflectLanguageInUrl(lang: Lang) {
+  if (typeof window === "undefined") return;
+  const url = new URL(window.location.href);
+  if (!url.pathname.startsWith("/about") && !url.searchParams.has("lang")) return;
+  url.searchParams.set("lang", lang);
+  window.history.replaceState(window.history.state, "", url);
+}
+
 type Ctx = {
   lang: Lang;
-  setLang: (l: Lang) => void;
+  setLang: (language: Lang) => void;
   toggle: () => void;
   t: (ko: string, en: string) => string;
 };
@@ -54,12 +71,7 @@ type Ctx = {
 const LanguageContext = createContext<Ctx | null>(null);
 
 export function LanguageProvider({ children }: { children: ReactNode }) {
-  const [lang, setLangState] = useState<Lang>("en");
-
-  // Hydrate from the user's saved choice or browser locale on mount.
-  useEffect(() => {
-    setLangState(detectInitial());
-  }, []);
+  const [lang, setLangState] = useState<Lang>(() => detectInitial());
 
   // Reflect on <html lang> for screen readers, search, and browser translation.
   useEffect(() => {
@@ -68,10 +80,11 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
     }
   }, [lang]);
 
-  const setLang = useCallback((l: Lang) => {
-    setLangState(l);
+  const setLang = useCallback((language: Lang) => {
+    setLangState(language);
+    reflectLanguageInUrl(language);
     try {
-      window.localStorage.setItem(LANGUAGE_STORAGE_KEY, l);
+      window.localStorage.setItem(LANGUAGE_STORAGE_KEY, language);
     } catch {
       // Keep the current session language even if storage is unavailable.
     }
@@ -99,9 +112,9 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
 }
 
 export function useLang() {
-  const ctx = useContext(LanguageContext);
-  if (!ctx) throw new Error("useLang must be used within LanguageProvider");
-  return ctx;
+  const context = useContext(LanguageContext);
+  if (!context) throw new Error("useLang must be used within LanguageProvider");
+  return context;
 }
 
 export function useT() {
@@ -112,22 +125,32 @@ export function LanguageToggle({ className = "" }: { className?: string }) {
   const { lang, setLang, t } = useLang();
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement | null>(null);
+  const firstOptionRef = useRef<HTMLButtonElement | null>(null);
 
   useEffect(() => {
     if (!open) return;
-    const onDown = (e: MouseEvent) => {
-      if (ref.current && !ref.current.contains(e.target as Node))
+    const onDown = (event: MouseEvent) => {
+      if (ref.current && !ref.current.contains(event.target as Node)) {
         setOpen(false);
+      }
+    };
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setOpen(false);
     };
     document.addEventListener("mousedown", onDown);
-    return () => document.removeEventListener("mousedown", onDown);
+    document.addEventListener("keydown", onKey);
+    window.setTimeout(() => firstOptionRef.current?.focus(), 0);
+    return () => {
+      document.removeEventListener("mousedown", onDown);
+      document.removeEventListener("keydown", onKey);
+    };
   }, [open]);
 
   return (
     <div ref={ref} className={`relative ${className}`}>
       <button
         type="button"
-        onClick={() => setOpen((v) => !v)}
+        onClick={() => setOpen((value) => !value)}
         aria-label={t("언어 선택", "Select language")}
         aria-haspopup="listbox"
         aria-expanded={open}
@@ -142,29 +165,31 @@ export function LanguageToggle({ className = "" }: { className?: string }) {
       {open && (
         <ul
           role="listbox"
-          className="absolute right-0 top-[calc(100%+4px)] z-50 min-w-[120px] overflow-hidden rounded-[24px] bg-white shadow-card"
+          aria-label={t("언어", "Language")}
+          className="absolute right-0 top-[calc(100%+4px)] z-50 min-w-[132px] overflow-hidden rounded-[18px] border border-ink/10 bg-white/96 p-1.5 shadow-float backdrop-blur-2xl"
         >
           {[
-            { v: "ko" as const, label: "한국어" },
-            { v: "en" as const, label: "English" },
-          ].map((opt) => (
-            <li key={opt.v}>
+            { value: "ko" as const, label: "한국어" },
+            { value: "en" as const, label: "English" },
+          ].map((option, index) => (
+            <li key={option.value}>
               <button
+                ref={index === 0 ? firstOptionRef : undefined}
                 type="button"
                 role="option"
-                aria-selected={lang === opt.v}
+                aria-selected={lang === option.value}
                 onClick={() => {
-                  setLang(opt.v);
+                  setLang(option.value);
                   setOpen(false);
                 }}
-                className={`flex min-h-11 w-full items-center justify-between px-3 py-2.5 text-left text-[13px] font-semibold ${
-                  lang === opt.v
-                    ? "bg-primary/15 text-ink"
+                className={`flex min-h-11 w-full items-center justify-between rounded-[13px] px-3 py-2.5 text-left text-[13px] font-semibold ${
+                  lang === option.value
+                    ? "bg-primary/18 text-ink"
                     : "text-ink-soft hover:bg-black/5"
                 }`}
               >
-                <span>{opt.label}</span>
-                {lang === opt.v && <span className="text-primary">✓</span>}
+                <span>{option.label}</span>
+                {lang === option.value && <span aria-hidden>✓</span>}
               </button>
             </li>
           ))}
