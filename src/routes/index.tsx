@@ -660,7 +660,7 @@ function Inbox() {
                 "Sign in to pick up on any device",
               )}
             </div>
-            <button
+            <button type="button"
               onClick={() => {
                 setLoginOpen(true);
                 toast.dismiss(id);

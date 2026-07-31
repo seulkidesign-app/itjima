@@ -573,7 +573,7 @@ export function ScheduleChoiceFlow({
         )}
 
         {(step !== "when" || editMode) && (
-          <input
+          <input aria-label={t("뭐였더라?", "What was this again?")}
             value={title}
             onChange={(e) => onTitleChange(e.target.value)}
             placeholder={t("뭐였더라?", "What was this again?")}

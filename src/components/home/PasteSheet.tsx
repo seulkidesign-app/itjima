@@ -47,13 +47,13 @@ export function PasteSheet({
             `${pasteSheet.chunks.length} lines here.`,
           )}
         </div>
-        <button
+        <button type="button"
           onClick={() => void onKeepSeparately()}
           className="mt-4 w-full rounded-full bg-primary py-3.5 text-[15px] font-bold text-ink"
         >
           {t("각각 따로 던지기", "Drop each separately")}
         </button>
-        <button
+        <button type="button"
           onClick={() => void onKeepAsOne()}
           className="mt-2 w-full rounded-full bg-white/70 py-3.5 text-[15px] font-semibold text-ink"
         >

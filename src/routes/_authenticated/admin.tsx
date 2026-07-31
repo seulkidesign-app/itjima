@@ -141,7 +141,7 @@ function AdminPage() {
                   )}
           </p>
           <div className="flex flex-wrap items-center justify-center gap-2">
-            <button
+            <button type="button"
               onClick={() => bootstrap.mutate()}
               disabled={bootstrap.isPending}
               className="rounded-full bg-primary px-5 py-2.5 text-sm font-bold text-ink shadow-card disabled:opacity-50"
@@ -298,7 +298,7 @@ function AdminDashboard() {
               )}
             </p>
           </div>
-          <button
+          <button type="button"
             onClick={refreshAll}
             className="glass flex items-center gap-1.5 rounded-full px-3 py-2 text-xs font-semibold text-ink-soft shadow-card"
           >
@@ -376,14 +376,14 @@ function AdminDashboard() {
                         </td>
                         <td className="py-2 text-right">
                           {isAdminRow ? (
-                            <button
+                            <button type="button"
                               onClick={() => revokeMut.mutate(u.id)}
                               className="inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-semibold text-destructive hover:bg-white/60"
                             >
                               <UserMinus size={12} /> {t("회수", "Revoke")}
                             </button>
                           ) : (
-                            <button
+                            <button type="button"
                               onClick={() => grantMut.mutate(u.id)}
                               className="inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-semibold text-ink hover:bg-white/60"
                             >
@@ -425,7 +425,7 @@ function AdminDashboard() {
                       {th.user_id.slice(0, 8)}
                     </p>
                   </div>
-                  <button
+                  <button type="button"
                     onClick={() => {
                       if (confirm(t("삭제할까요?", "Delete?")))
                         deleteMut.mutate(th.id);
@@ -492,7 +492,7 @@ function AdminDashboard() {
                     <span className="ml-auto">
                       {new Date(f.created_at).toLocaleString()}
                     </span>
-                    <button
+                    <button type="button"
                       onClick={() => {
                         if (confirm(t("삭제할까요?", "Delete?")))
                           feedbackDeleteMut.mutate(f.id);

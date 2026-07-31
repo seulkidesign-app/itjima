@@ -33,7 +33,7 @@ function MenuItem({
   danger?: boolean;
 }) {
   return (
-    <button
+    <button type="button"
       onClick={onClick}
       className={`flex w-full items-center gap-3 rounded-full px-4 py-3 text-[15px] font-medium min-h-11 ${
         danger ? "text-meta" : "text-ink"

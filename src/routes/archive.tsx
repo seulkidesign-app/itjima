@@ -756,7 +756,10 @@ function Archive() {
                     : "text-ink-soft"
                 }`}
               />
-              <input
+              <input aria-label={t(
+                  "기억하고 싶은 걸 찾아보세요",
+                  "Find a thought you kept",
+                )}
                 value={q}
                 onChange={(e) => {
                   setQ(e.target.value);
@@ -1210,7 +1213,7 @@ function Archive() {
       {selecting && (
         <div className="fixed inset-x-0 bottom-0 z-30 px-5 pb-[calc(env(safe-area-inset-bottom)+12px)] pt-2 animate-fade-in">
           <div className="glass-strong card-radius flex items-center gap-2 p-2 shadow-float">
-            <button
+            <button type="button"
               onClick={exitSelection}
               className="touch-target flex items-center justify-center rounded-full text-ink-soft hover:bg-white/60"
               aria-label={t("취소", "Cancel")}
@@ -1221,7 +1224,7 @@ function Archive() {
               {selected.size}
               {t("개 골랐어요", " picked")}
             </div>
-            <button
+            <button type="button"
               onClick={() => setMoveSheetOpen(true)}
               disabled={selected.size === 0}
               className="touch-press inline-flex items-center gap-1 rounded-full bg-ink/[0.06] px-3 py-2 text-[12px] font-semibold text-ink disabled:opacity-50"
@@ -1229,7 +1232,7 @@ function Archive() {
               <FolderInput size={14} />
               {t("옮기기", "Move")}
             </button>
-            <button
+            <button type="button"
               onClick={() => setGroupModal(true)}
               disabled={selected.size === 0}
               className="pill-yellow inline-flex items-center gap-1 disabled:opacity-50"
@@ -1262,7 +1265,7 @@ function Archive() {
                 className="h-12 w-14 rounded-full bg-white/80 text-center text-2xl text-ink input-focus-ring"
                 aria-label={t("이모지", "Emoji")}
               />
-              <input
+              <input aria-label={t("이름", "Name")}
                 value={newName}
                 onChange={(e) => setNewName(e.target.value)}
                 placeholder={t("이름", "Name")}
@@ -1271,13 +1274,13 @@ function Archive() {
               />
             </div>
             <div className="mt-5 flex gap-2">
-              <button
+              <button type="button"
                 onClick={() => setGroupModal(false)}
                 className="flex-1 rounded-full bg-white/70 py-3 text-[14px] font-semibold text-ink-soft"
               >
                 {t("취소", "Cancel")}
               </button>
-              <button
+              <button type="button"
                 onClick={createGroupFromSelection}
                 disabled={!newName.trim()}
                 className="touch-press flex-1 rounded-full bg-primary py-3 text-[14px] font-bold text-ink active:scale-95 disabled:opacity-50"
