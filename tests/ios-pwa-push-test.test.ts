@@ -11,34 +11,27 @@ function source(path: string) {
 }
 
 describe("ios-pwa push diagnostics", () => {
-  it("edge function sends immediate push and creates 3-minute scheduled reminder", () => {
+  it("edge function targets ios-pwa only from JWT user", () => {
     const edge = source("supabase/functions/test-push-ios/index.ts");
     expect(edge).toContain('eq("platform", IOS_PWA_PLATFORM)');
-    expect(edge).toContain("includeScheduledTest");
-    expect(edge).toContain("IOS_SCHEDULED_TEST_DELAY_MS");
-    expect(edge).toContain('source: "server-web-push"');
-    expect(edge).toContain("statusCode: 201");
+    expect(edge).toContain("auth.getUser()");
     expect(edge).not.toContain("p_endpoint");
+    expect(edge).toContain("deliveries");
+    expect(edge).toContain("잊지마 알림 테스트");
   });
 
-  it("service worker shows push immediately without waiting for clients", () => {
-    const sw = source("public/sw.js");
-    expect(sw).toContain("itjima-shell-v4");
-    expect(sw).toContain("self.skipWaiting()");
-    expect(sw).toContain("event.waitUntil(showPushNotification");
-    expect(sw).not.toContain("renotify");
+  it("process-reminders reports per-platform delivery results", () => {
+    const cron = source("supabase/functions/process-reminders/index.ts");
+    expect(cron).toContain("platform");
+    expect(cron).toContain("reminderDeliveries");
+    expect(cron).toContain("reminderMarkedSent");
   });
 
-  it("ScheduleAlarmSheet uses server-only ios background test path", () => {
+  it("ScheduleAlarmSheet uses ios-only immediate test path", () => {
     const sheet = source("src/components/ScheduleAlarmSheet.tsx");
-    expect(sheet).toContain("invokeIosPwaBackgroundPushTest");
-    expect(sheet).not.toContain("runIosPwaImmediatePushTest");
-  });
-
-  it("ios-pwa disables page-level in-app reminder timers", () => {
-    const schedule = source("src/routes/schedule.tsx");
-    expect(schedule).toContain('detectPushPlatform() === "ios-pwa"');
-    expect(schedule).toContain("bindInAppReminders");
+    expect(sheet).toContain('detectPushPlatform() === "ios-pwa"');
+    expect(sheet).toContain("runIosPwaImmediatePushTest");
+    expect(sheet).toContain("pollIosPwaScheduledPushTest");
   });
 
   it("summarizes ios-pwa acceptance without secrets", () => {
@@ -56,21 +49,19 @@ describe("ios-pwa push diagnostics", () => {
     ).toBe(true);
 
     const summary = formatIosPwaDeliverySummary(
-      {
-        deliveries: [
-          {
-            platform: "ios-pwa",
-            attempted: true,
-            accepted: false,
-            statusCode: 410,
-            errorType: "subscription_expired",
-            errorMessage: null,
-          },
-        ],
-      },
+      [
+        {
+          platform: "ios-pwa",
+          attempted: true,
+          accepted: false,
+          statusCode: 410,
+          errorType: "subscription_expired",
+          errorMessage: null,
+        },
+      ],
       "ko",
     );
-    expect(summary).toContain("HTTP 410");
+    expect(summary).toContain("subscription_expired");
     expect(summary).not.toMatch(/https?:\/\//);
   });
 });

@@ -17,16 +17,16 @@ describe("service worker update safety", () => {
   };
 
   it("uses a new shell cache and removes previous cache versions", () => {
-    expect(worker).toContain('const CACHE = "itjima-shell-v4"');
+    expect(worker).toContain('const CACHE = "itjima-shell-v3"');
     expect(worker).toContain("keys.filter((key) => key !== CACHE)");
   });
 
-  it("activates new workers immediately for background push on iOS PWA", () => {
+  it("does not force an update during installation", () => {
     const installBlock = worker.slice(
       worker.indexOf('self.addEventListener("install"'),
       worker.indexOf('self.addEventListener("activate"'),
     );
-    expect(installBlock).toContain("skipWaiting");
+    expect(installBlock).not.toContain("skipWaiting");
     expect(worker).toContain('event.data?.type === "SKIP_WAITING"');
   });
 

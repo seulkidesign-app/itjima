@@ -69,22 +69,16 @@ function resolveAllDay(schedule: ScheduleRow): boolean {
 function buildReminderPayload(
   scheduleId: string,
   schedule: ScheduleRow | null,
-  diagnostic?: { deliveryId: string; serverSentAt: string },
 ): string {
   const isTest = scheduleId === SERVER_PUSH_TEST_SCHEDULE_ID;
   if (isTest) {
-    const deliveryId = diagnostic?.deliveryId ?? crypto.randomUUID();
-    const serverSentAt = diagnostic?.serverSentAt ?? new Date().toISOString();
     return JSON.stringify({
       title: "잊지마",
-      body: "서버 예약 알림 테스트 (3분)",
-      tag: `itjima-server-push-test-${deliveryId.slice(0, 8)}`,
+      body: "서버 예약 알림 테스트",
+      tag: "itjima-server-push-test",
       data: {
         url: assertRelativeAppUrl("/schedule"),
         scheduleId,
-        source: "server-web-push",
-        deliveryId,
-        serverSentAt,
       },
     });
   }
@@ -217,12 +211,6 @@ Deno.serve(async (req) => {
     const payload = buildReminderPayload(
       reminder.schedule_id,
       (schedule as ScheduleRow | null) ?? null,
-      reminder.schedule_id === SERVER_PUSH_TEST_SCHEDULE_ID
-        ? {
-            deliveryId: crypto.randomUUID(),
-            serverSentAt: new Date().toISOString(),
-          }
-        : undefined,
     );
     let anySuccess = false;
     let hardFail = false;
@@ -248,7 +236,6 @@ Deno.serve(async (req) => {
           { TTL: 86400 },
         );
         delivery.accepted = true;
-        delivery.statusCode = 201;
         anySuccess = true;
         await supabase
           .from("push_subscriptions")

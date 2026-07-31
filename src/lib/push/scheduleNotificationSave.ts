@@ -5,7 +5,6 @@ import {
   showLocalTestNotification,
 } from "@/lib/push/pushSubscription";
 import { buildReminderNotificationCopy, buildSaveSuccessCopy } from "@/lib/push/scheduleNotificationContent";
-import { detectPushPlatform } from "@/lib/push/detectPushPlatform";
 import { syncScheduleReminder } from "@/lib/push/scheduledRemindersSync";
 import type { ScheduleItem } from "@/lib/store";
 
@@ -57,9 +56,6 @@ async function showScheduleTestNotification(
   schedule: ScheduleItem,
   lang: "ko" | "en",
 ): Promise<boolean> {
-  if (detectPushPlatform() === "ios-pwa") {
-    return false;
-  }
   const copy = buildReminderNotificationCopy(schedule, lang);
   try {
     const reg =

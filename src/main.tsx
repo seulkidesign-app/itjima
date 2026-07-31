@@ -22,7 +22,6 @@ import "./ui-premium.css";
 
 import { registerServiceWorker } from "@/lib/swReminders";
 import { installPushSubscriptionAuthSync } from "@/lib/push/pushAuthSync";
-import { installIosPwaServiceWorkerSync } from "@/lib/push/iosPwaSwSync";
 import {
   logPushDiagnostic,
   summarizePushEnvironment,
@@ -40,7 +39,6 @@ if (typeof window !== "undefined") {
   }
   void registerServiceWorker();
   installPushSubscriptionAuthSync();
-  installIosPwaServiceWorkerSync();
   if (import.meta.env.VITE_E2E !== "true") {
     logPushDiagnostic("boot", summarizePushEnvironment());
   }

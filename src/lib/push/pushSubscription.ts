@@ -264,7 +264,6 @@ export async function ensurePushSubscription(
 
 export async function showLocalTestNotification(): Promise<boolean> {
   if (import.meta.env.VITE_E2E === "true") return false;
-  if (detectPushPlatform() === "ios-pwa") return false;
   if (typeof window === "undefined" || Notification.permission !== "granted") {
     return false;
   }
