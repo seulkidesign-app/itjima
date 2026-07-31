@@ -15,20 +15,21 @@ describe("data rights", () => {
       "itjima.guest.inbox",
       JSON.stringify([{ id: "one", text: "Call Mom" }]),
     );
-    localStorage.setItem("itjima.language", "en");
+    localStorage.setItem("itjima_lang", "en");
     localStorage.setItem("itjima.__e2e_user_id__", "test-user");
     localStorage.setItem("sb-project-auth-token", "secret-session");
     localStorage.setItem("unrelated", "leave-me-alone");
 
     expect(collectLocalItjimaData()).toEqual({
       "itjima.guest.inbox": [{ id: "one", text: "Call Mom" }],
-      "itjima.language": "en",
+      itjima_lang: "en",
     });
   });
 
-  it("clears Itjima local data without deleting unrelated browser storage", () => {
+  it("clears dot and underscore Itjima keys without deleting unrelated storage", () => {
     localStorage.setItem("itjima.guest.inbox", "[]");
     localStorage.setItem("itjima.usageCount", "3");
+    localStorage.setItem("itjima_lang", "en");
     localStorage.setItem("unrelated", "keep");
 
     const removed = clearLocalItjimaData();
@@ -36,9 +37,11 @@ describe("data rights", () => {
     expect(removed.sort()).toEqual([
       "itjima.guest.inbox",
       "itjima.usageCount",
+      "itjima_lang",
     ]);
     expect(localStorage.getItem("itjima.guest.inbox")).toBeNull();
     expect(localStorage.getItem("itjima.usageCount")).toBeNull();
+    expect(localStorage.getItem("itjima_lang")).toBeNull();
     expect(localStorage.getItem("unrelated")).toBe("keep");
   });
 
