@@ -10,6 +10,7 @@ import {
   type ScheduleConfirmationReason,
 } from "@/lib/nlScheduleSafety";
 import { useLang, useT } from "@/lib/i18n";
+import { track } from "@/lib/analytics";
 
 type Props = {
   item: InboxItem;
@@ -74,6 +75,15 @@ export function InlinePromise({
     void Promise.resolve(action).then(onDismiss);
   };
 
+  const openManualSchedule = (source: "ambiguity" | "adjust" | "clarify") => {
+    track("nl_manual_schedule_opened", {
+      source,
+      intent: card.nlIntent,
+      confirmation_reason: confirmation ?? undefined,
+    });
+    onSchedule(item);
+  };
+
   return (
     <div
       className="ml-1 w-full max-w-[min(320px,90%)] rounded-[18px] border border-ink/8 bg-[#fafaf8] p-3"
@@ -89,7 +99,12 @@ export function InlinePromise({
       </p>
       <p className="mt-1 text-[12px] leading-snug text-ink-soft">
         {confirmation
-          ? confirmationCopy(confirmation, uiLang)
+          ? confirmationChoices.length > 0
+            ? confirmationCopy(confirmation, uiLang)
+            : t(
+                "날짜와 시간에 확인할 부분이 여러 개 있어요. 한 번에 같이 확인해 주세요.",
+                "There are a few date and time details to check together.",
+              )
           : card.nlIntent === "task"
             ? t(
                 "날짜 없이 나중 할 일로 둘 수 있어요.",
@@ -114,7 +129,7 @@ export function InlinePromise({
           </div>
           <button
             type="button"
-            onClick={() => onSchedule(item)}
+            onClick={() => openManualSchedule("clarify")}
             className="touch-press mt-2 min-h-[40px] w-full rounded-full border border-ink/12 bg-white px-3 py-2 text-[12px] font-semibold text-ink"
           >
             {t("직접 고르기", "Pick manually")}
@@ -131,7 +146,7 @@ export function InlinePromise({
           </button>
           <button
             type="button"
-            onClick={() => onSchedule(item)}
+            onClick={() => openManualSchedule("adjust")}
             className="touch-press min-h-[40px] rounded-full border border-ink/12 bg-white px-3 py-2 text-[12px] font-semibold text-ink"
           >
             {t("날짜 추가", "Add date")}
@@ -151,14 +166,18 @@ export function InlinePromise({
                   key={choice.id}
                   type="button"
                   data-testid={`promise-confirm-${choice.id}`}
-                  onClick={() =>
+                  onClick={() => {
+                    track("nl_inline_ambiguity_resolved", {
+                      reason: confirmation,
+                      choice: choice.id,
+                    });
                     finish(
                       onConfirmScheduleQuick({
                         ...item,
                         text: choice.resolvedText,
                       }),
-                    )
-                  }
+                    );
+                  }}
                   className={`touch-press min-h-[40px] rounded-full px-3 py-2 text-[12px] font-bold text-ink ${
                     confirmationChoices.length === 1
                       ? "pill-yellow"
@@ -172,7 +191,7 @@ export function InlinePromise({
           )}
           <button
             type="button"
-            onClick={() => onSchedule(item)}
+            onClick={() => openManualSchedule("ambiguity")}
             className="touch-press mt-2 min-h-[40px] w-full rounded-full border border-ink/12 bg-white px-3 py-2 text-[12px] font-semibold text-ink"
           >
             {confirmationChoices.length > 0
@@ -191,7 +210,7 @@ export function InlinePromise({
           </button>
           <button
             type="button"
-            onClick={() => onSchedule(item)}
+            onClick={() => openManualSchedule("adjust")}
             className="touch-press min-h-[40px] rounded-full border border-ink/12 bg-white px-3 py-2 text-[12px] font-semibold text-ink"
           >
             {t("수정", "Adjust")}
