@@ -8,16 +8,20 @@ on:
 permissions:
   contents: read
 
-jobs:
-  interaction-and-flow-qa:
-    runs-on: ubuntu-latest
-    timeout-minutes: 35
-    env:
-      CI: "true"
-      VITE_E2E: "true"
-      VITE_SUPABASE_URL: "http://127.0.0.1:54321"
-      VITE_SUPABASE_PUBLISHABLE_KEY: "e2e-placeholder"
+concurrency:
+  group: product-qa-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
 
+env:
+  CI: "true"
+  VITE_E2E: "true"
+  VITE_SUPABASE_URL: "http://127.0.0.1:54321"
+  VITE_SUPABASE_PUBLISHABLE_KEY: "e2e-placeholder"
+
+jobs:
+  interaction-audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -34,12 +38,6 @@ jobs:
       - name: Audit every interactive element
         run: node scripts/interaction-audit.mjs
 
-      - name: Install Chromium
-        run: npx playwright install --with-deps chromium
-
-      - name: Run mobile tablet and desktop user flows
-        run: npm run test:e2e
-
       - name: Upload interaction audit
         if: always()
         uses: actions/upload-artifact@v4
@@ -49,11 +47,74 @@ jobs:
           if-no-files-found: error
           retention-days: 14
 
+  mobile-regression:
+    name: mobile-regression-${{ matrix.shard }}-of-4
+    runs-on: ubuntu-latest
+    timeout-minutes: 24
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2, 3, 4]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Clean install
+        run: npm ci
+
+      - name: Install Chromium
+        run: npx playwright install --with-deps chromium
+
+      - name: Run mobile regression shard
+        run: npx playwright test --project=mobile-chrome --shard=${{ matrix.shard }}/4
+
       - name: Upload Playwright report
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: playwright-report-${{ github.event.pull_request.number || github.run_number }}
+          name: playwright-mobile-${{ matrix.shard }}-${{ github.event.pull_request.number || github.run_number }}
+          path: |
+            playwright-report/
+            test-results/
+          if-no-files-found: ignore
+          retention-days: 14
+
+  responsive-critical:
+    runs-on: ubuntu-latest
+    timeout-minutes: 18
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Clean install
+        run: npm ci
+
+      - name: Install Chromium
+        run: npx playwright install --with-deps chromium
+
+      - name: Run tablet and desktop critical flows
+        run: >-
+          npx playwright test e2e/responsive-critical.spec.ts
+          --project=tablet-chrome
+          --project=desktop-chrome
+
+      - name: Upload responsive report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-responsive-${{ github.event.pull_request.number || github.run_number }}
           path: |
             playwright-report/
             test-results/
