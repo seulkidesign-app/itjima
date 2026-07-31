@@ -5,6 +5,7 @@ import {
 } from "@/lib/nlSchedule";
 import { buildPromiseCard } from "@/lib/promiseCard";
 import {
+  scheduleConfirmationChoices,
   scheduleConfirmationReason,
   type ScheduleConfirmationReason,
 } from "@/lib/nlScheduleSafety";
@@ -30,16 +31,16 @@ function confirmationCopy(
   lang: "ko" | "en",
 ): string {
   const ko: Record<ScheduleConfirmationReason, string> = {
-    past_today: "말한 시간이 이미 지났어요. 날짜와 시간을 한 번 확인해 주세요.",
-    weekend_day: "주말은 토요일인지 일요일인지 아직 확실하지 않아요.",
-    after_work_time: "퇴근 시간을 오후 6시로 단정하지 않고 확인할게요.",
-    assumed_meridiem: "오전·오후가 없어서 시간을 한 번 확인할게요.",
+    past_today: "오늘 시간은 이미 지났어요. 내일 같은 시간으로 바로 옮길 수 있어요.",
+    weekend_day: "토요일인지 일요일인지 고르면 바로 일정에 넣어요.",
+    after_work_time: "퇴근 시간을 골라 주세요. 선택한 시간으로 바로 추가해요.",
+    assumed_meridiem: "오전인지 오후인지 고르면 바로 일정에 넣어요.",
   };
   const en: Record<ScheduleConfirmationReason, string> = {
-    past_today: "That time has already passed today. Check the date and time first.",
-    weekend_day: "Weekend could mean Saturday or Sunday, so let's check.",
-    after_work_time: "I won't assume what time you finish work.",
-    assumed_meridiem: "AM or PM is missing, so let's confirm the time.",
+    past_today: "That time has passed today. Move it to the same time tomorrow in one tap.",
+    weekend_day: "Choose Saturday or Sunday and add it right away.",
+    after_work_time: "Choose your after-work time and add it right away.",
+    assumed_meridiem: "Choose AM or PM and add it right away.",
   };
   return lang === "en" ? en[reason] : ko[reason];
 }
@@ -62,6 +63,9 @@ export function InlinePromise({
     card.nlIntent === "schedule_exact"
       ? scheduleConfirmationReason(item.text)
       : null;
+  const confirmationChoices = confirmation
+    ? scheduleConfirmationChoices(item.text, confirmation, uiLang)
+    : [];
   const clarifyOptions = clarifyPicksForText(item.text, uiLang);
 
   if (acknowledged) return null;
@@ -133,20 +137,57 @@ export function InlinePromise({
             {t("날짜 추가", "Add date")}
           </button>
         </div>
+      ) : confirmation ? (
+        <>
+          {confirmationChoices.length > 0 && (
+            <div
+              className={`mt-3 grid gap-2 ${
+                confirmationChoices.length === 1 ? "grid-cols-1" : "grid-cols-2"
+              }`}
+              data-testid="promise-confirmation-choices"
+            >
+              {confirmationChoices.map((choice) => (
+                <button
+                  key={choice.id}
+                  type="button"
+                  data-testid={`promise-confirm-${choice.id}`}
+                  onClick={() =>
+                    finish(
+                      onConfirmScheduleQuick({
+                        ...item,
+                        text: choice.resolvedText,
+                      }),
+                    )
+                  }
+                  className={`touch-press min-h-[40px] rounded-full px-3 py-2 text-[12px] font-bold text-ink ${
+                    confirmationChoices.length === 1
+                      ? "pill-yellow"
+                      : "border border-ink/10 bg-white"
+                  }`}
+                >
+                  {choice.label}
+                </button>
+              ))}
+            </div>
+          )}
+          <button
+            type="button"
+            onClick={() => onSchedule(item)}
+            className="touch-press mt-2 min-h-[40px] w-full rounded-full border border-ink/12 bg-white px-3 py-2 text-[12px] font-semibold text-ink"
+          >
+            {confirmationChoices.length > 0
+              ? t("직접 고르기", "Pick manually")
+              : t("확인하고 추가", "Review and add")}
+          </button>
+        </>
       ) : (
         <div className="mt-3 flex gap-2">
           <button
             type="button"
-            onClick={() =>
-              confirmation
-                ? onSchedule(item)
-                : finish(onConfirmScheduleQuick(item))
-            }
+            onClick={() => finish(onConfirmScheduleQuick(item))}
             className="pill-yellow touch-press min-h-[40px] flex-1 px-3 py-2 text-[12px] font-bold text-ink"
           >
-            {confirmation
-              ? t("확인하고 추가", "Review and add")
-              : t("일정에 추가", "Add to schedule")}
+            {t("일정에 추가", "Add to schedule")}
           </button>
           <button
             type="button"
