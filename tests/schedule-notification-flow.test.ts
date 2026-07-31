@@ -133,10 +133,49 @@ describe("notification onboarding gate", () => {
     expect(shouldOfferNotificationOnboarding(false, true, true)).toBe(false);
   });
 
+  it("offers onboarding on iOS Safari install path even if permission looks granted", () => {
+    vi.stubGlobal("Notification", { permission: "granted" });
+    expect(
+      shouldOfferNotificationOnboarding(true, true, true, {
+        needsIosInstall: true,
+      }),
+    ).toBe(true);
+  });
+
   it("skips onboarding after seen flag is set", () => {
     markNotificationOnboardingSeen();
     expect(hasSeenNotificationOnboarding()).toBe(true);
     expect(shouldOfferNotificationOnboarding(true, true, true)).toBe(false);
+  });
+});
+
+describe("first-notification onboarding sheet", () => {
+  it("guides Home Screen install before permission on iOS Safari", () => {
+    const { readFileSync } = require("node:fs") as typeof import("node:fs");
+    const { resolve } = require("node:path") as typeof import("node:path");
+    const sheet = readFileSync(
+      resolve(
+        process.cwd(),
+        "src/components/ScheduleNotificationOnboardingSheet.tsx",
+      ),
+      "utf8",
+    );
+    const save = readFileSync(
+      resolve(process.cwd(), "src/lib/push/scheduleNotificationSave.ts"),
+      "utf8",
+    );
+    const route = readFileSync(
+      resolve(process.cwd(), "src/routes/schedule.tsx"),
+      "utf8",
+    );
+    expect(sheet).toContain("needsInstall");
+    expect(sheet).toContain("홈 화면에 추가");
+    expect(save).toContain("buildInstallGuideSaveCopy");
+    expect(save).toContain("if (armed)");
+    expect(save).toContain("markNotificationOnboardingSeen()");
+    expect(route).toContain("needsIosInstall");
+    expect(route).toContain("executeDirectPushEnableFlow");
+    expect(route).toContain("showInstallGuide");
   });
 });
 

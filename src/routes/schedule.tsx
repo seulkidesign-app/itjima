@@ -85,6 +85,7 @@ import {
 } from "@/lib/push/scheduledRemindersSync";
 import {
   buildDeniedSaveCopy,
+  buildInstallGuideSaveCopy,
   completeScheduleSaveWithNotifications,
   markNotificationOnboardingSeen,
   shouldOfferNotificationOnboarding,
@@ -94,6 +95,9 @@ import {
 import { inferReminderKeyFromSchedule, scheduleHasSpecificTime } from "@/lib/push/scheduleNotificationDefaults";
 import { ScheduleNotificationOnboardingSheet } from "@/components/ScheduleNotificationOnboardingSheet";
 import { NotificationDeniedHelpSheet } from "@/components/NotificationDeniedHelpSheet";
+import { IosInstallHint } from "@/components/IosInstallHint";
+import { isIosSafariTab } from "@/lib/alarmAvailability";
+import { executeDirectPushEnableFlow } from "@/lib/push/directPushEnableFlow";
 import {
   ensurePushSubscription,
   hasActivePushSubscription,
@@ -193,6 +197,7 @@ function Schedule() {
   } | null>(null);
   const [onboardingBusy, setOnboardingBusy] = useState(false);
   const [deniedHelpOpen, setDeniedHelpOpen] = useState(false);
+  const [iosInstallHintOpen, setIosInstallHintOpen] = useState(false);
   useTimerTick();
   const { pins, toggle: togglePin } = usePins();
 
@@ -284,6 +289,25 @@ function Schedule() {
           label: lang === "ko" ? "방법 보기" : "How to enable",
           onClick: () => setDeniedHelpOpen(true),
         },
+      });
+    } else if (outcome.showInstallGuide) {
+      const install = buildInstallGuideSaveCopy(lang === "en" ? "en" : "ko");
+      toast.message(install.headline, {
+        ...scheduleToast,
+        description: install.detail,
+        action: {
+          label: lang === "ko" ? "추가 방법" : "How to add",
+          onClick: () => setIosInstallHintOpen(true),
+        },
+      });
+    } else if (
+      outcome.item?.alarm &&
+      !outcome.notificationReady &&
+      outcome.successCopy?.detail
+    ) {
+      toast.message(outcome.successCopy.headline, {
+        ...scheduleToast,
+        description: outcome.successCopy.detail,
       });
     } else if (outcome.successCopy?.detail) {
       toast.success(outcome.successCopy.headline, {
@@ -890,8 +914,11 @@ function Schedule() {
             edit: sheet.edit,
           };
 
+          const needsIosInstall = isIosSafariTab();
           if (
-            shouldOfferNotificationOnboarding(wantsAlarm, hasTime, pending.isNew)
+            shouldOfferNotificationOnboarding(wantsAlarm, hasTime, pending.isNew, {
+              needsIosInstall,
+            })
           ) {
             const fireAt = new Date(
               start.getTime() - reminderMin! * 60 * 1000,
@@ -910,16 +937,58 @@ function Schedule() {
         fireAt={notificationOnboarding?.fireAt ?? null}
         lang={lang === "en" ? "en" : "ko"}
         busy={onboardingBusy}
+        needsInstall={isIosSafariTab()}
         onClose={() => {
           if (!onboardingBusy) setNotificationOnboarding(null);
         }}
         onEnableAndSave={() => {
           if (!notificationOnboarding || onboardingBusy) return;
-          setOnboardingBusy(true);
           void (async () => {
             try {
+              if (isIosSafariTab()) {
+                setOnboardingBusy(true);
+                // Save with alarm intent; do not burn onboarding — user must reopen as PWA.
+                const outcome = await completeScheduleSaveWithNotifications(
+                  userId,
+                  notificationOnboarding.pending,
+                  lang === "en" ? "en" : "ko",
+                  (alarm) =>
+                    persistScheduleItem(notificationOnboarding.pending, alarm),
+                  { skipNotificationPrep: true },
+                );
+                applySaveOutcome(
+                  { ...outcome, showInstallGuide: true },
+                  Boolean(notificationOnboarding.pending.edit),
+                );
+                return;
+              }
+
+              // iOS: first await in this click must be permission / enable — no setState before it.
+              if (userId) {
+                const enabled = await executeDirectPushEnableFlow(
+                  userId,
+                  lang === "en" ? "en" : "ko",
+                );
+                setOnboardingBusy(true);
+                if (!enabled.ok && enabled.errorMessage) {
+                  toast.error(enabled.errorMessage, scheduleToast);
+                }
+                await runScheduleSave(notificationOnboarding.pending, {
+                  requestPermission: async () =>
+                    enabled.permission === "unsupported"
+                      ? "default"
+                      : enabled.permission,
+                });
+                return;
+              }
+
+              const permission =
+                Notification.permission === "default"
+                  ? await Notification.requestPermission()
+                  : Notification.permission;
+              setOnboardingBusy(true);
               await runScheduleSave(notificationOnboarding.pending, {
-                requestPermission: () => Notification.requestPermission(),
+                requestPermission: async () => permission,
               });
             } finally {
               setOnboardingBusy(false);
@@ -946,6 +1015,10 @@ function Schedule() {
       <NotificationDeniedHelpSheet
         open={deniedHelpOpen}
         onClose={() => setDeniedHelpOpen(false)}
+      />
+      <IosInstallHint
+        open={iosInstallHintOpen}
+        onClose={() => setIosInstallHintOpen(false)}
       />
     </div>
   );

@@ -167,8 +167,8 @@ export function BrandHubSheet({
                 icon={Download}
                 title={t("홈 화면에 추가", "Add to Home Screen")}
                 description={t(
-                  "앱처럼 한 번에 열어요",
-                  "Open it like a native app",
+                  "닫힌 앱 알림을 받으려면 필요해요",
+                  "Needed for closed-app reminders",
                 )}
                 onClick={() => {
                   tap();

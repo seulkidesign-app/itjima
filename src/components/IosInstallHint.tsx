@@ -72,8 +72,8 @@ export function IosInstallHint({
         </ol>
         <p className="mt-4 text-xs text-ink-soft">
           {t(
-            "Safari에서 열면 홈 화면에 둘 수 있어요.",
-            "Open in Safari to add it to your Home Screen.",
+            "홈 화면 앱에서만 닫힌 앱 알림을 받을 수 있어요.",
+            "Closed-app alerts only work from the Home Screen app.",
           )}
         </p>
       </div>

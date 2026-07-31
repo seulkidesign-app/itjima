@@ -30,6 +30,8 @@ export type ScheduleSaveOutcome = {
   reminderQueued: boolean;
   permission: NotificationPermission | "unsupported";
   showDeniedGuide: boolean;
+  /** Show Home Screen install guidance after save (iPhone Safari tab). */
+  showInstallGuide?: boolean;
   successCopy?: { headline: string; detail?: string };
   errorMessage?: string;
 };
@@ -47,10 +49,27 @@ export function shouldOfferNotificationOnboarding(
   wantsAlarm: boolean,
   hasSpecificTime: boolean,
   isNew: boolean,
+  opts?: { needsIosInstall?: boolean },
 ): boolean {
   if (!isNew || !wantsAlarm || !hasSpecificTime) return false;
   if (hasSeenNotificationOnboarding()) return false;
+  // Safari tab: guide install even if Notification.permission looks granted.
+  if (opts?.needsIosInstall) return true;
   return readNotificationPermission() === "default";
+}
+
+export function buildInstallGuideSaveCopy(lang: "ko" | "en"): {
+  headline: string;
+  detail: string;
+} {
+  return {
+    headline:
+      lang === "ko" ? "일정은 저장했어요." : "Schedule saved.",
+    detail:
+      lang === "ko"
+        ? "닫힌 앱 알림은 홈 화면 앱에서만 켤 수 있어요."
+        : "Closed-app alerts only work from the Home Screen app.",
+  };
 }
 
 export async function ensureNotificationReadyForSave(
@@ -106,13 +125,13 @@ export async function completeScheduleSaveWithNotifications(
       showDeniedGuide = true;
     } else if (permission === "default" && opts?.requestPermission) {
       const next = await opts.requestPermission();
-      markNotificationOnboardingSeen();
       if (next === "granted") {
         const prep = await ensureNotificationReadyForSave(lang);
         notificationReady = prep.ready;
       } else if (next === "denied") {
         showDeniedGuide = true;
       }
+      // Only mark seen when push can actually arm — not on a failed Safari-tab try.
     } else if (permission === "granted") {
       const prep = await ensureNotificationReadyForSave(lang);
       notificationReady = prep.ready;
@@ -179,16 +198,24 @@ export async function completeScheduleSaveWithNotifications(
   // Never fire the real reminder copy at save time — that looks like the alarm
   // already went off. Due-time delivery is server Web Push + in-app timers only.
 
+  const armed =
+    notificationReady &&
+    Boolean(item.alarm) &&
+    (userId ? reminderQueued : true);
+
+  if (armed) {
+    markNotificationOnboardingSeen();
+  }
+
   return {
     ok: true,
     item,
-    notificationReady: notificationReady && Boolean(item.alarm) && reminderQueued,
+    notificationReady: armed,
     reminderQueued,
     permission,
     showDeniedGuide,
     successCopy: buildSaveSuccessCopy(item, lang, {
-      notificationReady:
-        notificationReady && Boolean(item.alarm) && (userId ? reminderQueued : true),
+      notificationReady: armed,
     }),
   };
 }
