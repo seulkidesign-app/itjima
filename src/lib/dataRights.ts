@@ -23,6 +23,8 @@ type QueryResult = {
   error: { message: string } | null;
 };
 
+export type AccountDeletionOutcome = "deleted" | "requested";
+
 function parseStoredValue(raw: string): unknown {
   try {
     return JSON.parse(raw) as unknown;
@@ -180,16 +182,69 @@ export function downloadItjimaDataExport(data: DataExport): void {
   URL.revokeObjectURL(url);
 }
 
-export async function deleteCurrentAccount(): Promise<void> {
-  const { data, error } = await supabase.functions.invoke("delete-account", {
-    method: "POST",
-  });
-  if (error) throw new Error(error.message);
-  if (!data || typeof data !== "object" || data.ok !== true) {
-    throw new Error("Account deletion was not confirmed by the server.");
+function functionHttpStatus(error: unknown): number | null {
+  if (!error || typeof error !== "object") return null;
+  const context = (error as { context?: unknown }).context;
+  if (typeof Response !== "undefined" && context instanceof Response) {
+    return context.status;
   }
+  if (context && typeof context === "object") {
+    const status = (context as { status?: unknown }).status;
+    return typeof status === "number" ? status : null;
+  }
+  return null;
+}
 
+async function finishLocalAccountRemoval() {
   await supabase.auth.signOut({ scope: "local" });
   clearLocalItjimaData();
   await clearItjimaCaches();
+}
+
+async function submitAccountDeletionRequest(): Promise<AccountDeletionOutcome> {
+  const {
+    data: { user },
+    error: userError,
+  } = await supabase.auth.getUser();
+  if (userError || !user) {
+    throw new Error(userError?.message ?? "No signed-in account was found.");
+  }
+
+  const { error } = await supabase.from("feedback").insert({
+    category: "question",
+    message: "ACCOUNT_DELETION_REQUEST",
+    user_id: user.id,
+    email: user.email ?? null,
+    page_path: "/settings/data-privacy",
+    user_agent: typeof navigator === "undefined" ? null : navigator.userAgent,
+  });
+  if (error) throw new Error(error.message);
+
+  await finishLocalAccountRemoval();
+  return "requested";
+}
+
+/**
+ * Deletes immediately when the Edge Function is deployed. During staged rollout,
+ * a missing function falls back to an authenticated, auditable deletion request.
+ */
+export async function deleteCurrentAccount(): Promise<AccountDeletionOutcome> {
+  const { data, error } = await supabase.functions.invoke("delete-account", {
+    method: "POST",
+  });
+
+  if (error) {
+    if (functionHttpStatus(error) === 404) {
+      return submitAccountDeletionRequest();
+    }
+    throw new Error(error.message);
+  }
+
+  const payload = data as { ok?: unknown } | null;
+  if (!payload || payload.ok !== true) {
+    throw new Error("Account deletion was not confirmed by the server.");
+  }
+
+  await finishLocalAccountRemoval();
+  return "deleted";
 }
