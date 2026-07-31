@@ -1,9 +1,20 @@
-import { Globe, LogOut, Shield, User, Bell } from "lucide-react";
+import {
+  Globe,
+  LogOut,
+  Shield,
+  User,
+  Bell,
+  Database,
+} from "lucide-react";
 import { Link, useNavigate } from "@tanstack/react-router";
 import { toast } from "sonner";
 import { useState } from "react";
 import { BottomSheet } from "./BottomSheet";
-import { DeviceNotificationSheet, runDirectPushEnableFromSettings } from "./DeviceNotificationSheet";
+import {
+  DeviceNotificationSheet,
+  runDirectPushEnableFromSettings,
+} from "./DeviceNotificationSheet";
+import { DataPrivacySheet } from "./DataPrivacySheet";
 import { useT, LanguageToggle, useLang } from "@/lib/i18n";
 import type { PushEnableStep } from "@/lib/push/directPushEnableFlow";
 import { useUserId } from "@/lib/store";
@@ -32,9 +43,10 @@ export function SettingsSheet({ open, onClose }: Props) {
   const userId = useUserId();
   const isAdmin = useIsAdmin();
   const [notificationOpen, setNotificationOpen] = useState(false);
-  const [notificationSteps, setNotificationSteps] = useState<PushEnableStep[] | null>(
-    null,
-  );
+  const [dataPrivacyOpen, setDataPrivacyOpen] = useState(false);
+  const [notificationSteps, setNotificationSteps] = useState<
+    PushEnableStep[] | null
+  >(null);
   const [notificationFailed, setNotificationFailed] = useState(false);
 
   const handleNotificationSettings = () => {
@@ -117,7 +129,7 @@ export function SettingsSheet({ open, onClose }: Props) {
     <BottomSheet
       open={open}
       onClose={onClose}
-      maxHeight="70dvh"
+      maxHeight="74dvh"
       title={t("설정", "Settings")}
     >
       <div className="px-5 pb-8 pt-1">
@@ -172,7 +184,24 @@ export function SettingsSheet({ open, onClose }: Props) {
             <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-[10px] bg-primary/20 text-ink">
               <Bell size={17} strokeWidth={2.1} aria-hidden />
             </span>
-            <span className="flex-1">{t("알림 설정", "Notification settings")}</span>
+            <span className="flex-1">
+              {t("알림 설정", "Notification settings")}
+            </span>
+          </button>
+
+          <button
+            type="button"
+            data-testid="settings-data-privacy-row"
+            onClick={() => {
+              tap();
+              setDataPrivacyOpen(true);
+            }}
+            className={`${rowClass} border-b border-ink/[0.06]`}
+          >
+            <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-[10px] bg-ink/[0.06] text-ink-soft">
+              <Database size={17} strokeWidth={2.1} aria-hidden />
+            </span>
+            <span className="flex-1">{t("데이터와 개인정보", "Data & privacy")}</span>
           </button>
 
           <div className={rowClass}>
@@ -201,6 +230,11 @@ export function SettingsSheet({ open, onClose }: Props) {
         userId={userId}
         initialSteps={notificationSteps}
         initialFailed={notificationFailed}
+      />
+      <DataPrivacySheet
+        open={dataPrivacyOpen}
+        onClose={() => setDataPrivacyOpen(false)}
+        userId={userId}
       />
     </BottomSheet>
   );
