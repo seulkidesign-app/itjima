@@ -1,5 +1,5 @@
 import { test } from "@playwright/test";
-import { GUEST_INBOX_KEY } from "./helpers";
+import { CAPTURE_LINK_NAME, GUEST_INBOX_KEY } from "./helpers";
 
 async function seed(page: import("@playwright/test").Page, width: number) {
   await page.setViewportSize({ width, height: 844 });
@@ -24,7 +24,9 @@ async function seed(page: import("@playwright/test").Page, width: number) {
     },
   );
   await page.reload();
-  await page.getByRole("link", { name: /^Throw/ }).waitFor({ state: "visible" });
+  await page.getByRole("link", { name: CAPTURE_LINK_NAME }).waitFor({
+    state: "visible",
+  });
   const close = page.getByRole("button", { name: "Close" });
   if (await close.count()) await close.first().click();
 }
