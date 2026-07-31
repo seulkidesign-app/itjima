@@ -1,0 +1,95 @@
+name: Visual smoke
+
+on:
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  screenshots:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    env:
+      VITE_E2E: "true"
+      VITE_SUPABASE_URL: "http://127.0.0.1:54321"
+      VITE_SUPABASE_PUBLISHABLE_KEY: "e2e-placeholder"
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Clean install
+        run: npm ci
+
+      - name: Build production bundle
+        run: npm run build
+
+      - name: Start preview server
+        run: |
+          mkdir -p visual-artifacts
+          npm run preview -- --host 127.0.0.1 > /tmp/itjima-preview.log 2>&1 &
+          echo $! > /tmp/itjima-preview.pid
+          for attempt in {1..30}; do
+            if curl --fail --silent http://127.0.0.1:4173/ > /dev/null; then
+              exit 0
+            fi
+            sleep 1
+          done
+          cat /tmp/itjima-preview.log
+          exit 1
+
+      - name: Capture bilingual responsive screens
+        run: |
+          CHROME="$(command -v google-chrome || command -v chromium || command -v chromium-browser)"
+          if [ -z "$CHROME" ]; then
+            echo "Chrome or Chromium is required for visual smoke testing."
+            exit 1
+          fi
+
+          capture() {
+            local width="$1"
+            local height="$2"
+            local output="$3"
+            local url="$4"
+            "$CHROME" \
+              --headless=new \
+              --no-sandbox \
+              --disable-gpu \
+              --disable-dev-shm-usage \
+              --hide-scrollbars \
+              --force-device-scale-factor=1 \
+              --window-size="${width},${height}" \
+              --virtual-time-budget=2500 \
+              --screenshot="visual-artifacts/${output}" \
+              "$url"
+          }
+
+          capture 390 844 home-mobile-en.png "http://127.0.0.1:4173/?lang=en"
+          capture 390 844 home-mobile-ko.png "http://127.0.0.1:4173/?lang=ko"
+          capture 390 844 about-mobile-en.png "http://127.0.0.1:4173/about?lang=en"
+          capture 1440 1000 about-desktop-en.png "http://127.0.0.1:4173/about?lang=en"
+          capture 1440 1000 about-desktop-ko.png "http://127.0.0.1:4173/about?lang=ko"
+
+      - name: Upload screenshots
+        uses: actions/upload-artifact@v4
+        with:
+          name: visual-smoke-${{ github.event.pull_request.number || github.run_number }}
+          path: visual-artifacts/*.png
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: Stop preview server
+        if: always()
+        run: |
+          if [ -f /tmp/itjima-preview.pid ]; then
+            kill "$(cat /tmp/itjima-preview.pid)" || true
+          fi
