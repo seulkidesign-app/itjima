@@ -89,23 +89,48 @@ export async function cancelScheduleReminders(
   return true;
 }
 
+export type SyncScheduleReminderResult = {
+  ok: boolean;
+  /** True when a future pending row was written for cron delivery. */
+  queued: boolean;
+  reason?: "past_due" | "no_alarm" | "sync_failed";
+};
+
 /**
- * Replace the server reminder when an alarm changes. A false result means the
- * local in-app reminder remains valid, but background delivery was not proven.
+ * Replace the server reminder when an alarm changes.
+ * `queued: false` with `ok: true` means there is nothing future to deliver
+ * (e.g. alarm time already passed) — do not pretend a closed-app alarm is armed.
  */
 export async function syncScheduleReminder(
   userId: string,
   schedule: ScheduleItem,
 ): Promise<boolean> {
-  if (import.meta.env.VITE_E2E === "true") return true;
+  const result = await syncScheduleReminderDetailed(userId, schedule);
+  return result.ok;
+}
+
+export async function syncScheduleReminderDetailed(
+  userId: string,
+  schedule: ScheduleItem,
+): Promise<SyncScheduleReminderResult> {
+  if (import.meta.env.VITE_E2E === "true") {
+    return { ok: true, queued: true };
+  }
   try {
     const cancelled = await cancelScheduleReminders(userId, schedule.id);
-    if (!cancelled) return false;
+    if (!cancelled) {
+      return { ok: false, queued: false, reason: "sync_failed" };
+    }
+
+    if (!schedule.alarm || schedule.status === "done") {
+      rememberReminderSyncResult(true);
+      return { ok: true, queued: false, reason: "no_alarm" };
+    }
 
     const row = buildReminderUpsert(userId, schedule);
     if (!row) {
       rememberReminderSyncResult(true);
-      return true;
+      return { ok: true, queued: false, reason: "past_due" };
     }
 
     const { error } = await supabase.from("scheduled_reminders").upsert(row, {
@@ -114,14 +139,14 @@ export async function syncScheduleReminder(
     if (error) {
       console.error("[reminders] schedule failed", error.message);
       rememberReminderSyncResult(false);
-      return false;
+      return { ok: false, queued: false, reason: "sync_failed" };
     }
     rememberReminderSyncResult(true);
-    return true;
+    return { ok: true, queued: true };
   } catch (error) {
     console.error("[reminders] unexpected sync failure", error);
     rememberReminderSyncResult(false);
-    return false;
+    return { ok: false, queued: false, reason: "sync_failed" };
   }
 }
 

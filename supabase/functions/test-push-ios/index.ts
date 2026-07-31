@@ -175,9 +175,10 @@ Deno.serve(async (req) => {
           },
         },
         payload,
-        { TTL: 60 },
+        { TTL: 86400 },
       );
       result.accepted = true;
+      result.statusCode = 201;
       acceptedCount += 1;
       await admin
         .from("push_subscriptions")

@@ -6,6 +6,7 @@ import {
 import {
   buildReminderNotificationCopy,
   buildSaveSuccessCopy,
+  formatReminderTimeInTimeZone,
 } from "@/lib/push/scheduleNotificationContent";
 import {
   defaultReminderForNewSchedule,
@@ -58,6 +59,35 @@ describe("buildReminderNotificationCopy", () => {
       "ko",
     );
     expect(copy.body).toContain("일정이에요.");
+  });
+});
+
+describe("formatReminderTimeInTimeZone", () => {
+  it("formats 20:00 KST as evening, not 11:00 UTC", () => {
+    // 20:00 KST == 11:00 UTC — server getHours() bug showed 오전 11:00
+    const label = formatReminderTimeInTimeZone(
+      "2026-07-31T11:00:00.000Z",
+      "Asia/Seoul",
+      "ko",
+    );
+    expect(label).toMatch(/8:00/);
+    expect(label).toMatch(/오후|PM/i);
+    expect(label).not.toMatch(/11:00/);
+  });
+});
+
+describe("process-reminders timezone formatting", () => {
+  it("formats notification body with reminder timezone, not UTC getHours", () => {
+    const { readFileSync } = require("node:fs") as typeof import("node:fs");
+    const { resolve } = require("node:path") as typeof import("node:path");
+    const cron = readFileSync(
+      resolve(process.cwd(), "supabase/functions/process-reminders/index.ts"),
+      "utf8",
+    );
+    expect(cron).toContain("formatTimeInZone");
+    expect(cron).toContain("reminder.timezone");
+    expect(cron).toContain("Asia/Seoul");
+    expect(cron).not.toContain("date.getHours()");
   });
 });
 
@@ -127,5 +157,21 @@ describe("buildSaveSuccessCopy", () => {
     );
     expect(copy.headline).toBe("알림 준비 완료");
     expect(copy.detail).toMatch(/알려드릴게요\./);
+  });
+});
+
+describe("schedule save must not fire due-time notification early", () => {
+  it("does not call showNotification when saving an alarm", () => {
+    const { readFileSync } = require("node:fs") as typeof import("node:fs");
+    const { resolve } = require("node:path") as typeof import("node:path");
+    const source = readFileSync(
+      resolve(process.cwd(), "src/lib/push/scheduleNotificationSave.ts"),
+      "utf8",
+    );
+    expect(source).not.toContain("showNotification");
+    expect(source).not.toContain("showScheduleTestNotification");
+    expect(source).not.toContain("showLocalTestNotification");
+    expect(source).toContain("syncScheduleReminderDetailed");
+    expect(source).toContain("Never fire the real reminder copy at save time");
   });
 });

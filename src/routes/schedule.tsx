@@ -80,7 +80,7 @@ import { toast } from "sonner";
 import { useT, useLang } from "@/lib/i18n";
 import {
   cancelScheduleReminders,
-  syncScheduleReminder,
+  syncScheduleReminderDetailed,
 } from "@/lib/push/scheduledRemindersSync";
 import {
   buildDeniedSaveCopy,
@@ -339,6 +339,17 @@ function Schedule() {
       }
     }
 
+    if (at.getTime() <= Date.now()) {
+      toast.error(
+        t(
+          "알림 시간이 이미 지났어요. 다시 골라 주세요.",
+          "That reminder time already passed. Pick another.",
+        ),
+        scheduleToast,
+      );
+      return;
+    }
+
     try {
       clearReminderOffset(s.id);
       await update(s.id, { alarm: true, alarm_at: at.toISOString() });
@@ -348,29 +359,56 @@ function Schedule() {
         alarm_at: at.toISOString(),
       };
 
+      // Do not show a system notification here — only queue the due-time alarm.
       if (userId) {
-        await syncScheduleReminder(userId, updated);
+        const sync = await syncScheduleReminderDetailed(userId, updated);
+        if (!sync.ok) {
+          toast.error(
+            t(
+              "알림 예약에 실패했어요. 알림 설정에서 다시 연결해 주세요.",
+              "Couldn't queue the reminder. Reconnect in notification settings.",
+            ),
+            scheduleToast,
+          );
+          return;
+        }
+        if (!sync.queued) {
+          toast.error(
+            t(
+              "알림 시간이 이미 지났어요. 다시 골라 주세요.",
+              "That reminder time already passed. Pick another.",
+            ),
+            scheduleToast,
+          );
+          return;
+        }
+
+        const closedApp = await closedAppReminderReady();
+        const when = formatAlarmLabel(at, lang === "en" ? "en" : "ko");
+        if (closedApp) {
+          toast.success(
+            t(`${when}에 알려드릴게요`, `I'll remind you ${when}`),
+            scheduleToast,
+          );
+        } else {
+          toast.message(
+            t(
+              "앱을 열어두면 알려드릴게요. 닫힌 앱 알림은 기기 연결이 필요해요.",
+              "I'll notify you while the app is open. Closed-app alerts need device setup.",
+            ),
+            scheduleToast,
+          );
+        }
+        return;
       }
 
-      const closedApp = userId ? await closedAppReminderReady() : false;
-
-      if (closedApp) {
-        toast.success(
-          t(
-            "설정한 시간에 알림을 보낼게요",
-            "Reminder set for the time you chose",
-          ),
-          scheduleToast,
-        );
-      } else {
-        toast.message(
-          t(
-            "앱을 열어두면 알려드릴게요",
-            "I'll notify you while the app is open",
-          ),
-          scheduleToast,
-        );
-      }
+      toast.message(
+        t(
+          "앱을 열어두면 알려드릴게요",
+          "I'll notify you while the app is open",
+        ),
+        scheduleToast,
+      );
     } catch {
       toast.error(t("알림을 설정하지 못했어요", "Couldn't set reminder"));
     }

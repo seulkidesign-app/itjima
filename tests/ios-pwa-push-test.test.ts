@@ -25,6 +25,7 @@ describe("ios-pwa push diagnostics", () => {
     expect(cron).toContain("platform");
     expect(cron).toContain("reminderDeliveries");
     expect(cron).toContain("reminderMarkedSent");
+    expect(cron).toContain("allDevicesCovered");
   });
 
   it("ScheduleAlarmSheet uses ios-only immediate test path", () => {

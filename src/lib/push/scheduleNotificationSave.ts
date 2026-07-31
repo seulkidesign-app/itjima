@@ -2,10 +2,9 @@ import { readNotificationPermission } from "@/lib/alarmAvailability";
 import {
   ensurePushSubscriptionForCurrentUser,
   isDevicePushRegisteredForCurrentUser,
-  showLocalTestNotification,
 } from "@/lib/push/pushSubscription";
-import { buildReminderNotificationCopy, buildSaveSuccessCopy } from "@/lib/push/scheduleNotificationContent";
-import { syncScheduleReminder } from "@/lib/push/scheduledRemindersSync";
+import { buildSaveSuccessCopy } from "@/lib/push/scheduleNotificationContent";
+import { syncScheduleReminderDetailed } from "@/lib/push/scheduledRemindersSync";
 import type { ScheduleItem } from "@/lib/store";
 
 const ONBOARDING_SEEN_KEY = "itjima.notification.onboarding.seen";
@@ -27,6 +26,8 @@ export type ScheduleSaveOutcome = {
   ok: boolean;
   item?: ScheduleItem;
   notificationReady: boolean;
+  /** Server queued a future reminder for cron → Web Push. */
+  reminderQueued: boolean;
   permission: NotificationPermission | "unsupported";
   showDeniedGuide: boolean;
   successCopy?: { headline: string; detail?: string };
@@ -50,34 +51,6 @@ export function shouldOfferNotificationOnboarding(
   if (!isNew || !wantsAlarm || !hasSpecificTime) return false;
   if (hasSeenNotificationOnboarding()) return false;
   return readNotificationPermission() === "default";
-}
-
-async function showScheduleTestNotification(
-  schedule: ScheduleItem,
-  lang: "ko" | "en",
-): Promise<boolean> {
-  const copy = buildReminderNotificationCopy(schedule, lang);
-  try {
-    const reg =
-      (await navigator.serviceWorker?.ready?.catch(() => null)) ?? null;
-    if (reg) {
-      await reg.showNotification(copy.title, {
-        body: copy.body,
-        tag: `schedule-preview-${schedule.id}`,
-        icon: "/icons/icon-192.png",
-        badge: "/icons/badge-72.png",
-        data: { url: copy.url, scheduleId: schedule.id },
-      });
-      return true;
-    }
-  } catch {
-    // fall through
-  }
-  if (Notification.permission === "granted") {
-    new Notification(copy.title, { body: copy.body });
-    return true;
-  }
-  return showLocalTestNotification();
 }
 
 export async function ensureNotificationReadyForSave(
@@ -153,6 +126,7 @@ export async function completeScheduleSaveWithNotifications(
     return {
       ok: false,
       notificationReady: false,
+      reminderQueued: false,
       permission,
       showDeniedGuide,
       errorMessage:
@@ -160,22 +134,61 @@ export async function completeScheduleSaveWithNotifications(
     };
   }
 
+  let reminderQueued = false;
   if (userId && item.alarm) {
-    await syncScheduleReminder(userId, item);
+    const sync = await syncScheduleReminderDetailed(userId, item);
+    reminderQueued = sync.ok && sync.queued;
+    if (!sync.ok) {
+      return {
+        ok: true,
+        item,
+        notificationReady: false,
+        reminderQueued: false,
+        permission,
+        showDeniedGuide,
+        successCopy: {
+          headline:
+            lang === "ko" ? "일정은 저장했어요." : "Schedule saved.",
+          detail:
+            lang === "ko"
+              ? "닫힌 앱 알림 예약에 실패했어요. 알림 설정에서 다시 연결해 주세요."
+              : "Couldn't queue the closed-app reminder. Reconnect in notification settings.",
+        },
+      };
+    }
+    if (sync.reason === "past_due") {
+      return {
+        ok: true,
+        item,
+        notificationReady: false,
+        reminderQueued: false,
+        permission,
+        showDeniedGuide,
+        successCopy: {
+          headline:
+            lang === "ko" ? "일정은 저장했어요." : "Schedule saved.",
+          detail:
+            lang === "ko"
+              ? "알림 시간이 이미 지나서 예약하지 않았어요."
+              : "The reminder time already passed, so nothing was scheduled.",
+        },
+      };
+    }
   }
 
-  if (notificationReady && item.alarm) {
-    await showScheduleTestNotification(item, lang);
-  }
+  // Never fire the real reminder copy at save time — that looks like the alarm
+  // already went off. Due-time delivery is server Web Push + in-app timers only.
 
   return {
     ok: true,
     item,
-    notificationReady: notificationReady && Boolean(item.alarm),
+    notificationReady: notificationReady && Boolean(item.alarm) && reminderQueued,
+    reminderQueued,
     permission,
     showDeniedGuide,
     successCopy: buildSaveSuccessCopy(item, lang, {
-      notificationReady: notificationReady && Boolean(item.alarm),
+      notificationReady:
+        notificationReady && Boolean(item.alarm) && (userId ? reminderQueued : true),
     }),
   };
 }

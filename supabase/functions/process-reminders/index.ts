@@ -1,16 +1,20 @@
 import { createClient } from "npm:@supabase/supabase-js@2";
 import webpush from "npm:web-push@3";
 
-const MAX_ATTEMPTS = 3;
+const MAX_ATTEMPTS = 5;
 const REVOKE_AFTER_FAILURES = 5;
 const SERVER_PUSH_TEST_SCHEDULE_ID =
   "00000000-0000-4000-a000-000000000001";
+/** Skip re-push if this subscription already succeeded at/after due time. */
+const ALREADY_DELIVERED_SLACK_MS = 5_000;
+// Keep in sync with src/lib/push/reminderDelivery.ts
 
 type ReminderRow = {
   id: string;
   user_id: string;
   schedule_id: string;
   due_at_utc: string;
+  timezone: string | null;
   attempt_count: number;
 };
 
@@ -21,12 +25,14 @@ type PushRow = {
   auth: string;
   failure_count: number;
   platform: string | null;
+  last_success_at: string | null;
 };
 
 type DeliveryResult = {
   platform: string;
   attempted: boolean;
   accepted: boolean;
+  skipped: boolean;
   statusCode: number | null;
   errorType: string | null;
 };
@@ -50,13 +56,26 @@ type ScheduleRow = {
   alarm_at: string | null;
 };
 
-function formatKoTime(date: Date): string {
-  const hours = date.getHours();
-  const minutes = date.getMinutes();
-  const period = hours < 12 ? "오전" : "오후";
-  const h12 = hours % 12 || 12;
-  const min = minutes.toString().padStart(2, "0");
-  return `${period} ${h12}:${min}`;
+/** Format in the user's timezone — Deno/UTC getHours() would show 11:00 for 20:00 KST. */
+function formatTimeInZone(iso: string, timeZone: string | null): string {
+  const date = new Date(iso);
+  if (Number.isNaN(date.getTime())) return "";
+  const tz = timeZone && timeZone.trim() ? timeZone : "Asia/Seoul";
+  try {
+    return new Intl.DateTimeFormat("ko-KR", {
+      timeZone: tz,
+      hour: "numeric",
+      minute: "2-digit",
+      hour12: true,
+    }).format(date);
+  } catch {
+    return new Intl.DateTimeFormat("ko-KR", {
+      timeZone: "Asia/Seoul",
+      hour: "numeric",
+      minute: "2-digit",
+      hour12: true,
+    }).format(date);
+  }
 }
 
 function resolveAllDay(schedule: ScheduleRow): boolean {
@@ -69,6 +88,7 @@ function resolveAllDay(schedule: ScheduleRow): boolean {
 function buildReminderPayload(
   scheduleId: string,
   schedule: ScheduleRow | null,
+  timeZone: string | null,
 ): string {
   const isTest = scheduleId === SERVER_PUSH_TEST_SCHEDULE_ID;
   if (isTest) {
@@ -86,9 +106,9 @@ function buildReminderPayload(
   const title = (schedule?.text ?? "").trim() || "잊지마";
   let body = "예정된 일정이에요.";
   if (schedule && !resolveAllDay(schedule)) {
-    const start = new Date(schedule.start_time);
-    if (!Number.isNaN(start.getTime())) {
-      body = `${formatKoTime(start)} 일정이에요.`;
+    const timeLabel = formatTimeInZone(schedule.start_time, timeZone);
+    if (timeLabel) {
+      body = `${timeLabel} 일정이에요.`;
     }
   }
 
@@ -116,6 +136,28 @@ function classifyPushError(error: unknown): {
   else if (statusCode === 429) errorType = "rate_limited";
   else if (statusCode != null && statusCode >= 500) errorType = "push_service_error";
   return { statusCode, errorType };
+}
+
+/** True if this device already got a push for this reminder's due window. */
+function subscriptionAlreadyDelivered(
+  lastSuccessAt: string | null | undefined,
+  dueAtUtc: string,
+): boolean {
+  if (!lastSuccessAt) return false;
+  const successMs = Date.parse(lastSuccessAt);
+  const dueMs = Date.parse(dueAtUtc);
+  if (!Number.isFinite(successMs) || !Number.isFinite(dueMs)) return false;
+  return successMs >= dueMs - ALREADY_DELIVERED_SLACK_MS;
+}
+
+function shouldMarkReminderSent(
+  coveredCount: number,
+  activeSubscriptionCount: number,
+  attemptCount: number,
+): boolean {
+  if (activeSubscriptionCount <= 0) return false;
+  if (coveredCount >= activeSubscriptionCount) return true;
+  return attemptCount >= MAX_ATTEMPTS && coveredCount > 0;
 }
 
 function json(body: unknown, status = 200) {
@@ -174,17 +216,21 @@ Deno.serve(async (req) => {
   const reminders = (claimed ?? []) as ReminderRow[];
   let sent = 0;
   let failed = 0;
+  let partialRetry = 0;
   const reminderDeliveries: Array<{
     reminderId: string;
     scheduleId: string;
     deliveries: DeliveryResult[];
     reminderMarkedSent: boolean;
+    allDevicesCovered: boolean;
   }> = [];
 
   for (const reminder of reminders) {
     const { data: subs, error: subsError } = await supabase
       .from("push_subscriptions")
-      .select("id, endpoint, p256dh, auth, failure_count, platform")
+      .select(
+        "id, endpoint, p256dh, auth, failure_count, platform, last_success_at",
+      )
       .eq("user_id", reminder.user_id)
       .is("revoked_at", null);
 
@@ -211,20 +257,44 @@ Deno.serve(async (req) => {
     const payload = buildReminderPayload(
       reminder.schedule_id,
       (schedule as ScheduleRow | null) ?? null,
+      reminder.timezone,
     );
-    let anySuccess = false;
-    let hardFail = false;
     const deliveries: DeliveryResult[] = [];
+    let coveredCount = 0;
+    let attemptedThisRun = 0;
+    let acceptedThisRun = 0;
 
     for (const sub of subs as PushRow[]) {
       const platform = sub.platform ?? "unknown";
+
+      if (subscriptionAlreadyDelivered(sub.last_success_at, reminder.due_at_utc)) {
+        deliveries.push({
+          platform,
+          attempted: false,
+          accepted: true,
+          skipped: true,
+          statusCode: null,
+          errorType: "already_delivered",
+        });
+        coveredCount += 1;
+        console.info("[process-reminders] delivery", {
+          scheduleId: reminder.schedule_id,
+          platform,
+          accepted: true,
+          skipped: true,
+        });
+        continue;
+      }
+
       const delivery: DeliveryResult = {
         platform,
         attempted: true,
         accepted: false,
+        skipped: false,
         statusCode: null,
         errorType: null,
       };
+      attemptedThisRun += 1;
 
       try {
         await webpush.sendNotification(
@@ -236,7 +306,9 @@ Deno.serve(async (req) => {
           { TTL: 86400 },
         );
         delivery.accepted = true;
-        anySuccess = true;
+        delivery.statusCode = 201;
+        coveredCount += 1;
+        acceptedThisRun += 1;
         await supabase
           .from("push_subscriptions")
           .update({
@@ -266,7 +338,10 @@ Deno.serve(async (req) => {
           })
           .eq("id", sub.id);
 
-        if (statusCode === 404 || statusCode === 410) hardFail = true;
+        // Gone/expired subscription is no longer an active target.
+        if (revoke) {
+          coveredCount += 1;
+        }
       }
 
       deliveries.push(delivery);
@@ -279,15 +354,23 @@ Deno.serve(async (req) => {
       });
     }
 
-    const reminderMarkedSent = anySuccess;
+    const activeCount = (subs as PushRow[]).length;
+    const allDevicesCovered = coveredCount >= activeCount;
+    const reminderMarkedSent = shouldMarkReminderSent(
+      coveredCount,
+      activeCount,
+      reminder.attempt_count,
+    );
+
     reminderDeliveries.push({
       reminderId: reminder.id,
       scheduleId: reminder.schedule_id,
       deliveries,
       reminderMarkedSent,
+      allDevicesCovered,
     });
 
-    if (anySuccess) {
+    if (reminderMarkedSent) {
       await supabase
         .from("scheduled_reminders")
         .update({
@@ -297,10 +380,7 @@ Deno.serve(async (req) => {
         })
         .eq("id", reminder.id);
       sent += 1;
-    } else if (
-      reminder.attempt_count >= MAX_ATTEMPTS ||
-      hardFail
-    ) {
+    } else if (reminder.attempt_count >= MAX_ATTEMPTS) {
       await supabase
         .from("scheduled_reminders")
         .update({
@@ -310,6 +390,7 @@ Deno.serve(async (req) => {
         .eq("id", reminder.id);
       failed += 1;
     } else {
+      // Keep pending so cron retries devices that have not accepted yet.
       await supabase
         .from("scheduled_reminders")
         .update({
@@ -317,7 +398,11 @@ Deno.serve(async (req) => {
           updated_at: new Date().toISOString(),
         })
         .eq("id", reminder.id);
-      failed += 1;
+      if (acceptedThisRun > 0 || attemptedThisRun > 0) {
+        partialRetry += 1;
+      } else {
+        failed += 1;
+      }
     }
   }
 
@@ -325,6 +410,7 @@ Deno.serve(async (req) => {
     claimed: reminders.length,
     sent,
     failed,
+    partialRetry,
     reminders: reminderDeliveries,
   });
 });

@@ -28,6 +28,35 @@ export function formatReminderFireTime(
   });
 }
 
+/**
+ * Format an absolute instant in a specific IANA timezone.
+ * Edge Functions run in UTC — never use Date#getHours() for user-facing copy.
+ */
+export function formatReminderTimeInTimeZone(
+  iso: string,
+  timeZone: string,
+  lang: "ko" | "en" = "ko",
+): string {
+  const date = new Date(iso);
+  if (Number.isNaN(date.getTime())) return "";
+  const tz = timeZone || "Asia/Seoul";
+  try {
+    return new Intl.DateTimeFormat(lang === "en" ? "en-US" : "ko-KR", {
+      timeZone: tz,
+      hour: "numeric",
+      minute: "2-digit",
+      hour12: true,
+    }).format(date);
+  } catch {
+    return new Intl.DateTimeFormat("ko-KR", {
+      timeZone: "Asia/Seoul",
+      hour: "numeric",
+      minute: "2-digit",
+      hour12: true,
+    }).format(date);
+  }
+}
+
 export function buildReminderNotificationCopy(
   schedule: Pick<ScheduleItem, "id" | "text" | "start_time" | "end_time" | "all_day" | "start_all_day" | "end_all_day" | "alarm" | "alarm_at">,
   lang: "ko" | "en",
