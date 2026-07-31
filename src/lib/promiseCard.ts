@@ -1,6 +1,5 @@
 import { detectDate } from "@/lib/dateDetect";
 import {
-  shouldShowNlPrompt,
   understandNaturalLanguage,
   type NlIntent,
   type ScheduleConfidence,
@@ -104,12 +103,21 @@ function confidenceScore(level: ScheduleConfidence): number {
   return 0.4;
 }
 
-/** Show inline promise only for high/medium confidence NL understanding. */
+/**
+ * v1 exposes only the focused schedule/task interpretation surface. Archive,
+ * memory, and low-confidence notes stay quiet until separately validated.
+ */
 export function shouldShowInlinePromise(
   text: string,
   lang: "ko" | "en",
 ): boolean {
-  return shouldShowNlPrompt(text, lang);
+  const nl = understandNaturalLanguage(text.trim(), lang);
+  return (
+    nl.confidence !== "low" &&
+    (nl.intent === "schedule_exact" ||
+      nl.intent === "schedule_clarify" ||
+      nl.intent === "task")
+  );
 }
 
 /** Deterministic promise copy — NL understanding first, no LLM on the hot path. */
