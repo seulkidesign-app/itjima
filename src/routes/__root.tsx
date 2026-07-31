@@ -5,6 +5,7 @@ import { maybeRouteOAuthCallback } from "@/lib/oauth";
 import { authDebug } from "@/lib/authDebug";
 import { SideNav } from "@/components/SideNav";
 import { TopNav } from "@/components/TopNav";
+import { DesktopAppNav } from "@/components/DesktopAppNav";
 import { PageTransition } from "@/components/PageTransition";
 import { GlobalInteractions } from "@/components/GlobalInteractions";
 import { ScheduleDeepLinkBridge } from "@/components/ScheduleDeepLinkBridge";
@@ -102,16 +103,21 @@ function RootLayout() {
           <Toaster position="top-center" theme="system" richColors closeButton />
         </div>
       ) : (
-        <div className="flex min-h-dvh w-full items-start justify-center">
-          <div className="phone-frame flex flex-col">
-            <TopNav />
-            <div
-              id="phone-scroll"
-              className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden"
-            >
-              <PageTransition routeKey={mainRouteKey}>
-                <Outlet />
-              </PageTransition>
+        <div className="itjima-app-stage flex min-h-dvh w-full items-start justify-center">
+          <div className="phone-frame itjima-responsive-frame flex flex-col lg:flex-row">
+            <DesktopAppNav />
+            <div className="flex min-h-0 min-w-0 flex-1 flex-col">
+              <div className="lg:hidden">
+                <TopNav />
+              </div>
+              <main
+                id="phone-scroll"
+                className="min-h-0 min-w-0 flex-1 overflow-y-auto overflow-x-hidden"
+              >
+                <PageTransition routeKey={mainRouteKey}>
+                  <Outlet />
+                </PageTransition>
+              </main>
             </div>
           </div>
           <Toaster
