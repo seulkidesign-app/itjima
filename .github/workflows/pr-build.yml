@@ -1,9 +1,14 @@
-name: PR Build
+name: CI
 
 on:
   pull_request:
     branches: [main]
+  push:
+    branches: [main]
   workflow_dispatch:
+
+permissions:
+  contents: read
 
 jobs:
   build:
@@ -18,14 +23,34 @@ jobs:
           node-version: 22
           cache: npm
 
-      - name: Refresh lockfile and install dependencies
-        run: npm install
-
-      - name: Upload refreshed lockfile
-        uses: actions/upload-artifact@v4
-        with:
-          name: package-lock
-          path: package-lock.json
+      - name: Clean install
+        run: npm ci
 
       - name: Run release build
         run: npm run build
+
+  production-smoke:
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Verify focused production metadata
+        shell: bash
+        run: |
+          set -euo pipefail
+          for attempt in {1..20}; do
+            html="$(curl -fsSL --max-time 20 https://itjima.app/ || true)"
+            manifest="$(curl -fsSL --max-time 20 https://itjima.app/manifest.webmanifest || true)"
+
+            if grep -Fq "말하듯 남기는 일정 캡처" <<<"$html" \
+              && grep -Fq "애매한 부분만 확인" <<<"$manifest"; then
+              echo "Production smoke check passed"
+              exit 0
+            fi
+
+            echo "Production is not updated yet (attempt $attempt/20)"
+            sleep 15
+          done
+
+          echo "::error::Production did not serve the focused Itjima metadata"
+          exit 1
