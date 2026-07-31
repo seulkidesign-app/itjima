@@ -11,7 +11,7 @@ permissions:
 jobs:
   screenshots:
     runs-on: ubuntu-latest
-    timeout-minutes: 12
+    timeout-minutes: 14
     env:
       VITE_E2E: "true"
       VITE_SUPABASE_URL: "http://127.0.0.1:54321"
@@ -47,7 +47,7 @@ jobs:
           cat /tmp/itjima-preview.log
           exit 1
 
-      - name: Capture bilingual responsive screens
+      - name: Capture mobile tablet and desktop screens
         run: |
           CHROME="$(command -v google-chrome || command -v chromium || command -v chromium-browser)"
           if [ -z "$CHROME" ]; then
@@ -68,16 +68,62 @@ jobs:
               --hide-scrollbars \
               --force-device-scale-factor=1 \
               --window-size="${width},${height}" \
-              --virtual-time-budget=2500 \
+              --virtual-time-budget=3000 \
               --screenshot="visual-artifacts/${output}" \
               "$url"
           }
 
+          # Mobile coverage: smallest supported width and a modern phone.
+          capture 320 568 home-mobile-small-en.png "http://127.0.0.1:4173/?lang=en"
           capture 390 844 home-mobile-en.png "http://127.0.0.1:4173/?lang=en"
           capture 390 844 home-mobile-ko.png "http://127.0.0.1:4173/?lang=ko"
           capture 390 844 about-mobile-en.png "http://127.0.0.1:4173/about?lang=en"
+
+          # Tablet coverage: portrait iPad-class layouts and bilingual rendering.
+          capture 768 1024 home-tablet-en.png "http://127.0.0.1:4173/?lang=en"
+          capture 834 1112 home-tablet-ko.png "http://127.0.0.1:4173/?lang=ko"
+          capture 768 1024 schedule-tablet-en.png "http://127.0.0.1:4173/schedule?lang=en"
+          capture 834 1112 about-tablet-en.png "http://127.0.0.1:4173/about?lang=en"
+
+          # Desktop coverage: dedicated sidebar app shell and full launch page.
+          capture 1440 1000 home-desktop-en.png "http://127.0.0.1:4173/?lang=en"
+          capture 1440 1000 schedule-desktop-en.png "http://127.0.0.1:4173/schedule?lang=en"
+          capture 1440 1000 archive-desktop-ko.png "http://127.0.0.1:4173/archive?lang=ko"
           capture 1440 1000 about-desktop-en.png "http://127.0.0.1:4173/about?lang=en"
           capture 1440 1000 about-desktop-ko.png "http://127.0.0.1:4173/about?lang=ko"
+
+      - name: Verify screenshot dimensions
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          from PIL import Image
+
+          expected = {
+              "home-mobile-small-en.png": (320, 568),
+              "home-mobile-en.png": (390, 844),
+              "home-mobile-ko.png": (390, 844),
+              "about-mobile-en.png": (390, 844),
+              "home-tablet-en.png": (768, 1024),
+              "home-tablet-ko.png": (834, 1112),
+              "schedule-tablet-en.png": (768, 1024),
+              "about-tablet-en.png": (834, 1112),
+              "home-desktop-en.png": (1440, 1000),
+              "schedule-desktop-en.png": (1440, 1000),
+              "archive-desktop-ko.png": (1440, 1000),
+              "about-desktop-en.png": (1440, 1000),
+              "about-desktop-ko.png": (1440, 1000),
+          }
+
+          for filename, size in expected.items():
+              path = Path("visual-artifacts") / filename
+              if not path.exists():
+                  raise SystemExit(f"Missing screenshot: {filename}")
+              with Image.open(path) as image:
+                  if image.size != size:
+                      raise SystemExit(
+                          f"Unexpected size for {filename}: {image.size}, expected {size}"
+                      )
+          PY
 
       - name: Upload screenshots
         uses: actions/upload-artifact@v4
