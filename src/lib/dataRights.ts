@@ -33,6 +33,10 @@ function parseStoredValue(raw: string): unknown {
   }
 }
 
+export function isItjimaStorageKey(key: string): boolean {
+  return key.startsWith("itjima.") || key.startsWith("itjima_");
+}
+
 /** Export only Itjima-owned localStorage keys. Auth tokens are intentionally excluded. */
 export function collectLocalItjimaData(
   storage: Pick<Storage, "length" | "key" | "getItem"> = localStorage,
@@ -41,7 +45,7 @@ export function collectLocalItjimaData(
 
   for (let index = 0; index < storage.length; index += 1) {
     const key = storage.key(index);
-    if (!key?.startsWith("itjima.")) continue;
+    if (!key || !isItjimaStorageKey(key)) continue;
     if (key.includes("__e2e")) continue;
     const value = storage.getItem(key);
     if (value === null) continue;
@@ -57,7 +61,7 @@ export function clearLocalItjimaData(
   const keys: string[] = [];
   for (let index = 0; index < storage.length; index += 1) {
     const key = storage.key(index);
-    if (key?.startsWith("itjima.")) keys.push(key);
+    if (key && isItjimaStorageKey(key)) keys.push(key);
   }
   keys.forEach((key) => storage.removeItem(key));
   return keys;
