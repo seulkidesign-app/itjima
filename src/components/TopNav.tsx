@@ -70,6 +70,7 @@ export function TopNav() {
           )}
           <button
             type="button"
+            data-testid="open-settings"
             aria-label={t("설정 열기", "Open settings")}
             aria-haspopup="dialog"
             aria-expanded={settingsOpen}
