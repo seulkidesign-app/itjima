@@ -1,13 +1,12 @@
 import { supabase } from "@/integrations/supabase/client";
 import {
   diagnoseServerPushTest,
-  fetchServerPushTestRow,
-  startServerPushTest,
+  SERVER_PUSH_TEST_CRON_STALE_MS,
   type ServerPushTestPhase,
   type ServerPushTestRow,
 } from "@/lib/push/serverPushTest";
 
-export type IosPwaPayloadKind = "minimal" | "schedule";
+export const IOS_PWA_SCHEDULED_TEST_DELAY_MS = 3 * 60 * 1000;
 
 export type IosPwaDeliveryResult = {
   platform: string;
@@ -16,14 +15,21 @@ export type IosPwaDeliveryResult = {
   statusCode: number | null;
   errorType: string | null;
   errorMessage: string | null;
+  deliveryId?: string;
+  serverSentAt?: string;
 };
 
 export type IosPwaPushTestResponse = {
   ok: boolean;
-  payloadKind?: IosPwaPayloadKind;
   accepted?: number;
   attempted?: number;
   deliveries?: IosPwaDeliveryResult[];
+  deliveryId?: string;
+  serverSentAt?: string;
+  scheduledReminder?: {
+    due_at_utc: string;
+    idempotency_key: string;
+  } | null;
   error?: string;
 };
 
@@ -34,15 +40,21 @@ export type IosPwaSubscriptionProbe = {
   updated_at: string;
 };
 
-export async function invokeIosPwaPushTest(
-  payloadKind: IosPwaPayloadKind = "minimal",
-): Promise<IosPwaPushTestResponse> {
+export type IosPwaSwProbe = {
+  scope: string;
+  activeScriptUrl: string | null;
+  waiting: boolean;
+  controller: boolean;
+  cacheVersion: string | null;
+};
+
+export async function invokeIosPwaBackgroundPushTest(): Promise<IosPwaPushTestResponse> {
   if (import.meta.env.VITE_E2E === "true") {
     return { ok: false, error: "e2e_disabled" };
   }
 
   const { data, error } = await supabase.functions.invoke("test-push-ios", {
-    body: { payloadKind },
+    body: { includeScheduledTest: true },
   });
 
   if (error) {
@@ -68,6 +80,26 @@ export async function probeIosPwaSubscription(): Promise<IosPwaSubscriptionProbe
   return data as IosPwaSubscriptionProbe;
 }
 
+export async function probeIosPwaServiceWorker(): Promise<IosPwaSwProbe | null> {
+  if (typeof navigator === "undefined" || !("serviceWorker" in navigator)) {
+    return null;
+  }
+
+  const registration =
+    (await navigator.serviceWorker.getRegistration("/")) ?? null;
+  if (!registration) return null;
+
+  return {
+    scope: registration.scope,
+    activeScriptUrl: registration.active?.scriptURL ?? null,
+    waiting: Boolean(registration.waiting),
+    controller: Boolean(navigator.serviceWorker.controller),
+    cacheVersion: registration.active?.scriptURL?.includes("sw.js")
+      ? "sw.js"
+      : null,
+  };
+}
+
 export function iosPwaDeliverySucceeded(
   deliveries: IosPwaDeliveryResult[] | undefined,
 ): boolean {
@@ -75,24 +107,43 @@ export function iosPwaDeliverySucceeded(
 }
 
 export function formatIosPwaDeliverySummary(
-  deliveries: IosPwaDeliveryResult[] | undefined,
+  response: Pick<
+    IosPwaPushTestResponse,
+    "deliveries" | "deliveryId" | "serverSentAt" | "scheduledReminder"
+  >,
   lang: "ko" | "en",
 ): string {
-  const row = deliveries?.find((entry) => entry.platform === "ios-pwa");
+  const row = response.deliveries?.find((entry) => entry.platform === "ios-pwa");
   if (!row) {
     return lang === "ko"
       ? "ios-pwa 구독 결과가 없어요."
       : "No ios-pwa subscription result.";
   }
+
+  const status =
+    row.statusCode != null ? `HTTP ${row.statusCode}` : row.errorType ?? "unknown";
+
   if (row.accepted) {
+    const due = response.scheduledReminder?.due_at_utc;
+    const dueLabel = due
+      ? new Date(due).toLocaleTimeString(lang === "en" ? "en-US" : "ko-KR", {
+          hour: "numeric",
+          minute: "2-digit",
+        })
+      : null;
+    const base =
+      lang === "ko"
+        ? `Push 수락 (${status}). 즉시 테스트를 보냈어요.`
+        : `Push accepted (${status}). Immediate test sent.`;
+    if (!dueLabel) return base;
     return lang === "ko"
-      ? "Push 서비스가 ios-pwa 알림을 수락했어요."
-      : "Push service accepted the ios-pwa notification.";
+      ? `${base} ${dueLabel} 예약 테스트가 등록됐어요.`
+      : `${base} Scheduled test registered for ${dueLabel}.`;
   }
-  const detail = row.errorType ?? row.errorMessage ?? "unknown";
+
   return lang === "ko"
-    ? `Push 서비스 거절 (${detail})`
-    : `Push service rejected (${detail})`;
+    ? `Push 거절 (${status})`
+    : `Push rejected (${status})`;
 }
 
 export type IosScheduledPushProbe = {
@@ -100,6 +151,7 @@ export type IosScheduledPushProbe = {
   iosLastSuccessAt: string | null;
   iosDeliveredAfterDue: boolean;
   macMaskedSent: boolean;
+  scheduledDueAt: string | null;
 };
 
 export async function probeIosScheduledPushDelivery(
@@ -122,29 +174,31 @@ export async function probeIosScheduledPushDelivery(
     iosLastSuccessAt: ios?.last_success_at ?? null,
     iosDeliveredAfterDue,
     macMaskedSent: reminderPhase === "sent" && !iosDeliveredAfterDue,
+    scheduledDueAt: row.due_at_utc,
   };
-}
-
-export async function runIosPwaImmediatePushTest(
-  payloadKind: IosPwaPayloadKind = "minimal",
-): Promise<IosPwaPushTestResponse> {
-  return invokeIosPwaPushTest(payloadKind);
-}
-
-export async function startIosPwaScheduledPushTest(
-  userId: string | null,
-): Promise<
-  | { ok: true; row: ServerPushTestRow; resumed?: boolean }
-  | { ok: false; phase: ServerPushTestPhase }
-> {
-  return startServerPushTest(userId);
 }
 
 export async function pollIosPwaScheduledPushTest(
   userId: string,
-  rowId: string,
+  dueAtUtc: string,
 ): Promise<IosScheduledPushProbe | null> {
-  const row = await fetchServerPushTestRow(userId, rowId);
-  if (!row) return null;
+  const { data } = await supabase
+    .from("scheduled_reminders")
+    .select("id, status, due_at_utc, sent_at, created_at, updated_at, attempt_count")
+    .eq("user_id", userId)
+    .eq("schedule_id", "00000000-0000-4000-a000-000000000001")
+    .eq("due_at_utc", dueAtUtc)
+    .maybeSingle();
+
+  if (!data) return null;
+
+  const row = data as ServerPushTestRow;
   return probeIosScheduledPushDelivery(userId, row);
+}
+
+export function isIosScheduledProbeTerminal(probe: IosScheduledPushProbe): boolean {
+  if (probe.iosDeliveredAfterDue) return true;
+  const dueMs = Date.parse(probe.scheduledDueAt ?? "");
+  if (!Number.isFinite(dueMs)) return false;
+  return Date.now() >= dueMs + SERVER_PUSH_TEST_CRON_STALE_MS;
 }

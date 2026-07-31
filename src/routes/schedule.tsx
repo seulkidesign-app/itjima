@@ -98,6 +98,7 @@ import {
   hasActivePushSubscription,
 } from "@/lib/push/pushSubscription";
 import { track } from "@/lib/analytics";
+import { detectPushPlatform } from "@/lib/push/detectPushPlatform";
 import { haptic, confirm as hapticConfirm } from "@/lib/haptics";
 
 export const Route = createFileRoute("/schedule")({
@@ -205,6 +206,7 @@ function Schedule() {
   );
 
   useEffect(() => {
+    if (detectPushPlatform() === "ios-pwa") return () => {};
     return bindInAppReminders(items, (title, body) => {
       if (Notification.permission === "granted") {
         new Notification(title, { body });

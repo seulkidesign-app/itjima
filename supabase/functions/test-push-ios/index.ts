@@ -3,6 +3,9 @@ import webpush from "npm:web-push@3";
 
 const IOS_PWA_PLATFORM = "ios-pwa";
 const REVOKE_AFTER_FAILURES = 5;
+const SERVER_PUSH_TEST_SCHEDULE_ID =
+  "00000000-0000-4000-a000-000000000001";
+const IOS_SCHEDULED_TEST_DELAY_MS = 3 * 60 * 1000;
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -19,8 +22,6 @@ type PushRow = {
   platform: string | null;
 };
 
-type PayloadKind = "minimal" | "schedule";
-
 type DeliveryResult = {
   platform: string;
   attempted: boolean;
@@ -28,6 +29,8 @@ type DeliveryResult = {
   statusCode: number | null;
   errorType: string | null;
   errorMessage: string | null;
+  deliveryId?: string;
+  serverSentAt?: string;
 };
 
 function json(body: unknown, status = 200) {
@@ -66,20 +69,23 @@ function classifyPushError(error: unknown): {
   };
 }
 
-function buildPayload(kind: PayloadKind): string {
-  if (kind === "schedule") {
-    return JSON.stringify({
-      title: "잊지마",
-      body: "오후 8:30 일정이에요.",
-      tag: "ios-push-test-schedule",
-      data: { url: "/schedule" },
-    });
-  }
-
+function buildDiagnosticPayload(
+  title: string,
+  body: string,
+  deliveryId: string,
+  serverSentAt: string,
+  tag: string,
+) {
   return JSON.stringify({
-    title: "잊지마 알림 테스트",
-    body: "아이폰 알림 연결이 완료됐어요.",
-    data: { url: "/schedule" },
+    title,
+    body,
+    tag,
+    data: {
+      url: "/schedule",
+      source: "server-web-push",
+      deliveryId,
+      serverSentAt,
+    },
   });
 }
 
@@ -97,12 +103,12 @@ Deno.serve(async (req) => {
     return json({ error: "unauthorized" }, 401);
   }
 
-  let payloadKind: PayloadKind = "minimal";
+  let includeScheduledTest = false;
   try {
     const body = await req.json().catch(() => ({}));
-    if (body?.payloadKind === "schedule") payloadKind = "schedule";
+    includeScheduledTest = Boolean(body?.includeScheduledTest);
   } catch {
-    // default minimal
+    // default immediate only
   }
 
   const supabaseUrl = Deno.env.get("SUPABASE_URL") ?? "";
@@ -150,7 +156,17 @@ Deno.serve(async (req) => {
   }
 
   webpush.setVapidDetails(vapidSubject, vapidPublic, vapidPrivate);
-  const payload = buildPayload(payloadKind);
+
+  const deliveryId = crypto.randomUUID();
+  const serverSentAt = new Date().toISOString();
+  const payload = buildDiagnosticPayload(
+    "잊지마 알림 테스트",
+    "아이폰 알림 연결이 완료됐어요.",
+    deliveryId,
+    serverSentAt,
+    `ios-test-${deliveryId.slice(0, 8)}`,
+  );
+
   const deliveries: DeliveryResult[] = [];
   let acceptedCount = 0;
 
@@ -163,6 +179,8 @@ Deno.serve(async (req) => {
       statusCode: null,
       errorType: null,
       errorMessage: null,
+      deliveryId,
+      serverSentAt,
     };
 
     try {
@@ -175,23 +193,26 @@ Deno.serve(async (req) => {
           },
         },
         payload,
-        { TTL: 60 },
+        { TTL: 86400 },
       );
       result.accepted = true;
+      result.statusCode = 201;
       acceptedCount += 1;
       await admin
         .from("push_subscriptions")
         .update({
-          last_success_at: new Date().toISOString(),
+          last_success_at: serverSentAt,
           failure_count: 0,
-          updated_at: new Date().toISOString(),
+          updated_at: serverSentAt,
         })
         .eq("id", subscription.id);
 
       console.info("[test-push-ios] delivery_ok", {
         platform,
-        payloadKind,
         accepted: true,
+        statusCode: 201,
+        deliveryId: deliveryId.slice(0, 8),
+        serverSentAt,
       });
     } catch (error) {
       const classified = classifyPushError(error);
@@ -216,7 +237,6 @@ Deno.serve(async (req) => {
 
       console.warn("[test-push-ios] delivery_failed", {
         platform,
-        payloadKind,
         statusCode: classified.statusCode,
         errorType: classified.errorType,
       });
@@ -225,20 +245,50 @@ Deno.serve(async (req) => {
     deliveries.push(result);
   }
 
+  let scheduledReminder: {
+    due_at_utc: string;
+    idempotency_key: string;
+  } | null = null;
+
+  if (includeScheduledTest && acceptedCount > 0) {
+    const dueAt = new Date(Date.now() + IOS_SCHEDULED_TEST_DELAY_MS);
+    const dueIso = dueAt.toISOString();
+    const idempotencyKey =
+      `push-test-ios:${userData.user.id}:${dueIso}`;
+    scheduledReminder = {
+      due_at_utc: dueIso,
+      idempotency_key: idempotencyKey,
+    };
+
+    await admin.from("scheduled_reminders").upsert(
+      {
+        user_id: userData.user.id,
+        schedule_id: SERVER_PUSH_TEST_SCHEDULE_ID,
+        due_at_utc: dueIso,
+        timezone: "UTC",
+        status: "pending",
+        idempotency_key: idempotencyKey,
+      },
+      { onConflict: "idempotency_key" },
+    );
+  }
+
   if (!acceptedCount) {
     return json({
       ok: false,
       error: "ios_push_delivery_failed",
-      payloadKind,
       deliveries,
+      scheduledReminder,
     }, 502);
   }
 
   return json({
     ok: true,
-    payloadKind,
     accepted: acceptedCount,
     attempted: deliveries.length,
     deliveries,
+    deliveryId,
+    serverSentAt,
+    scheduledReminder,
   });
 });

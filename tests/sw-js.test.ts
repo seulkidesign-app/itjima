@@ -38,15 +38,14 @@ describe("service worker (public/sw.js)", () => {
     expect(publicSw).toContain('addEventListener("notificationclick"');
   });
 
-  it("shows notifications with PNG icons and fallback handling", () => {
+  it("shows notifications immediately from push with minimal fallback", () => {
     expect(publicSw).toContain("event.waitUntil(showPushNotification");
     expect(publicSw).toContain("self.registration.showNotification");
-    expect(publicSw).toContain('icon: NOTIFICATION_ICON');
-    expect(publicSw).toContain('"/icons/icon-192.png"');
-    expect(publicSw).toContain('"/icons/badge-72.png"');
+    expect(publicSw).toContain("formatDiagnosticBody");
+    expect(publicSw).toContain('data.source !== "server-web-push"');
     expect(publicSw).toContain("showNotification:fallback_ok");
     expect(publicSw).toContain("sanitizePushLogMessage");
-    expect(publicSw).not.toContain("itjima-push-fallback");
+    expect(publicSw).not.toContain("renotify");
     expect(publicSw).toContain("[itjima:sw:push]");
   });
 });

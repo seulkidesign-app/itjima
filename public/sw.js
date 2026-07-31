@@ -1,4 +1,4 @@
-const CACHE = "itjima-shell-v3";
+const CACHE = "itjima-shell-v4";
 const SHELL = [
   "/index.html",
   "/manifest.webmanifest",
@@ -9,10 +9,9 @@ const SHELL = [
 const PUSH_LOG = "[itjima:sw:push]";
 const DEFAULT_TITLE = "잊지마";
 const DEFAULT_BODY = "예정된 일정이 있어요.";
-const NOTIFICATION_ICON = "/icons/icon-192.png";
-const NOTIFICATION_BADGE = "/icons/badge-72.png";
 
 self.addEventListener("install", (event) => {
+  self.skipWaiting();
   event.waitUntil(caches.open(CACHE).then((cache) => cache.addAll(SHELL)));
 });
 
@@ -120,64 +119,68 @@ function sanitizePushLogMessage(error) {
     .slice(0, 160);
 }
 
-function buildNotificationOptions(payload, url) {
-  const scheduleId = payload.data?.scheduleId;
-  return {
-    body: payload.body || DEFAULT_BODY,
-    icon: NOTIFICATION_ICON,
-    badge: NOTIFICATION_BADGE,
-    tag: payload.tag || (scheduleId ? `schedule-${scheduleId}` : "itjima-reminder"),
-    data: {
-      ...(payload.data && typeof payload.data === "object" ? payload.data : {}),
-      url,
-      scheduleId,
-    },
-    renotify: true,
-  };
+function formatDiagnosticBody(payload) {
+  const base = payload.body || DEFAULT_BODY;
+  const data = payload.data && typeof payload.data === "object" ? payload.data : {};
+  if (data.source !== "server-web-push") return base;
+
+  const deliveryId =
+    typeof data.deliveryId === "string" ? data.deliveryId.slice(0, 8) : null;
+  const serverSentAt =
+    typeof data.serverSentAt === "string" ? data.serverSentAt : null;
+  if (!deliveryId && !serverSentAt) return base;
+
+  const sentLabel = serverSentAt
+    ? new Date(serverSentAt).toISOString().slice(11, 19)
+    : "";
+  return `${base} [${deliveryId ?? "--------"}@${sentLabel}]`;
 }
 
-async function showPushNotification(payload, parseMode) {
+function showPushNotification(payload, parseMode) {
   const scheduleId = payload.data?.scheduleId;
   const fallbackUrl = scheduleId
     ? `/schedule?open=${encodeURIComponent(String(scheduleId))}`
     : "/schedule";
   const url = safeAppPath(payload.data?.url, fallbackUrl);
   const title = payload.title || DEFAULT_TITLE;
-  const options = buildNotificationOptions(payload, url);
+  const body = formatDiagnosticBody(payload);
+  const swShownAt = new Date().toISOString();
+  const tag = payload.tag || (scheduleId ? `schedule-${scheduleId}` : "itjima-reminder");
 
   console.info(PUSH_LOG, "received", {
     parseMode,
-    hasTitle: Boolean(payload.title),
-    hasBody: Boolean(payload.body),
-    hasUrl: Boolean(payload.data?.url),
-    tag: options.tag,
+    source: payload.data?.source ?? null,
+    hasDeliveryId: Boolean(payload.data?.deliveryId),
+    tag,
   });
 
-  try {
-    await self.registration.showNotification(title, options);
-    console.info(PUSH_LOG, "showNotification:ok", { tag: options.tag, url });
-    return true;
-  } catch (error) {
-    console.warn(PUSH_LOG, "showNotification:failed", {
-      tag: options.tag,
-      message: sanitizePushLogMessage(error),
-    });
+  const data = {
+    ...(payload.data && typeof payload.data === "object" ? payload.data : {}),
+    url,
+    scheduleId,
+    swShownAt,
+  };
 
-    try {
-      await self.registration.showNotification(title, {
-        body: options.body,
-        tag: options.tag,
-        data: options.data,
+  return self.registration
+    .showNotification(title, { body, tag, data })
+    .then(() => {
+      console.info(PUSH_LOG, "showNotification:ok", { tag, swShownAt });
+    })
+    .catch((error) => {
+      console.warn(PUSH_LOG, "showNotification:failed", {
+        tag,
+        message: sanitizePushLogMessage(error),
       });
-      console.info(PUSH_LOG, "showNotification:fallback_ok", { tag: options.tag });
-    } catch (fallbackError) {
+      return self.registration.showNotification(title, { body }).then(() => {
+        console.info(PUSH_LOG, "showNotification:fallback_ok", { tag, swShownAt });
+      });
+    })
+    .catch((fallbackError) => {
       console.warn(PUSH_LOG, "showNotification:fallback_failed", {
-        tag: options.tag,
+        tag,
         message: sanitizePushLogMessage(fallbackError),
       });
-    }
-    return false;
-  }
+    });
 }
 
 self.addEventListener("fetch", (event) => {
@@ -203,10 +206,9 @@ self.addEventListener("fetch", (event) => {
   }
 });
 
-/** Server-triggered Web Push — no in-memory scheduling. */
+/** Server-triggered Web Push — show immediately; never wait for open clients. */
 self.addEventListener("push", (event) => {
   const { payload, parseMode } = parsePushPayload(event);
-
   event.waitUntil(showPushNotification(payload, parseMode));
 });
 
