@@ -70,18 +70,34 @@ export function DataPrivacySheet({ open, onClose, userId }: Props) {
     setDeleting(true);
     try {
       if (userId) {
-        await deleteCurrentAccount();
+        const outcome = await deleteCurrentAccount();
+        if (outcome === "requested") {
+          toast.success(
+            t(
+              "삭제 요청을 접수하고 이 기기에서 로그아웃했어요.",
+              "Your deletion request was submitted and this device was signed out.",
+            ),
+          );
+        } else {
+          toast.success(
+            t(
+              "계정과 데이터를 삭제했어요",
+              "Your account and data were deleted",
+            ),
+          );
+        }
       } else {
         clearLocalItjimaData();
         await clearItjimaCaches();
+        toast.success(
+          t(
+            "이 기기의 데이터를 삭제했어요",
+            "Data on this device was deleted",
+          ),
+        );
       }
-      toast.success(
-        userId
-          ? t("계정과 데이터를 삭제했어요", "Your account and data were deleted")
-          : t("이 기기의 데이터를 삭제했어요", "Data on this device was deleted"),
-      );
       onClose();
-      window.setTimeout(() => window.location.assign("/"), 250);
+      window.setTimeout(() => window.location.assign("/"), 350);
     } catch {
       setDestructiveConfirm(false);
       toast.error(
@@ -186,8 +202,8 @@ export function DataPrivacySheet({ open, onClose, userId }: Props) {
                 )
               : userId
                 ? t(
-                    "계정, 일정, 보관함, 알림 등록 정보를 서버에서 삭제해요.",
-                    "Deletes your account, schedules, archive, and notification registrations from the server.",
+                    "계정, 일정, 보관함, 알림 등록 정보를 삭제해요. 즉시 삭제가 불가능한 경우 인증된 삭제 요청으로 접수해요.",
+                    "Deletes your account, schedules, archive, and notification registrations. If instant deletion is unavailable, an authenticated deletion request is submitted.",
                   )
                 : t(
                     "로그인하지 않고 이 기기에 저장한 내용을 모두 삭제해요.",
