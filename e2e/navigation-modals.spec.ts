@@ -1,11 +1,10 @@
-import { test, expect } from "@playwright/test";
+import { test, expect, type Page } from "@playwright/test";
 import {
   resetAppState,
   addThought,
   openContextMenu,
   openContextMenuRaw,
-  openAbout,
-  openFeedback,
+  openSettings,
   gotoArchiveListView,
   openArchiveEditDialog,
   dismissArchiveEditDialog,
@@ -14,6 +13,22 @@ import {
   clickContextMenuItem,
   contextMenuDialog,
 } from "./helpers";
+
+async function openAboutFromSettings(page: Page) {
+  await openSettings(page);
+  await page.getByTestId("settings-about-itjima-row").click();
+  await page
+    .getByRole("dialog", { name: "About Itjima" })
+    .waitFor({ state: "visible" });
+}
+
+async function openFeedbackFromSettings(page: Page) {
+  await openAboutFromSettings(page);
+  await page.getByRole("button", { name: "Send feedback" }).click();
+  await page
+    .getByRole("dialog", { name: "Share your thoughts" })
+    .waitFor({ state: "visible" });
+}
 
 test.describe("Navigation and modals", () => {
   test.beforeEach(async ({ page }) => {
@@ -45,10 +60,10 @@ test.describe("Navigation and modals", () => {
     expect(ignorable).toEqual([]);
   });
 
-  test("brand hub opens and closes without trapping focus", async ({
+  test("product information opens from settings and closes without trapping focus", async ({
     page,
   }) => {
-    await openAbout(page);
+    await openAboutFromSettings(page);
     await expect(
       page.getByRole("dialog", { name: "About Itjima" }),
     ).toBeVisible();
@@ -58,11 +73,8 @@ test.describe("Navigation and modals", () => {
     ).toHaveCount(0);
   });
 
-  test("feedback sheet opens and closes with Escape", async ({ page }) => {
-    await openFeedback(page);
-    await page.getByRole("dialog", { name: "Share your thoughts" }).waitFor({
-      state: "visible",
-    });
+  test("feedback sheet opens from settings and closes with Escape", async ({ page }) => {
+    await openFeedbackFromSettings(page);
     await page.keyboard.press("Escape");
     await expect(
       page.getByRole("dialog", { name: "Share your thoughts" }),
@@ -100,10 +112,10 @@ test.describe("Navigation and modals", () => {
     await expect(phone(page).getByRole("tabpanel")).toHaveCount(1);
   });
 
-  test("feedback from brand hub opens feedback sheet and closes fully", async ({
+  test("feedback transition closes product information before opening feedback", async ({
     page,
   }) => {
-    await openAbout(page);
+    await openAboutFromSettings(page);
     await page.getByRole("button", { name: "Send feedback" }).click();
     await page
       .getByRole("dialog", { name: /Share your thoughts/ })
