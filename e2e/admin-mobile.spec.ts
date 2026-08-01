@@ -15,7 +15,7 @@ test.describe("Admin on mobile", () => {
   test("admin link appears in settings and opens admin page", async ({
     page,
   }) => {
-    await page.getByTestId("open-settings").click();
+    await page.locator('[data-testid="open-settings"]:visible').click();
     const adminLink = page.getByRole("link", { name: "Admin", exact: true });
     await adminLink.waitFor({ state: "visible" });
     await adminLink.click();
