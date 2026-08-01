@@ -1,0 +1,50 @@
+/*
+ * Laptop workspace override
+ *
+ * At notebook-sized browser widths, Itjima is a desktop web app—not a
+ * simulated tablet or phone floating inside the page. The application shell
+ * therefore consumes the complete browser viewport while the inner reading
+ * rails continue to protect line length.
+ */
+
+@media (min-width: 1024px) and (max-width: 1599px) {
+  html,
+  body,
+  #root,
+  .itjima-app-stage {
+    width: 100%;
+    min-height: 100svh;
+    min-height: 100dvh;
+  }
+
+  .itjima-app-stage[data-layout="app"] {
+    padding: 0 !important;
+    align-items: stretch !important;
+    justify-content: stretch !important;
+  }
+
+  .itjima-responsive-frame {
+    width: 100vw !important;
+    max-width: none !important;
+    height: 100svh !important;
+    height: 100dvh !important;
+    min-height: 100svh !important;
+    min-height: 100dvh !important;
+    margin: 0 !important;
+    border: 0 !important;
+    border-radius: 0 !important;
+    box-shadow: none !important;
+  }
+
+  .itjima-app-workspace,
+  .itjima-app-content,
+  .itjima-app-scroll {
+    height: 100%;
+    min-height: 0;
+  }
+
+  .itjima-desktop-nav {
+    height: 100%;
+    border-radius: 0 !important;
+  }
+}
