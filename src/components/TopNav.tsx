@@ -7,7 +7,6 @@ import { SPRING_TAB } from "@/lib/motion";
 import { useUserId } from "@/lib/store";
 import { tap } from "@/lib/haptics";
 import { SettingsSheet } from "./SettingsSheet";
-import { BrandHubSheet } from "./BrandHubSheet";
 
 export function TopNav() {
   const t = useT();
@@ -15,7 +14,11 @@ export function TopNav() {
   const userId = useUserId();
   const tabs = [
     { to: "/", label: t("남기기", "Capture"), Icon: MessageSquareText },
-    { to: "/schedule", label: t("일정", "Schedule"), Icon: CalendarDays },
+    {
+      to: "/schedule",
+      label: t("할 일·일정", "Tasks & schedule"),
+      Icon: CalendarDays,
+    },
     { to: "/archive", label: t("보관함", "Archive"), Icon: Archive },
   ] as const;
 
@@ -23,12 +26,6 @@ export function TopNav() {
   const tabletSettingsRef = useRef<HTMLButtonElement | null>(null);
   const [scrolled, setScrolled] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
-  const [brandHubOpen, setBrandHubOpen] = useState(false);
-  const isHome = path === "/";
-
-  useEffect(() => {
-    if (!isHome) setBrandHubOpen(false);
-  }, [isHome]);
 
   useEffect(() => {
     const element = document.getElementById("phone-scroll");
@@ -58,30 +55,16 @@ export function TopNav() {
     });
   };
 
-  const renderBrand = (className: string) =>
-    isHome ? (
-      <button
-        type="button"
-        aria-label={t("Itjima 제품 정보 열기", "Open Itjima product information")}
-        onClick={() => {
-          tap();
-          setBrandHubOpen(true);
-        }}
-        className={className}
-      >
-        ITJIMA
-        <span className="ml-1 inline-block h-1.5 w-1.5 -translate-y-1 rounded-full bg-primary align-middle" />
-      </button>
-    ) : (
-      <Link
-        to="/"
-        aria-label={t("남기기 화면으로 이동", "Go to Capture")}
-        className={className}
-      >
-        ITJIMA
-        <span className="ml-1 inline-block h-1.5 w-1.5 -translate-y-1 rounded-full bg-primary align-middle" />
-      </Link>
-    );
+  const renderBrand = (className: string) => (
+    <Link
+      to="/"
+      aria-label={t("남기기 화면으로 이동", "Go to Capture")}
+      className={className}
+    >
+      ITJIMA
+      <span className="ml-1 inline-block h-1.5 w-1.5 -translate-y-1 rounded-full bg-primary align-middle" />
+    </Link>
+  );
 
   return (
     <>
@@ -159,7 +142,7 @@ export function TopNav() {
 
         <LayoutGroup id="tablet-primary-navigation">
           <nav
-            className="tablet-segmented-nav mx-auto flex min-w-0 max-w-[520px] flex-1 items-center rounded-[18px] border border-ink/[0.07] bg-ink/[0.035] p-1"
+            className="tablet-segmented-nav mx-auto flex min-w-0 max-w-[560px] flex-1 items-center rounded-[18px] border border-ink/[0.07] bg-ink/[0.035] p-1"
             aria-label={t("주요 메뉴", "Primary navigation")}
           >
             {tabs.map(({ to, label, Icon }) => {
@@ -208,12 +191,6 @@ export function TopNav() {
       </header>
 
       <SettingsSheet open={settingsOpen} onClose={closeSettings} />
-      {isHome && (
-        <BrandHubSheet
-          open={brandHubOpen}
-          onClose={() => setBrandHubOpen(false)}
-        />
-      )}
     </>
   );
 }
