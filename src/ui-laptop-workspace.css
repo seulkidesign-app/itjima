@@ -22,19 +22,23 @@
     justify-content: stretch !important;
   }
 
-  .itjima-responsive-frame {
+  .itjima-app-stage[data-layout="app"] > .phone-frame.itjima-responsive-frame {
     box-sizing: border-box !important;
+    flex: 1 1 auto !important;
     width: 100vw !important;
     max-width: none !important;
     height: 100svh !important;
     height: 100dvh !important;
     min-height: 100svh !important;
     min-height: 100dvh !important;
+    max-height: 100dvh !important;
     margin: 0 !important;
     padding: 0 !important;
+    padding-block: 0 !important;
     border: 0 !important;
     border-radius: 0 !important;
     box-shadow: none !important;
+    transform: none !important;
     overflow: hidden !important;
   }
 
