@@ -27,9 +27,9 @@ async function submitThoughtKo(page: Page, text: string) {
   await page.evaluate(() => localStorage.setItem("itjima_lang", "ko"));
   await page.reload();
   const frame = phone(page);
-  await frame.getByRole("link", { name: /^던지기/ }).waitFor({ state: "visible" });
+  await frame.getByRole("link", { name: /^남기기$/ }).waitFor({ state: "visible" });
   await frame.locator("textarea").first().fill(text);
-  await frame.getByRole("button", { name: "던지기", exact: true }).click();
+  await frame.getByRole("button", { name: "남기기", exact: true }).click();
   await frame.getByText(text.split("\n")[0]!, { exact: true }).first().waitFor({
     state: "visible",
   });
@@ -46,7 +46,7 @@ test.describe("NL beta guards", () => {
   test("dismissed Brain Mirror stays hidden after reload", async ({ page }) => {
     const frame = phone(page);
     await frame.locator("textarea").first().fill("내일 3시에 치과");
-    await frame.getByRole("button", { name: "던지기", exact: true }).click();
+    await frame.getByRole("button", { name: "남기기", exact: true }).click();
     const promise = frame.getByTestId("inline-promise").last();
     await promise.getByTestId("promise-manual").click();
     await promise
@@ -70,7 +70,7 @@ test.describe("NL beta guards", () => {
   test("double-tap schedule confirm creates only one event", async ({ page }) => {
     const frame = phone(page);
     await frame.locator("textarea").first().fill("내일 3시에 치과");
-    await frame.getByRole("button", { name: "던지기", exact: true }).click();
+    await frame.getByRole("button", { name: "남기기", exact: true }).click();
     const promise = frame.getByTestId("inline-promise").last();
     const btn = promise.getByTestId("promise-primary");
     await btn.dblclick();
@@ -81,7 +81,7 @@ test.describe("NL beta guards", () => {
   test("calendar never opens automatically on capture", async ({ page }) => {
     const frame = phone(page);
     await frame.locator("textarea").first().fill("내일 3시에 치과");
-    await frame.getByRole("button", { name: "던지기", exact: true }).click();
+    await frame.getByRole("button", { name: "남기기", exact: true }).click();
     await frame.getByTestId("inline-promise").last().waitFor({ state: "visible" });
     await expect(page.getByRole("dialog")).toHaveCount(0);
   });
@@ -90,7 +90,7 @@ test.describe("NL beta guards", () => {
     const secret = "여권 번호 SECRET-999";
     const frame = phone(page);
     await frame.locator("textarea").first().fill(secret);
-    await frame.getByRole("button", { name: "던지기", exact: true }).click();
+    await frame.getByRole("button", { name: "남기기", exact: true }).click();
     await frame.getByTestId("inline-promise").last().waitFor({ state: "visible" });
     const events = await readAnalytics(page);
     const blob = JSON.stringify(events);
@@ -103,7 +103,7 @@ test.describe("NL beta guards", () => {
   test("debug panel hidden without nlDebug param", async ({ page }) => {
     const frame = phone(page);
     await frame.locator("textarea").first().fill("내일 3시에 치과");
-    await frame.getByRole("button", { name: "던지기", exact: true }).click();
+    await frame.getByRole("button", { name: "남기기", exact: true }).click();
     await frame.getByTestId("inline-promise").last().waitFor({ state: "visible" });
     await expect(frame.getByTestId("nl-debug-panel")).toHaveCount(0);
   });
@@ -114,7 +114,7 @@ test.describe("NL beta guards", () => {
     await page.reload();
     const frame = phone(page);
     await frame.locator("textarea").first().fill("내일 3시에 치과");
-    await frame.getByRole("button", { name: "던지기", exact: true }).click();
+    await frame.getByRole("button", { name: "남기기", exact: true }).click();
     await expect(frame.getByTestId("nl-debug-panel").last()).toBeVisible();
   });
 
