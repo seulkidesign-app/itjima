@@ -26,15 +26,16 @@ async function expectInsideViewport(page: Page, selector: string) {
 }
 
 async function expectPcUsesViewport(page: Page) {
-  const frame = page.locator(".itjima-responsive-frame");
-  const box = await frame.boundingBox();
+  const shell = page.locator(".itjima-desktop-shell");
+  const box = await shell.boundingBox();
   const viewport = page.viewportSize();
-  const chrome = await frame.evaluate((element) => {
+  const chrome = await shell.evaluate((element) => {
     const style = getComputedStyle(element);
     return {
       borderRadius: Number.parseFloat(style.borderTopLeftRadius) || 0,
       borderWidth: Number.parseFloat(style.borderTopWidth) || 0,
       boxShadow: style.boxShadow,
+      position: style.position,
     };
   });
 
@@ -42,11 +43,12 @@ async function expectPcUsesViewport(page: Page) {
   expect(viewport).toBeTruthy();
   expect(Math.abs(box!.x)).toBeLessThanOrEqual(2);
   expect(Math.abs(box!.y)).toBeLessThanOrEqual(2);
-  expect(box!.width).toBeGreaterThanOrEqual(viewport!.width - 2);
-  expect(box!.height).toBeGreaterThanOrEqual(viewport!.height - 2);
+  expect(Math.abs(box!.width - viewport!.width)).toBeLessThanOrEqual(2);
+  expect(Math.abs(box!.height - viewport!.height)).toBeLessThanOrEqual(2);
   expect(chrome.borderRadius).toBe(0);
   expect(chrome.borderWidth).toBe(0);
   expect(chrome.boxShadow).toBe("none");
+  expect(chrome.position).toBe("fixed");
 }
 
 async function expectNoHorizontalOverflow(page: Page) {
@@ -95,7 +97,11 @@ for (const viewport of viewports) {
     await page.goto("/?lang=en");
 
     await expect(page.locator("#capture-input")).toBeVisible();
-    await expectInsideViewport(page, ".itjima-responsive-frame");
+    if (viewport.width < 1024) {
+      await expectInsideViewport(page, ".itjima-responsive-frame");
+    } else {
+      await expectPcUsesViewport(page);
+    }
     await expectInsideViewport(page, "form.composer-hero");
     await expectNoHorizontalOverflow(page);
     await expectComfortableControls(page);
@@ -105,17 +111,19 @@ for (const viewport of viewports) {
       await expect(page.locator(".mobile-bottom-nav")).toBeVisible();
       await expect(page.locator(".tablet-app-nav")).toBeHidden();
       await expect(page.locator(".itjima-desktop-nav")).toBeHidden();
+      await expect(page.locator(".itjima-desktop-shell")).toHaveCount(0);
     } else if (viewport.width < 1024) {
       await expect(page.locator(".mobile-app-header")).toBeHidden();
       await expect(page.locator(".mobile-bottom-nav")).toBeHidden();
       await expect(page.locator(".tablet-app-nav")).toBeVisible();
       await expect(page.locator(".itjima-desktop-nav")).toBeHidden();
+      await expect(page.locator(".itjima-desktop-shell")).toHaveCount(0);
     } else {
-      await expect(page.locator(".mobile-app-header")).toBeHidden();
-      await expect(page.locator(".mobile-bottom-nav")).toBeHidden();
-      await expect(page.locator(".tablet-app-nav")).toBeHidden();
+      await expect(page.locator(".mobile-app-header")).toHaveCount(0);
+      await expect(page.locator(".mobile-bottom-nav")).toHaveCount(0);
+      await expect(page.locator(".tablet-app-nav")).toHaveCount(0);
       await expect(page.locator(".itjima-desktop-nav")).toBeVisible();
-      await expectPcUsesViewport(page);
+      await expect(page.locator(".itjima-responsive-frame")).toHaveCount(0);
     }
 
     const settings = page.locator('[data-testid="open-settings"]:visible');
