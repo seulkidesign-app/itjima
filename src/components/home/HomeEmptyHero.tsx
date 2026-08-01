@@ -4,11 +4,12 @@ import {
   MessageSquareText,
   ShieldCheck,
 } from "lucide-react";
-import { useT } from "@/lib/i18n";
+import { useLang, useT } from "@/lib/i18n";
 
 /** Compact first-run cue that demonstrates the product before the first input. */
 export function HomeEmptyHero() {
   const t = useT();
+  const { lang } = useLang();
 
   return (
     <section
@@ -16,7 +17,9 @@ export function HomeEmptyHero() {
       data-testid="home-empty-hero"
       aria-labelledby="home-empty-title"
     >
-      <p className="font-display text-[11px] uppercase tracking-[0.17em] text-ink/38">
+      <p
+        className={`${lang === "en" ? "font-display" : "font-sans"} text-[11px] font-bold uppercase tracking-[0.17em] text-ink/38`}
+      >
         {t("말하듯 남기는 일정", "Natural-language scheduling")}
       </p>
       <h1
