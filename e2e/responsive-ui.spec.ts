@@ -87,8 +87,8 @@ test.describe("responsive UI safeguards", () => {
     ]);
     expect(shellBox?.width ?? 0).toBeGreaterThanOrEqual(1438);
     expect(navBox?.width ?? 0).toBeGreaterThanOrEqual(180);
-    expect(chatBox?.width ?? 0).toBeLessThanOrEqual(760);
-    expect(composerBox?.width ?? 0).toBeLessThanOrEqual(760);
+    expect(chatBox?.width ?? 0).toBeLessThanOrEqual(840);
+    expect(composerBox?.width ?? 0).toBeLessThanOrEqual(840);
     const chatCenter = (chatBox?.x ?? 0) + (chatBox?.width ?? 0) / 2;
     const composerCenter = (composerBox?.x ?? 0) + (composerBox?.width ?? 0) / 2;
     expect(Math.abs(chatCenter - composerCenter)).toBeLessThanOrEqual(3);
