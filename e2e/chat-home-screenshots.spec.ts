@@ -20,7 +20,9 @@ test.describe("Chat home mobile screenshots", () => {
       sessionStorage.clear();
     });
     await page.reload();
-    await phone(page).getByRole("link", { name: /^던지기/ }).waitFor();
+    await phone(page)
+      .getByRole("link", { name: /^(남기기|던지기)/ })
+      .waitFor();
 
     await phone(page).screenshot({
       path: join(OUT_DIR, "01-empty-chat.png"),
@@ -29,7 +31,9 @@ test.describe("Chat home mobile screenshots", () => {
     const submit = async (text: string) => {
       const frame = phone(page);
       await frame.locator("textarea").first().fill(text);
-      await frame.getByRole("button", { name: "던지기", exact: true }).click();
+      await frame
+        .getByRole("button", { name: /^(남기기|던지기)$/, exact: false })
+        .click();
       await frame.getByTestId("chat-turn").last().waitFor({
         state: "visible",
       });

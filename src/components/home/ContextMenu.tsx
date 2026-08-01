@@ -6,6 +6,7 @@ import {
   Sparkles,
   ListOrdered,
 } from "lucide-react";
+import { useEffect, useRef } from "react";
 import { FEATURES } from "@/lib/features";
 import { useT } from "@/lib/i18n";
 import type { InboxItem } from "@/lib/store";
@@ -26,18 +27,23 @@ function MenuItem({
   label,
   onClick,
   danger,
+  buttonRef,
 }: {
   icon: React.ReactNode;
   label: string;
   onClick: () => void;
   danger?: boolean;
+  buttonRef?: React.Ref<HTMLButtonElement>;
 }) {
   return (
     <button
+      ref={buttonRef}
+      type="button"
+      role="menuitem"
       onClick={onClick}
-      className={`flex w-full items-center gap-3 rounded-full px-4 py-3 text-[15px] font-medium min-h-11 ${
+      className={`flex min-h-11 w-full items-center gap-3 rounded-full px-4 py-3 text-[15px] font-medium ${
         danger ? "text-meta" : "text-ink"
-      } hover:bg-white/60`}
+      } hover:bg-white/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary`}
     >
       {icon}
       {label}
@@ -56,23 +62,70 @@ export function ContextMenu({
   onMoveToDelete,
 }: Props) {
   const t = useT();
+  const panelRef = useRef<HTMLDivElement | null>(null);
+  const firstItemRef = useRef<HTMLButtonElement | null>(null);
+
+  useEffect(() => {
+    const previous =
+      document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    const frame = window.requestAnimationFrame(() => {
+      firstItemRef.current?.focus({ preventScroll: true });
+    });
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        event.preventDefault();
+        onClose();
+        return;
+      }
+      if (event.key !== "ArrowDown" && event.key !== "ArrowUp") return;
+      const buttons = Array.from(
+        panelRef.current?.querySelectorAll<HTMLButtonElement>(
+          '[role="menuitem"]:not([disabled])',
+        ) ?? [],
+      );
+      if (!buttons.length) return;
+      event.preventDefault();
+      const current = buttons.indexOf(document.activeElement as HTMLButtonElement);
+      const delta = event.key === "ArrowDown" ? 1 : -1;
+      const next = current < 0 ? 0 : (current + delta + buttons.length) % buttons.length;
+      buttons[next].focus();
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => {
+      window.cancelAnimationFrame(frame);
+      window.removeEventListener("keydown", onKeyDown);
+      window.requestAnimationFrame(() => {
+        if (previous?.isConnected) previous.focus({ preventScroll: true });
+      });
+    };
+  }, [onClose]);
+
+  let assignedFirst = false;
+  const firstRef = () => {
+    if (assignedFirst) return undefined;
+    assignedFirst = true;
+    return firstItemRef;
+  };
 
   return (
-    <div
-      className="fixed inset-0 z-50 flex flex-col"
-      role="dialog"
-      aria-modal="true"
-      data-testid="inbox-context-menu"
-      onClick={onClose}
-    >
-      <div className="flex-1 bg-ink/30 backdrop-blur-sm animate-fade-in" />
+    <div className="fixed inset-0 z-[90] flex flex-col" role="presentation">
+      <button
+        type="button"
+        aria-label={t("메뉴 닫기", "Close menu")}
+        className="absolute inset-0 bg-ink/30 backdrop-blur-sm animate-fade-in"
+        onClick={onClose}
+      />
       <div
-        className="glass-strong animate-slide-up mx-5 mb-[100px] rounded-[24px] p-2 shadow-float"
-        onClick={(e) => e.stopPropagation()}
+        ref={panelRef}
+        role="menu"
+        aria-label={t("기록 작업", "Capture actions")}
+        data-testid="inbox-context-menu"
+        className="glass-strong relative mt-auto animate-slide-up mx-5 mb-[100px] rounded-[24px] p-2 shadow-float"
       >
         {FEATURES.CLEANUP && (
           <MenuItem
-            icon={<Wind size={18} />}
+            buttonRef={firstRef()}
+            icon={<Wind size={18} aria-hidden />}
             label={t("가볍게 비우기", "Lighten up")}
             onClick={() => {
               onClose();
@@ -81,7 +134,8 @@ export function ContextMenu({
           />
         )}
         <MenuItem
-          icon={<ListOrdered size={18} />}
+          buttonRef={firstRef()}
+          icon={<ListOrdered size={18} aria-hidden />}
           label={t("하나씩 정리하기", "Sort one by one")}
           onClick={() => {
             onClose();
@@ -90,7 +144,7 @@ export function ContextMenu({
         />
         {FEATURES.BRAIN_MIRROR && (
           <MenuItem
-            icon={<Sparkles size={18} />}
+            icon={<Sparkles size={18} aria-hidden />}
             label={t("다시 살펴보기", "Look again")}
             onClick={() => {
               const target = menuItem;
@@ -100,7 +154,7 @@ export function ContextMenu({
           />
         )}
         <MenuItem
-          icon={<Calendar size={18} />}
+          icon={<Calendar size={18} aria-hidden />}
           label={t("그때로 보내기", "Bring it back then")}
           onClick={() => {
             onClose();
@@ -108,7 +162,7 @@ export function ContextMenu({
           }}
         />
         <MenuItem
-          icon={<ArchiveIcon size={18} />}
+          icon={<ArchiveIcon size={18} aria-hidden />}
           label={t("보관함에 맡기기", "Save to vault")}
           onClick={() => {
             onClose();
@@ -116,7 +170,7 @@ export function ContextMenu({
           }}
         />
         <MenuItem
-          icon={<Trash2 size={18} />}
+          icon={<Trash2 size={18} aria-hidden />}
           label={t("삭제하기", "Delete")}
           danger
           onClick={() => {

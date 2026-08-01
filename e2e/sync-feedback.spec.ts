@@ -8,7 +8,6 @@ import {
   injectSignedInUser,
   blockCloudMutations,
   TEST_USER_ID,
-  contextMenuDialog,
   clickContextMenuItem,
 } from "./helpers";
 
@@ -59,7 +58,7 @@ test.describe("sync feedback", () => {
 
     await phone(page)
       .getByRole("alert")
-      .getByText("Connection hiccup — your thoughts are safe")
+      .getByText(/Connection paused.*thoughts are still safe/i)
       .waitFor({ state: "visible" });
   });
 });

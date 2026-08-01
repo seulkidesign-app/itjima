@@ -801,7 +801,7 @@ function Schedule() {
       </div>
 
       {tab !== "cal" && (
-        <motion.button
+        <motion.button type="button"
           onClick={() => setSheet({ open: true })}
           whileTap={{ scale: 0.94 }}
           initial={{ scale: 0, opacity: 0 }}

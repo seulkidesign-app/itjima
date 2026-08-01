@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { languageFromBrowser } from "@/lib/i18n";
+import { languageFromBrowser, languageFromSearch } from "@/lib/i18n";
 import {
   formatReminderTime,
   reminderBody,
@@ -17,6 +17,12 @@ describe("US launch locale defaults", () => {
   it("keeps Korean browsers in Korean", () => {
     expect(languageFromBrowser(["ko-KR", "en-US"])).toBe("ko");
     expect(languageFromBrowser(["ko"])).toBe("ko");
+  });
+
+  it("honors explicit alternate-language URLs", () => {
+    expect(languageFromSearch("?lang=en")).toBe("en");
+    expect(languageFromSearch("?source=search&lang=ko")).toBe("ko");
+    expect(languageFromSearch("?lang=fr")).toBeNull();
   });
 });
 

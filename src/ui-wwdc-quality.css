@@ -1,0 +1,525 @@
+/*
+ * Itjima WWDC-quality finish
+ * Final cascade layer: hierarchy, adaptive materials, accessibility, and motion restraint.
+ */
+
+:root {
+  --ij-system-blue: #0a84ff;
+  --ij-system-green: #248a3d;
+  --ij-system-red: #ff3b30;
+  --ij-primary: #ffd43b;
+  --ij-primary-pressed: #efc42f;
+  --ij-canvas: #f5f5f7;
+  --ij-surface: #ffffff;
+  --ij-surface-elevated: rgba(255, 255, 255, 0.92);
+  --ij-surface-chrome: rgba(248, 248, 250, 0.82);
+  --ij-label: #111113;
+  --ij-secondary: rgba(60, 60, 67, 0.68);
+  --ij-tertiary: rgba(60, 60, 67, 0.42);
+  --ij-separator: rgba(60, 60, 67, 0.12);
+  --ij-separator-soft: rgba(60, 60, 67, 0.075);
+  --ij-fill: rgba(118, 118, 128, 0.12);
+  --ij-fill-strong: rgba(118, 118, 128, 0.18);
+  --ij-radius-s: 12px;
+  --ij-radius-m: 18px;
+  --ij-radius-l: 24px;
+  --ij-radius-xl: 30px;
+  --ij-spring: cubic-bezier(0.32, 0.72, 0, 1);
+  --ij-ease: cubic-bezier(0.22, 1, 0.36, 1);
+  --ij-shadow-card:
+    0 1px 1px rgba(0, 0, 0, 0.025),
+    0 10px 30px -22px rgba(0, 0, 0, 0.28);
+  --ij-shadow-float:
+    0 2px 8px rgba(0, 0, 0, 0.06),
+    0 24px 68px -30px rgba(0, 0, 0, 0.34);
+}
+
+html {
+  color-scheme: light;
+  font-family:
+    -apple-system,
+    BlinkMacSystemFont,
+    "SF Pro Text",
+    "SF Pro Display",
+    "Pretendard",
+    "Segoe UI",
+    sans-serif;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+body {
+  min-width: 320px;
+  background: var(--ij-canvas);
+  color: var(--ij-label);
+}
+
+::selection {
+  background: rgba(255, 212, 59, 0.58);
+  color: #111113;
+}
+
+/* Clear, consistent focus without changing layout. */
+:is(button, a, input, textarea, select, summary, [role="button"], [tabindex]):focus-visible {
+  outline: 3px solid color-mix(in srgb, var(--ij-system-blue) 72%, white 28%) !important;
+  outline-offset: 3px !important;
+  box-shadow: none !important;
+}
+
+/* Comfortable interaction target across touch and pointer devices. */
+.phone-frame :is(button, a, summary, [role="button"]) {
+  min-width: 44px;
+  min-height: 44px;
+}
+
+.phone-frame :is(input, textarea, select) {
+  font-size: max(16px, 1rem);
+}
+
+/* App frame behaves like a native adaptive surface on large screens. */
+@media (min-width: 900px) {
+  body {
+    background:
+      radial-gradient(circle at 18% 0%, rgba(255, 212, 59, 0.14), transparent 34rem),
+      radial-gradient(circle at 88% 100%, rgba(10, 132, 255, 0.08), transparent 34rem),
+      var(--ij-canvas);
+  }
+
+  .phone-frame {
+    margin-block: 22px;
+    min-height: calc(100dvh - 44px) !important;
+    max-height: calc(100dvh - 44px);
+    overflow: hidden;
+    border: 1px solid rgba(60, 60, 67, 0.1);
+    border-radius: 32px;
+    background: var(--ij-surface);
+    box-shadow: var(--ij-shadow-float);
+  }
+}
+
+/* Hierarchy: navigation is calm; active destination is unmistakable. */
+.phone-frame .app-top-nav {
+  border-bottom: 1px solid var(--ij-separator-soft) !important;
+  background: var(--ij-surface-chrome) !important;
+  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.52) inset !important;
+  backdrop-filter: blur(28px) saturate(175%) !important;
+  -webkit-backdrop-filter: blur(28px) saturate(175%) !important;
+}
+
+.phone-frame .app-brand-trigger {
+  letter-spacing: 0.045em;
+}
+
+.phone-frame .app-primary-tabs {
+  gap: 4px;
+  padding-bottom: 4px;
+}
+
+.phone-frame .app-primary-tab {
+  min-height: 44px;
+  border-radius: 13px;
+  color: var(--ij-secondary);
+}
+
+.phone-frame .app-primary-tab:hover {
+  background: rgba(118, 118, 128, 0.07);
+  color: var(--ij-label);
+}
+
+.phone-frame .app-primary-tab[aria-current="page"] {
+  background: rgba(255, 255, 255, 0.68);
+  color: var(--ij-label);
+}
+
+.phone-frame .app-primary-tab[aria-current="page"] > span[aria-hidden] {
+  height: 3px;
+  background: var(--ij-label);
+}
+
+/* Empty state: product education that still feels quiet. */
+.itjima-empty-hero {
+  position: relative;
+  isolation: isolate;
+}
+
+.itjima-empty-hero::before {
+  position: absolute;
+  z-index: -1;
+  top: 8%;
+  width: min(72vw, 330px);
+  aspect-ratio: 1;
+  border-radius: 999px;
+  background: radial-gradient(circle, rgba(255, 212, 59, 0.22), transparent 68%);
+  filter: blur(5px);
+  content: "";
+  pointer-events: none;
+}
+
+.itjima-empty-orb {
+  display: grid;
+  width: 78px;
+  height: 78px;
+  place-items: center;
+  border: 1px solid rgba(255, 255, 255, 0.75);
+  border-radius: 25px;
+  background:
+    linear-gradient(145deg, rgba(255, 255, 255, 0.94), rgba(255, 248, 210, 0.86));
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.95),
+    0 22px 50px -25px rgba(137, 104, 0, 0.36);
+  transform: rotate(-4deg);
+}
+
+.itjima-empty-orb-core {
+  display: grid;
+  width: 50px;
+  height: 50px;
+  place-items: center;
+  border-radius: 17px;
+  background: var(--ij-primary);
+  color: var(--ij-label);
+  transform: rotate(4deg);
+}
+
+.itjima-empty-proof {
+  display: flex;
+  min-height: 62px;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px;
+  border: 1px solid var(--ij-separator-soft);
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.78);
+  box-shadow: var(--ij-shadow-card);
+  backdrop-filter: blur(18px) saturate(150%);
+  -webkit-backdrop-filter: blur(18px) saturate(150%);
+}
+
+.itjima-empty-proof-icon {
+  display: grid;
+  width: 36px;
+  height: 36px;
+  flex: 0 0 auto;
+  place-items: center;
+  border-radius: 12px;
+  background: var(--ij-fill);
+  color: var(--ij-label);
+}
+
+.itjima-empty-proof > span:nth-child(2) {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.itjima-empty-proof strong {
+  font-size: 13px;
+  font-weight: 760;
+  letter-spacing: -0.018em;
+}
+
+.itjima-empty-proof small {
+  color: var(--ij-secondary);
+  font-size: 11px;
+  line-height: 1.35;
+}
+
+/* Composer: one strong action, quiet secondary controls. */
+.phone-frame .composer-hero.sticky {
+  border-top: 1px solid var(--ij-separator-soft) !important;
+  background: rgba(248, 248, 250, 0.86) !important;
+  box-shadow: 0 -18px 42px -36px rgba(0, 0, 0, 0.32) !important;
+  backdrop-filter: blur(28px) saturate(170%) !important;
+  -webkit-backdrop-filter: blur(28px) saturate(170%) !important;
+}
+
+.phone-frame form.composer-hero {
+  margin-inline: 10px;
+  overflow: hidden;
+  border: 1px solid var(--ij-separator) !important;
+  border-radius: 22px !important;
+  background: rgba(255, 255, 255, 0.94) !important;
+  box-shadow: var(--ij-shadow-card) !important;
+}
+
+.phone-frame form.composer-hero .input-shell {
+  border: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+}
+
+.phone-frame form.composer-hero textarea#capture-input {
+  min-height: 30px;
+  color: var(--ij-label);
+  caret-color: var(--ij-system-blue);
+  font-size: 16px !important;
+  letter-spacing: -0.012em;
+}
+
+.phone-frame form.composer-hero textarea#capture-input::placeholder {
+  color: var(--ij-tertiary);
+}
+
+.phone-frame form.composer-hero > div:last-of-type {
+  min-height: 50px;
+  border-top: 1px solid var(--ij-separator-soft);
+}
+
+.phone-frame form.composer-hero > div:last-of-type > button:not(:last-child) {
+  width: 42px;
+  min-width: 42px;
+  height: 42px;
+  min-height: 42px;
+  color: var(--ij-secondary);
+}
+
+.phone-frame form.composer-hero > div:last-of-type > button:not(:last-child):hover {
+  background: var(--ij-fill);
+  color: var(--ij-label);
+}
+
+.phone-frame form.composer-hero > div:last-of-type > button:last-child {
+  min-width: 92px;
+  min-height: 42px;
+  height: 42px;
+  border: 1px solid rgba(190, 150, 0, 0.14);
+  background: var(--ij-primary) !important;
+  color: var(--ij-label) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.52),
+    0 8px 18px -12px rgba(125, 92, 0, 0.42) !important;
+  font-weight: 750;
+}
+
+.phone-frame form.composer-hero > div:last-of-type > button:last-child:active {
+  background: var(--ij-primary-pressed) !important;
+  transform: scale(0.97);
+}
+
+.phone-frame form.composer-hero > div:last-of-type > button:last-child:disabled {
+  border-color: transparent;
+  background: var(--ij-fill) !important;
+  color: var(--ij-tertiary) !important;
+  box-shadow: none !important;
+  opacity: 1;
+}
+
+/* Cards use material sparingly and preserve clear grouping. */
+.phone-frame :is(
+  .thought-card,
+  .brain-mirror-card,
+  .itjima-reply-bubble,
+  .focus-sort-card,
+  .itjima-card,
+  .itjima-settings-group
+) {
+  border-color: var(--ij-separator-soft) !important;
+  box-shadow: var(--ij-shadow-card) !important;
+}
+
+.phone-frame .chat-bubble {
+  border-color: rgba(190, 150, 0, 0.15) !important;
+  background: linear-gradient(155deg, #fffbe8, #fff3b9) !important;
+  box-shadow: var(--ij-shadow-card) !important;
+}
+
+/* Sheets: strong hierarchy, safe area, and comfortable grab target. */
+.bottom-sheet-backdrop {
+  background: rgba(0, 0, 0, 0.28) !important;
+  backdrop-filter: blur(7px) saturate(120%) !important;
+  -webkit-backdrop-filter: blur(7px) saturate(120%) !important;
+}
+
+.bottom-sheet-panel {
+  border: 1px solid rgba(255, 255, 255, 0.58) !important;
+  border-radius: 30px 30px 0 0 !important;
+  background: rgba(250, 250, 252, 0.96) !important;
+  box-shadow: 0 -16px 70px -22px rgba(0, 0, 0, 0.36) !important;
+  backdrop-filter: blur(30px) saturate(175%) !important;
+  -webkit-backdrop-filter: blur(30px) saturate(175%) !important;
+}
+
+@media (min-width: 640px) {
+  .bottom-sheet-panel {
+    border-radius: 30px !important;
+  }
+}
+
+/* Large text: allow content to reflow rather than clip. */
+@media (min-resolution: 1dppx) {
+  .phone-frame :is(.app-primary-tab, .filter-chip, .segment-nav-item) {
+    white-space: normal;
+    text-align: center;
+    line-height: 1.2;
+  }
+}
+
+@media (max-width: 360px) {
+  .phone-frame .app-account-button span {
+    display: none;
+  }
+
+  .itjima-empty-proof small {
+    font-size: 10.5px;
+  }
+}
+
+/* Reduce transparency: opaque materials retain hierarchy. */
+@media (prefers-reduced-transparency: reduce) {
+  .phone-frame .app-top-nav,
+  .phone-frame .composer-hero.sticky,
+  .bottom-sheet-panel,
+  .itjima-empty-proof,
+  .itjima-glass,
+  .itjima-glass-panel,
+  .itjima-glass-chrome {
+    background: var(--ij-surface) !important;
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+  }
+
+  .bottom-sheet-backdrop {
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+  }
+}
+
+/* Reduce motion: preserve state changes without spatial movement. */
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto !important;
+  }
+
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
+  }
+
+  .itjima-empty-orb,
+  .itjima-empty-orb-core,
+  .phone-frame button:active,
+  .phone-frame [role="button"]:active {
+    transform: none !important;
+  }
+}
+
+/* High-contrast and forced-color modes remain fully operable. */
+@media (prefers-contrast: more) {
+  :root {
+    --ij-secondary: rgba(20, 20, 24, 0.82);
+    --ij-tertiary: rgba(20, 20, 24, 0.65);
+    --ij-separator: rgba(20, 20, 24, 0.28);
+    --ij-separator-soft: rgba(20, 20, 24, 0.2);
+  }
+
+  .phone-frame :is(.thought-card, .brain-mirror-card, .itjima-reply-bubble, .itjima-card),
+  .itjima-empty-proof,
+  .bottom-sheet-panel {
+    border-width: 1.5px !important;
+  }
+}
+
+@media (forced-colors: active) {
+  :root {
+    --ij-primary: Highlight;
+    --ij-label: CanvasText;
+    --ij-surface: Canvas;
+    --ij-canvas: Canvas;
+  }
+
+  .phone-frame *,
+  .bottom-sheet-panel * {
+    box-shadow: none !important;
+  }
+
+  .itjima-empty-orb,
+  .itjima-empty-orb-core,
+  .itjima-empty-proof,
+  .phone-frame form.composer-hero,
+  .bottom-sheet-panel {
+    border: 1px solid CanvasText !important;
+  }
+}
+
+/* Dark mode follows the system, preserving the yellow action color. */
+@media (prefers-color-scheme: dark) {
+  :root {
+    --ij-canvas: #000000;
+    --ij-surface: #1c1c1e;
+    --ij-surface-elevated: rgba(36, 36, 39, 0.94);
+    --ij-surface-chrome: rgba(28, 28, 30, 0.84);
+    --ij-label: #f5f5f7;
+    --ij-secondary: rgba(235, 235, 245, 0.67);
+    --ij-tertiary: rgba(235, 235, 245, 0.38);
+    --ij-separator: rgba(84, 84, 88, 0.65);
+    --ij-separator-soft: rgba(84, 84, 88, 0.42);
+    --ij-fill: rgba(118, 118, 128, 0.24);
+    --ij-fill-strong: rgba(118, 118, 128, 0.32);
+    --ij-shadow-card: 0 1px 0 rgba(255, 255, 255, 0.03) inset;
+    --ij-shadow-float: 0 28px 80px -30px rgba(0, 0, 0, 0.9);
+  }
+
+  html {
+    color-scheme: dark;
+    background: var(--ij-canvas);
+  }
+
+  body,
+  .phone-frame,
+  .phone-frame .page-shell {
+    background: var(--ij-canvas) !important;
+    color: var(--ij-label);
+  }
+
+  .phone-frame .app-top-nav,
+  .phone-frame .composer-hero.sticky {
+    background: var(--ij-surface-chrome) !important;
+    box-shadow: none !important;
+  }
+
+  .phone-frame .app-primary-tab[aria-current="page"] {
+    background: rgba(118, 118, 128, 0.2);
+  }
+
+  .phone-frame form.composer-hero,
+  .phone-frame .input-shell,
+  .phone-frame :is(
+    .thought-card,
+    .brain-mirror-card,
+    .itjima-reply-bubble,
+    .focus-sort-card,
+    .itjima-card,
+    .itjima-settings-group
+  ),
+  .itjima-empty-proof {
+    background: var(--ij-surface-elevated) !important;
+    color: var(--ij-label);
+  }
+
+  .phone-frame .chat-bubble {
+    border-color: rgba(255, 212, 59, 0.24) !important;
+    background: linear-gradient(155deg, #4d4318, #3c3518) !important;
+    color: #fffbea !important;
+  }
+
+  .itjima-empty-orb {
+    border-color: rgba(255, 255, 255, 0.08);
+    background: linear-gradient(145deg, #2c2c2e, #322d18);
+  }
+
+  .bottom-sheet-panel {
+    border-color: rgba(255, 255, 255, 0.08) !important;
+    background: rgba(28, 28, 30, 0.97) !important;
+  }
+
+  .bottom-sheet-backdrop {
+    background: rgba(0, 0, 0, 0.62) !important;
+  }
+}

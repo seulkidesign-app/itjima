@@ -1,8 +1,8 @@
 import { useState } from "react";
 import { MessageSquarePlus } from "lucide-react";
 import { useT } from "@/lib/i18n";
-import { useScrollLock } from "@/hooks/useScrollLock";
 import { FeedbackSheet } from "./FeedbackSheet";
+import { BottomSheet } from "./BottomSheet";
 
 export function AboutSheet({
   open,
@@ -13,8 +13,6 @@ export function AboutSheet({
 }) {
   const t = useT();
   const [feedbackOpen, setFeedbackOpen] = useState(false);
-  useScrollLock(open || feedbackOpen);
-  if (!open && !feedbackOpen) return null;
 
   const closeFeedback = () => {
     setFeedbackOpen(false);
@@ -23,64 +21,50 @@ export function AboutSheet({
 
   return (
     <>
-      {open && !feedbackOpen && (
-      <div className="fixed inset-0 z-50 flex flex-col" onClick={onClose}>
-        <div className="flex-1 bg-ink/30 backdrop-blur-sm animate-fade-in" />
-        <div
-          role="dialog"
-          aria-modal="true"
-          aria-labelledby="about-sheet-title"
-          className="glass-strong animate-slide-up rounded-t-[28px] px-6 pb-[calc(env(safe-area-inset-bottom)+1.5rem)] pt-3"
-          onClick={(e) => e.stopPropagation()}
-        >
-          <div className="mx-auto mb-4 h-1.5 w-10 rounded-full bg-ink/15" />
-          <div id="about-sheet-title" className="text-[22px] font-semibold tracking-[-0.02em] text-ink">
-            {t("Itjima (잊지마)", "Itjima (잊지마)")}
-          </div>
-          <div className="text-sm text-ink-soft">
-            {t("기억 인박스 · 정리 전, 기억부터", "Memory inbox · Remember before you organize")}
-          </div>
-          <p className="mt-4 text-[14px] leading-[1.6] text-ink/90">
+      <BottomSheet
+        open={open && !feedbackOpen}
+        onClose={onClose}
+        maxHeight="76dvh"
+        title={t("Itjima 제품 정보", "About Itjima")}
+      >
+        <div className="sheet-scroll min-h-0 flex-1 overflow-y-auto px-6 pb-7 pt-1">
+          <p className="text-[11px] font-black uppercase tracking-[0.14em] text-ink/38">
+            {t("자연어 일정 캡처", "Natural-language scheduling")}
+          </p>
+          <h2 className="mt-2 text-[24px] font-black tracking-[-0.035em] text-ink">
+            Itjima <span className="text-ink-soft">잊지마</span>
+          </h2>
+          <p className="mt-3 text-[14px] leading-[1.65] text-ink/78">
             {t(
-              "캘린더도 할 일 목록도 아닙니다. 머릿속에 떠오른 걸 여기에 남겨두세요. 오른쪽으로 밀면 그때, 왼쪽으로 밀면 기억함에.",
-              "Not a calendar, not a to-do list. Leave what floats through your mind here — swipe right for when, swipe left to keep it safe.",
+              "말하듯 일정과 할 일을 남기면 확실한 정보는 채우고, 애매한 날짜와 시간만 확인해요.",
+              "Say a plan or task naturally. Itjima fills what is clear and asks only about ambiguous dates and times.",
             )}
           </p>
-          <div className="mt-5 space-y-2.5 text-[13px] leading-relaxed text-ink-soft">
-            <div>
-              {t("→ 오른쪽: 그때를 기억하기", "→ Swipe right: remember for then")}
-            </div>
-            <div>
-              {t("← 왼쪽: 기억함에 저장", "← Swipe left: Kept")}
-            </div>
-            <div>
-              {t(
-                "길게 누르면 더 많은 선택",
-                "Long-press for more options",
-              )}
-            </div>
+
+          <div className="mt-5 space-y-2.5 rounded-[18px] bg-ink/[0.035] p-4 text-[13px] leading-relaxed text-ink-soft">
+            <p>{t("• 확실한 일정은 한 번에 추가", "• Add clear schedules in one tap")}</p>
+            <p>{t("• 오전·오후와 주말 날짜는 확인", "• Confirm AM/PM and weekend day")}</p>
+            <p>{t("• 설정에서 데이터 내려받기·삭제", "• Export or delete data from Settings")}</p>
           </div>
 
           <button
+            type="button"
             onClick={() => setFeedbackOpen(true)}
-            className="mt-5 flex w-full items-center justify-center gap-2 rounded-full bg-white/60 py-3 text-sm font-semibold text-ink hover:bg-white/80 touch-press"
+            className="mt-5 flex min-h-12 w-full items-center justify-center gap-2 rounded-full border border-ink/10 bg-white px-4 text-sm font-semibold text-ink shadow-card touch-press"
           >
-            <MessageSquarePlus size={16} />
+            <MessageSquarePlus size={16} aria-hidden />
             {t("피드백 보내기", "Send feedback")}
           </button>
           <button
+            type="button"
             onClick={onClose}
-            className="mt-2 w-full rounded-full bg-primary py-3 text-sm font-bold text-ink touch-press"
+            className="mt-2 flex min-h-12 w-full items-center justify-center rounded-full bg-primary px-4 text-sm font-bold text-ink touch-press"
           >
-            {t("알겠어요", "Got it")}
+            {t("완료", "Done")}
           </button>
         </div>
-      </div>
-      )}
-      <FeedbackSheet
-        open={feedbackOpen}
-        onClose={closeFeedback}
-      />
+      </BottomSheet>
+      <FeedbackSheet open={feedbackOpen} onClose={closeFeedback} />
     </>
   );
 }

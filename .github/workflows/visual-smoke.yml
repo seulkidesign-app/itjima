@@ -1,0 +1,146 @@
+name: Visual smoke
+
+on:
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  screenshots:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      VITE_E2E: "true"
+      VITE_SUPABASE_URL: "http://127.0.0.1:54321"
+      VITE_SUPABASE_PUBLISHABLE_KEY: "e2e-placeholder"
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Clean install
+        run: npm ci
+
+      - name: Install Playwright Chromium
+        run: npx playwright install chromium
+
+      - name: Build production bundle
+        run: npm run build
+
+      - name: Start preview server
+        run: |
+          mkdir -p visual-artifacts
+          npm run preview -- --host 127.0.0.1 > /tmp/itjima-preview.log 2>&1 &
+          echo $! > /tmp/itjima-preview.pid
+          for attempt in {1..30}; do
+            if curl --fail --silent http://127.0.0.1:4173/ > /dev/null; then
+              exit 0
+            fi
+            sleep 1
+          done
+          cat /tmp/itjima-preview.log
+          exit 1
+
+      - name: Capture mobile tablet and desktop screens
+        run: |
+          node --input-type=module <<'NODE'
+          import { chromium } from "@playwright/test";
+          import { mkdir } from "node:fs/promises";
+
+          const baseUrl = "http://127.0.0.1:4173";
+          const captures = [
+            [320, 568, "home-mobile-small-en.png", "/?lang=en"],
+            [390, 844, "home-mobile-en.png", "/?lang=en"],
+            [390, 844, "home-mobile-ko.png", "/?lang=ko"],
+            [390, 844, "about-mobile-en.png", "/about?lang=en"],
+            [768, 1024, "home-tablet-en.png", "/?lang=en"],
+            [834, 1112, "home-tablet-ko.png", "/?lang=ko"],
+            [768, 1024, "schedule-tablet-en.png", "/schedule?lang=en"],
+            [834, 1112, "about-tablet-en.png", "/about?lang=en"],
+            [1440, 1000, "home-desktop-en.png", "/?lang=en"],
+            [1440, 1000, "schedule-desktop-en.png", "/schedule?lang=en"],
+            [1440, 1000, "archive-desktop-ko.png", "/archive?lang=ko"],
+            [1440, 1000, "about-desktop-en.png", "/about?lang=en"],
+            [1440, 1000, "about-desktop-ko.png", "/about?lang=ko"],
+          ];
+
+          await mkdir("visual-artifacts", { recursive: true });
+          const browser = await chromium.launch({ headless: true });
+
+          try {
+            for (const [width, height, output, route] of captures) {
+              const context = await browser.newContext({
+                viewport: { width, height },
+                deviceScaleFactor: 1,
+                reducedMotion: "reduce",
+              });
+              const page = await context.newPage();
+
+              await page.goto(`${baseUrl}${route}`, {
+                waitUntil: "domcontentloaded",
+                timeout: 20_000,
+              });
+              await page.locator("body").waitFor({ state: "visible", timeout: 10_000 });
+              await page.waitForTimeout(700);
+              await page.screenshot({
+                path: `visual-artifacts/${output}`,
+                animations: "disabled",
+                fullPage: false,
+              });
+
+              console.log(`captured ${output} at ${width}x${height}`);
+              await context.close();
+            }
+          } finally {
+            await browser.close();
+          }
+          NODE
+
+      - name: Verify screenshot files and dimensions
+        run: |
+          verify_png() {
+            local file_name="$1"
+            local width="$2"
+            local height="$3"
+            local path="visual-artifacts/${file_name}"
+            test -s "$path"
+            file "$path" | grep -Eq "PNG image data, ${width} x ${height}(,| )"
+          }
+
+          verify_png home-mobile-small-en.png 320 568
+          verify_png home-mobile-en.png 390 844
+          verify_png home-mobile-ko.png 390 844
+          verify_png about-mobile-en.png 390 844
+          verify_png home-tablet-en.png 768 1024
+          verify_png home-tablet-ko.png 834 1112
+          verify_png schedule-tablet-en.png 768 1024
+          verify_png about-tablet-en.png 834 1112
+          verify_png home-desktop-en.png 1440 1000
+          verify_png schedule-desktop-en.png 1440 1000
+          verify_png archive-desktop-ko.png 1440 1000
+          verify_png about-desktop-en.png 1440 1000
+          verify_png about-desktop-ko.png 1440 1000
+
+      - name: Upload screenshots
+        uses: actions/upload-artifact@v4
+        with:
+          name: visual-smoke-${{ github.event.pull_request.number || github.run_number }}
+          path: visual-artifacts/*.png
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: Stop preview server
+        if: always()
+        run: |
+          if [ -f /tmp/itjima-preview.pid ]; then
+            kill "$(cat /tmp/itjima-preview.pid)" || true
+          fi

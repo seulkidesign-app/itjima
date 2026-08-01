@@ -4,6 +4,7 @@ import {
   phone,
   readGuestList,
   openContextMenu,
+  contextMenuDialog,
   completeScheduleDialog,
   gotoScheduleUpcoming,
   GUEST_INBOX_KEY,
@@ -14,22 +15,21 @@ import {
 async function submitThought(page: Page, text: string) {
   const frame = phone(page);
   await frame.locator("textarea").first().fill(text);
-  await frame.getByRole("button", { name: "Drop it", exact: true }).click();
+  await frame.getByRole("button", { name: "Capture", exact: true }).click();
   await frame.getByText(text, { exact: true }).first().waitFor({ state: "visible" });
 }
 
-test.describe("Product reset IA", () => {
+test.describe("Current product information architecture", () => {
   test.beforeEach(async ({ page }) => {
     await resetAppState(page);
   });
 
-  test("throw → context menu → vault shows original text", async ({ page }) => {
+  test("Capture to context menu to Archive preserves the original text", async ({ page }) => {
     await submitThought(page, "Travel");
     await expect(phone(page).getByTestId("inline-promise")).toHaveCount(0);
     await openContextMenu(page, "Travel");
-    await phone(page)
-      .getByRole("dialog")
-      .getByRole("button", { name: "Save to vault", exact: true })
+    await contextMenuDialog(page)
+      .getByRole("menuitem", { name: "Save to vault", exact: true })
       .click();
 
     await phone(page).getByRole("link", { name: /^Archive/ }).click();
@@ -37,47 +37,32 @@ test.describe("Product reset IA", () => {
       phone(page).getByRole("heading", { name: "Archive", exact: true }),
     ).toBeVisible();
     await expect(phone(page).getByText("Travel").first()).toBeVisible();
-
-    const inbox = await readGuestList(page, GUEST_INBOX_KEY);
-    expect(inbox.length).toBe(0);
-    const archive = await readGuestList(page, GUEST_ARCHIVE_KEY);
-    expect(archive.length).toBe(1);
+    expect((await readGuestList(page, GUEST_INBOX_KEY)).length).toBe(0);
+    expect((await readGuestList(page, GUEST_ARCHIVE_KEY)).length).toBe(1);
   });
 
-  test("context menu schedule keeps inbox until confirmed, then shows on Today", async ({
-    page,
-  }) => {
+  test("context menu scheduling keeps Capture until confirmation", async ({ page }) => {
     await submitThought(page, "Dentist tomorrow at 3pm");
-    await expect(phone(page).getByTestId("inline-promise")).toHaveCount(1);
-
-    let inbox = await readGuestList(page, GUEST_INBOX_KEY);
-    expect(inbox.length).toBe(1);
-
+    expect((await readGuestList(page, GUEST_INBOX_KEY)).length).toBe(1);
     await openContextMenu(page, "Dentist tomorrow at 3pm");
-    await phone(page)
-      .getByRole("dialog")
-      .getByRole("button", { name: "Bring it back then", exact: true })
+    await contextMenuDialog(page)
+      .getByRole("menuitem", { name: "Bring it back then", exact: true })
       .click();
     await completeScheduleDialog(page);
-
-    inbox = await readGuestList(page, GUEST_INBOX_KEY);
-    expect(inbox.length).toBe(0);
-
-    const schedules = await readGuestList(page, GUEST_SCHEDULE_KEY);
-    expect(schedules.length).toBe(1);
-
+    expect((await readGuestList(page, GUEST_INBOX_KEY)).length).toBe(0);
+    expect((await readGuestList(page, GUEST_SCHEDULE_KEY)).length).toBe(1);
     await gotoScheduleUpcoming(page);
     await expect(phone(page).getByText(/Dentist/i).first()).toBeVisible();
   });
 
-  test("legacy thought map remains behind feature flag", async ({ page }) => {
-    await page.evaluate(({ ak }) => {
+  test("legacy thought map remains behind its feature flag", async ({ page }) => {
+    await page.evaluate(({ archiveKey }) => {
       localStorage.setItem(
         "itjima.__feature_overrides__",
         JSON.stringify({ ARCHIVE_THOUGHT_MAP: true, ARCHIVE_AI_GROUPING: true }),
       );
       localStorage.setItem(
-        ak,
+        archiveKey,
         JSON.stringify([
           {
             id: "qa-map",
@@ -87,13 +72,10 @@ test.describe("Product reset IA", () => {
           },
         ]),
       );
-    }, { ak: GUEST_ARCHIVE_KEY });
+    }, { archiveKey: GUEST_ARCHIVE_KEY });
     await page.reload();
-    await phone(page).getByRole("link", { name: /^Archive/ }).waitFor();
-
     await phone(page).getByRole("link", { name: /^Archive/ }).click();
     await expect(phone(page).getByText("Map memory seed").first()).toBeVisible();
-
     await phone(page).getByRole("button", { name: "Thought map" }).click();
     await expect(phone(page).getByText("Vault › Thought map")).toBeVisible();
   });

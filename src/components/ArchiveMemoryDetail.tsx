@@ -1,5 +1,6 @@
 import { motion, AnimatePresence } from "framer-motion";
 import { X, Pin } from "lucide-react";
+import { useEffect, useRef } from "react";
 import type { ArchiveItem } from "@/lib/store";
 import { archiveDisplayTitle } from "@/lib/archiveMeta";
 import { useT, useLang } from "@/lib/i18n";
@@ -43,7 +44,31 @@ export function ArchiveMemoryDetail({
 }: DetailProps) {
   const t = useT();
   const { lang } = useLang();
+  const dialogRef = useRef<HTMLDivElement | null>(null);
   useScrollLock(!!item);
+
+  useEffect(() => {
+    if (!item) return;
+    const previous =
+      document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    const frame = window.requestAnimationFrame(() => {
+      dialogRef.current?.focus({ preventScroll: true });
+    });
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        event.preventDefault();
+        onClose();
+      }
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => {
+      window.cancelAnimationFrame(frame);
+      window.removeEventListener("keydown", onKeyDown);
+      window.requestAnimationFrame(() => {
+        if (previous?.isConnected) previous.focus({ preventScroll: true });
+      });
+    };
+  }, [item, onClose]);
 
   const displayTitle = item ? archiveDisplayTitle(item.id, item) : "";
   const bodyText = item ? (item.raw_text ?? item.text) : "";
@@ -81,8 +106,11 @@ export function ArchiveMemoryDetail({
             onClick={onClose}
           />
           <motion.div
+            ref={dialogRef}
             role="dialog"
-            aria-modal
+            tabIndex={-1}
+            aria-modal="true"
+            aria-labelledby="archive-memory-detail-title"
             initial={{ y: "100%" }}
             animate={{ y: 0 }}
             exit={{ y: "100%" }}
@@ -98,6 +126,7 @@ export function ArchiveMemoryDetail({
               className={`mx-auto mb-3 h-1 w-9 rounded-full ${
                 dark ? "bg-white/15" : "bg-ink/12"
               }`}
+              aria-hidden
             />
             <div className="flex items-start justify-between gap-3">
               <div>
@@ -109,6 +138,7 @@ export function ArchiveMemoryDetail({
                   {displayTitle} · {relativeTime(item.created_at, lang)}
                 </p>
                 <h2
+                  id="archive-memory-detail-title"
                   className={`mt-1 text-[22px] font-bold tracking-[-0.02em] ${
                     dark ? "text-[color:var(--archive-text)]" : "text-ink"
                   }`}
@@ -119,11 +149,12 @@ export function ArchiveMemoryDetail({
               <button
                 type="button"
                 onClick={onClose}
+                aria-label={t("상세 닫기", "Close details")}
                 className={`touch-target rounded-full ${
                   dark ? "text-[color:var(--archive-text-soft)]" : "text-ink-soft"
                 }`}
               >
-                <X size={20} />
+                <X size={20} aria-hidden />
               </button>
             </div>
             {item.images?.length > 0 && (
@@ -181,7 +212,7 @@ export function ArchiveMemoryDetail({
                       : "bg-ink/[0.05] text-ink-soft"
                 }`}
               >
-                <Pin size={14} className={pinned ? "fill-current" : ""} />
+                <Pin size={14} className={pinned ? "fill-current" : ""} aria-hidden />
                 {pinned ? t("핀 해제", "Unpin") : t("자주 보기", "Pin")}
               </button>
               {onRemove && (

@@ -20,22 +20,21 @@ export function ScheduleAlarmChips({ onSelect, onCustom, onDismiss }: Props) {
   ];
 
   return (
-    <div
-      className="mt-2 flex flex-wrap gap-1.5"
-      onClick={(e) => e.stopPropagation()}
-    >
+    <div className="mt-2 flex flex-wrap gap-1.5">
       {chips.map(({ id, label }) => (
         <button
           key={id}
           type="button"
-          onClick={() => {
-            if (id === "custom") onCustom();
-            else {
-              onSelect(id);
-              onDismiss();
+          onClick={(event) => {
+            event.stopPropagation();
+            if (id === "custom") {
+              onCustom();
+              return;
             }
+            onSelect(id);
+            onDismiss();
           }}
-          className="rounded-full bg-primary/25 px-2.5 py-1 text-[11px] font-bold text-ink active:scale-95"
+          className="touch-press min-h-11 rounded-full bg-primary/25 px-3 text-[11px] font-bold text-ink active:scale-95"
         >
           {label}
         </button>

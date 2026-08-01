@@ -1,0 +1,182 @@
+/* Device-specific navigation contracts. */
+
+.itjima-responsive-frame {
+  position: relative;
+}
+
+.mobile-app-chrome,
+.tablet-app-nav {
+  flex: 0 0 auto;
+}
+
+@media (max-width: 639px) {
+  .mobile-app-chrome {
+    display: block;
+  }
+
+  .tablet-app-nav,
+  .itjima-desktop-nav {
+    display: none !important;
+  }
+
+  .mobile-app-header {
+    position: relative;
+    z-index: 45;
+  }
+
+  .mobile-bottom-nav {
+    position: absolute;
+    z-index: 70;
+    right: 10px;
+    bottom: max(8px, env(safe-area-inset-bottom));
+    left: 10px;
+    display: flex;
+    min-height: 62px;
+    padding: 5px;
+    border: 1px solid color-mix(in srgb, var(--ij-separator, rgba(0, 0, 0, 0.1)) 72%, transparent);
+    border-radius: 22px;
+    box-shadow: 0 12px 36px -16px rgba(0, 0, 0, 0.28);
+    backdrop-filter: blur(22px) saturate(1.2);
+    -webkit-backdrop-filter: blur(22px) saturate(1.2);
+  }
+
+  .mobile-bottom-nav-item {
+    min-height: 52px;
+  }
+
+  .itjima-app-scroll {
+    padding-bottom: calc(78px + env(safe-area-inset-bottom));
+  }
+
+  .phone-frame form.composer-hero {
+    bottom: calc(76px + env(safe-area-inset-bottom)) !important;
+  }
+
+  /* Keep the schedule FAB above the persistent mobile navigation. */
+  .phone-frame button[aria-label="Add task"],
+  .phone-frame button[aria-label="할 일 추가"] {
+    bottom: calc(86px + env(safe-area-inset-bottom)) !important;
+  }
+
+  /* Route-level dialogs must always sit above the persistent mobile chrome. */
+  [data-testid="archive-edit-dialog"],
+  [data-testid="archive-group-dialog"],
+  [data-testid="archive-ungroup-dialog"] {
+    z-index: 90 !important;
+  }
+
+  .phone-frame [data-testid="inbox-context-menu"] {
+    margin-bottom: calc(154px + env(safe-area-inset-bottom)) !important;
+  }
+}
+
+@media (min-width: 640px) and (max-width: 1023px) {
+  .mobile-app-chrome,
+  .itjima-desktop-nav {
+    display: none !important;
+  }
+
+  .tablet-app-nav {
+    display: flex !important;
+    min-height: 72px;
+  }
+
+  .itjima-app-scroll {
+    padding-bottom: 0;
+  }
+
+  .tablet-segmented-nav-item {
+    min-height: 44px;
+  }
+}
+
+@media (min-width: 1024px) {
+  html,
+  body,
+  #root {
+    width: 100% !important;
+    height: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    overflow: hidden !important;
+  }
+
+  .mobile-app-chrome,
+  .tablet-app-nav {
+    display: none !important;
+  }
+
+  .itjima-desktop-shell {
+    position: fixed;
+    inset: 0;
+    box-sizing: border-box;
+    display: flex;
+    width: auto;
+    height: auto;
+    min-width: 0;
+    min-height: 0;
+    margin: 0;
+    padding: 0;
+    overflow: hidden;
+    background: var(--ij-surface, #fff);
+  }
+
+  .itjima-desktop-style-scope {
+    display: contents !important;
+  }
+
+  .itjima-desktop-nav {
+    display: flex !important;
+    height: 100%;
+    min-height: 0;
+    border-radius: 0 !important;
+  }
+
+  .itjima-desktop-shell .itjima-app-content,
+  .itjima-desktop-shell .itjima-app-scroll {
+    height: 100%;
+    min-height: 0;
+  }
+
+  .itjima-app-scroll {
+    padding-bottom: 0;
+  }
+}
+
+@media (max-width: 359px) {
+  .mobile-bottom-nav {
+    right: 6px;
+    bottom: max(5px, env(safe-area-inset-bottom));
+    left: 6px;
+    min-height: 58px;
+    border-radius: 19px;
+  }
+
+  .mobile-bottom-nav-item {
+    min-height: 48px;
+    padding-inline: 3px;
+    font-size: 10px;
+  }
+
+  .itjima-app-scroll {
+    padding-bottom: calc(70px + env(safe-area-inset-bottom));
+  }
+
+  .phone-frame form.composer-hero {
+    bottom: calc(68px + env(safe-area-inset-bottom)) !important;
+  }
+
+  .phone-frame button[aria-label="Add task"],
+  .phone-frame button[aria-label="할 일 추가"] {
+    bottom: calc(78px + env(safe-area-inset-bottom)) !important;
+  }
+}
+
+@media (prefers-reduced-transparency: reduce) {
+  .mobile-bottom-nav,
+  .tablet-app-nav {
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+    background: var(--ij-surface-elevated, #fff);
+  }
+}

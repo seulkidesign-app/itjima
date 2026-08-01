@@ -89,6 +89,8 @@ export function InlinePromise({
       className="ml-1 w-full max-w-[min(320px,90%)] rounded-[18px] border border-ink/8 bg-[#fafaf8] p-3"
       data-testid="inline-promise"
       data-intent={card.nlIntent}
+      data-confidence={card.confidenceLevel}
+      data-sensitive={card.isSensitive ? "true" : "false"}
       data-needs-confirmation={confirmation ? "true" : "false"}
     >
       <p className="text-[11px] font-semibold text-ink-soft">
@@ -115,11 +117,15 @@ export function InlinePromise({
 
       {card.nlIntent === "schedule_clarify" ? (
         <>
-          <div className="mt-3 grid grid-cols-3 gap-1.5">
+          <div
+            className="mt-3 grid grid-cols-3 gap-1.5"
+            data-testid="promise-clarify-chips"
+          >
             {clarifyOptions.map(({ pick, label }) => (
               <button
                 key={pick}
                 type="button"
+                data-testid={`promise-clarify-${pick}`}
                 onClick={() => finish(onConfirmClarify(item, pick))}
                 className="touch-press min-h-[40px] rounded-full border border-ink/10 bg-white px-2 py-2 text-[11px] font-semibold text-ink"
               >
@@ -129,6 +135,7 @@ export function InlinePromise({
           </div>
           <button
             type="button"
+            data-testid="promise-manual"
             onClick={() => openManualSchedule("clarify")}
             className="touch-press mt-2 min-h-[40px] w-full rounded-full border border-ink/12 bg-white px-3 py-2 text-[12px] font-semibold text-ink"
           >
@@ -139,6 +146,7 @@ export function InlinePromise({
         <div className="mt-3 flex gap-2">
           <button
             type="button"
+            data-testid="promise-primary"
             onClick={() => finish(onConfirmTaskLater(item))}
             className="pill-yellow touch-press min-h-[40px] flex-1 px-3 py-2 text-[12px] font-bold text-ink"
           >
@@ -146,6 +154,7 @@ export function InlinePromise({
           </button>
           <button
             type="button"
+            data-testid="promise-add-date"
             onClick={() => openManualSchedule("adjust")}
             className="touch-press min-h-[40px] rounded-full border border-ink/12 bg-white px-3 py-2 text-[12px] font-semibold text-ink"
           >
@@ -191,6 +200,7 @@ export function InlinePromise({
           )}
           <button
             type="button"
+            data-testid="promise-manual"
             onClick={() => openManualSchedule("ambiguity")}
             className="touch-press mt-2 min-h-[40px] w-full rounded-full border border-ink/12 bg-white px-3 py-2 text-[12px] font-semibold text-ink"
           >
@@ -203,6 +213,7 @@ export function InlinePromise({
         <div className="mt-3 flex gap-2">
           <button
             type="button"
+            data-testid="promise-primary"
             onClick={() => finish(onConfirmScheduleQuick(item))}
             className="pill-yellow touch-press min-h-[40px] flex-1 px-3 py-2 text-[12px] font-bold text-ink"
           >
@@ -210,6 +221,7 @@ export function InlinePromise({
           </button>
           <button
             type="button"
+            data-testid="promise-manual"
             onClick={() => openManualSchedule("adjust")}
             className="touch-press min-h-[40px] rounded-full border border-ink/12 bg-white px-3 py-2 text-[12px] font-semibold text-ink"
           >

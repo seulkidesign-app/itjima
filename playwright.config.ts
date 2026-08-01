@@ -15,13 +15,45 @@ export default defineConfig({
     screenshot: "only-on-failure",
     video: "retain-on-failure",
     locale: "en-US",
+    timezoneId: "America/New_York",
   },
   projects: [
     {
       name: "mobile-chrome",
+      testMatch: "**/*.spec.ts",
+      testIgnore: "**/responsive-matrix.spec.ts",
       use: {
         ...devices["iPhone 13"],
         browserName: "chromium",
+      },
+    },
+    {
+      name: "responsive-matrix-chrome",
+      testMatch: "**/responsive-matrix.spec.ts",
+      use: {
+        ...devices["Desktop Chrome"],
+        browserName: "chromium",
+        viewport: { width: 1440, height: 900 },
+      },
+    },
+    {
+      name: "tablet-chrome",
+      testMatch: "**/responsive-critical.spec.ts",
+      use: {
+        browserName: "chromium",
+        viewport: { width: 834, height: 1112 },
+        deviceScaleFactor: 1,
+        hasTouch: true,
+        isMobile: true,
+      },
+    },
+    {
+      name: "desktop-chrome",
+      testMatch: "**/responsive-critical.spec.ts",
+      use: {
+        ...devices["Desktop Chrome"],
+        browserName: "chromium",
+        viewport: { width: 1440, height: 1000 },
       },
     },
   ],

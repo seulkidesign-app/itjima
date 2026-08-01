@@ -212,7 +212,10 @@ export function FeedbackSheet({
           })}
         </div>
 
-        <textarea
+        <textarea aria-label={t(
+            "어떤 점이 불편했나요? 어떤 아이디어가 있나요?",
+            "What was annoying? What would you improve?",
+          )}
           value={message}
           onChange={(e) => setMessage(e.target.value)}
           rows={5}
@@ -227,7 +230,10 @@ export function FeedbackSheet({
           {message.length} / 2000
         </div>
 
-        <input
+        <input aria-label={t(
+            "답장 받을 이메일 (선택)",
+            "Email for reply (optional)",
+          )}
           type="email"
           value={email}
           onChange={(e) => setEmail(e.target.value)}

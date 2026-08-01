@@ -1,5 +1,9 @@
 import { test, expect, type Page } from "@playwright/test";
-import { GUEST_INBOX_KEY, readGuestList } from "./helpers";
+import {
+  CAPTURE_LINK_NAME,
+  GUEST_INBOX_KEY,
+  readGuestList,
+} from "./helpers";
 
 type InboxSeed = {
   id: string;
@@ -9,7 +13,7 @@ type InboxSeed = {
   status: "active";
 };
 
-async function resetThrow(page: Page) {
+async function resetCapture(page: Page) {
   await page.goto("/");
   await page.evaluate(() => {
     for (const k of Object.keys(localStorage)) {
@@ -19,7 +23,9 @@ async function resetThrow(page: Page) {
     sessionStorage.clear();
   });
   await page.reload();
-  await page.getByRole("link", { name: /^Throw/ }).waitFor({ state: "visible" });
+  await page.getByRole("link", { name: CAPTURE_LINK_NAME }).waitFor({
+    state: "visible",
+  });
   const closeButtons = page.getByRole("button", { name: "Close" });
   if (await closeButtons.count()) {
     await closeButtons.first().click();
@@ -34,7 +40,9 @@ async function seedInbox(page: Page, items: InboxSeed[]) {
     { key: GUEST_INBOX_KEY, rows: items },
   );
   await page.reload();
-  await page.getByRole("link", { name: /^Throw/ }).waitFor({ state: "visible" });
+  await page.getByRole("link", { name: CAPTURE_LINK_NAME }).waitFor({
+    state: "visible",
+  });
   const closeButtons = page.getByRole("button", { name: "Close" });
   if (await closeButtons.count()) {
     await closeButtons.first().click();
@@ -77,7 +85,7 @@ async function dragBubble(page: Page, text: string, deltaX: number) {
 
 test.describe("Home chat bubbles without swipe tray", () => {
   test.beforeEach(async ({ page }) => {
-    await resetThrow(page);
+    await resetCapture(page);
   });
 
   async function setupRows(page: Page) {

@@ -1,0 +1,157 @@
+name: Product QA
+
+on:
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: product-qa-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+env:
+  CI: "true"
+  VITE_E2E: "true"
+  VITE_SUPABASE_URL: "http://127.0.0.1:54321"
+  VITE_SUPABASE_PUBLISHABLE_KEY: "e2e-placeholder"
+
+jobs:
+  interaction-audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Clean install
+        run: npm ci
+
+      - name: Audit every interactive element
+        run: node scripts/interaction-audit.mjs --strict
+
+      - name: Upload interaction audit
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: interaction-audit-${{ github.event.pull_request.number || github.run_number }}
+          path: qa-artifacts/*
+          if-no-files-found: error
+          retention-days: 14
+
+  mobile-regression:
+    name: mobile-regression-${{ matrix.shard }}-of-4
+    runs-on: ubuntu-latest
+    timeout-minutes: 24
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2, 3, 4]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Clean install
+        run: npm ci
+
+      - name: Install Chromium
+        run: npx playwright install --with-deps chromium
+
+      - name: Run mobile regression shard
+        run: npx playwright test --project=mobile-chrome --shard=${{ matrix.shard }}/4
+
+      - name: Upload Playwright report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-mobile-${{ matrix.shard }}-${{ github.event.pull_request.number || github.run_number }}
+          path: |
+            playwright-report/
+            test-results/
+          if-no-files-found: ignore
+          retention-days: 14
+
+  responsive-critical:
+    runs-on: ubuntu-latest
+    timeout-minutes: 18
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Clean install
+        run: npm ci
+
+      - name: Install Chromium
+        run: npx playwright install --with-deps chromium
+
+      - name: Run tablet and desktop critical flows
+        run: >-
+          npx playwright test e2e/responsive-critical.spec.ts
+          --project=tablet-chrome
+          --project=desktop-chrome
+
+      - name: Upload responsive report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-responsive-${{ github.event.pull_request.number || github.run_number }}
+          path: |
+            playwright-report/
+            test-results/
+          if-no-files-found: ignore
+          retention-days: 14
+
+  responsive-matrix:
+    runs-on: ubuntu-latest
+    timeout-minutes: 18
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Clean install
+        run: npm ci
+
+      - name: Install Chromium
+        run: npx playwright install --with-deps chromium
+
+      - name: Run eleven-viewport responsive matrix
+        run: >-
+          npx playwright test e2e/responsive-matrix.spec.ts
+          --project=responsive-matrix-chrome
+
+      - name: Upload responsive matrix report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-responsive-matrix-${{ github.event.pull_request.number || github.run_number }}
+          path: |
+            playwright-report/
+            test-results/
+          if-no-files-found: ignore
+          retention-days: 14

@@ -1,5 +1,6 @@
 import { test, expect, type Page } from "@playwright/test";
 import {
+  CAPTURE_LINK_NAME,
   GUEST_ARCHIVE_KEY,
   GUEST_INBOX_KEY,
   GUEST_SCHEDULE_KEY,
@@ -20,47 +21,49 @@ async function enableLegacyArchiveFeatures(page: Page) {
     );
   });
   await page.reload();
-  await phone(page).getByRole("link", { name: /^Throw/ }).waitFor();
+  await phone(page).getByRole("link", { name: CAPTURE_LINK_NAME }).waitFor();
 }
 
 test.describe("Schedule V1", () => {
   test.beforeEach(async ({ page }) => {
     await resetAppState(page);
-    const now = Date.now();
-    const todayStart = new Date(now + 2 * 60 * 60 * 1000);
-    todayStart.setSeconds(0, 0);
-    // Keep fixture on today's calendar day (avoid midnight rollover flakiness).
-    if (todayStart.toDateString() !== new Date(now).toDateString()) {
-      todayStart.setTime(now);
-      todayStart.setHours(15, 0, 0, 0);
-    }
-    const todayEnd = new Date(todayStart.getTime() + 60 * 60 * 1000);
-    const laterStart = new Date();
-    laterStart.setDate(laterStart.getDate() + 4);
-    laterStart.setHours(10, 0, 0, 0);
-    const laterEnd = new Date(laterStart.getTime() + 60 * 60 * 1000);
-
     await page.evaluate(
-      ({ sk, ik, todayStartIso, todayEndIso, laterStartIso, laterEndIso }) => {
+      ({ sk, ik }) => {
+        // Build dates in the browser context so they use Playwright's configured
+        // application timezone instead of the runner's UTC timezone.
+        const now = new Date();
+        const todayStart = new Date(now);
+        todayStart.setHours(0, 0, 0, 0);
+        const todayEnd = new Date(now);
+        todayEnd.setHours(23, 59, 0, 0);
+
+        const laterStart = new Date(now);
+        laterStart.setDate(laterStart.getDate() + 4);
+        laterStart.setHours(10, 0, 0, 0);
+        const laterEnd = new Date(laterStart.getTime() + 60 * 60 * 1000);
+
         localStorage.setItem(
           sk,
           JSON.stringify([
             {
               id: "qa-today-task",
               text: "Today compact row",
-              start_time: todayStartIso,
-              end_time: todayEndIso,
+              start_time: todayStart.toISOString(),
+              end_time: todayEnd.toISOString(),
               alarm: false,
-              created_at: new Date().toISOString(),
+              created_at: now.toISOString(),
+              all_day: true,
+              start_all_day: true,
+              end_all_day: true,
               status: "active",
             },
             {
               id: "qa-later-task",
               text: "Later dated task",
-              start_time: laterStartIso,
-              end_time: laterEndIso,
+              start_time: laterStart.toISOString(),
+              end_time: laterEnd.toISOString(),
               alarm: false,
-              created_at: new Date().toISOString(),
+              created_at: now.toISOString(),
               status: "active",
             },
           ]),
@@ -72,21 +75,14 @@ test.describe("Schedule V1", () => {
               id: "qa-later-inbox",
               text: "Later without date",
               images: [],
-              created_at: new Date().toISOString(),
+              created_at: now.toISOString(),
               decision: "later",
-              decided_at: new Date().toISOString(),
+              decided_at: now.toISOString(),
             },
           ]),
         );
       },
-      {
-        sk: GUEST_SCHEDULE_KEY,
-        ik: GUEST_INBOX_KEY,
-        todayStartIso: todayStart.toISOString(),
-        todayEndIso: todayEnd.toISOString(),
-        laterStartIso: laterStart.toISOString(),
-        laterEndIso: laterEnd.toISOString(),
-      },
+      { sk: GUEST_SCHEDULE_KEY, ik: GUEST_INBOX_KEY },
     );
     await page.reload();
     await phone(page).getByRole("link", { name: /^Schedule/ }).waitFor();

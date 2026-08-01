@@ -128,7 +128,7 @@ test.describe("data integrity (guest upload + tombstones)", () => {
       "Guest beta",
     ]);
     await page
-      .getByText("Connection hiccup — your thoughts are safe")
+      .getByText(/Connection paused.*thoughts are still safe/i)
       .waitFor({ state: "visible", timeout: 15_000 });
   });
 
@@ -191,12 +191,12 @@ test.describe("data integrity (guest upload + tombstones)", () => {
 
     await injectSignedInUser(page);
     await page
-      .getByText("Connection hiccup — your thoughts are safe")
+      .getByText(/Connection paused.*thoughts are still safe/i)
       .waitFor({ state: "visible", timeout: 15_000 });
     expect((await readGuestList(page, GUEST_INBOX_KEY)).length).toBe(2);
 
     failUpserts = false;
-    await page.getByRole("button", { name: "Try again", exact: true }).click();
+    await page.getByRole("button", { name: /Retry|Try again/, exact: false }).click();
 
     await expect
       .poll(async () => (await readGuestList(page, GUEST_INBOX_KEY)).length)
@@ -314,7 +314,7 @@ test.describe("data integrity (guest upload + tombstones)", () => {
     ).toHaveCount(0);
 
     deleteShouldFail = false;
-    await page.getByRole("button", { name: "Try again", exact: true }).click();
+    await page.getByRole("button", { name: /Retry|Try again/, exact: false }).click();
     await expect
       .poll(async () => (await readUserList(page, TOMBSTONES_KEY)).length)
       .toBe(0);
@@ -423,7 +423,7 @@ test.describe("data integrity (guest upload + tombstones)", () => {
     expect(localAfterDelete).toHaveLength(0);
 
     deleteShouldFail = false;
-    await page.getByRole("button", { name: "Try again", exact: true }).click();
+    await page.getByRole("button", { name: /Retry|Try again/, exact: false }).click();
 
     await expect
       .poll(async () => (await readUserList(page, TOMBSTONES_KEY)).length)

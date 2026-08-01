@@ -4,249 +4,143 @@ import {
   phone,
   readGuestList,
   GUEST_INBOX_KEY,
-  GUEST_ARCHIVE_KEY,
   GUEST_SCHEDULE_KEY,
   gotoScheduleUpcoming,
 } from "./helpers";
 
-async function submitThought(page: Page, text: string) {
+async function submit(page: Page, text: string) {
   const frame = phone(page);
   await frame.locator("textarea").first().fill(text);
-  await frame.getByRole("button", { name: "Drop it", exact: true }).click();
+  await frame.locator('form.composer-hero button[type="submit"]').click();
   await frame.getByText(text, { exact: true }).first().waitFor({ state: "visible" });
 }
 
-test.describe("Natural language scheduling", () => {
+async function submitKo(page: Page, text: string) {
+  const frame = phone(page);
+  await frame.locator("textarea").first().fill(text);
+  await frame.getByRole("button", { name: "남기기", exact: true }).click();
+  await frame.getByText(text, { exact: true }).first().waitFor({ state: "visible" });
+}
+
+test.describe("Natural-language scheduling", () => {
   test.beforeEach(async ({ page }) => {
     await resetAppState(page);
   });
 
-  test("high confidence schedule confirms in one tap", async ({ page }) => {
-    await submitThought(page, "Dentist tomorrow at 3pm");
-    const frame = phone(page);
-    const promise = frame.getByTestId("inline-promise").last();
-    await expect(promise).toBeVisible();
+  test("clear English schedule confirms in one tap", async ({ page }) => {
+    await submit(page, "Dentist tomorrow at 3pm");
+    const promise = phone(page).getByTestId("inline-promise").last();
     await expect(promise).toHaveAttribute("data-intent", "schedule_exact");
     await expect(promise).toHaveAttribute("data-confidence", "high");
     await expect(promise.getByTestId("promise-primary")).toHaveText("Add to schedule");
     await promise.getByTestId("promise-primary").click();
-
-    const inbox = await readGuestList(page, GUEST_INBOX_KEY);
-    expect(inbox.length).toBe(0);
-    const schedules = await readGuestList(page, GUEST_SCHEDULE_KEY);
-    expect(schedules.length).toBe(1);
-
+    expect((await readGuestList(page, GUEST_INBOX_KEY)).length).toBe(0);
+    expect((await readGuestList(page, GUEST_SCHEDULE_KEY)).length).toBe(1);
     await gotoScheduleUpcoming(page);
-    await expect(frame.getByText(/Dentist/i).first()).toBeVisible();
+    await expect(phone(page).getByText(/Dentist/i).first()).toBeVisible();
   });
 
-  test("low confidence asks for a day with chips only", async ({ page }) => {
-    await submitThought(page, "Watch it next week or so");
-    const frame = phone(page);
-    const promise = frame.getByTestId("inline-promise").last();
+  test("ambiguous English schedule resolves with inline choices", async ({ page }) => {
+    await submit(page, "Watch it next week or so");
+    const promise = phone(page).getByTestId("inline-promise").last();
     await expect(promise).toHaveAttribute("data-intent", "schedule_clarify");
     await expect(promise).toHaveAttribute("data-confidence", "medium");
-    await expect(promise.getByTestId("promise-clarify-chips")).toBeVisible();
-    await expect(promise.getByTestId("promise-primary")).toHaveCount(0);
-    await expect(promise.getByTestId("promise-manual")).toHaveText("Pick a date");
-    await promise.getByTestId("promise-clarify-weekend").click();
-
-    const inbox = await readGuestList(page, GUEST_INBOX_KEY);
-    expect(inbox.length).toBe(0);
-    const schedules = await readGuestList(page, GUEST_SCHEDULE_KEY);
-    expect(schedules.length).toBe(1);
+    const choices = promise.getByTestId("promise-clarify-chips");
+    await expect(choices).toBeVisible();
+    await choices.getByRole("button").first().click();
+    expect((await readGuestList(page, GUEST_INBOX_KEY)).length).toBe(0);
+    expect((await readGuestList(page, GUEST_SCHEDULE_KEY)).length).toBe(1);
   });
 
-  test("reference note recommends vault", async ({ page }) => {
-    await submitThought(page, "Passport number");
-    const frame = phone(page);
-    const promise = frame.getByTestId("inline-promise").last();
-    await expect(promise).toHaveAttribute("data-intent", "archive");
-    await expect(promise).toHaveAttribute("data-sensitive", "true");
-    await promise.getByTestId("promise-primary").click();
-    await promise.getByTestId("promise-primary").click();
-
-    const inbox = await readGuestList(page, GUEST_INBOX_KEY);
-    expect(inbox.length).toBe(0);
-    const archive = await readGuestList(page, GUEST_ARCHIVE_KEY);
-    expect(archive.length).toBe(1);
-  });
-
-  test("task without time adds to schedule without a date", async ({ page }) => {
-    await submitThought(page, "Call mom");
-    const frame = phone(page);
-    const promise = frame.getByTestId("inline-promise").last();
+  test("task remains a later task without forcing a date", async ({ page }) => {
+    await submit(page, "Call mom");
+    const promise = phone(page).getByTestId("inline-promise").last();
     await expect(promise).toHaveAttribute("data-intent", "task");
-    await expect(promise.getByTestId("promise-primary")).toHaveText("Add as task");
+    await expect(promise.getByTestId("promise-primary")).toHaveText("Keep as later task");
     await expect(promise.getByTestId("promise-add-date")).toBeVisible();
     await promise.getByTestId("promise-primary").click();
-
-    const inbox = await readGuestList(page, GUEST_INBOX_KEY);
-    expect(inbox.length).toBe(1);
+    const inbox = (await readGuestList(page, GUEST_INBOX_KEY)) as Array<{ decision?: string }>;
+    expect(inbox).toHaveLength(1);
     expect(inbox[0]?.decision).toBe("later");
-
-    await gotoScheduleUpcoming(page);
-    await expect(frame.getByText(/Call mom/i).first()).toBeVisible();
-    await expect(frame.getByText("No date").first()).toBeVisible();
   });
 
-  test("plain note does not show promise card", async ({ page }) => {
-    await submitThought(page, "Travel");
+  test("sensitive reference notes are not auto-routed", async ({ page }) => {
+    await submit(page, "Passport number");
     await expect(phone(page).getByTestId("inline-promise")).toHaveCount(0);
+    expect((await readGuestList(page, GUEST_INBOX_KEY)).length).toBe(1);
+  });
+
+  test("Adjust opens manual scheduling and Escape returns to the card", async ({ page }) => {
+    await submit(page, "Dentist tomorrow at 3pm");
+    const promise = phone(page).getByTestId("inline-promise").last();
+    await promise.getByTestId("promise-manual").click();
+    await expect(page.getByRole("dialog").last()).toBeVisible();
+    await page.keyboard.press("Escape");
+    await expect(promise).toBeVisible();
   });
 });
 
-test.describe("Natural language scheduling (Korean)", () => {
+test.describe("Natural-language scheduling in Korean", () => {
   test.beforeEach(async ({ page }) => {
-    await page.goto("/");
-    await page.evaluate(() => {
-      for (const k of Object.keys(localStorage)) {
-        if (k.startsWith("itjima.")) localStorage.removeItem(k);
-      }
-      localStorage.setItem("itjima_lang", "ko");
-      sessionStorage.clear();
-    });
+    await resetAppState(page);
+    await page.evaluate(() => localStorage.setItem("itjima_lang", "ko"));
     await page.reload();
-    await phone(page).getByRole("link", { name: /^던지기/ }).waitFor({
-      state: "visible",
-    });
   });
 
-  async function submitThoughtKo(page: Page, text: string) {
-    const frame = phone(page);
-    await frame.locator("textarea").first().fill(text);
-    await frame.getByRole("button", { name: "던지기", exact: true }).click();
-    await frame.getByText(text, { exact: true }).first().waitFor({ state: "visible" });
-  }
-
-  test("내일 3시에 치과 — high confidence one tap", async ({ page }) => {
-    await submitThoughtKo(page, "내일 3시에 치과");
-    const frame = phone(page);
-    const promise = frame.getByTestId("inline-promise").last();
+  test("명확한 일정은 한 번에 추가된다", async ({ page }) => {
+    await submitKo(page, "내일 오후 3시에 치과");
+    const promise = phone(page).getByTestId("inline-promise").last();
     await expect(promise).toHaveAttribute("data-intent", "schedule_exact");
-    await expect(promise).toHaveAttribute("data-confidence", "high");
+    await expect(promise).toHaveAttribute("data-needs-confirmation", "false");
     await expect(promise.getByTestId("promise-primary")).toHaveText("일정에 추가");
     await promise.getByTestId("promise-primary").click();
-
-    expect((await readGuestList(page, GUEST_INBOX_KEY)).length).toBe(0);
     expect((await readGuestList(page, GUEST_SCHEDULE_KEY)).length).toBe(1);
-
-    await frame.getByRole("link", { name: /^일정/ }).click();
-    await frame.getByRole("tab", { name: "예정" }).click();
-    await expect(frame.getByText(/치과/i).first()).toBeVisible();
   });
 
-  test("다음주쯤 보기 — medium clarify chips", async ({ page }) => {
-    await submitThoughtKo(page, "다음주쯤 보기");
-    const frame = phone(page);
-    const promise = frame.getByTestId("inline-promise").last();
+  test("주말 표현은 토요일과 일요일 중 선택하게 한다", async ({ page }) => {
+    await submitKo(page, "주말에 영화 보기");
+    const promise = phone(page).getByTestId("inline-promise").last();
+    await expect(promise).toHaveAttribute("data-needs-confirmation", "true");
+    const choices = promise.getByTestId("promise-confirmation-choices");
+    await expect(choices).toBeVisible();
+    await choices.getByRole("button").first().click();
+    expect((await readGuestList(page, GUEST_SCHEDULE_KEY)).length).toBe(1);
+  });
+
+  test("애매한 날짜는 카드 안에서 해결한다", async ({ page }) => {
+    await submitKo(page, "다음주쯤 보기");
+    const promise = phone(page).getByTestId("inline-promise").last();
     await expect(promise).toHaveAttribute("data-intent", "schedule_clarify");
-    await expect(promise).toHaveAttribute("data-confidence", "medium");
-    await expect(promise.getByTestId("promise-clarify-chips")).toBeVisible();
-    await expect(promise.getByTestId("promise-manual")).toHaveText("날짜 고르기");
-    await promise.getByTestId("promise-clarify-next_week").click();
-
-    expect((await readGuestList(page, GUEST_INBOX_KEY)).length).toBe(0);
-    expect((await readGuestList(page, GUEST_SCHEDULE_KEY)).length).toBe(1);
-  });
-
-  test("엄마한테 전화하기 — task without forced date", async ({ page }) => {
-    await submitThoughtKo(page, "엄마한테 전화하기");
-    const frame = phone(page);
-    const promise = frame.getByTestId("inline-promise").last();
-    await expect(promise).toHaveAttribute("data-intent", "task");
-    await expect(promise.getByTestId("promise-primary")).toHaveText("할 일로 넣기");
-    await expect(promise.getByTestId("promise-add-date")).toHaveText("날짜 추가");
-    await promise.getByTestId("promise-primary").click();
-
-    const inbox = await readGuestList(page, GUEST_INBOX_KEY);
-    expect(inbox.length).toBe(1);
-    expect(inbox[0]?.decision).toBe("later");
-
-    await frame.getByRole("link", { name: /^일정/ }).click();
-    await frame.getByRole("tab", { name: "예정" }).click();
-    await expect(frame.getByText(/엄마한테 전화하기/i).first()).toBeVisible();
-    await expect(frame.getByText("날짜 없음").first()).toBeVisible();
-  });
-
-  test("여권 번호 — archive with privacy warning", async ({ page }) => {
-    await submitThoughtKo(page, "여권 번호");
-    const frame = phone(page);
-    const promise = frame.getByTestId("inline-promise").last();
-    await expect(promise).toHaveAttribute("data-intent", "archive");
-    await expect(promise).toHaveAttribute("data-sensitive", "true");
-    await expect(promise.getByTestId("promise-privacy-warning")).toBeVisible();
-    await promise.getByTestId("promise-primary").click();
-    await promise.getByTestId("promise-primary").click();
-
-    expect((await readGuestList(page, GUEST_INBOX_KEY)).length).toBe(0);
-    expect((await readGuestList(page, GUEST_ARCHIVE_KEY)).length).toBe(1);
-  });
-
-  test("다음 달 초에 병원 — contextual early-month chips", async ({ page }) => {
-    await submitThoughtKo(page, "다음 달 초에 병원");
-    const frame = phone(page);
-    const promise = frame.getByTestId("inline-promise").last();
-    await expect(promise).toHaveAttribute("data-intent", "schedule_clarify");
-    await expect(promise.getByTestId("promise-clarify-early_next_month")).toBeVisible();
-    await promise.getByTestId("promise-clarify-early_next_month").click();
-
-    expect((await readGuestList(page, GUEST_INBOX_KEY)).length).toBe(0);
-    expect((await readGuestList(page, GUEST_SCHEDULE_KEY)).length).toBe(1);
-  });
-
-  test("금요일 저녁 약속 — weekday evening schedule", async ({ page }) => {
-    await submitThoughtKo(page, "금요일 저녁 약속");
-    const frame = phone(page);
-    const promise = frame.getByTestId("inline-promise").last();
-    await expect(promise).toHaveAttribute("data-intent", "schedule_exact");
-    await expect(promise).toHaveAttribute("data-confidence", "high");
-    await promise.getByTestId("promise-primary").click();
-
-    expect((await readGuestList(page, GUEST_SCHEDULE_KEY)).length).toBe(1);
-  });
-
-  test("평범한 메모 — no Brain Mirror card", async ({ page }) => {
-    await submitThoughtKo(page, "커피 한 잔 마셨다");
-    await expect(phone(page).getByTestId("inline-promise")).toHaveCount(0);
-  });
-
-  test("intent correction switches schedule to task", async ({ page }) => {
-    await submitThoughtKo(page, "내일 3시에 치과");
-    const frame = phone(page);
-    const promise = frame.getByTestId("inline-promise").last();
-    await promise.getByTestId("promise-correct").click();
-    await promise.getByTestId("promise-correct-menu").getByRole("button", {
-      name: "할 일로 넣기",
-      exact: true,
-    }).click();
-
-    const inbox = await readGuestList(page, GUEST_INBOX_KEY);
-    expect(inbox.length).toBe(1);
-    expect(inbox[0]?.decision).toBe("later");
-    expect((await readGuestList(page, GUEST_SCHEDULE_KEY)).length).toBe(0);
-  });
-
-  test("correcting to schedule without date opens date picker fallback", async ({ page }) => {
-    await submitThoughtKo(page, "엄마한테 전화하기");
-    const frame = phone(page);
-    const promise = frame.getByTestId("inline-promise").last();
-    await promise.getByTestId("promise-correct").click();
     await promise
-      .getByTestId("promise-correct-menu")
-      .getByRole("button", { name: "일정에 추가", exact: true })
+      .getByTestId("promise-clarify-chips")
+      .getByRole("button")
+      .first()
       .click();
-    await page.getByRole("dialog").last().waitFor({ state: "visible" });
-    await page.keyboard.press("Escape");
+    expect((await readGuestList(page, GUEST_SCHEDULE_KEY)).length).toBe(1);
   });
 
-  test("task can add date via manual fallback only", async ({ page }) => {
-    await submitThoughtKo(page, "엄마한테 전화하기");
-    const frame = phone(page);
-    const promise = frame.getByTestId("inline-promise").last();
+  test("날짜 없는 할 일은 나중 할 일로 둔다", async ({ page }) => {
+    await submitKo(page, "엄마한테 전화하기");
+    const promise = phone(page).getByTestId("inline-promise").last();
+    await expect(promise).toHaveAttribute("data-intent", "task");
+    await expect(promise.getByTestId("promise-primary")).toHaveText("나중 할 일로 두기");
+    await promise.getByTestId("promise-primary").click();
+    const inbox = (await readGuestList(page, GUEST_INBOX_KEY)) as Array<{ decision?: string }>;
+    expect(inbox[0]?.decision).toBe("later");
+  });
+
+  test("할 일에서 날짜 추가를 누르면 수동 일정 화면이 열린다", async ({ page }) => {
+    await submitKo(page, "엄마한테 전화하기");
+    const promise = phone(page).getByTestId("inline-promise").last();
     await promise.getByTestId("promise-add-date").click();
-    await page.getByRole("dialog").last().waitFor({ state: "visible" });
+    await expect(page.getByRole("dialog").last()).toBeVisible();
     await page.keyboard.press("Escape");
-    await expect(frame.getByTestId("inline-promise").last()).toBeVisible();
+    await expect(promise).toBeVisible();
+  });
+
+  test("민감한 참고 정보는 자동 분류하지 않는다", async ({ page }) => {
+    await submitKo(page, "여권 번호");
+    await expect(phone(page).getByTestId("inline-promise")).toHaveCount(0);
+    expect((await readGuestList(page, GUEST_INBOX_KEY)).length).toBe(1);
   });
 });

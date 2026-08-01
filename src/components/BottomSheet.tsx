@@ -44,6 +44,15 @@ function focusableElements(container: HTMLElement): HTMLElement[] {
   );
 }
 
+function isTopmostModal(panel: HTMLElement): boolean {
+  const dialogs = Array.from(
+    document.querySelectorAll<HTMLElement>('[role="dialog"][aria-modal="true"]'),
+  ).filter(
+    (dialog) => dialog.getClientRects().length > 0 && !dialog.hasAttribute("hidden"),
+  );
+  return dialogs[dialogs.length - 1] === panel;
+}
+
 type Props = {
   open: boolean;
   onClose: () => void;
@@ -64,6 +73,7 @@ export function BottomSheet({
   const dragControls = useDragControls();
   const titleId = useId();
   const panelRef = useRef<HTMLDivElement | null>(null);
+  const previousFocusRef = useRef<HTMLElement | null>(null);
   const [keyboardInset, setKeyboardInset] = useState(0);
   const [wideLayout, setWideLayout] = useState(false);
   const [dragY, setDragY] = useState(0);
@@ -102,7 +112,7 @@ export function BottomSheet({
   useEffect(() => {
     if (!open) return;
 
-    const previousFocus =
+    previousFocusRef.current =
       document.activeElement instanceof HTMLElement ? document.activeElement : null;
     const focusFrame = window.requestAnimationFrame(() => {
       const panel = panelRef.current;
@@ -113,15 +123,16 @@ export function BottomSheet({
     });
 
     const onKey = (event: KeyboardEvent) => {
+      const panel = panelRef.current;
+      if (!panel || !isTopmostModal(panel)) return;
+
       if (event.key === "Escape") {
         event.preventDefault();
+        event.stopImmediatePropagation();
         onClose();
         return;
       }
       if (event.key !== "Tab") return;
-
-      const panel = panelRef.current;
-      if (!panel) return;
       const focusable = focusableElements(panel);
       if (focusable.length === 0) {
         event.preventDefault();
@@ -145,9 +156,6 @@ export function BottomSheet({
     return () => {
       window.cancelAnimationFrame(focusFrame);
       window.removeEventListener("keydown", onKey);
-      window.requestAnimationFrame(() => {
-        if (previousFocus?.isConnected) previousFocus.focus({ preventScroll: true });
-      });
     };
   }, [open, onClose]);
 
@@ -181,7 +189,17 @@ export function BottomSheet({
   const backdropOpacity = SHEET_DIM_MAX * dimProgress;
 
   return (
-    <AnimatePresence>
+    <AnimatePresence
+      onExitComplete={() => {
+        const previousFocus = previousFocusRef.current;
+        previousFocusRef.current = null;
+        window.requestAnimationFrame(() => {
+          if (previousFocus?.isConnected) {
+            previousFocus.focus({ preventScroll: true });
+          }
+        });
+      }}
+    >
       {open && (
         <div
           className="bottom-sheet-root fixed inset-0 z-[80] flex min-w-0 flex-col"
@@ -247,7 +265,7 @@ export function BottomSheet({
                 ? { duration: MOTION_DURATION, ease: MOTION_EASE }
                 : SPRING_SHEET
             }
-            className="bottom-sheet-panel itjima-glass-panel sheet-chrome relative z-[1] mx-auto mt-auto flex w-full max-h-[var(--sheet-max-h)] shrink-0 flex-col overflow-hidden"
+            className="bottom-sheet-panel itjima-glass-panel sheet-chrome relative z-[1] mx-auto mt-auto flex min-h-0 w-full max-h-[var(--sheet-max-h)] shrink flex-col overflow-hidden"
             style={
               {
                 "--sheet-max-h": maxHeight,
@@ -272,7 +290,7 @@ export function BottomSheet({
                 <div className="h-1 w-9 rounded-full bg-ink/12" />
               </div>
             )}
-            <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
+            <div className="flex min-h-0 flex-1 flex-col overflow-x-hidden overflow-y-auto overscroll-contain">
               {children}
             </div>
           </motion.div>

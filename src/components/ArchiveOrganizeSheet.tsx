@@ -1,3 +1,4 @@
+import { useEffect, useRef } from "react";
 import { useT, useLang } from "@/lib/i18n";
 import { useScrollLock } from "@/hooks/useScrollLock";
 import type { ArchiveItem } from "@/lib/store";
@@ -32,8 +33,32 @@ export function ArchiveOrganizeSheet({
 }: Props) {
   const t = useT();
   const { lang } = useLang();
+  const panelRef = useRef<HTMLDivElement | null>(null);
 
   useScrollLock(open);
+
+  useEffect(() => {
+    if (!open) return;
+    const previous =
+      document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    const frame = window.requestAnimationFrame(() => {
+      panelRef.current?.focus({ preventScroll: true });
+    });
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        event.preventDefault();
+        onClose();
+      }
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => {
+      window.cancelAnimationFrame(frame);
+      window.removeEventListener("keydown", onKeyDown);
+      window.requestAnimationFrame(() => {
+        if (previous?.isConnected) previous.focus({ preventScroll: true });
+      });
+    };
+  }, [open, onClose]);
 
   if (!open) return null;
 
@@ -70,22 +95,30 @@ export function ArchiveOrganizeSheet({
   };
 
   return (
-    <div
-      className="fixed inset-0 z-[100] flex flex-col"
-      role="dialog"
-      aria-modal="true"
-      onClick={onClose}
-    >
-      <div className="flex-1 bg-ink/35 backdrop-blur-sm animate-fade-in" />
+    <div className="fixed inset-0 z-[100] flex flex-col" role="presentation">
+      <button
+        type="button"
+        aria-label={t("키워드 묶기 닫기", "Close keyword grouping")}
+        className="absolute inset-0 bg-ink/35 backdrop-blur-sm animate-fade-in"
+        onClick={onClose}
+      />
       <div
-        className="animate-slide-up max-h-[75vh] overflow-y-auto rounded-t-[28px] bg-background px-5 pb-[calc(env(safe-area-inset-bottom)+1.25rem)] pt-2.5"
-        onClick={(e) => e.stopPropagation()}
+        ref={panelRef}
+        role="dialog"
+        tabIndex={-1}
+        aria-modal="true"
+        aria-labelledby="archive-organize-title"
+        aria-describedby="archive-organize-description"
+        className="relative mt-auto animate-slide-up max-h-[75vh] overflow-y-auto rounded-t-[28px] bg-background px-5 pb-[calc(env(safe-area-inset-bottom)+1.25rem)] pt-2.5"
       >
-        <div className="mx-auto mb-4 h-1.5 w-10 rounded-full bg-ink/15" />
-        <h2 className="text-[17px] font-bold text-ink">
+        <div className="mx-auto mb-4 h-1.5 w-10 rounded-full bg-ink/15" aria-hidden />
+        <h2 id="archive-organize-title" className="text-[17px] font-bold text-ink">
           {t("키워드로 묶기", "Group by keywords")}
         </h2>
-        <p className="mt-1.5 text-sm leading-relaxed text-ink-soft">
+        <p
+          id="archive-organize-description"
+          className="mt-1.5 text-sm leading-relaxed text-ink-soft"
+        >
           {t(
             "글 속 키워드를 기준으로 묶어볼게요. 직접 만든 묶음은 그대로 둡니다.",
             "We'll group by keywords in your text. Your custom groups stay as they are.",
@@ -109,9 +142,9 @@ export function ArchiveOrganizeSheet({
               </li>
             ))}
             {moves.length > 8 && (
-              <p className="text-center text-[11px] text-ink-soft">
+              <li className="text-center text-[11px] text-ink-soft">
                 +{moves.length - 8} {t("더", "more")}
-              </p>
+              </li>
             )}
           </ul>
         )}

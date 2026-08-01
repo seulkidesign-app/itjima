@@ -1,7 +1,6 @@
 import { test, expect } from "@playwright/test";
 import {
   resetAppState,
-  gotoInbox,
   addThought,
   openContextMenu,
   getTabCount,
@@ -10,7 +9,6 @@ import {
   gotoArchiveListView,
   gotoScheduleUpcoming,
   completeScheduleDialog,
-  contextMenuDialog,
   clickContextMenuItem,
   GUEST_INBOX_KEY,
   GUEST_ARCHIVE_KEY,
@@ -28,7 +26,7 @@ test.describe("CRUD flows (guest / offline)", () => {
     const text = `QA thought ${Date.now()}`;
     await addThought(page, text);
 
-    expect(await getTabCount(page, "Throw")).toBe(1);
+    expect(await getTabCount(page, "Capture")).toBe(1);
 
     await page.reload();
     await phone(page).getByText(text, { exact: true }).first().waitFor({ state: "visible" });
@@ -45,15 +43,12 @@ test.describe("CRUD flows (guest / offline)", () => {
     await addThought(page, text);
 
     await openContextMenu(page, text);
-    await phone(page)
-      .getByRole("dialog")
-      .getByRole("button", { name: "Save to vault", exact: true })
-      .click();
+    await clickContextMenuItem(page, "Save to vault");
 
     await expect(
       phone(page).getByRole("paragraph").filter({ hasText: text }),
     ).toHaveCount(0);
-    expect(await getTabCount(page, "Throw")).toBe(0);
+    expect(await getTabCount(page, "Capture")).toBe(0);
     expect(await getTabCount(page, "Archive")).toBe(1);
 
     await gotoArchiveListView(page);
@@ -93,10 +88,7 @@ test.describe("CRUD flows (guest / offline)", () => {
     await addThought(page, text);
 
     await openContextMenu(page, text);
-    await phone(page)
-      .getByRole("dialog")
-      .getByRole("button", { name: "Bring it back then", exact: true })
-      .click();
+    await clickContextMenuItem(page, "Bring it back then");
 
     await completeScheduleDialog(page);
 
@@ -123,7 +115,14 @@ test.describe("CRUD flows (guest / offline)", () => {
     await sheet.getByPlaceholder("What was this again?").fill(text);
     await completeScheduleDialog(page);
 
+    const notification = page.getByRole("dialog", { name: "Notification" });
+    if (await notification.isVisible().catch(() => false)) {
+      await notification
+        .getByRole("button", { name: "Save without notifications" })
+        .click();
+    }
+
+    await expect.poll(() => getTabCount(page, "Schedule")).toBe(1);
     await phone(page).getByText(text).first().waitFor({ state: "visible" });
-    expect(await getTabCount(page, "Schedule")).toBe(1);
   });
 });

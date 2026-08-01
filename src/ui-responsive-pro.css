@@ -1,0 +1,566 @@
+/*
+ * Itjima professional responsive system
+ * Mobile: full-screen native surface.
+ * Tablet: centered adaptive work surface.
+ * Desktop: dedicated sidebar workspace.
+ */
+
+:root {
+  --ij-mobile-gutter: 16px;
+  --ij-tablet-gutter: 28px;
+  --ij-desktop-gutter: 36px;
+  --ij-tablet-frame-max: 960px;
+  --ij-desktop-frame-max: 1240px;
+  --ij-desktop-sidebar: 248px;
+  --ij-desktop-content: 900px;
+  --ij-desktop-chat: 760px;
+}
+
+.itjima-app-stage {
+  padding: 0;
+  background: var(--ij-canvas, #f5f5f7);
+}
+
+.itjima-responsive-frame {
+  width: 100% !important;
+  max-width: none !important;
+  min-height: 100dvh;
+  height: 100dvh;
+  margin: 0 !important;
+  overflow: hidden;
+  border: 0;
+  border-radius: 0;
+  background: var(--ij-surface, #fff);
+  box-shadow: none;
+}
+
+/* Mobile home must never crop its education block above the composer. */
+.phone-frame .home-chat-lane:has(.itjima-empty-hero) {
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding-top: 0 !important;
+  padding-bottom: calc(214px + env(safe-area-inset-bottom)) !important;
+}
+
+.phone-frame .itjima-empty-hero {
+  min-height: max-content;
+  justify-content: flex-start !important;
+  padding: 22px 10px 20px !important;
+}
+
+.phone-frame .itjima-empty-orb {
+  width: 66px;
+  height: 66px;
+  border-radius: 22px;
+}
+
+.phone-frame .itjima-empty-orb-core {
+  width: 44px;
+  height: 44px;
+  border-radius: 15px;
+}
+
+.phone-frame .itjima-empty-hero h1 {
+  max-width: 18.5rem;
+  font-size: clamp(25px, 7vw, 32px) !important;
+}
+
+.phone-frame .itjima-empty-hero > p:nth-of-type(2) {
+  max-width: 19rem;
+}
+
+.phone-frame .itjima-empty-hero > div[role="list"] {
+  margin-top: 22px !important;
+}
+
+.phone-frame .itjima-empty-proof {
+  min-height: 58px;
+  padding: 9px 11px;
+}
+
+/* Empty-state example chips use a single horizontal rail on narrow screens. */
+.phone-frame form.composer-hero > div:first-child {
+  flex-wrap: nowrap !important;
+  overflow-x: auto;
+  scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
+}
+
+.phone-frame form.composer-hero > div:first-child::-webkit-scrollbar {
+  display: none;
+}
+
+.phone-frame form.composer-hero > div:first-child > button {
+  flex: 0 0 auto;
+  white-space: nowrap;
+}
+
+/* Prevent the bottom composer from becoming wider than the viewport. */
+.phone-frame form.composer-hero {
+  width: calc(100% - 16px) !important;
+  max-width: none !important;
+  margin-inline: 8px !important;
+}
+
+.phone-frame .decision-launcher-bar,
+.phone-frame [data-testid="decision-launcher"] {
+  width: calc(100% - 24px) !important;
+  max-width: none !important;
+}
+
+/* Landing: mobile first, no horizontal overflow at 320px. */
+.itjima-launch-page {
+  min-width: 320px;
+  overflow-x: clip;
+  background: #fbfbf7;
+}
+
+.itjima-launch-page header > div {
+  width: min(100% - 24px, 1120px) !important;
+}
+
+.itjima-launch-page main > section:first-child {
+  padding-top: 42px !important;
+  padding-bottom: 72px !important;
+}
+
+.itjima-launch-page main > section:first-child > div {
+  gap: 42px !important;
+}
+
+.itjima-launch-page main > section:first-child h1 {
+  max-width: 10ch;
+  font-size: clamp(42px, 13.5vw, 64px) !important;
+  line-height: 0.98 !important;
+}
+
+.itjima-launch-page main > section:first-child p {
+  max-width: 38rem;
+}
+
+.itjima-launch-page main > section:first-child a {
+  text-align: center;
+}
+
+.itjima-launch-page details summary {
+  min-height: 64px;
+}
+
+@media (max-width: 359px) {
+  :root {
+    --ij-mobile-gutter: 14px;
+  }
+
+  .phone-frame .app-top-nav-bar {
+    padding-inline: 14px !important;
+  }
+
+  .phone-frame .app-primary-tabs {
+    padding-inline: 10px !important;
+  }
+
+  .phone-frame .app-primary-tab {
+    font-size: 12px !important;
+  }
+
+  .phone-frame .itjima-empty-hero {
+    padding-top: 16px !important;
+  }
+
+  .phone-frame .itjima-empty-orb {
+    width: 56px;
+    height: 56px;
+    border-radius: 18px;
+  }
+
+  .phone-frame .itjima-empty-orb-core {
+    width: 38px;
+    height: 38px;
+    border-radius: 13px;
+  }
+
+  .phone-frame .itjima-empty-hero h1 {
+    font-size: 24px !important;
+  }
+
+  .phone-frame .itjima-empty-proof {
+    gap: 9px;
+  }
+
+  .phone-frame .itjima-empty-proof-icon {
+    width: 32px;
+    height: 32px;
+  }
+
+  .itjima-launch-page header > div {
+    width: calc(100% - 18px) !important;
+  }
+
+  .itjima-launch-page header a[aria-label] span:last-child,
+  .itjima-launch-page header .touch-target span:nth-child(2) {
+    display: none;
+  }
+
+  .itjima-launch-page header .touch-target {
+    width: 44px;
+    padding-inline: 0 !important;
+  }
+
+  .itjima-launch-page main > section:first-child h1 {
+    font-size: 39px !important;
+  }
+}
+
+@media (max-height: 700px) and (max-width: 639px) {
+  .phone-frame .home-chat-lane:has(.itjima-empty-hero) {
+    padding-bottom: calc(186px + env(safe-area-inset-bottom)) !important;
+  }
+
+  .phone-frame .itjima-empty-hero {
+    padding-top: 12px !important;
+  }
+
+  .phone-frame .itjima-empty-orb {
+    width: 50px;
+    height: 50px;
+  }
+
+  .phone-frame .itjima-empty-orb-core {
+    width: 34px;
+    height: 34px;
+  }
+
+  .phone-frame .itjima-empty-hero > p:first-of-type {
+    margin-top: 14px !important;
+  }
+
+  .phone-frame .itjima-empty-hero h1 {
+    margin-top: 8px !important;
+    font-size: 23px !important;
+  }
+
+  .phone-frame .itjima-empty-hero > p:nth-of-type(2) {
+    margin-top: 7px !important;
+    font-size: 12.5px !important;
+  }
+
+  .phone-frame .itjima-empty-hero > div[role="list"] {
+    margin-top: 14px !important;
+    gap: 7px !important;
+  }
+
+  .phone-frame .itjima-empty-proof {
+    min-height: 50px;
+    padding-block: 7px;
+  }
+
+  .phone-frame .itjima-empty-hero > p:last-child {
+    margin-top: 12px !important;
+  }
+}
+
+/* Tablet: app-like centered surface with wider content rails. */
+@media (min-width: 640px) and (max-width: 1023px) {
+  .itjima-app-stage {
+    padding: 16px;
+    align-items: center !important;
+  }
+
+  .itjima-responsive-frame {
+    width: min(calc(100vw - 32px), var(--ij-tablet-frame-max)) !important;
+    max-width: var(--ij-tablet-frame-max) !important;
+    min-height: calc(100dvh - 32px);
+    height: calc(100dvh - 32px);
+    border: 1px solid var(--ij-separator-soft, rgba(60, 60, 67, 0.08));
+    border-radius: 28px;
+    box-shadow: var(--ij-shadow-float);
+  }
+
+  .phone-frame .app-top-nav-bar {
+    width: 100%;
+    max-width: 860px !important;
+    margin-inline: auto;
+    padding-inline: var(--ij-tablet-gutter) !important;
+  }
+
+  .phone-frame .app-primary-tabs {
+    width: min(100%, 560px);
+    max-width: 560px !important;
+    margin-inline: auto;
+  }
+
+  .phone-frame .home-chat-lane,
+  .phone-frame form.composer-hero {
+    width: min(100%, 720px) !important;
+    max-width: 720px !important;
+    margin-inline: auto !important;
+  }
+
+  .phone-frame form.composer-hero {
+    width: min(calc(100% - 32px), 720px) !important;
+  }
+
+  .phone-frame .decision-launcher-bar,
+  .phone-frame [data-testid="decision-launcher"] {
+    width: min(calc(100% - 48px), 696px) !important;
+    max-width: 696px !important;
+  }
+
+  .phone-frame .home-chat-lane:has(.itjima-empty-hero) {
+    padding-bottom: calc(190px + env(safe-area-inset-bottom)) !important;
+  }
+
+  .phone-frame .itjima-empty-hero {
+    width: min(100%, 700px);
+    margin-inline: auto;
+    padding-top: 34px !important;
+  }
+
+  .phone-frame .itjima-empty-hero h1 {
+    max-width: 21rem;
+    font-size: 36px !important;
+  }
+
+  .phone-frame .itjima-empty-hero > div[role="list"] {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    max-width: 680px !important;
+  }
+
+  .phone-frame .itjima-empty-proof {
+    min-height: 68px;
+  }
+
+  .phone-frame .sticky:has(#schedule-tab-today) > div:first-of-type,
+  .phone-frame .sticky:has(#schedule-tab-today) > div:nth-of-type(2),
+  .phone-frame .sticky:has(#schedule-tab-today) + div {
+    width: min(100%, 800px) !important;
+    max-width: 800px !important;
+    margin-inline: auto;
+  }
+
+  .phone-frame:has(.app-primary-tab[href="/archive"][aria-current="page"])
+    .page-shell
+    > div
+    > .sticky
+    > div,
+  .phone-frame:has(.app-primary-tab[href="/archive"][aria-current="page"])
+    .page-shell
+    > div
+    > .sticky
+    + div {
+    width: min(100%, 800px) !important;
+    max-width: 800px !important;
+    margin-inline: auto;
+  }
+
+  .itjima-launch-page main > section:first-child {
+    padding-top: 72px !important;
+  }
+
+  .itjima-launch-page main > section:first-child > div {
+    grid-template-columns: minmax(0, 1.05fr) minmax(300px, 0.95fr) !important;
+    gap: 38px !important;
+  }
+
+  .itjima-launch-page main > section:first-child h1 {
+    font-size: clamp(52px, 7vw, 68px) !important;
+  }
+
+  .itjima-launch-page main > section:first-child > div > div:last-child {
+    align-self: center;
+  }
+}
+
+/* Desktop: a true application workspace, not a stretched phone. */
+@media (min-width: 1024px) {
+  .itjima-app-stage {
+    padding: 20px;
+    align-items: center !important;
+    background:
+      radial-gradient(circle at 14% 0%, rgba(255, 212, 59, 0.14), transparent 34rem),
+      radial-gradient(circle at 90% 100%, rgba(10, 132, 255, 0.08), transparent 36rem),
+      var(--ij-canvas, #f5f5f7);
+  }
+
+  .itjima-responsive-frame {
+    width: min(calc(100vw - 40px), var(--ij-desktop-frame-max)) !important;
+    max-width: var(--ij-desktop-frame-max) !important;
+    min-height: calc(100dvh - 40px);
+    height: calc(100dvh - 40px);
+    border: 1px solid var(--ij-separator-soft, rgba(60, 60, 67, 0.08));
+    border-radius: 30px;
+    box-shadow: var(--ij-shadow-float);
+  }
+
+  .itjima-desktop-nav {
+    width: var(--ij-desktop-sidebar);
+    background:
+      linear-gradient(180deg, rgba(255, 255, 255, 0.9), rgba(248, 248, 250, 0.86));
+    backdrop-filter: blur(28px) saturate(170%);
+    -webkit-backdrop-filter: blur(28px) saturate(170%);
+  }
+
+  .itjima-desktop-nav-item[aria-current="page"] {
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.1),
+      0 12px 28px -22px rgba(0, 0, 0, 0.6);
+  }
+
+  .phone-frame #phone-scroll {
+    background:
+      radial-gradient(circle at 50% -10%, rgba(255, 212, 59, 0.08), transparent 28rem),
+      var(--ij-surface, #fff);
+  }
+
+  .phone-frame .home-chat-lane,
+  .phone-frame form.composer-hero {
+    width: min(100%, var(--ij-desktop-chat)) !important;
+    max-width: var(--ij-desktop-chat) !important;
+    margin-inline: auto !important;
+  }
+
+  .phone-frame form.composer-hero {
+    width: min(calc(100% - 48px), var(--ij-desktop-chat)) !important;
+    margin-inline: auto !important;
+  }
+
+  .phone-frame .decision-launcher-bar,
+  .phone-frame [data-testid="decision-launcher"] {
+    width: min(calc(100% - 72px), calc(var(--ij-desktop-chat) - 24px)) !important;
+    max-width: calc(var(--ij-desktop-chat) - 24px) !important;
+  }
+
+  .phone-frame .home-chat-lane:has(.itjima-empty-hero) {
+    padding-bottom: calc(182px + env(safe-area-inset-bottom)) !important;
+  }
+
+  .phone-frame .itjima-empty-hero {
+    width: min(100%, 760px);
+    margin-inline: auto;
+    padding-top: 48px !important;
+  }
+
+  .phone-frame .itjima-empty-orb {
+    width: 82px;
+    height: 82px;
+    border-radius: 27px;
+  }
+
+  .phone-frame .itjima-empty-orb-core {
+    width: 52px;
+    height: 52px;
+    border-radius: 18px;
+  }
+
+  .phone-frame .itjima-empty-hero h1 {
+    max-width: 25rem;
+    font-size: 42px !important;
+  }
+
+  .phone-frame .itjima-empty-hero > p:nth-of-type(2) {
+    max-width: 34rem;
+    font-size: 15px !important;
+  }
+
+  .phone-frame .itjima-empty-hero > div[role="list"] {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    max-width: 720px !important;
+  }
+
+  .phone-frame .itjima-empty-proof {
+    min-height: 72px;
+  }
+
+  .phone-frame .sticky:has(#schedule-tab-today) > div:first-of-type,
+  .phone-frame .sticky:has(#schedule-tab-today) > div:nth-of-type(2),
+  .phone-frame .sticky:has(#schedule-tab-today) + div {
+    width: min(100%, var(--ij-desktop-content)) !important;
+    max-width: var(--ij-desktop-content) !important;
+    margin-inline: auto;
+    padding-inline: var(--ij-desktop-gutter) !important;
+  }
+
+  .phone-frame .segment-nav {
+    max-width: 560px !important;
+  }
+
+  .phone-frame:has(.app-primary-tab[href="/archive"][aria-current="page"])
+    .page-shell
+    > div
+    > .sticky
+    > div,
+  .phone-frame:has(.app-primary-tab[href="/archive"][aria-current="page"])
+    .page-shell
+    > div
+    > .sticky
+    + div {
+    width: min(100%, var(--ij-desktop-content)) !important;
+    max-width: var(--ij-desktop-content) !important;
+    margin-inline: auto;
+    padding-inline: var(--ij-desktop-gutter) !important;
+  }
+
+  .bottom-sheet-panel {
+    max-width: 640px !important;
+  }
+
+  .itjima-launch-page header > div,
+  .itjima-launch-page main > section > div,
+  .itjima-launch-page footer > div {
+    max-width: 1240px !important;
+  }
+
+  .itjima-launch-page main > section:first-child > div {
+    grid-template-columns: minmax(0, 1.02fr) minmax(440px, 0.98fr) !important;
+    gap: clamp(54px, 6vw, 96px) !important;
+  }
+}
+
+@media (min-width: 1440px) {
+  :root {
+    --ij-desktop-frame-max: 1360px;
+    --ij-desktop-sidebar: 270px;
+    --ij-desktop-content: 980px;
+    --ij-desktop-chat: 820px;
+  }
+
+  .itjima-app-stage {
+    padding: 24px;
+  }
+
+  .itjima-responsive-frame {
+    width: min(calc(100vw - 48px), var(--ij-desktop-frame-max)) !important;
+    min-height: calc(100dvh - 48px);
+    height: calc(100dvh - 48px);
+  }
+}
+
+@media (prefers-color-scheme: dark) and (min-width: 1024px) {
+  .itjima-desktop-nav {
+    background: linear-gradient(180deg, rgba(28, 28, 30, 0.96), rgba(20, 20, 22, 0.94));
+  }
+
+  .itjima-desktop-nav button,
+  .itjima-desktop-nav a {
+    border-color: var(--ij-separator-soft) !important;
+  }
+}
+
+@media (prefers-reduced-transparency: reduce) {
+  .itjima-desktop-nav {
+    background: var(--ij-surface, #fff) !important;
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+  }
+}
+
+/* QA: fixed 44px composer targets */
+.phone-frame form.composer-hero > div:first-child > button {
+  min-height: 44px !important;
+  height: 44px !important;
+}
+
+.phone-frame .capture-submit-button {
+  min-height: 44px !important;
+  height: 44px !important;
+}

@@ -1,3 +1,4 @@
+import { useEffect, useRef } from "react";
 import { useT, useLang } from "@/lib/i18n";
 import { useScrollLock } from "@/hooks/useScrollLock";
 
@@ -25,28 +26,60 @@ export function ArchiveMoveSheet({
 }: Props) {
   const t = useT();
   const { lang } = useLang();
+  const panelRef = useRef<HTMLDivElement | null>(null);
 
   useScrollLock(open);
+
+  useEffect(() => {
+    if (!open) return;
+    const previous =
+      document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    const frame = window.requestAnimationFrame(() => {
+      panelRef.current?.focus({ preventScroll: true });
+    });
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        event.preventDefault();
+        onClose();
+      }
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => {
+      window.cancelAnimationFrame(frame);
+      window.removeEventListener("keydown", onKeyDown);
+      window.requestAnimationFrame(() => {
+        if (previous?.isConnected) previous.focus({ preventScroll: true });
+      });
+    };
+  }, [open, onClose]);
 
   if (!open) return null;
 
   return (
     <div
       className="fixed inset-0 z-[100] flex items-end justify-center sm:items-center"
-      role="dialog"
-      aria-modal="true"
-      onClick={onClose}
+      role="presentation"
     >
-      <div className="absolute inset-0 bg-ink/35 backdrop-blur-sm animate-fade-in" />
+      <button
+        type="button"
+        aria-label={t("이동 창 닫기", "Close move dialog")}
+        className="absolute inset-0 bg-ink/35 backdrop-blur-sm animate-fade-in"
+        onClick={onClose}
+      />
       <div
+        ref={panelRef}
+        role="dialog"
+        tabIndex={-1}
+        aria-modal="true"
+        aria-labelledby="archive-move-title"
+        aria-describedby="archive-move-count"
         className="relative w-full max-w-sm animate-slide-up rounded-t-[28px] bg-white px-5 pb-[calc(env(safe-area-inset-bottom)+1.25rem)] pt-3 sm:rounded-[28px]"
-        onClick={(e) => e.stopPropagation()}
       >
-        <div className="mx-auto mb-4 h-1 w-10 rounded-full bg-ink/10" />
-        <h2 className="text-[17px] font-semibold text-ink">
+        <div className="mx-auto mb-4 h-1 w-10 rounded-full bg-ink/10" aria-hidden />
+        <h2 id="archive-move-title" className="text-[17px] font-semibold text-ink">
           {t("어디에 둘까요?", "Move to…")}
         </h2>
-        <p className="mt-1 text-[13px] text-ink-soft">
+        <p id="archive-move-count" className="mt-1 text-[13px] text-ink-soft">
           {t(
             `${count}개의 기억`,
             count === 1 ? "1 memory" : `${count} memories`,
@@ -63,7 +96,7 @@ export function ArchiveMoveSheet({
                 }}
                 className="touch-press flex w-full items-center gap-3 rounded-[18px] bg-ink/[0.04] px-4 py-3.5 text-left text-[15px] font-medium text-ink active:bg-ink/[0.07]"
               >
-                <span className="text-lg">{g.emoji}</span>
+                <span className="text-lg" aria-hidden>{g.emoji}</span>
                 {lang === "en" ? g.en : g.ko}
               </button>
             </li>

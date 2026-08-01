@@ -6,6 +6,8 @@ export const GUEST_INBOX_KEY = "itjima.guest.inbox";
 export const GUEST_ARCHIVE_KEY = "itjima.guest.archive";
 export const GUEST_SCHEDULE_KEY = "itjima.guest.schedules";
 export const TEST_USER_ID = "11111111-1111-4111-8111-111111111111";
+export const CAPTURE_LINK_NAME = /^Capture$/;
+export const CAPTURE_LINK_NAME_KO = /^남기기$/;
 
 export function getSupabaseProjectId(): string | null {
   try {
@@ -48,7 +50,7 @@ export async function injectSignedInUser(
     { userId: TEST_USER_ID },
   );
   await page.reload();
-  await phone(page).getByRole("link", { name: /^Throw/ }).waitFor({
+  await phone(page).getByRole("link", { name: CAPTURE_LINK_NAME }).waitFor({
     state: "visible",
   });
   await waitForE2eSignedIn(page);
@@ -104,7 +106,7 @@ export async function resetAppState(page: Page) {
     }
   });
   await page.reload();
-  await phone(page).getByRole("link", { name: /^Throw/ }).waitFor({
+  await phone(page).getByRole("link", { name: CAPTURE_LINK_NAME }).waitFor({
     state: "visible",
   });
 }
@@ -113,7 +115,7 @@ export async function gotoInbox(page: Page) {
   if (!page.url().includes("127.0.0.1")) {
     await page.goto("/");
   }
-  await phone(page).getByRole("link", { name: /^Throw/ }).waitFor({
+  await phone(page).getByRole("link", { name: CAPTURE_LINK_NAME }).waitFor({
     state: "visible",
   });
 }
@@ -183,7 +185,7 @@ async function forceAcknowledgeInlinePromises(page: Page) {
     );
   });
   await page.reload();
-  await phone(page).getByRole("link", { name: /^Throw/ }).waitFor({
+  await phone(page).getByRole("link", { name: CAPTURE_LINK_NAME }).waitFor({
     state: "visible",
   });
 }
@@ -298,14 +300,15 @@ export async function closeDecisionDeckIfOpen(page: Page) {
 }
 
 export function contextMenuDialog(page: Page) {
-  return phone(page).getByTestId("inbox-context-menu");
+  // The context menu is rendered in an overlay portal, outside the device shell.
+  return page.getByTestId("inbox-context-menu");
 }
 
 export async function clickContextMenuItem(page: Page, label: string) {
   const menu = contextMenuDialog(page);
   await menu.waitFor({ state: "visible" });
   await menu
-    .getByRole("button", { name: label, exact: true })
+    .getByRole("menuitem", { name: label, exact: true })
     .click({ force: true });
 }
 
@@ -326,7 +329,7 @@ export async function openContextMenuRaw(page: Page, thoughtText: string) {
   await page.mouse.down();
   await page.waitForTimeout(550);
   await page.mouse.up();
-  await frame.getByTestId("inbox-context-menu").waitFor({
+  await contextMenuDialog(page).waitFor({
     state: "visible",
     timeout: 10_000,
   });
@@ -334,10 +337,10 @@ export async function openContextMenuRaw(page: Page, thoughtText: string) {
 
 export async function getTabCount(
   page: Page,
-  tab: "Throw" | "Schedule" | "Archive",
+  tab: "Capture" | "Schedule" | "Archive",
 ) {
   const key =
-    tab === "Throw"
+    tab === "Capture"
       ? GUEST_INBOX_KEY
       : tab === "Schedule"
         ? GUEST_SCHEDULE_KEY
@@ -357,13 +360,17 @@ export async function readGuestList(page: Page, key: string): Promise<unknown[]>
 }
 
 export async function openSettings(page: Page) {
-  await phone(page).getByRole("button", { name: "Settings", exact: true }).click();
+  await phone(page)
+    .getByRole("button", { name: /Open settings|Settings/, exact: false })
+    .click();
 }
 
 export async function openBrandHub(page: Page) {
   await gotoInbox(page);
   await phone(page)
-    .getByRole("button", { name: "Itjima (잊지마)", exact: true })
+    .getByRole("button", {
+      name: /Open Itjima product information|Itjima \(잊지마\)/,
+    })
     .click();
 }
 
@@ -374,7 +381,7 @@ export async function openAbout(page: Page) {
 
 export async function openFeedback(page: Page) {
   await openBrandHub(page);
-  await phone(page).getByRole("button", { name: "Send feedback" }).click();
+  await page.getByRole("button", { name: "Send feedback" }).click();
 }
 
 /** Stub Supabase admin role checks for signed-in E2E. */

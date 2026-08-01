@@ -99,7 +99,7 @@ export function SideNav() {
         </div>
         <LanguageToggle className="self-start" />
         {userId ? (
-          <button
+          <button type="button"
             onClick={async () => {
               const { error } = await signOutWithPushCleanup("SideNav.tsx");
               if (error) {

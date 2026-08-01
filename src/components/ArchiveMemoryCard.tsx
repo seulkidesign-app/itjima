@@ -79,14 +79,23 @@ export function ArchiveMemoryCard({
       )}
 
       <div
-        role={selecting ? undefined : "button"}
-        tabIndex={selecting ? undefined : 0}
+        role="button"
+        tabIndex={0}
+        aria-pressed={selecting ? selected : undefined}
+        aria-expanded={selecting ? undefined : expanded}
+        aria-label={
+          selecting
+            ? t(
+                `${title} ${selected ? "선택됨" : "선택"}`,
+                `${title}, ${selected ? "selected" : "select"}`,
+              )
+            : t(`${title} 열기`, `Open ${title}`)
+        }
         onClick={handleActivate}
         onKeyDown={(e) => {
-          if (selecting) return;
           if (e.key === "Enter" || e.key === " ") {
             e.preventDefault();
-            onToggleExpand();
+            handleActivate();
           }
         }}
         className={`block w-full px-5 py-4 text-left ${

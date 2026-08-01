@@ -9,6 +9,7 @@ import {
   GUEST_ARCHIVE_KEY,
   dismissInlinePromise,
   closeDecisionDeckIfOpen,
+  CAPTURE_LINK_NAME,
 } from "./helpers";
 import {
   resolveDragOutcome,
@@ -121,7 +122,7 @@ test.describe("Decision deck swipe", () => {
       },
     );
     await page.reload();
-    await phone(page).getByRole("link", { name: /^Throw/ }).waitFor({
+    await phone(page).getByRole("link", { name: CAPTURE_LINK_NAME }).waitFor({
       state: "visible",
     });
     await openDeck(page);
