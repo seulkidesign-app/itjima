@@ -44,7 +44,7 @@ async function expectAppControlsAreUsable(page: Page) {
   expect(unnamed, "Every visible interactive control needs a name").toEqual([]);
 
   const tooSmall = result.filter(
-    (item) => item.width < 40 || item.height < 40,
+    (item) => item.width < 44 || item.height < 44,
   );
   expect(
     tooSmall,
@@ -66,7 +66,7 @@ async function captureText(page: Page, text: string) {
   const input = page.locator("#capture-input");
   await expect(input).toBeVisible();
   await input.fill(text);
-  await page.getByRole("button", { name: "Capture", exact: true }).click();
+  await page.getByTestId("capture-submit").click();
   await expect(page.getByTestId("inline-promise")).toBeVisible();
 }
 
@@ -181,7 +181,8 @@ test("[critical] manual schedule creation completes every step and can be marked
   const row = page.getByRole("button", { name: /Product review.*Tap to refine/i });
   await expect(row).toBeVisible();
   await row.press(" ");
-  await expect(page.getByText("Product review", { exact: true }).first()).toBeVisible();
+  await expect(page.getByText("You can let this go", { exact: true })).toBeVisible();
+  await expect(row).toBeHidden();
 
   expect(errors).toEqual([]);
 });

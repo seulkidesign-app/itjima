@@ -44,6 +44,15 @@ function focusableElements(container: HTMLElement): HTMLElement[] {
   );
 }
 
+function isTopmostModal(panel: HTMLElement): boolean {
+  const dialogs = Array.from(
+    document.querySelectorAll<HTMLElement>('[role="dialog"][aria-modal="true"]'),
+  ).filter(
+    (dialog) => dialog.getClientRects().length > 0 && !dialog.hasAttribute("hidden"),
+  );
+  return dialogs[dialogs.length - 1] === panel;
+}
+
 type Props = {
   open: boolean;
   onClose: () => void;
@@ -113,15 +122,16 @@ export function BottomSheet({
     });
 
     const onKey = (event: KeyboardEvent) => {
+      const panel = panelRef.current;
+      if (!panel || !isTopmostModal(panel)) return;
+
       if (event.key === "Escape") {
         event.preventDefault();
+        event.stopImmediatePropagation();
         onClose();
         return;
       }
       if (event.key !== "Tab") return;
-
-      const panel = panelRef.current;
-      if (!panel) return;
       const focusable = focusableElements(panel);
       if (focusable.length === 0) {
         event.preventDefault();

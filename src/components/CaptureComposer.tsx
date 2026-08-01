@@ -378,7 +378,7 @@ export function CaptureComposer({
                   setUserText(label);
                   textareaRef.current?.focus();
                 }}
-                className="touch-press rounded-full border border-ink/10 bg-ink/[0.035] px-3 py-1.5 text-[11px] font-semibold text-ink-soft"
+                className="touch-press min-h-11 rounded-full border border-ink/10 bg-ink/[0.035] px-3 py-2 text-[11px] font-semibold text-ink-soft"
               >
                 {label}
               </button>
@@ -576,8 +576,9 @@ export function CaptureComposer({
           whileTap={{ scale: 0.96 }}
           transition={SPRING_MICRO}
           disabled={submittingRef.current || !hasContent}
-          className="capture-submit-button flex h-10 min-w-[6rem] items-center justify-center gap-1.5 rounded-full bg-primary px-4 text-[13px] font-black text-ink shadow-card disabled:bg-ink/[0.08] disabled:text-ink-soft/55 disabled:shadow-none"
-          aria-label={t("던지기", "Drop it")}
+          data-testid="capture-submit"
+          className="capture-submit-button flex h-11 min-h-11 min-w-[6rem] items-center justify-center gap-1.5 rounded-full bg-primary px-4 text-[13px] font-black text-ink shadow-card disabled:bg-ink/[0.08] disabled:text-ink-soft/55 disabled:shadow-none"
+          aria-label={t("남기기", "Capture")}
         >
           <ArrowUp size={16} strokeWidth={2.8} aria-hidden />
           {t("남기기", "Capture")}

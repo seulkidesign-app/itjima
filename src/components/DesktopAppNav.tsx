@@ -71,6 +71,7 @@ export function DesktopAppNav() {
                 key={to}
                 to={to}
                 onClick={tap}
+                aria-label={label}
                 aria-current={active ? "page" : undefined}
                 className={`itjima-desktop-nav-item group flex min-h-[66px] items-center gap-3 rounded-[18px] px-3.5 py-2.5 no-underline transition-colors ${
                   active
