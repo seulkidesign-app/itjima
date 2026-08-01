@@ -22,6 +22,7 @@ export function DesktopAppNav() {
     {
       to: "/" as const,
       label: t("남기기", "Capture"),
+      ariaLabel: t("남기기", "Capture"),
       description: t(
         "말하듯 일정과 할 일을 입력",
         "Capture plans in natural language",
@@ -31,6 +32,10 @@ export function DesktopAppNav() {
     {
       to: "/schedule" as const,
       label: t("할 일·일정", "Tasks & schedule"),
+      ariaLabel: t(
+        "할 일·일정",
+        "Schedule — tasks and undated to-dos",
+      ),
       description: t(
         "날짜 없는 할 일과 예정된 일정",
         "Review tasks and scheduled plans",
@@ -40,6 +45,7 @@ export function DesktopAppNav() {
     {
       to: "/archive" as const,
       label: t("보관함", "Archive"),
+      ariaLabel: t("보관함", "Archive"),
       description: t(
         "행동이 필요 없는 정보를 보관",
         "Keep reference material for later",
@@ -57,7 +63,7 @@ export function DesktopAppNav() {
         <Link
           to="/"
           className="itjima-desktop-brand flex min-h-16 items-center gap-3 px-5 no-underline"
-          aria-label={t("Itjima 남기기 화면", "Itjima Capture")}
+          aria-label={t("잊지마 홈", "Itjima home")}
         >
           <span className="grid h-10 w-10 place-items-center rounded-[14px] bg-primary text-[13px] font-black text-ink shadow-card">
             IJ
@@ -73,14 +79,14 @@ export function DesktopAppNav() {
         </Link>
 
         <nav className="mt-5 flex flex-col gap-1.5 px-3">
-          {items.map(({ to, label, description, Icon }) => {
+          {items.map(({ to, label, ariaLabel, description, Icon }) => {
             const active = pathname === to;
             return (
               <Link
                 key={to}
                 to={to}
                 onClick={tap}
-                aria-label={label}
+                aria-label={ariaLabel}
                 aria-current={active ? "page" : undefined}
                 className={`itjima-desktop-nav-item group flex min-h-[66px] items-center gap-3 rounded-[18px] px-3.5 py-2.5 no-underline transition-colors ${
                   active
