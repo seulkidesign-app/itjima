@@ -58,6 +58,13 @@
     bottom: calc(86px + env(safe-area-inset-bottom)) !important;
   }
 
+  /* Route-level dialogs must always sit above the persistent mobile chrome. */
+  [data-testid="archive-edit-dialog"],
+  [data-testid="archive-group-dialog"],
+  [data-testid="archive-ungroup-dialog"] {
+    z-index: 90 !important;
+  }
+
   .phone-frame [data-testid="inbox-context-menu"] {
     margin-bottom: calc(154px + env(safe-area-inset-bottom)) !important;
   }
