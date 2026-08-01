@@ -30,6 +30,9 @@ jobs:
       - name: Clean install
         run: npm ci
 
+      - name: Install Playwright Chromium
+        run: npx playwright install chromium
+
       - name: Build production bundle
         run: npm run build
 
@@ -49,72 +52,58 @@ jobs:
 
       - name: Capture mobile tablet and desktop screens
         run: |
-          CHROME="$(command -v google-chrome || command -v chromium || command -v chromium-browser)"
-          if [ -z "$CHROME" ]; then
-            echo "Chrome or Chromium is required for visual smoke testing."
-            exit 1
-          fi
+          node --input-type=module <<'NODE'
+          import { chromium } from "@playwright/test";
+          import { mkdir } from "node:fs/promises";
 
-          capture() {
-            local width="$1"
-            local height="$2"
-            local output="$3"
-            local url="$4"
-            local output_path="visual-artifacts/${output}"
-            local profile_dir
-            local status
+          const baseUrl = "http://127.0.0.1:4173";
+          const captures = [
+            [320, 568, "home-mobile-small-en.png", "/?lang=en"],
+            [390, 844, "home-mobile-en.png", "/?lang=en"],
+            [390, 844, "home-mobile-ko.png", "/?lang=ko"],
+            [390, 844, "about-mobile-en.png", "/about?lang=en"],
+            [768, 1024, "home-tablet-en.png", "/?lang=en"],
+            [834, 1112, "home-tablet-ko.png", "/?lang=ko"],
+            [768, 1024, "schedule-tablet-en.png", "/schedule?lang=en"],
+            [834, 1112, "about-tablet-en.png", "/about?lang=en"],
+            [1440, 1000, "home-desktop-en.png", "/?lang=en"],
+            [1440, 1000, "schedule-desktop-en.png", "/schedule?lang=en"],
+            [1440, 1000, "archive-desktop-ko.png", "/archive?lang=ko"],
+            [1440, 1000, "about-desktop-en.png", "/about?lang=en"],
+            [1440, 1000, "about-desktop-ko.png", "/about?lang=ko"],
+          ];
 
-            profile_dir="$(mktemp -d)"
-            rm -f "$output_path"
+          await mkdir("visual-artifacts", { recursive: true });
+          const browser = await chromium.launch({ headless: true });
 
-            set +e
-            timeout --signal=TERM --kill-after=2s 20s "$CHROME" \
-              --headless=new \
-              --no-sandbox \
-              --disable-gpu \
-              --disable-dev-shm-usage \
-              --disable-background-networking \
-              --disable-component-update \
-              --disable-default-apps \
-              --disable-sync \
-              --no-first-run \
-              --hide-scrollbars \
-              --force-device-scale-factor=1 \
-              --user-data-dir="$profile_dir" \
-              --window-size="${width},${height}" \
-              --virtual-time-budget=3000 \
-              --screenshot="$output_path" \
-              "$url"
-            status=$?
-            set -e
+          try {
+            for (const [width, height, output, route] of captures) {
+              const context = await browser.newContext({
+                viewport: { width, height },
+                deviceScaleFactor: 1,
+                reducedMotion: "reduce",
+              });
+              const page = await context.newPage();
 
-            rm -rf "$profile_dir"
+              await page.goto(`${baseUrl}${route}`, {
+                waitUntil: "domcontentloaded",
+                timeout: 20_000,
+              });
+              await page.locator("body").waitFor({ state: "visible", timeout: 10_000 });
+              await page.waitForTimeout(700);
+              await page.screenshot({
+                path: `visual-artifacts/${output}`,
+                animations: "disabled",
+                fullPage: false,
+              });
 
-            if [ ! -s "$output_path" ]; then
-              echo "Screenshot capture failed for ${output} with Chrome status ${status}."
-              exit 1
-            fi
-
-            if [ "$status" -ne 0 ]; then
-              echo "Chrome status ${status} after writing ${output}; continuing because the PNG is complete."
-            fi
+              console.log(`captured ${output} at ${width}x${height}`);
+              await context.close();
+            }
+          } finally {
+            await browser.close();
           }
-
-          capture 320 568 home-mobile-small-en.png "http://127.0.0.1:4173/?lang=en"
-          capture 390 844 home-mobile-en.png "http://127.0.0.1:4173/?lang=en"
-          capture 390 844 home-mobile-ko.png "http://127.0.0.1:4173/?lang=ko"
-          capture 390 844 about-mobile-en.png "http://127.0.0.1:4173/about?lang=en"
-
-          capture 768 1024 home-tablet-en.png "http://127.0.0.1:4173/?lang=en"
-          capture 834 1112 home-tablet-ko.png "http://127.0.0.1:4173/?lang=ko"
-          capture 768 1024 schedule-tablet-en.png "http://127.0.0.1:4173/schedule?lang=en"
-          capture 834 1112 about-tablet-en.png "http://127.0.0.1:4173/about?lang=en"
-
-          capture 1440 1000 home-desktop-en.png "http://127.0.0.1:4173/?lang=en"
-          capture 1440 1000 schedule-desktop-en.png "http://127.0.0.1:4173/schedule?lang=en"
-          capture 1440 1000 archive-desktop-ko.png "http://127.0.0.1:4173/archive?lang=ko"
-          capture 1440 1000 about-desktop-en.png "http://127.0.0.1:4173/about?lang=en"
-          capture 1440 1000 about-desktop-ko.png "http://127.0.0.1:4173/about?lang=ko"
+          NODE
 
       - name: Verify screenshot files and dimensions
         run: |
