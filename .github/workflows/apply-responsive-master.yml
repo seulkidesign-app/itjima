@@ -46,6 +46,14 @@ jobs:
       - name: Validate release build
         run: npm run build
 
+      - name: Commit responsive master
+        run: |
+          git config user.name "itjima-responsive-bot"
+          git config user.email "actions@users.noreply.github.com"
+          git add src e2e playwright.config.ts .github/workflows/product-qa.yml .github/workflows/visual-smoke.yml
+          git commit -m "[responsive-master] Perfect mobile tablet and desktop layouts"
+          git push origin HEAD:agent/us-launch-positioning
+
       - name: Install Chromium
         run: npx playwright install --with-deps chromium
 
@@ -57,11 +65,3 @@ jobs:
 
       - name: Verify eleven-viewport responsive matrix
         run: npx playwright test e2e/responsive-matrix.spec.ts --project=responsive-matrix-chrome
-
-      - name: Commit verified responsive master
-        run: |
-          git config user.name "itjima-responsive-bot"
-          git config user.email "actions@users.noreply.github.com"
-          git add src e2e playwright.config.ts .github/workflows/product-qa.yml .github/workflows/visual-smoke.yml
-          git commit -m "[responsive-master] Perfect mobile tablet and desktop layouts"
-          git push origin HEAD:agent/us-launch-positioning
