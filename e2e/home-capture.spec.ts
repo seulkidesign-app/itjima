@@ -5,6 +5,8 @@ import {
   phone,
   openContextMenuRaw,
   GUEST_INBOX_KEY,
+  CAPTURE_LINK_NAME,
+  contextMenuDialog,
 } from "./helpers";
 
 async function installSpeechMock(page: Page) {
@@ -177,7 +179,7 @@ test.describe("Home capture UX", () => {
     test.beforeEach(async ({ page }) => {
       await installSpeechMock(page);
       await page.reload();
-      await phone(page).getByRole("link", { name: /^Throw/ }).waitFor({ state: "visible" });
+      await phone(page).getByRole("link", { name: CAPTURE_LINK_NAME }).waitFor({ state: "visible" });
     });
 
     test("finalized voice transcript is inserted only once", async ({ page }) => {
@@ -213,13 +215,9 @@ test.describe("Home capture UX", () => {
     test("optimistic submit clears composer before item appears", async ({
       page,
     }) => {
-      await phone(page)
-        .getByPlaceholder("Write whatever comes to mind")
-        .fill("Optimistic capture test");
-      await phone(page).getByRole("button", { name: "Drop it" }).click();
-      await expect(phone(page).getByPlaceholder("Write whatever comes to mind")).toHaveValue(
-        "",
-      );
+      await phone(page).locator("#capture-input").fill("Optimistic capture test");
+      await phone(page).locator('form.composer-hero button[type="submit"]').click();
+      await expect(phone(page).locator("#capture-input")).toHaveValue("");
       await expect(phone(page).getByText("Optimistic capture test")).toBeVisible();
     });
   });
@@ -252,13 +250,11 @@ test.describe("Home capture UX", () => {
         },
       );
       await page.reload();
-      await phone(page).getByRole("link", { name: /^Throw/ }).waitFor({ state: "visible" });
+      await phone(page).getByRole("link", { name: CAPTURE_LINK_NAME }).waitFor({ state: "visible" });
 
-      await expect
-        .poll(async () => isLatestTurnNearBottom(page, `Newer ${stamp}`))
-        .toBe(true);
-      const metrics = await scrollMetrics(page);
-      expect(metrics?.distanceFromBottom ?? 999).toBeLessThan(160);
+      const turns = phone(page).getByTestId("chat-turn");
+      await expect(turns.first()).toContainText(`Newer ${stamp}`);
+      await expect(turns.nth(1)).toContainText(`Older ${stamp}`);
     });
 
     test("submitting a thought scrolls to the newest thought", async ({ page }) => {
@@ -275,38 +271,26 @@ test.describe("Home capture UX", () => {
       page,
     }) => {
       const stamp = Date.now();
-      for (let i = 0; i < 8; i += 1) {
+      for (let i = 0; i < 12; i += 1) {
         await addThought(page, `Bulk ${i} ${stamp}`);
       }
-      await page.evaluate(() => {
-        const el = document.getElementById("phone-scroll");
-        if (!el) return;
-        el.scrollTop = el.scrollHeight;
-      });
-      await expect
-        .poll(async () => (await scrollMetrics(page))!.distanceFromBottom < 240)
-        .toBe(true);
 
-      const beforeScrollUp = await scrollMetrics(page);
-      await page.evaluate(() => {
-        const el = document.getElementById("phone-scroll");
-        if (el) {
-          el.scrollTop = 0;
-          el.dispatchEvent(new Event("scroll"));
-        }
-      });
-      const scrolledUp = await scrollMetrics(page);
-      expect(scrolledUp?.scrollTop ?? 999).toBeLessThan(40);
+      await phone(page).locator("#capture-input").blur();
+      const scroll = page.locator("#phone-scroll");
+      await scroll.hover();
+      await page.mouse.wheel(0, -1200);
+      await page.waitForTimeout(200);
 
-      await page.evaluate(() => {
-        window.dispatchEvent(new Event("resize"));
-      });
+      const before = await scrollMetrics(page);
+      const maxScroll = (before?.scrollHeight ?? 0) - (before?.clientHeight ?? 0);
+      expect(maxScroll).toBeGreaterThan(200);
+      expect(before?.scrollTop ?? maxScroll).toBeLessThan(maxScroll - 80);
+
+      await page.evaluate(() => window.dispatchEvent(new Event("resize")));
       await page.waitForTimeout(400);
 
       const after = await scrollMetrics(page);
-      expect(after?.scrollTop ?? 999).toBeLessThan(
-        Math.max(80, (beforeScrollUp?.scrollTop ?? 0) + 40),
-      );
+      expect(Math.abs((after?.scrollTop ?? 0) - (before?.scrollTop ?? 0))).toBeLessThan(80);
     });
   });
 
@@ -327,7 +311,7 @@ test.describe("Home capture UX", () => {
     await addThought(page, text);
     await openContextMenuRaw(page, text);
     await expect(
-      phone(page).getByRole("dialog").getByRole("button", { name: "Save to vault", exact: true }),
+      contextMenuDialog(page).getByRole("menuitem", { name: "Save to vault", exact: true }),
     ).toBeVisible();
   });
 
