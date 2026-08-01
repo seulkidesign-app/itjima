@@ -5,6 +5,8 @@ import {
   readGuestList,
   addThought,
   phone,
+  CAPTURE_LINK_NAME,
+  CAPTURE_LINK_NAME_KO,
 } from "./helpers";
 
 async function resetForIa(page: Page) {
@@ -18,7 +20,7 @@ async function resetForIa(page: Page) {
     sessionStorage.clear();
   });
   await page.reload();
-  await page.getByRole("link", { name: /^Throw/ }).waitFor({ state: "visible" });
+  await page.getByRole("link", { name: CAPTURE_LINK_NAME }).waitFor({ state: "visible" });
 }
 
 async function seedGuestData(page: Page) {
@@ -63,22 +65,22 @@ async function seedGuestData(page: Page) {
   );
 }
 
-test.describe("IA navigation (Throw / Schedule / Archive)", () => {
+test.describe("IA navigation (Capture / Schedule / Archive)", () => {
   test.beforeEach(async ({ page }) => {
     await resetForIa(page);
     await seedGuestData(page);
     await page.reload();
-    await page.getByRole("link", { name: /^Throw/ }).waitFor({ state: "visible" });
+    await page.getByRole("link", { name: CAPTURE_LINK_NAME }).waitFor({ state: "visible" });
   });
 
   test("tabs, route labels, and guest data persist across navigation", async ({
     page,
   }) => {
-    await expect(page.getByRole("link", { name: /^Throw$/ })).toBeVisible();
+    await expect(page.getByRole("link", { name: CAPTURE_LINK_NAME })).toBeVisible();
     await expect(page.getByRole("link", { name: /^Schedule$/ })).toBeVisible();
     await expect(page.getByRole("link", { name: /^Archive$/ })).toBeVisible();
 
-    await page.screenshot({ path: "qa-ia/01-throw.png" });
+    await page.screenshot({ path: "qa-ia/01-capture.png" });
 
     await page.getByRole("link", { name: /^Schedule$/ }).click();
     await expect(page).toHaveURL(/\/schedule$/);
@@ -110,7 +112,7 @@ test.describe("IA navigation (Throw / Schedule / Archive)", () => {
 
     await page.screenshot({ path: "qa-ia/03-archive-shell.png" });
 
-    await page.getByRole("link", { name: /^Throw$/ }).click();
+    await page.getByRole("link", { name: CAPTURE_LINK_NAME }).click();
     await expect(page).toHaveURL("/");
 
     const schedules = await readGuestList(page, GUEST_SCHEDULE_KEY);
@@ -135,9 +137,9 @@ test.describe("IA visual QA viewports", () => {
         sessionStorage.clear();
       });
       await page.reload();
-      await phone(page).getByRole("link", { name: /^던지기$/ }).waitFor();
+      await phone(page).getByRole("link", { name: CAPTURE_LINK_NAME_KO }).waitFor();
 
-      await expect(phone(page).getByRole("link", { name: /^던지기$/ })).toBeVisible();
+      await expect(phone(page).getByRole("link", { name: CAPTURE_LINK_NAME_KO })).toBeVisible();
       await expect(phone(page).getByRole("link", { name: /^일정$/ })).toBeVisible();
       await expect(phone(page).getByRole("link", { name: /^보관함$/ })).toBeVisible();
 
