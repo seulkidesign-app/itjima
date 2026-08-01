@@ -16,13 +16,7 @@ export function HomeEmptyHero() {
       data-testid="home-empty-hero"
       aria-labelledby="home-empty-title"
     >
-      <div className="itjima-empty-orb" aria-hidden>
-        <span className="itjima-empty-orb-core">
-          <MessageSquareText size={25} strokeWidth={1.9} />
-        </span>
-      </div>
-
-      <p className="mt-4 font-display text-[11px] uppercase tracking-[0.17em] text-ink/38">
+      <p className="font-display text-[11px] uppercase tracking-[0.17em] text-ink/38">
         {t("말하듯 남기는 일정", "Natural-language scheduling")}
       </p>
       <h1
