@@ -1,7 +1,7 @@
 import { test, expect } from "@playwright/test";
 
 test.describe("v1 release boundary", () => {
-  test("capture saves the original thought without invoking AI", async ({ page }) => {
+  test("capture saves the original thought without invoking server AI", async ({ page }) => {
     let aiRequestCount = 0;
 
     await page.route("**/api/brain-mirror", async (route) => {
@@ -35,7 +35,12 @@ test.describe("v1 release boundary", () => {
     await page.waitForTimeout(500);
 
     expect(aiRequestCount).toBe(0);
-    await expect(page.locator('[data-testid="inline-promise"]')).toHaveCount(0);
+    const localInterpretation = page.locator('[data-testid="inline-promise"]');
+    await expect(localInterpretation).toHaveCount(1);
+    await expect(localInterpretation).toHaveAttribute(
+      "data-intent",
+      "schedule_exact",
+    );
     await expect(page.getByText(/AI가 이해했어요|AI understood/i)).toHaveCount(0);
   });
 });
