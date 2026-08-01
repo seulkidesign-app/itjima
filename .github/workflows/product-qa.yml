@@ -36,7 +36,7 @@ jobs:
         run: npm ci
 
       - name: Audit every interactive element
-        run: node scripts/interaction-audit.mjs
+        run: node scripts/interaction-audit.mjs --strict
 
       - name: Upload interaction audit
         if: always()
