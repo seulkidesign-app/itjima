@@ -73,6 +73,7 @@ export function BottomSheet({
   const dragControls = useDragControls();
   const titleId = useId();
   const panelRef = useRef<HTMLDivElement | null>(null);
+  const previousFocusRef = useRef<HTMLElement | null>(null);
   const [keyboardInset, setKeyboardInset] = useState(0);
   const [wideLayout, setWideLayout] = useState(false);
   const [dragY, setDragY] = useState(0);
@@ -111,7 +112,7 @@ export function BottomSheet({
   useEffect(() => {
     if (!open) return;
 
-    const previousFocus =
+    previousFocusRef.current =
       document.activeElement instanceof HTMLElement ? document.activeElement : null;
     const focusFrame = window.requestAnimationFrame(() => {
       const panel = panelRef.current;
@@ -155,9 +156,6 @@ export function BottomSheet({
     return () => {
       window.cancelAnimationFrame(focusFrame);
       window.removeEventListener("keydown", onKey);
-      window.requestAnimationFrame(() => {
-        if (previousFocus?.isConnected) previousFocus.focus({ preventScroll: true });
-      });
     };
   }, [open, onClose]);
 
@@ -191,7 +189,17 @@ export function BottomSheet({
   const backdropOpacity = SHEET_DIM_MAX * dimProgress;
 
   return (
-    <AnimatePresence>
+    <AnimatePresence
+      onExitComplete={() => {
+        const previousFocus = previousFocusRef.current;
+        previousFocusRef.current = null;
+        window.requestAnimationFrame(() => {
+          if (previousFocus?.isConnected) {
+            previousFocus.focus({ preventScroll: true });
+          }
+        });
+      }}
+    >
       {open && (
         <div
           className="bottom-sheet-root fixed inset-0 z-[80] flex min-w-0 flex-col"
