@@ -1,6 +1,6 @@
 import { Link, useRouterState } from "@tanstack/react-router";
 import { Archive, CalendarDays, MessageSquareText, User } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { motion, LayoutGroup } from "framer-motion";
 import { useT } from "@/lib/i18n";
 import { SPRING_TAB } from "@/lib/motion";
@@ -19,6 +19,8 @@ export function TopNav() {
     { to: "/archive", label: t("보관함", "Archive"), Icon: Archive },
   ] as const;
 
+  const mobileSettingsRef = useRef<HTMLButtonElement | null>(null);
+  const tabletSettingsRef = useRef<HTMLButtonElement | null>(null);
   const [scrolled, setScrolled] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [brandHubOpen, setBrandHubOpen] = useState(false);
@@ -39,6 +41,21 @@ export function TopNav() {
   const openSettings = () => {
     tap();
     setSettingsOpen(true);
+  };
+
+  const closeSettings = () => {
+    setSettingsOpen(false);
+    const restoreFocus = () => {
+      const trigger = [mobileSettingsRef.current, tabletSettingsRef.current].find(
+        (element) => element && element.getClientRects().length > 0,
+      );
+      trigger?.focus({ preventScroll: true });
+    };
+    queueMicrotask(restoreFocus);
+    window.requestAnimationFrame(() => {
+      restoreFocus();
+      window.requestAnimationFrame(restoreFocus);
+    });
   };
 
   const renderBrand = (className: string) =>
@@ -80,6 +97,7 @@ export function TopNav() {
               "app-brand-trigger rounded-[12px] px-1 py-1 font-display text-[19px] uppercase leading-none tracking-wide text-ink",
             )}
             <button
+              ref={mobileSettingsRef}
               type="button"
               data-testid="open-settings"
               aria-label={t("설정 열기", "Open settings")}
@@ -173,6 +191,7 @@ export function TopNav() {
         </LayoutGroup>
 
         <button
+          ref={tabletSettingsRef}
           type="button"
           data-testid="open-settings"
           aria-label={t("설정 열기", "Open settings")}
@@ -188,10 +207,7 @@ export function TopNav() {
         </button>
       </header>
 
-      <SettingsSheet
-        open={settingsOpen}
-        onClose={() => setSettingsOpen(false)}
-      />
+      <SettingsSheet open={settingsOpen} onClose={closeSettings} />
       {isHome && (
         <BrandHubSheet
           open={brandHubOpen}
