@@ -103,16 +103,20 @@ function RootLayout() {
           <Toaster position="top-center" theme="system" richColors closeButton />
         </div>
       ) : (
-        <div className="itjima-app-stage flex min-h-dvh w-full items-start justify-center">
-          <div className="phone-frame itjima-responsive-frame flex flex-col lg:flex-row">
+        <div
+          className="itjima-app-stage flex min-h-dvh w-full items-start justify-center"
+          data-layout="app"
+          data-route={mainRouteKey}
+        >
+          <div className="phone-frame itjima-responsive-frame itjima-app-workspace flex flex-col lg:flex-row">
             <DesktopAppNav />
-            <div className="flex min-h-0 min-w-0 flex-1 flex-col">
+            <div className="itjima-app-content flex min-h-0 min-w-0 flex-1 flex-col">
               <div className="lg:hidden">
                 <TopNav />
               </div>
               <main
                 id="phone-scroll"
-                className="min-h-0 min-w-0 flex-1 overflow-y-auto overflow-x-hidden"
+                className="itjima-app-scroll min-h-0 min-w-0 flex-1 overflow-y-auto overflow-x-hidden"
               >
                 <PageTransition routeKey={mainRouteKey}>
                   <Outlet />
