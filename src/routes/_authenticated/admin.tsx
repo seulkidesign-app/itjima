@@ -471,6 +471,7 @@ function AdminDashboard() {
                       {f.category}
                     </span>
                     <select
+                      aria-label={t("피드백 상태", "Feedback status")}
                       value={f.status}
                       onChange={(e) =>
                         feedbackStatusMut.mutate({

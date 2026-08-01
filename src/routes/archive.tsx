@@ -1246,7 +1246,9 @@ function Archive() {
       {/* Create-group modal */}
       {groupModal && (
         <div className="fixed inset-0 z-[100] flex items-end justify-center p-4 pb-[calc(env(safe-area-inset-bottom)+1rem)] sm:items-center animate-fade-in">
-          <div
+          <button
+            type="button"
+            aria-label={t("새 모음 닫기", "Close new gathering")}
             className="absolute inset-0 bg-ink/40 backdrop-blur-md"
             onClick={() => setGroupModal(false)}
           />
@@ -1313,14 +1315,19 @@ function Archive() {
       {ungroupTarget && (
         <div
           className="fixed inset-0 z-50 flex flex-col justify-end"
-          role="dialog"
-          aria-modal="true"
-          onClick={() => setUngroupTarget(null)}
+          role="presentation"
         >
-          <div className="flex-1 animate-fade-in bg-ink/30 backdrop-blur-sm" />
+          <button
+            type="button"
+            aria-label={t("그룹 해제 창 닫기", "Close remove group dialog")}
+            className="absolute inset-0 animate-fade-in bg-ink/30 backdrop-blur-sm"
+            onClick={() => setUngroupTarget(null)}
+          />
           <div
-            className="animate-slide-up rounded-t-[28px] bg-white px-5 pb-[calc(env(safe-area-inset-bottom)+1rem)] pt-4"
-            onClick={(e) => e.stopPropagation()}
+            role="dialog"
+            aria-modal="true"
+            aria-label={t("그룹 해제", "Remove group")}
+            className="relative animate-slide-up rounded-t-[28px] bg-white px-5 pb-[calc(env(safe-area-inset-bottom)+1rem)] pt-4"
           >
             <p className="text-[16px] font-bold text-ink">
               {t(
@@ -1334,6 +1341,7 @@ function Archive() {
             <div className="mt-4 flex gap-2">
               <button
                 type="button"
+                autoFocus
                 onClick={() => setUngroupTarget(null)}
                 className="touch-press flex-1 rounded-full border border-ink/10 py-3 text-[14px] font-bold text-ink"
               >
@@ -1354,21 +1362,27 @@ function Archive() {
       {editItem && (
         <div
           className="fixed inset-0 z-50 flex flex-col"
-          role="dialog"
-          aria-modal="true"
-          aria-labelledby="archive-edit-title"
+          role="presentation"
           data-testid="archive-edit-dialog"
-          onClick={() => setEditItem(null)}
         >
-          <div className="flex-1 animate-fade-in bg-ink/30 backdrop-blur-sm" />
+          <button
+            type="button"
+            aria-label={t("이름 수정 닫기", "Close name editor")}
+            className="absolute inset-0 animate-fade-in bg-ink/30 backdrop-blur-sm"
+            onClick={() => setEditItem(null)}
+          />
           <div
-            className="animate-slide-up rounded-t-[28px] bg-background px-5 pb-[calc(env(safe-area-inset-bottom)+1rem)] pt-3"
-            onClick={(e) => e.stopPropagation()}
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="archive-edit-title"
+            className="relative mt-auto animate-slide-up rounded-t-[28px] bg-background px-5 pb-[calc(env(safe-area-inset-bottom)+1rem)] pt-3"
           >
             <h3 id="archive-edit-title" className="text-[17px] font-bold text-ink">
               {t("이름 다듬기", "Refine name")}
             </h3>
             <input
+              aria-label={t("보관 이름", "Archive name")}
+              autoFocus
               value={editTitle}
               onChange={(e) => setEditTitle(e.target.value)}
               className="mt-3 w-full rounded-[20px] bg-ink/[0.04] px-3.5 py-3 text-[15px] input-focus-ring"
