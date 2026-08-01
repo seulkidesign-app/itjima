@@ -23,6 +23,7 @@ import "./ui-wwdc-quality.css";
 import "./ui-responsive-pro.css";
 import "./ui-responsive-master.css";
 import "./ui-adaptive-navigation.css";
+import "./ui-mobile-light-contract.css";
 
 import { registerServiceWorker } from "@/lib/swReminders";
 import { installPushSubscriptionAuthSync } from "@/lib/push/pushAuthSync";

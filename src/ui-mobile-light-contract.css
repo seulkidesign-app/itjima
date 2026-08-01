@@ -1,0 +1,99 @@
+/*
+ * Mobile PWA light-surface contract.
+ *
+ * Itjima currently ships as a light-only product. iOS can still request a dark
+ * appearance for installed web apps, and older cascade layers may partially
+ * darken translucent chrome without updating the content canvas. Keep every
+ * persistent mobile surface in the same light appearance until a complete,
+ * intentionally designed dark theme exists.
+ */
+
+@media (max-width: 639px) {
+  html,
+  body,
+  #root {
+    color-scheme: light !important;
+    background: #ffffff !important;
+  }
+
+  .itjima-app-stage,
+  .itjima-responsive-frame,
+  .phone-frame,
+  .itjima-app-content,
+  .itjima-app-scroll,
+  .phone-frame .page-shell,
+  .phone-frame #phone-scroll {
+    background: #ffffff !important;
+    color: #111113 !important;
+  }
+
+  .mobile-app-chrome,
+  .mobile-app-header,
+  .mobile-app-header.itjima-glass-chrome,
+  .phone-frame .app-top-nav {
+    border-color: rgba(60, 60, 67, 0.1) !important;
+    background: rgba(255, 255, 255, 0.97) !important;
+    color: #111113 !important;
+    box-shadow: 0 1px 0 rgba(60, 60, 67, 0.08) !important;
+  }
+
+  .phone-frame .app-brand-trigger {
+    color: #111113 !important;
+  }
+
+  .phone-frame .app-account-button {
+    border-color: rgba(60, 60, 67, 0.1) !important;
+    background: rgba(255, 255, 255, 0.98) !important;
+    color: rgba(60, 60, 67, 0.72) !important;
+  }
+
+  .phone-frame .composer-hero.sticky {
+    border-top-color: rgba(60, 60, 67, 0.1) !important;
+    background: rgba(248, 248, 250, 0.97) !important;
+    color: #111113 !important;
+  }
+
+  .phone-frame form.composer-hero {
+    border-color: rgba(60, 60, 67, 0.12) !important;
+    background: rgba(255, 255, 255, 0.98) !important;
+    color: #111113 !important;
+  }
+
+  .phone-frame form.composer-hero .input-shell {
+    background: transparent !important;
+  }
+
+  .phone-frame form.composer-hero textarea#capture-input {
+    background: transparent !important;
+    color: #111113 !important;
+    -webkit-text-fill-color: #111113 !important;
+  }
+
+  .phone-frame form.composer-hero textarea#capture-input::placeholder {
+    color: rgba(60, 60, 67, 0.42) !important;
+    -webkit-text-fill-color: rgba(60, 60, 67, 0.42) !important;
+    opacity: 1 !important;
+  }
+
+  .mobile-bottom-nav {
+    border-color: rgba(60, 60, 67, 0.12) !important;
+    background: rgba(248, 248, 250, 0.97) !important;
+    color: #111113 !important;
+    box-shadow: 0 12px 36px -16px rgba(0, 0, 0, 0.24) !important;
+  }
+
+  .mobile-bottom-nav-item {
+    color: rgba(60, 60, 67, 0.62) !important;
+  }
+
+  .mobile-bottom-nav-item[aria-current="page"] {
+    background: rgba(118, 118, 128, 0.12) !important;
+    color: #111113 !important;
+  }
+
+  .phone-frame .chat-bubble {
+    border-color: rgba(190, 150, 0, 0.15) !important;
+    background: linear-gradient(155deg, #fffbe8, #fff3b9) !important;
+    color: #111113 !important;
+  }
+}
