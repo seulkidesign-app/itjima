@@ -12,7 +12,7 @@ import {
 async function submitThought(page: Page, text: string) {
   const frame = phone(page);
   await frame.locator("textarea").first().fill(text);
-  await frame.getByRole("button", { name: "Drop it", exact: true }).click();
+  await frame.locator('form.composer-hero button[type="submit"]').click();
   await frame.getByText(text, { exact: true }).first().waitFor({ state: "visible" });
 }
 
@@ -107,7 +107,7 @@ test.describe("Natural language scheduling (Korean)", () => {
       sessionStorage.clear();
     });
     await page.reload();
-    await phone(page).getByRole("link", { name: /^던지기/ }).waitFor({
+    await phone(page).getByRole("link", { name: /^남기기$/ }).waitFor({
       state: "visible",
     });
   });
@@ -115,7 +115,7 @@ test.describe("Natural language scheduling (Korean)", () => {
   async function submitThoughtKo(page: Page, text: string) {
     const frame = phone(page);
     await frame.locator("textarea").first().fill(text);
-    await frame.getByRole("button", { name: "던지기", exact: true }).click();
+    await frame.getByRole("button", { name: "남기기", exact: true }).click();
     await frame.getByText(text, { exact: true }).first().waitFor({ state: "visible" });
   }
 
