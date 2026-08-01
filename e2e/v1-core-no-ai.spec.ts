@@ -27,9 +27,7 @@ test.describe("v1 release boundary", () => {
     await expect(input).toBeVisible();
     await input.fill("내일 오후 3시 치과");
 
-    const submit = page.locator(
-      'form.composer-hero button[aria-label="던지기"], form.composer-hero button[aria-label="Drop it"]',
-    );
+    const submit = page.locator('form.composer-hero button[type="submit"]');
     await expect(submit).toBeEnabled();
     await submit.click();
 
