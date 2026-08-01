@@ -5,15 +5,14 @@ import {
   openContextMenu,
   gotoArchiveListView,
   phone,
+  CAPTURE_LINK_NAME,
+  clickContextMenuItem,
 } from "./helpers";
 
 async function saveToArchive(page: import("@playwright/test").Page, text: string) {
   await addThought(page, text);
   await openContextMenu(page, text);
-  await phone(page)
-    .getByRole("dialog")
-    .getByRole("button", { name: "Save to vault", exact: true })
-    .click();
+  await clickContextMenuItem(page, "Save to vault");
   await expect(
     phone(page).getByRole("paragraph").filter({ hasText: text }),
   ).toHaveCount(0);
@@ -37,14 +36,14 @@ test.describe("Archive keyword organize", () => {
       );
     });
     await page.reload();
-    await phone(page).getByRole("link", { name: /^Throw/ }).waitFor();
+    await phone(page).getByRole("link", { name: CAPTURE_LINK_NAME }).waitFor();
 
     await gotoArchiveListView(page);
     await phone(page)
       .getByRole("button", { name: "Gather by theme", exact: true })
       .click();
 
-    const sheet = phone(page).getByRole("dialog");
+    const sheet = page.getByRole("dialog");
     await expect(sheet.getByRole("heading", { name: "Group by keywords" })).toBeVisible();
     await expect(
       sheet.getByText("We'll group by keywords in your text"),
