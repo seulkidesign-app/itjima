@@ -72,6 +72,26 @@ function hasMeaningfulChild(node) {
   return false;
 }
 
+function hasImplicitLabel(node) {
+  let current = node.parent;
+  while (current) {
+    if (ts.isJsxElement(current) && tagName(current.openingElement) === "label") {
+      return hasMeaningfulChild(current);
+    }
+    if (
+      ts.isJsxElement(current) ||
+      ts.isJsxFragment(current) ||
+      ts.isParenthesizedExpression(current) ||
+      ts.isConditionalExpression(current)
+    ) {
+      current = current.parent;
+      continue;
+    }
+    break;
+  }
+  return false;
+}
+
 function lineOf(source, node) {
   return source.getLineAndCharacterOfPosition(node.getStart(source)).line + 1;
 }
@@ -172,7 +192,8 @@ for (const file of files) {
           attributes.has("id") ||
             attributes.has("aria-label") ||
             attributes.has("aria-labelledby") ||
-            attributes.has("title"),
+            attributes.has("title") ||
+            hasImplicitLabel(opening),
         );
         if (!hasProgrammaticLabel) {
           addIssue(
