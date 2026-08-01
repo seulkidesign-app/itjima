@@ -1,0 +1,4 @@
+- First-run capture cue is compact and action-led.
+- Interpretation is shown as structured plan/date/time fields.
+- Ambiguous assumptions remain explicit and require confirmation.
+- Mobile, tablet, and desktop navigation label tasks and schedules together.
