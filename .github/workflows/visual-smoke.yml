@@ -11,7 +11,7 @@ permissions:
 jobs:
   screenshots:
     runs-on: ubuntu-latest
-    timeout-minutes: 14
+    timeout-minutes: 10
     env:
       VITE_E2E: "true"
       VITE_SUPABASE_URL: "http://127.0.0.1:54321"
@@ -60,17 +60,44 @@ jobs:
             local height="$2"
             local output="$3"
             local url="$4"
-            "$CHROME" \
+            local output_path="visual-artifacts/${output}"
+            local profile_dir
+            local status
+
+            profile_dir="$(mktemp -d)"
+            rm -f "$output_path"
+
+            set +e
+            timeout --signal=TERM --kill-after=2s 20s "$CHROME" \
               --headless=new \
               --no-sandbox \
               --disable-gpu \
               --disable-dev-shm-usage \
+              --disable-background-networking \
+              --disable-component-update \
+              --disable-default-apps \
+              --disable-sync \
+              --no-first-run \
               --hide-scrollbars \
               --force-device-scale-factor=1 \
+              --user-data-dir="$profile_dir" \
               --window-size="${width},${height}" \
               --virtual-time-budget=3000 \
-              --screenshot="visual-artifacts/${output}" \
+              --screenshot="$output_path" \
               "$url"
+            status=$?
+            set -e
+
+            rm -rf "$profile_dir"
+
+            if [ ! -s "$output_path" ]; then
+              echo "Screenshot capture failed for ${output} with Chrome status ${status}."
+              exit 1
+            fi
+
+            if [ "$status" -ne 0 ]; then
+              echo "Chrome status ${status} after writing ${output}; continuing because the PNG is complete."
+            fi
           }
 
           capture 320 568 home-mobile-small-en.png "http://127.0.0.1:4173/?lang=en"
