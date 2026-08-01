@@ -21,9 +21,19 @@ export default defineConfig({
     {
       name: "mobile-chrome",
       testMatch: "**/*.spec.ts",
+      testIgnore: "**/responsive-matrix.spec.ts",
       use: {
         ...devices["iPhone 13"],
         browserName: "chromium",
+      },
+    },
+    {
+      name: "responsive-matrix-chrome",
+      testMatch: "**/responsive-matrix.spec.ts",
+      use: {
+        ...devices["Desktop Chrome"],
+        browserName: "chromium",
+        viewport: { width: 1440, height: 900 },
       },
     },
     {
