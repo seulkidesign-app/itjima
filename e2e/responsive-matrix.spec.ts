@@ -8,9 +8,9 @@ const viewports = [
   { name: "phone-large", width: 430, height: 932 },
   { name: "tablet-portrait", width: 768, height: 1024 },
   { name: "tablet-large", width: 820, height: 1180 },
-  { name: "tablet-landscape", width: 1024, height: 768 },
-  { name: "desktop-compact", width: 1280, height: 800 },
-  { name: "desktop-standard", width: 1440, height: 900 },
+  { name: "laptop-compact", width: 1024, height: 768 },
+  { name: "laptop-standard", width: 1280, height: 800 },
+  { name: "laptop-large", width: 1440, height: 900 },
   { name: "desktop-wide", width: 1920, height: 1080 },
 ] as const;
 
@@ -23,6 +23,30 @@ async function expectInsideViewport(page: Page, selector: string) {
   expect(box!.y).toBeGreaterThanOrEqual(-2);
   expect(box!.x + box!.width).toBeLessThanOrEqual(viewport!.width + 3);
   expect(box!.y + box!.height).toBeLessThanOrEqual(viewport!.height + 3);
+}
+
+async function expectLaptopUsesViewport(page: Page) {
+  const frame = page.locator(".itjima-responsive-frame");
+  const box = await frame.boundingBox();
+  const viewport = page.viewportSize();
+  const chrome = await frame.evaluate((element) => {
+    const style = getComputedStyle(element);
+    return {
+      borderRadius: Number.parseFloat(style.borderTopLeftRadius) || 0,
+      borderWidth: Number.parseFloat(style.borderTopWidth) || 0,
+      boxShadow: style.boxShadow,
+    };
+  });
+
+  expect(box).toBeTruthy();
+  expect(viewport).toBeTruthy();
+  expect(Math.abs(box!.x)).toBeLessThanOrEqual(2);
+  expect(Math.abs(box!.y)).toBeLessThanOrEqual(2);
+  expect(box!.width).toBeGreaterThanOrEqual(viewport!.width - 2);
+  expect(box!.height).toBeGreaterThanOrEqual(viewport!.height - 2);
+  expect(chrome.borderRadius).toBe(0);
+  expect(chrome.borderWidth).toBe(0);
+  expect(chrome.boxShadow).toBe("none");
 }
 
 async function expectNoHorizontalOverflow(page: Page) {
@@ -82,6 +106,10 @@ for (const viewport of viewports) {
     } else {
       await expect(page.locator(".app-top-nav")).toBeVisible();
       await expect(page.locator(".itjima-desktop-nav")).toBeHidden();
+    }
+
+    if (viewport.width >= 1024 && viewport.width < 1600) {
+      await expectLaptopUsesViewport(page);
     }
 
     const settings = page.locator('[data-testid="open-settings"]:visible');
