@@ -108,7 +108,7 @@ export function ContextMenu({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex flex-col" role="presentation">
+    <div className="fixed inset-0 z-[90] flex flex-col" role="presentation">
       <button
         type="button"
         aria-label={t("메뉴 닫기", "Close menu")}
