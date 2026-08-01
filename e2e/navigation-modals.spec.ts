@@ -166,7 +166,7 @@ test.describe("Navigation and modals", () => {
     await expect(contextMenuDialog(page)).toBeVisible();
     await expect(page).toHaveURL(/\/$/);
 
-    await page.getByRole("button", { name: "Close menu" }).click();
+    await page.keyboard.press("Escape");
     await expect(contextMenuDialog(page)).toHaveCount(0);
 
     await phone(page).getByRole("link", { name: /^Schedule/ }).click();
