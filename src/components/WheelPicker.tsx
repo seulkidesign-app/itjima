@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 
 type Col = { label: string; values: number[]; pad?: number };
 
@@ -40,6 +40,7 @@ function Column({
   value: number;
   onChange: (v: number) => void;
 }) {
+  const labelId = `${useId()}-label`;
   const ref = useRef<HTMLDivElement>(null);
   const settleTimer = useRef<number | null>(null);
   const dragging = useRef(false);
@@ -123,7 +124,7 @@ function Column({
   return (
     <div className="min-w-0 flex-1 text-center">
       <div
-        id={`wheel-label-${col.label}`}
+        id={labelId}
         className="mb-1.5 text-[11px] font-semibold uppercase tracking-wider text-ink-soft/70"
       >
         {col.label}
@@ -138,7 +139,7 @@ function Column({
           ref={ref}
           role="spinbutton"
           tabIndex={0}
-          aria-labelledby={`wheel-label-${col.label}`}
+          aria-labelledby={labelId}
           aria-valuemin={col.values[0]}
           aria-valuemax={col.values[col.values.length - 1]}
           aria-valuenow={internal}
