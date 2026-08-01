@@ -11,6 +11,78 @@ permissions:
   contents: read
 
 jobs:
+  security-audit:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Clean install
+        run: npm ci
+
+      - name: Capture runtime and full dependency audits
+        shell: bash
+        run: |
+          npm audit --omit=dev --json > audit-runtime.json || true
+          npm audit --json > audit-full.json || true
+
+      - name: Enforce runtime high and critical vulnerability gate
+        run: |
+          node --input-type=module <<'NODE'
+          import { readFileSync } from "node:fs";
+
+          const readAudit = (path) => {
+            try {
+              return JSON.parse(readFileSync(path, "utf8"));
+            } catch (error) {
+              console.error(`Could not parse ${path}:`, error);
+              process.exit(1);
+            }
+          };
+
+          const runtime = readAudit("audit-runtime.json");
+          const full = readAudit("audit-full.json");
+          const runtimeCounts = runtime.metadata?.vulnerabilities ?? {};
+          const fullCounts = full.metadata?.vulnerabilities ?? {};
+          const runtimeBlocking =
+            Number(runtimeCounts.high ?? 0) + Number(runtimeCounts.critical ?? 0);
+
+          console.log("Runtime dependency audit:", runtimeCounts);
+          console.log("Full dependency audit, including developer tools:", fullCounts);
+
+          if (runtimeBlocking > 0) {
+            console.error(
+              `Runtime dependencies contain ${runtimeBlocking} high or critical vulnerabilities.`,
+            );
+            process.exit(1);
+          }
+
+          const fullHigh = Number(fullCounts.high ?? 0);
+          const fullCritical = Number(fullCounts.critical ?? 0);
+          if (fullHigh + fullCritical > 0) {
+            console.warn(
+              `Developer tooling still reports ${fullHigh} high and ${fullCritical} critical vulnerabilities. See the uploaded audit artifact.`,
+            );
+          }
+          NODE
+
+      - name: Upload dependency audit reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: dependency-audit-${{ github.event.pull_request.number || github.run_number }}
+          path: |
+            audit-runtime.json
+            audit-full.json
+          if-no-files-found: error
+          retention-days: 14
+
   build:
     runs-on: ubuntu-latest
     steps:
@@ -31,7 +103,7 @@ jobs:
 
   production-smoke:
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-    needs: build
+    needs: [security-audit, build]
     runs-on: ubuntu-latest
     steps:
       - name: Verify focused production metadata
