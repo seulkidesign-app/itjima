@@ -1,7 +1,6 @@
 import { test, expect } from "@playwright/test";
 import {
   resetAppState,
-  gotoInbox,
   addThought,
   openContextMenu,
   openContextMenuRaw,
@@ -10,8 +9,10 @@ import {
   gotoArchiveListView,
   openArchiveEditDialog,
   dismissArchiveEditDialog,
-  completeScheduleDialog,
   phone,
+  CAPTURE_LINK_NAME,
+  clickContextMenuItem,
+  contextMenuDialog,
 } from "./helpers";
 
 test.describe("Navigation and modals", () => {
@@ -32,8 +33,8 @@ test.describe("Navigation and modals", () => {
     await phone(page)
       .getByRole("heading", { name: "Archive" })
       .waitFor();
-    await phone(page).getByRole("link", { name: /^Throw/ }).click();
-    await phone(page).getByPlaceholder("Write whatever comes to mind").waitFor();
+    await phone(page).getByRole("link", { name: CAPTURE_LINK_NAME }).click();
+    await phone(page).locator("#capture-input").waitFor();
 
     const ignorable = errors.filter(
       (e) =>
@@ -49,11 +50,11 @@ test.describe("Navigation and modals", () => {
   }) => {
     await openAbout(page);
     await expect(
-      page.getByRole("dialog", { name: "Itjima (잊지마)" }),
+      page.getByRole("dialog", { name: "About Itjima" }),
     ).toBeVisible();
     await page.keyboard.press("Escape");
     await expect(
-      page.getByRole("dialog", { name: "Itjima (잊지마)" }),
+      page.getByRole("dialog", { name: "About Itjima" }),
     ).toHaveCount(0);
   });
 
@@ -73,10 +74,7 @@ test.describe("Navigation and modals", () => {
     await addThought(page, text);
 
     await openContextMenu(page, text);
-    await phone(page)
-      .getByRole("dialog")
-      .getByRole("button", { name: "Save to vault", exact: true })
-      .click();
+    await clickContextMenuItem(page, "Save to vault");
 
     await openArchiveEditDialog(page, text);
 
@@ -111,7 +109,7 @@ test.describe("Navigation and modals", () => {
       .getByRole("dialog", { name: /Share your thoughts/ })
       .waitFor({ state: "visible" });
     await expect(
-      page.getByRole("dialog", { name: "Itjima (잊지마)" }),
+      page.getByRole("dialog", { name: "About Itjima" }),
     ).toHaveCount(0);
     await expect(page.getByRole("dialog")).toHaveCount(1);
 
@@ -123,12 +121,8 @@ test.describe("Navigation and modals", () => {
     await addThought(page, "First thought for sort");
     await addThought(page, "Second thought for sort");
 
-    const frame = phone(page);
     await openContextMenuRaw(page, "First thought for sort");
-    await frame
-      .getByRole("dialog")
-      .getByRole("button", { name: "Sort one by one", exact: true })
-      .click();
+    await clickContextMenuItem(page, "Sort one by one");
     await phone(page)
       .getByRole("dialog", { name: "One by one" })
       .waitFor({ state: "visible" });
@@ -152,17 +146,14 @@ test.describe("Navigation and modals", () => {
     const text = `Edit overlay ${Date.now()}`;
     await addThought(page, text);
     await openContextMenu(page, text);
-    await phone(page)
-      .getByRole("dialog")
-      .getByRole("button", { name: "Save to vault", exact: true })
-      .click();
+    await clickContextMenuItem(page, "Save to vault");
 
     await openArchiveEditDialog(page, text);
     await expect(page).toHaveURL(/\/archive/);
 
     await dismissArchiveEditDialog(page);
-    await phone(page).getByRole("link", { name: /^Throw/ }).click();
-    await phone(page).getByPlaceholder("Write whatever comes to mind").waitFor();
+    await phone(page).getByRole("link", { name: CAPTURE_LINK_NAME }).click();
+    await phone(page).locator("#capture-input").waitFor();
   });
 
   test("context menu blocks tab navigation until dismissed", async ({
@@ -172,11 +163,11 @@ test.describe("Navigation and modals", () => {
     await addThought(page, text);
     await openContextMenu(page, text);
 
-    await expect(phone(page).getByRole("dialog")).toBeVisible();
+    await expect(contextMenuDialog(page)).toBeVisible();
     await expect(page).toHaveURL(/\/$/);
 
-    await phone(page).getByRole("dialog").click({ position: { x: 20, y: 20 } });
-    await expect(phone(page).getByRole("dialog")).toHaveCount(0);
+    await page.getByRole("button", { name: "Close menu" }).click();
+    await expect(contextMenuDialog(page)).toHaveCount(0);
 
     await phone(page).getByRole("link", { name: /^Schedule/ }).click();
     await phone(page).getByRole("heading", { name: "Schedule" }).waitFor();
@@ -203,7 +194,7 @@ test.describe("Navigation and modals", () => {
       { key: "itjima.guest.inbox", thoughtText: text },
     );
 
-    await expect(phone(page).getByRole("dialog")).toHaveCount(0);
+    await expect(contextMenuDialog(page)).toHaveCount(0);
     await phone(page).getByRole("link", { name: /^Schedule/ }).click();
     await phone(page).getByRole("heading", { name: "Schedule" }).waitFor();
   });
