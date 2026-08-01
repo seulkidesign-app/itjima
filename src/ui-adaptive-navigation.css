@@ -90,6 +90,47 @@
   .itjima-app-scroll {
     padding-bottom: 0;
   }
+
+  /* PC is the browser workspace itself, never a simulated device frame. */
+  .itjima-app-stage[data-layout="app"] {
+    box-sizing: border-box !important;
+    width: 100vw !important;
+    height: 100dvh !important;
+    min-height: 100dvh !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    align-items: stretch !important;
+    justify-content: stretch !important;
+    overflow: hidden !important;
+  }
+
+  .itjima-app-stage[data-layout="app"] > .phone-frame.itjima-responsive-frame {
+    box-sizing: border-box !important;
+    flex: 1 1 auto !important;
+    width: 100vw !important;
+    max-width: none !important;
+    height: 100dvh !important;
+    min-height: 0 !important;
+    max-height: 100dvh !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    border: 0 !important;
+    border-radius: 0 !important;
+    box-shadow: none !important;
+    transform: none !important;
+    overflow: hidden !important;
+  }
+
+  .itjima-app-stage[data-layout="app"] .itjima-app-content,
+  .itjima-app-stage[data-layout="app"] .itjima-app-scroll,
+  .itjima-app-stage[data-layout="app"] .itjima-desktop-nav {
+    height: 100%;
+    min-height: 0;
+  }
+
+  .itjima-desktop-nav {
+    border-radius: 0 !important;
+  }
 }
 
 @media (max-width: 359px) {
