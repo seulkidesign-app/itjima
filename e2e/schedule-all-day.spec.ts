@@ -1,5 +1,11 @@
 import { test, expect, type Page } from "@playwright/test";
-import { readGuestList, GUEST_SCHEDULE_KEY, TEST_USER_ID, injectSignedInUser } from "./helpers";
+import {
+  CAPTURE_LINK_NAME,
+  readGuestList,
+  GUEST_SCHEDULE_KEY,
+  TEST_USER_ID,
+  injectSignedInUser,
+} from "./helpers";
 import {
   resolveScheduleAllDayFlags,
   scheduleAllDayFieldsFromConfirm,
@@ -47,7 +53,7 @@ async function resetForScheduleAllDay(page: Page) {
     sessionStorage.clear();
   });
   await page.reload();
-  await page.getByRole("link", { name: /^Throw/ }).waitFor({ state: "visible" });
+  await page.getByRole("link", { name: CAPTURE_LINK_NAME }).waitFor({ state: "visible" });
   const closeButtons = page.getByRole("button", { name: "Close" });
   if (await closeButtons.count()) {
     await closeButtons.first().click();
@@ -85,7 +91,7 @@ async function openEditTimeStep(
   await ui
     .getByRole("button", {
       name: new RegExp(
-        `^${title.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\.`,
+        `^${title.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\.`,
       ),
     })
     .click();
