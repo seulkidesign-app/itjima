@@ -23,6 +23,7 @@
   }
 
   .itjima-responsive-frame {
+    box-sizing: border-box !important;
     width: 100vw !important;
     max-width: none !important;
     height: 100svh !important;
@@ -30,9 +31,11 @@
     min-height: 100svh !important;
     min-height: 100dvh !important;
     margin: 0 !important;
+    padding: 0 !important;
     border: 0 !important;
     border-radius: 0 !important;
     box-shadow: none !important;
+    overflow: hidden !important;
   }
 
   .itjima-app-workspace,
