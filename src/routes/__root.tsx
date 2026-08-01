@@ -1,5 +1,5 @@
 import { Outlet, createRootRoute, useRouterState } from "@tanstack/react-router";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { Toaster } from "sonner";
 import { maybeRouteOAuthCallback } from "@/lib/oauth";
 import { authDebug } from "@/lib/authDebug";
@@ -37,6 +37,93 @@ function AppRuntimeServices() {
       <GlobalInteractions />
       <ScheduleDeepLinkBridge />
     </>
+  );
+}
+
+function readDesktopLayout() {
+  return (
+    typeof window !== "undefined" &&
+    window.matchMedia("(min-width: 1024px)").matches
+  );
+}
+
+function useDesktopLayout() {
+  const [isDesktop, setIsDesktop] = useState(readDesktopLayout);
+
+  useEffect(() => {
+    const media = window.matchMedia("(min-width: 1024px)");
+    const sync = () => setIsDesktop(media.matches);
+    sync();
+    media.addEventListener("change", sync);
+    return () => media.removeEventListener("change", sync);
+  }, []);
+
+  return isDesktop;
+}
+
+function AppRouteOutlet({ routeKey }: { routeKey: string }) {
+  return (
+    <PageTransition routeKey={routeKey}>
+      <Outlet />
+    </PageTransition>
+  );
+}
+
+function AdaptiveAppShell({ routeKey }: { routeKey: string }) {
+  const isDesktop = useDesktopLayout();
+
+  if (isDesktop) {
+    return (
+      <div
+        className="itjima-desktop-shell flex h-dvh w-full overflow-hidden"
+        data-layout="desktop"
+        data-route={routeKey}
+      >
+        <div className="phone-frame itjima-desktop-style-scope contents">
+          <DesktopAppNav />
+          <div className="itjima-app-content flex min-h-0 min-w-0 flex-1 flex-col">
+            <main
+              id="phone-scroll"
+              className="itjima-app-scroll min-h-0 min-w-0 flex-1 overflow-y-auto overflow-x-hidden"
+            >
+              <AppRouteOutlet routeKey={routeKey} />
+            </main>
+          </div>
+        </div>
+        <Toaster
+          position="top-center"
+          theme="system"
+          toastOptions={calmToastOptions}
+          offset={24}
+        />
+      </div>
+    );
+  }
+
+  return (
+    <div
+      className="itjima-app-stage flex min-h-dvh w-full items-start justify-center"
+      data-layout="touch"
+      data-route={routeKey}
+    >
+      <div className="phone-frame itjima-responsive-frame itjima-app-workspace flex flex-col">
+        <TopNav />
+        <div className="itjima-app-content flex min-h-0 min-w-0 flex-1 flex-col">
+          <main
+            id="phone-scroll"
+            className="itjima-app-scroll min-h-0 min-w-0 flex-1 overflow-y-auto overflow-x-hidden"
+          >
+            <AppRouteOutlet routeKey={routeKey} />
+          </main>
+        </div>
+      </div>
+      <Toaster
+        position="top-center"
+        theme="system"
+        toastOptions={calmToastOptions}
+        offset={72}
+      />
+    </div>
   );
 }
 
@@ -103,34 +190,7 @@ function RootLayout() {
           <Toaster position="top-center" theme="system" richColors closeButton />
         </div>
       ) : (
-        <div
-          className="itjima-app-stage flex min-h-dvh w-full items-start justify-center"
-          data-layout="app"
-          data-route={mainRouteKey}
-        >
-          <div className="phone-frame itjima-responsive-frame itjima-app-workspace flex flex-col lg:flex-row">
-            <DesktopAppNav />
-            <div className="itjima-app-content flex min-h-0 min-w-0 flex-1 flex-col">
-              <div className="lg:hidden">
-                <TopNav />
-              </div>
-              <main
-                id="phone-scroll"
-                className="itjima-app-scroll min-h-0 min-w-0 flex-1 overflow-y-auto overflow-x-hidden"
-              >
-                <PageTransition routeKey={mainRouteKey}>
-                  <Outlet />
-                </PageTransition>
-              </main>
-            </div>
-          </div>
-          <Toaster
-            position="top-center"
-            theme="system"
-            toastOptions={calmToastOptions}
-            offset={72}
-          />
-        </div>
+        <AdaptiveAppShell routeKey={mainRouteKey} />
       )}
     </LanguageProvider>
   );
