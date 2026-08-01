@@ -38,11 +38,6 @@ function tomorrowParts() {
   };
 }
 
-function todayParts() {
-  const now = new Date();
-  return { y: now.getFullYear(), m: now.getMonth(), d: now.getDate() };
-}
-
 async function resetForScheduleAllDay(page: Page) {
   await page.goto("/");
   await page.evaluate(() => {
@@ -91,7 +86,7 @@ async function openEditTimeStep(
   await ui
     .getByRole("button", {
       name: new RegExp(
-        `^${title.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\.`,
+        `^${title.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\.`,
       ),
     })
     .click();
@@ -145,9 +140,20 @@ async function expectToggleStates(
 }
 
 async function saveEditSheet(page: Page) {
-  const sheet = page.getByRole("dialog");
+  const sheet = page.getByRole("dialog").first();
   await sheet.getByRole("button", { name: "Set a reminder" }).click();
-  await sheet.getByRole("button", { name: "Add to schedule" }).click();
+
+  const addToSchedule = sheet.getByRole("button", { name: "Add to schedule" });
+  if (await addToSchedule.isVisible().catch(() => false)) {
+    await addToSchedule.click();
+  }
+
+  const notification = page.getByRole("dialog", { name: "Notification" });
+  if (await notification.isVisible().catch(() => false)) {
+    await notification
+      .getByRole("button", { name: "Save without notifications" })
+      .click();
+  }
 }
 
 test.describe("QA #7 resolveScheduleAllDayFlags (unit)", () => {
@@ -371,6 +377,9 @@ test.describe("QA #7 schedule all-day E2E", () => {
     const switches = sheet.getByRole("switch", { name: "All-day" });
     await switches.nth(0).click();
     await saveEditSheet(page);
+    await expect
+      .poll(async () => (await readGuestSchedule(page)).length)
+      .toBe(1);
 
     await page.reload();
     let saved = (await readGuestSchedule(page))[0]!;
@@ -384,6 +393,9 @@ test.describe("QA #7 schedule all-day E2E", () => {
     await switches.nth(0).click();
     await switches.nth(1).click();
     await saveEditSheet(page);
+    await expect
+      .poll(async () => (await readGuestSchedule(page)).length)
+      .toBe(1);
 
     await page.reload();
     saved = (await readGuestSchedule(page))[0]!;
