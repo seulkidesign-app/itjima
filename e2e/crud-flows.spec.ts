@@ -115,7 +115,14 @@ test.describe("CRUD flows (guest / offline)", () => {
     await sheet.getByPlaceholder("What was this again?").fill(text);
     await completeScheduleDialog(page);
 
+    const notification = page.getByRole("dialog", { name: "Notification" });
+    if (await notification.isVisible().catch(() => false)) {
+      await notification
+        .getByRole("button", { name: "Save without notifications" })
+        .click();
+    }
+
+    await expect.poll(() => getTabCount(page, "Schedule")).toBe(1);
     await phone(page).getByText(text).first().waitFor({ state: "visible" });
-    expect(await getTabCount(page, "Schedule")).toBe(1);
   });
 });
