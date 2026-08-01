@@ -1,1 +1,0 @@
-Launch QA repair trigger for PR #8.
