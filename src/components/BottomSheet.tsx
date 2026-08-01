@@ -257,7 +257,7 @@ export function BottomSheet({
                 ? { duration: MOTION_DURATION, ease: MOTION_EASE }
                 : SPRING_SHEET
             }
-            className="bottom-sheet-panel itjima-glass-panel sheet-chrome relative z-[1] mx-auto mt-auto flex w-full max-h-[var(--sheet-max-h)] shrink-0 flex-col overflow-hidden"
+            className="bottom-sheet-panel itjima-glass-panel sheet-chrome relative z-[1] mx-auto mt-auto flex min-h-0 w-full max-h-[var(--sheet-max-h)] shrink flex-col overflow-hidden"
             style={
               {
                 "--sheet-max-h": maxHeight,
@@ -282,7 +282,7 @@ export function BottomSheet({
                 <div className="h-1 w-9 rounded-full bg-ink/12" />
               </div>
             )}
-            <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
+            <div className="flex min-h-0 flex-1 flex-col overflow-x-hidden overflow-y-auto overscroll-contain">
               {children}
             </div>
           </motion.div>
