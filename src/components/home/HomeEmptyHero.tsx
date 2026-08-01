@@ -1,66 +1,75 @@
-import { CalendarClock, Check, MessageSquareText, ShieldCheck } from "lucide-react";
+import {
+  ArrowDown,
+  CalendarClock,
+  MessageSquareText,
+  ShieldCheck,
+} from "lucide-react";
 import { useT } from "@/lib/i18n";
 
-/** Launch-ready Home opening for natural-language schedule capture. */
+/** Compact first-run cue that demonstrates the product before the first input. */
 export function HomeEmptyHero() {
   const t = useT();
 
   return (
     <section
-      className="itjima-empty-hero flex flex-1 flex-col items-center justify-center px-4 pb-5 pt-[min(9dvh,4.5rem)] text-center"
+      className="itjima-empty-hero flex flex-1 flex-col items-center justify-center px-4 pb-3 pt-[min(5dvh,2.5rem)] text-center"
       data-testid="home-empty-hero"
       aria-labelledby="home-empty-title"
     >
       <div className="itjima-empty-orb" aria-hidden>
         <span className="itjima-empty-orb-core">
-          <MessageSquareText size={27} strokeWidth={1.9} />
+          <MessageSquareText size={25} strokeWidth={1.9} />
         </span>
       </div>
 
-      <p className="mt-6 font-display text-[12px] uppercase tracking-[0.18em] text-ink/38">
-        {t("자연어 일정 캡처", "Natural-language scheduling")}
+      <p className="mt-4 font-display text-[11px] uppercase tracking-[0.17em] text-ink/38">
+        {t("말하듯 남기는 일정", "Natural-language scheduling")}
       </p>
       <h1
         id="home-empty-title"
-        className="mt-3 max-w-[20rem] text-[clamp(26px,7vw,34px)] font-black leading-[1.08] tracking-[-0.045em] text-ink"
+        className="mt-2 max-w-[21rem] text-[clamp(25px,6.8vw,34px)] font-black leading-[1.08] tracking-[-0.045em] text-ink"
       >
-        {t("말하듯 남기면, 일정이 됩니다.", "Say the plan. It becomes a schedule.")}
+        {t("무엇을 잊고 싶지 않나요?", "What do you want to remember?")}
       </h1>
-      <p className="mt-3 max-w-[20rem] text-[14px] leading-[1.65] text-ink-soft/95">
+      <p className="mt-2 max-w-[21rem] text-[14px] leading-[1.6] text-ink-soft/95">
         {t(
-          "확실한 날짜와 시간은 채우고, 위험한 추측이 필요한 부분만 확인해요.",
-          "Itjima fills what is clear and asks only when a date or time needs confirmation.",
+          "대충 말해도 괜찮아요. 확실한 정보는 채우고, 필요한 것만 확인해요.",
+          "Say it roughly. Itjima fills what is clear and asks only what matters.",
         )}
       </p>
 
-      <div className="mt-7 grid w-full max-w-[22rem] gap-2.5 text-left" role="list">
-        <div className="itjima-empty-proof" role="listitem">
-          <span className="itjima-empty-proof-icon">
-            <CalendarClock size={17} aria-hidden />
-          </span>
-          <span>
-            <strong>{t("일정 자동 해석", "Understands schedules")}</strong>
-            <small>{t("날짜·시간·할 일을 분리", "Separates date, time, and task")}</small>
-          </span>
-          <Check size={15} className="ml-auto text-emerald-600" aria-hidden />
+      <div
+        className="mt-5 w-full max-w-[22rem] rounded-[20px] border border-ink/[0.08] bg-white/72 px-3.5 py-3 text-left shadow-card"
+        aria-label={t("일정 해석 예시", "Schedule interpretation example")}
+      >
+        <div className="flex items-center gap-2 text-[12px] font-semibold text-ink-soft">
+          <MessageSquareText size={15} aria-hidden />
+          <span>{t("내일 3시 치과", "Dentist tomorrow at 3")}</span>
         </div>
-        <div className="itjima-empty-proof" role="listitem">
-          <span className="itjima-empty-proof-icon">
-            <ShieldCheck size={17} aria-hidden />
-          </span>
-          <span>
-            <strong>{t("애매함은 확인", "Confirms ambiguity")}</strong>
-            <small>{t("오전·오후와 날짜를 단정하지 않음", "Never silently guesses AM, PM, or day")}</small>
-          </span>
-          <Check size={15} className="ml-auto text-emerald-600" aria-hidden />
+
+        <div className="my-2 flex justify-center text-ink/25" aria-hidden>
+          <ArrowDown size={15} />
+        </div>
+
+        <div className="grid gap-2">
+          <div className="flex items-center gap-2">
+            <CalendarClock size={16} className="text-ink-soft" aria-hidden />
+            <span className="text-[13px] font-bold text-ink">
+              {t("내일 · 3시", "Tomorrow · 3:00")}
+            </span>
+            <span className="ml-auto rounded-full bg-primary/55 px-2 py-1 text-[10px] font-bold text-ink">
+              {t("오전·오후 확인", "Confirm AM/PM")}
+            </span>
+          </div>
+          <div className="flex items-center gap-2 border-t border-ink/[0.06] pt-2 text-[11px] text-ink-soft">
+            <ShieldCheck size={14} aria-hidden />
+            <span>{t("추정한 정보는 숨기지 않아요", "Assumptions are always visible")}</span>
+          </div>
         </div>
       </div>
 
-      <p className="mt-6 text-[11px] font-medium text-ink-soft/70">
-        {t(
-          "예: ‘내일 오후 3시에 치과’",
-          "Try: “Dentist tomorrow at 3 PM”",
-        )}
+      <p className="mt-4 text-[11px] font-medium text-ink-soft/68">
+        {t("아래 입력창에 바로 남겨보세요", "Start in the field below")}
       </p>
     </section>
   );
