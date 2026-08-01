@@ -136,7 +136,9 @@ for (const viewport of viewports) {
     await page.keyboard.press("Escape");
     await expect(dialog).toBeHidden();
 
-    await page.getByRole("link", { name: "Schedule", exact: true }).click();
+    await page
+      .getByRole("link", { name: /^(Tasks & schedule|Schedule)/ })
+      .click();
     await expect(
       page.getByRole("heading", { name: "Schedule", exact: true }),
     ).toBeVisible();
