@@ -7,6 +7,7 @@ import {
   GUEST_SCHEDULE_KEY,
   phone,
   resetAppState,
+  CAPTURE_LINK_NAME,
 } from "./helpers";
 
 const OUT_DIR = join(process.cwd(), "e2e-screenshots", "design-polish");
@@ -111,7 +112,7 @@ test.describe("Design polish visual regression", () => {
       },
     );
     await page.reload();
-    await phone(page).getByRole("link", { name: /^Throw/ }).waitFor();
+    await phone(page).getByRole("link", { name: CAPTURE_LINK_NAME }).waitFor();
 
     await phone(page).screenshot({ path: join(OUT_DIR, "01-home.png") });
 
