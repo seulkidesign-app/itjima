@@ -6,7 +6,8 @@ export const GUEST_INBOX_KEY = "itjima.guest.inbox";
 export const GUEST_ARCHIVE_KEY = "itjima.guest.archive";
 export const GUEST_SCHEDULE_KEY = "itjima.guest.schedules";
 export const TEST_USER_ID = "11111111-1111-4111-8111-111111111111";
-export const CAPTURE_LINK_NAME = /^(Capture|Throw)/;
+export const CAPTURE_LINK_NAME = /^Capture$/;
+export const CAPTURE_LINK_NAME_KO = /^남기기$/;
 
 export function getSupabaseProjectId(): string | null {
   try {
@@ -299,14 +300,15 @@ export async function closeDecisionDeckIfOpen(page: Page) {
 }
 
 export function contextMenuDialog(page: Page) {
-  return phone(page).getByTestId("inbox-context-menu");
+  // The context menu is rendered in an overlay portal, outside the device shell.
+  return page.getByTestId("inbox-context-menu");
 }
 
 export async function clickContextMenuItem(page: Page, label: string) {
   const menu = contextMenuDialog(page);
   await menu.waitFor({ state: "visible" });
   await menu
-    .getByRole("button", { name: label, exact: true })
+    .getByRole("menuitem", { name: label, exact: true })
     .click({ force: true });
 }
 
@@ -327,7 +329,7 @@ export async function openContextMenuRaw(page: Page, thoughtText: string) {
   await page.mouse.down();
   await page.waitForTimeout(550);
   await page.mouse.up();
-  await frame.getByTestId("inbox-context-menu").waitFor({
+  await contextMenuDialog(page).waitFor({
     state: "visible",
     timeout: 10_000,
   });
@@ -335,10 +337,10 @@ export async function openContextMenuRaw(page: Page, thoughtText: string) {
 
 export async function getTabCount(
   page: Page,
-  tab: "Capture" | "Throw" | "Schedule" | "Archive",
+  tab: "Capture" | "Schedule" | "Archive",
 ) {
   const key =
-    tab === "Capture" || tab === "Throw"
+    tab === "Capture"
       ? GUEST_INBOX_KEY
       : tab === "Schedule"
         ? GUEST_SCHEDULE_KEY
@@ -379,7 +381,7 @@ export async function openAbout(page: Page) {
 
 export async function openFeedback(page: Page) {
   await openBrandHub(page);
-  await phone(page).getByRole("button", { name: "Send feedback" }).click();
+  await page.getByRole("button", { name: "Send feedback" }).click();
 }
 
 /** Stub Supabase admin role checks for signed-in E2E. */
