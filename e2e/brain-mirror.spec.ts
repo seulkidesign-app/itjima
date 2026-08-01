@@ -21,7 +21,7 @@ test.describe("Brain Mirror API failures", () => {
     const frame = phone(page);
     const input = frame.locator("textarea").first();
     await input.fill(text);
-    await frame.getByRole("button", { name: "Drop it", exact: true }).click();
+    await frame.locator('form.composer-hero button[type="submit"]').click();
     await frame.getByText(text, { exact: true }).first().waitFor({ state: "visible" });
     await expect(frame.getByTestId("inline-promise")).toHaveCount(0);
     await expect(
@@ -37,7 +37,7 @@ test.describe("Brain Mirror API failures", () => {
     const frame = phone(page);
     const input = frame.locator("textarea").first();
     await input.fill(text);
-    await frame.getByRole("button", { name: "Drop it", exact: true }).click();
+    await frame.locator('form.composer-hero button[type="submit"]').click();
     await frame.getByText(text, { exact: true }).first().waitFor({ state: "visible" });
     await expect(frame.getByTestId("inline-promise")).toHaveCount(1);
     await expect(frame.getByTestId("inline-promise").last()).toHaveAttribute(
