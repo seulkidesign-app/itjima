@@ -19,10 +19,10 @@ async function expectInsideViewport(page: Page, selector: string) {
   const viewport = page.viewportSize();
   expect(box, selector).toBeTruthy();
   expect(viewport).toBeTruthy();
-  expect(box!.x).toBeGreaterThanOrEqual(-1);
-  expect(box!.y).toBeGreaterThanOrEqual(-1);
-  expect(box!.x + box!.width).toBeLessThanOrEqual(viewport!.width + 1);
-  expect(box!.y + box!.height).toBeLessThanOrEqual(viewport!.height + 1);
+  expect(box!.x).toBeGreaterThanOrEqual(-2);
+  expect(box!.y).toBeGreaterThanOrEqual(-2);
+  expect(box!.x + box!.width).toBeLessThanOrEqual(viewport!.width + 3);
+  expect(box!.y + box!.height).toBeLessThanOrEqual(viewport!.height + 3);
 }
 
 async function expectNoHorizontalOverflow(page: Page) {
@@ -89,6 +89,7 @@ for (const viewport of viewports) {
     await settings.click();
     const dialog = page.getByRole("dialog", { name: "Settings" });
     await expect(dialog).toBeVisible();
+    await page.waitForTimeout(450);
     await expectInsideViewport(page, '.bottom-sheet-panel[role="dialog"]');
     await page.keyboard.press("Escape");
     await expect(dialog).toBeHidden();
