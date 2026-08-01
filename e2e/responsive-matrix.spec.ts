@@ -25,7 +25,7 @@ async function expectInsideViewport(page: Page, selector: string) {
   expect(box!.y + box!.height).toBeLessThanOrEqual(viewport!.height + 3);
 }
 
-async function expectLaptopUsesViewport(page: Page) {
+async function expectPcUsesViewport(page: Page) {
   const frame = page.locator(".itjima-responsive-frame");
   const box = await frame.boundingBox();
   const viewport = page.viewportSize();
@@ -100,16 +100,22 @@ for (const viewport of viewports) {
     await expectNoHorizontalOverflow(page);
     await expectComfortableControls(page);
 
-    if (viewport.width >= 1024) {
-      await expect(page.locator(".itjima-desktop-nav")).toBeVisible();
-      await expect(page.locator(".app-top-nav")).toBeHidden();
-    } else {
-      await expect(page.locator(".app-top-nav")).toBeVisible();
+    if (viewport.width < 640) {
+      await expect(page.locator(".mobile-app-header")).toBeVisible();
+      await expect(page.locator(".mobile-bottom-nav")).toBeVisible();
+      await expect(page.locator(".tablet-app-nav")).toBeHidden();
       await expect(page.locator(".itjima-desktop-nav")).toBeHidden();
-    }
-
-    if (viewport.width >= 1024 && viewport.width < 1600) {
-      await expectLaptopUsesViewport(page);
+    } else if (viewport.width < 1024) {
+      await expect(page.locator(".mobile-app-header")).toBeHidden();
+      await expect(page.locator(".mobile-bottom-nav")).toBeHidden();
+      await expect(page.locator(".tablet-app-nav")).toBeVisible();
+      await expect(page.locator(".itjima-desktop-nav")).toBeHidden();
+    } else {
+      await expect(page.locator(".mobile-app-header")).toBeHidden();
+      await expect(page.locator(".mobile-bottom-nav")).toBeHidden();
+      await expect(page.locator(".tablet-app-nav")).toBeHidden();
+      await expect(page.locator(".itjima-desktop-nav")).toBeVisible();
+      await expectPcUsesViewport(page);
     }
 
     const settings = page.locator('[data-testid="open-settings"]:visible');
