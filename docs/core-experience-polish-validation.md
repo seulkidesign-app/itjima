@@ -1,0 +1,1 @@
+Validation is handled by the pull request workflows.
