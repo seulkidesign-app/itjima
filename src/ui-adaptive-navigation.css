@@ -52,6 +52,12 @@
     bottom: calc(76px + env(safe-area-inset-bottom)) !important;
   }
 
+  /* Keep the schedule FAB above the persistent mobile navigation. */
+  .phone-frame button[aria-label="Add task"],
+  .phone-frame button[aria-label="할 일 추가"] {
+    bottom: calc(86px + env(safe-area-inset-bottom)) !important;
+  }
+
   .phone-frame [data-testid="inbox-context-menu"] {
     margin-bottom: calc(154px + env(safe-area-inset-bottom)) !important;
   }
@@ -151,6 +157,11 @@
 
   .phone-frame form.composer-hero {
     bottom: calc(68px + env(safe-area-inset-bottom)) !important;
+  }
+
+  .phone-frame button[aria-label="Add task"],
+  .phone-frame button[aria-label="할 일 추가"] {
+    bottom: calc(78px + env(safe-area-inset-bottom)) !important;
   }
 }
 
