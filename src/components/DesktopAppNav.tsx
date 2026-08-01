@@ -22,19 +22,34 @@ export function DesktopAppNav() {
     {
       to: "/" as const,
       label: t("남기기", "Capture"),
-      description: t("일정과 할 일을 자연어로 입력", "Capture plans in natural language"),
+      ariaLabel: t("남기기", "Capture"),
+      description: t(
+        "말하듯 일정과 할 일을 입력",
+        "Capture plans in natural language",
+      ),
       Icon: MessageSquareText,
     },
     {
       to: "/schedule" as const,
-      label: t("일정", "Schedule"),
-      description: t("오늘과 예정된 일정 확인", "Review today and upcoming plans"),
+      label: t("할 일·일정", "Tasks & schedule"),
+      ariaLabel: t(
+        "할 일·일정",
+        "Schedule — tasks and undated to-dos",
+      ),
+      description: t(
+        "날짜 없는 할 일과 예정된 일정",
+        "Review tasks and scheduled plans",
+      ),
       Icon: CalendarDays,
     },
     {
       to: "/archive" as const,
       label: t("보관함", "Archive"),
-      description: t("나중을 위해 남긴 내용 찾기", "Find what you saved for later"),
+      ariaLabel: t("보관함", "Archive"),
+      description: t(
+        "행동이 필요 없는 정보를 보관",
+        "Keep reference material for later",
+      ),
       Icon: Archive,
     },
   ];
@@ -48,7 +63,7 @@ export function DesktopAppNav() {
         <Link
           to="/"
           className="itjima-desktop-brand flex min-h-16 items-center gap-3 px-5 no-underline"
-          aria-label={t("Itjima 남기기 화면", "Itjima Capture")}
+          aria-label={t("잊지마 홈", "Itjima home")}
         >
           <span className="grid h-10 w-10 place-items-center rounded-[14px] bg-primary text-[13px] font-black text-ink shadow-card">
             IJ
@@ -58,20 +73,20 @@ export function DesktopAppNav() {
               ITJIMA
             </strong>
             <small className="mt-0.5 block text-[10px] font-bold uppercase tracking-[0.12em] text-ink/38">
-              {t("자연어 일정", "Natural scheduling")}
+              {t("말하듯 남기는 일정", "Natural scheduling")}
             </small>
           </span>
         </Link>
 
         <nav className="mt-5 flex flex-col gap-1.5 px-3">
-          {items.map(({ to, label, description, Icon }) => {
+          {items.map(({ to, label, ariaLabel, description, Icon }) => {
             const active = pathname === to;
             return (
               <Link
                 key={to}
                 to={to}
                 onClick={tap}
-                aria-label={label}
+                aria-label={ariaLabel}
                 aria-current={active ? "page" : undefined}
                 className={`itjima-desktop-nav-item group flex min-h-[66px] items-center gap-3 rounded-[18px] px-3.5 py-2.5 no-underline transition-colors ${
                   active
@@ -108,6 +123,18 @@ export function DesktopAppNav() {
           })}
         </nav>
 
+        <div className="mx-4 mt-5 rounded-[16px] border border-ink/[0.06] bg-ink/[0.025] px-3 py-3">
+          <p className="text-[10px] font-bold uppercase tracking-[0.1em] text-ink/36">
+            {t("기본 원칙", "Core principle")}
+          </p>
+          <p className="mt-1.5 text-[11px] font-semibold leading-[1.55] text-ink-soft">
+            {t(
+              "확실한 정보는 채우고, 애매한 부분만 확인해요.",
+              "Fill what is clear. Confirm only what matters.",
+            )}
+          </p>
+        </div>
+
         <div className="mt-auto p-3 pb-4">
           <button
             type="button"
@@ -125,7 +152,9 @@ export function DesktopAppNav() {
             </span>
             <span className="min-w-0 flex-1">
               <strong className="block text-[13px] font-bold text-ink">
-                {userId ? t("계정과 설정", "Account & settings") : t("로그인과 설정", "Sign in & settings")}
+                {userId
+                  ? t("계정과 설정", "Account & settings")
+                  : t("로그인과 설정", "Sign in & settings")}
               </strong>
               <small className="mt-0.5 block truncate text-[10.5px] font-medium text-ink-soft">
                 {t("언어·알림·데이터 관리", "Language, reminders, and data")}

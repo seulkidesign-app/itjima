@@ -172,6 +172,25 @@
   }
 }
 
+/* The primary capture action must never collapse into vertical text. */
+.capture-submit-button {
+  flex: 0 0 auto !important;
+  width: auto !important;
+  min-width: 6.5rem !important;
+  white-space: nowrap !important;
+  word-break: keep-all !important;
+  writing-mode: horizontal-tb !important;
+  line-height: 1 !important;
+}
+
+@media (max-width: 359px) {
+  .capture-submit-button {
+    min-width: 5.75rem !important;
+    padding-inline: 0.8rem !important;
+    font-size: 12px !important;
+  }
+}
+
 @media (prefers-reduced-transparency: reduce) {
   .mobile-bottom-nav,
   .tablet-app-nav {

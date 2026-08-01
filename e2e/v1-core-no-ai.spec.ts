@@ -31,7 +31,13 @@ test.describe("v1 release boundary", () => {
     await expect(submit).toBeEnabled();
     await submit.click();
 
-    await expect(page.getByText("내일 오후 3시 치과", { exact: true })).toBeVisible();
+    const capturedTurn = page.getByTestId("chat-turn").last();
+    await expect(
+      capturedTurn
+        .getByRole("paragraph")
+        .filter({ hasText: /^내일 오후 3시 치과$/ })
+        .first(),
+    ).toBeVisible();
     await page.waitForTimeout(500);
 
     expect(aiRequestCount).toBe(0);

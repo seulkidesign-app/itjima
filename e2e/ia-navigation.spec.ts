@@ -9,6 +9,9 @@ import {
   CAPTURE_LINK_NAME_KO,
 } from "./helpers";
 
+const TASKS_SCHEDULE_LINK_NAME = /^Schedule — tasks and undated to-dos$/;
+const TASKS_SCHEDULE_LINK_NAME_KO = /^할 일·일정$/;
+
 async function resetForIa(page: Page) {
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto("/");
@@ -65,7 +68,7 @@ async function seedGuestData(page: Page) {
   );
 }
 
-test.describe("IA navigation (Capture / Schedule / Archive)", () => {
+test.describe("IA navigation (Capture / Tasks & schedule / Archive)", () => {
   test.beforeEach(async ({ page }) => {
     await resetForIa(page);
     await seedGuestData(page);
@@ -77,12 +80,12 @@ test.describe("IA navigation (Capture / Schedule / Archive)", () => {
     page,
   }) => {
     await expect(page.getByRole("link", { name: CAPTURE_LINK_NAME })).toBeVisible();
-    await expect(page.getByRole("link", { name: /^Schedule$/ })).toBeVisible();
+    await expect(page.getByRole("link", { name: TASKS_SCHEDULE_LINK_NAME })).toBeVisible();
     await expect(page.getByRole("link", { name: /^Archive$/ })).toBeVisible();
 
     await page.screenshot({ path: "qa-ia/01-capture.png" });
 
-    await page.getByRole("link", { name: /^Schedule$/ }).click();
+    await page.getByRole("link", { name: TASKS_SCHEDULE_LINK_NAME }).click();
     await expect(page).toHaveURL(/\/schedule$/);
     await expect(
       page.getByRole("heading", { name: "Schedule", exact: true }),
@@ -140,7 +143,9 @@ test.describe("IA visual QA viewports", () => {
       await phone(page).getByRole("link", { name: CAPTURE_LINK_NAME_KO }).waitFor();
 
       await expect(phone(page).getByRole("link", { name: CAPTURE_LINK_NAME_KO })).toBeVisible();
-      await expect(phone(page).getByRole("link", { name: /^일정$/ })).toBeVisible();
+      await expect(
+        phone(page).getByRole("link", { name: TASKS_SCHEDULE_LINK_NAME_KO }),
+      ).toBeVisible();
       await expect(phone(page).getByRole("link", { name: /^보관함$/ })).toBeVisible();
 
       const metrics = await page.evaluate(() => ({

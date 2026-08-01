@@ -3,19 +3,21 @@ import {
   Clock3,
   Database,
   Globe,
+  Info,
   LogOut,
   Shield,
   User,
 } from "lucide-react";
 import { Link, useNavigate } from "@tanstack/react-router";
 import { toast } from "sonner";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { BottomSheet } from "./BottomSheet";
 import {
   DeviceNotificationSheet,
   runDirectPushEnableFromSettings,
 } from "./DeviceNotificationSheet";
 import { DataPrivacySheet } from "./DataPrivacySheet";
+import { BrandHubSheet } from "./BrandHubSheet";
 import { useT, LanguageToggle, useLang } from "@/lib/i18n";
 import type { PushEnableStep } from "@/lib/push/directPushEnableFlow";
 import { resolveUserTimezone } from "@/lib/push/timezone";
@@ -47,10 +49,18 @@ export function SettingsSheet({ open, onClose }: Props) {
   const timezone = resolveUserTimezone();
   const [notificationOpen, setNotificationOpen] = useState(false);
   const [dataPrivacyOpen, setDataPrivacyOpen] = useState(false);
+  const [brandHubOpen, setBrandHubOpen] = useState(false);
+  const [pendingBrandHub, setPendingBrandHub] = useState(false);
   const [notificationSteps, setNotificationSteps] = useState<
     PushEnableStep[] | null
   >(null);
   const [notificationFailed, setNotificationFailed] = useState(false);
+
+  useEffect(() => {
+    if (open || !pendingBrandHub) return;
+    setBrandHubOpen(true);
+    setPendingBrandHub(false);
+  }, [open, pendingBrandHub]);
 
   const handleNotificationSettings = () => {
     tap();
@@ -129,137 +139,168 @@ export function SettingsSheet({ open, onClose }: Props) {
   };
 
   return (
-    <BottomSheet
-      open={open}
-      onClose={onClose}
-      maxHeight="78dvh"
-      title={t("설정", "Settings")}
-    >
-      <div className="px-5 pb-8 pt-1">
-        <div className="px-1 pb-4">
-          <h2 className="text-[22px] font-bold tracking-[-0.03em] text-ink">
-            {t("설정", "Settings")}
-          </h2>
-          <p className="mt-1 text-[13px] leading-relaxed text-ink-soft">
-            {t(
-              "계정, 알림, 언어와 데이터 통제를 관리해요.",
-              "Manage your account, reminders, language, and data controls.",
-            )}
-          </p>
-        </div>
+    <>
+      <BottomSheet
+        open={open}
+        onClose={onClose}
+        maxHeight="78dvh"
+        title={t("설정", "Settings")}
+      >
+        <div className="px-5 pb-8 pt-1">
+          <div className="px-1 pb-4">
+            <h2 className="text-[22px] font-bold tracking-[-0.03em] text-ink">
+              {t("설정", "Settings")}
+            </h2>
+            <p className="mt-1 text-[13px] leading-relaxed text-ink-soft">
+              {t(
+                "계정, 알림, 언어와 데이터 통제를 관리해요.",
+                "Manage your account, reminders, language, and data controls.",
+              )}
+            </p>
+          </div>
 
-        <div className="itjima-settings-group overflow-hidden">
-          {!userId && (
-            <Link
-              to="/auth"
-              onClick={() => {
-                tap();
-                onClose();
-              }}
+          <div className="itjima-settings-group overflow-hidden">
+            {!userId && (
+              <Link
+                to="/auth"
+                onClick={() => {
+                  tap();
+                  onClose();
+                }}
+                className={`${rowClass} border-b border-ink/[0.06]`}
+              >
+                <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-[10px] bg-primary/20 text-ink">
+                  <User size={17} strokeWidth={2.1} aria-hidden />
+                </span>
+                <span className="flex-1">{t("로그인", "Sign in")}</span>
+              </Link>
+            )}
+
+            {isAdmin && (
+              <Link
+                to="/admin"
+                onClick={onClose}
+                className={`${rowClass} border-b border-ink/[0.06]`}
+              >
+                <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-[10px] bg-ink/[0.06] text-ink-soft">
+                  <Shield size={17} strokeWidth={2.1} aria-hidden />
+                </span>
+                <span className="flex-1">{t("관리자", "Admin")}</span>
+              </Link>
+            )}
+
+            <button
+              type="button"
+              data-testid="settings-notification-settings-row"
+              onClick={handleNotificationSettings}
               className={`${rowClass} border-b border-ink/[0.06]`}
             >
               <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-[10px] bg-primary/20 text-ink">
-                <User size={17} strokeWidth={2.1} aria-hidden />
+                <Bell size={17} strokeWidth={2.1} aria-hidden />
               </span>
-              <span className="flex-1">{t("로그인", "Sign in")}</span>
-            </Link>
-          )}
+              <span className="flex-1">
+                {t("알림 설정", "Notification settings")}
+              </span>
+            </button>
 
-          {isAdmin && (
-            <Link
-              to="/admin"
-              onClick={onClose}
+            <div
+              className={`${rowClass} border-b border-ink/[0.06]`}
+              aria-label={t(`현재 시간대 ${timezone}`, `Current time zone ${timezone}`)}
+            >
+              <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-[10px] bg-ink/[0.06] text-ink-soft">
+                <Clock3 size={17} strokeWidth={2.1} aria-hidden />
+              </span>
+              <span className="min-w-0 flex-1">
+                <span className="block">{t("시간대", "Time zone")}</span>
+                <span className="mt-0.5 block truncate text-[11px] font-normal text-ink-soft">
+                  {t(
+                    "기기 변경 시 알림을 자동 업데이트해요",
+                    "Reminders update automatically when this changes",
+                  )}
+                </span>
+              </span>
+              <span className="max-w-[8.5rem] truncate text-[11px] font-semibold text-ink-soft">
+                {timezone}
+              </span>
+            </div>
+
+            <button
+              type="button"
+              data-testid="settings-data-privacy-row"
+              onClick={() => {
+                tap();
+                setDataPrivacyOpen(true);
+              }}
               className={`${rowClass} border-b border-ink/[0.06]`}
             >
               <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-[10px] bg-ink/[0.06] text-ink-soft">
-                <Shield size={17} strokeWidth={2.1} aria-hidden />
+                <Database size={17} strokeWidth={2.1} aria-hidden />
               </span>
-              <span className="flex-1">{t("관리자", "Admin")}</span>
-            </Link>
+              <span className="flex-1">{t("데이터와 개인정보", "Data & privacy")}</span>
+            </button>
+
+            <div className={`${rowClass} border-b border-ink/[0.06]`}>
+              <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-[10px] bg-ink/[0.06] text-ink-soft">
+                <Globe size={17} strokeWidth={2.1} aria-hidden />
+              </span>
+              <span className="flex-1">{t("언어", "Language")}</span>
+              <LanguageToggle />
+            </div>
+
+            <button
+              type="button"
+              data-testid="settings-about-itjima-row"
+              onClick={() => {
+                tap();
+                onClose();
+                setPendingBrandHub(true);
+              }}
+              className={rowClass}
+            >
+              <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-[10px] bg-ink/[0.06] text-ink-soft">
+                <Info size={17} strokeWidth={2.1} aria-hidden />
+              </span>
+              <span className="min-w-0 flex-1">
+                <span className="block">{t("잊지마 소개", "About Itjima")}</span>
+                <span className="mt-0.5 block text-[11px] font-normal text-ink-soft">
+                  {t(
+                    "제품 정보, 업데이트와 피드백",
+                    "Product details, updates, and feedback",
+                  )}
+                </span>
+              </span>
+            </button>
+          </div>
+
+          {userId && (
+            <button
+              type="button"
+              onClick={() => void handleSignOut()}
+              className="mt-3 flex min-h-[50px] w-full items-center justify-center gap-2 rounded-[16px] border border-red-500/10 bg-red-500/[0.06] px-4 text-[14px] font-semibold text-red-600 transition-colors active:bg-red-500/[0.1]"
+            >
+              <LogOut size={17} strokeWidth={2.1} aria-hidden />
+              {t("로그아웃", "Sign out")}
+            </button>
           )}
-
-          <button
-            type="button"
-            data-testid="settings-notification-settings-row"
-            onClick={handleNotificationSettings}
-            className={`${rowClass} border-b border-ink/[0.06]`}
-          >
-            <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-[10px] bg-primary/20 text-ink">
-              <Bell size={17} strokeWidth={2.1} aria-hidden />
-            </span>
-            <span className="flex-1">
-              {t("알림 설정", "Notification settings")}
-            </span>
-          </button>
-
-          <div
-            className={`${rowClass} border-b border-ink/[0.06]`}
-            aria-label={t(`현재 시간대 ${timezone}`, `Current time zone ${timezone}`)}
-          >
-            <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-[10px] bg-ink/[0.06] text-ink-soft">
-              <Clock3 size={17} strokeWidth={2.1} aria-hidden />
-            </span>
-            <span className="min-w-0 flex-1">
-              <span className="block">{t("시간대", "Time zone")}</span>
-              <span className="mt-0.5 block truncate text-[11px] font-normal text-ink-soft">
-                {t(
-                  "기기 변경 시 알림을 자동 업데이트해요",
-                  "Reminders update automatically when this changes",
-                )}
-              </span>
-            </span>
-            <span className="max-w-[8.5rem] truncate text-[11px] font-semibold text-ink-soft">
-              {timezone}
-            </span>
-          </div>
-
-          <button
-            type="button"
-            data-testid="settings-data-privacy-row"
-            onClick={() => {
-              tap();
-              setDataPrivacyOpen(true);
-            }}
-            className={`${rowClass} border-b border-ink/[0.06]`}
-          >
-            <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-[10px] bg-ink/[0.06] text-ink-soft">
-              <Database size={17} strokeWidth={2.1} aria-hidden />
-            </span>
-            <span className="flex-1">{t("데이터와 개인정보", "Data & privacy")}</span>
-          </button>
-
-          <div className={rowClass}>
-            <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-[10px] bg-ink/[0.06] text-ink-soft">
-              <Globe size={17} strokeWidth={2.1} aria-hidden />
-            </span>
-            <span className="flex-1">{t("언어", "Language")}</span>
-            <LanguageToggle />
-          </div>
         </div>
+        <DeviceNotificationSheet
+          open={notificationOpen}
+          onClose={() => setNotificationOpen(false)}
+          userId={userId}
+          initialSteps={notificationSteps}
+          initialFailed={notificationFailed}
+        />
+        <DataPrivacySheet
+          open={dataPrivacyOpen}
+          onClose={() => setDataPrivacyOpen(false)}
+          userId={userId}
+        />
+      </BottomSheet>
 
-        {userId && (
-          <button
-            type="button"
-            onClick={() => void handleSignOut()}
-            className="mt-3 flex min-h-[50px] w-full items-center justify-center gap-2 rounded-[16px] border border-red-500/10 bg-red-500/[0.06] px-4 text-[14px] font-semibold text-red-600 transition-colors active:bg-red-500/[0.1]"
-          >
-            <LogOut size={17} strokeWidth={2.1} aria-hidden />
-            {t("로그아웃", "Sign out")}
-          </button>
-        )}
-      </div>
-      <DeviceNotificationSheet
-        open={notificationOpen}
-        onClose={() => setNotificationOpen(false)}
-        userId={userId}
-        initialSteps={notificationSteps}
-        initialFailed={notificationFailed}
+      <BrandHubSheet
+        open={brandHubOpen}
+        onClose={() => setBrandHubOpen(false)}
       />
-      <DataPrivacySheet
-        open={dataPrivacyOpen}
-        onClose={() => setDataPrivacyOpen(false)}
-        userId={userId}
-      />
-    </BottomSheet>
+    </>
   );
 }

@@ -1,5 +1,7 @@
 import { expect, test, type Page } from "@playwright/test";
 
+const TASKS_SCHEDULE_LINK_NAME = /^Schedule — tasks and undated to-dos$/;
+
 function collectPageErrors(page: Page) {
   const errors: string[] = [];
   page.on("pageerror", (error) => errors.push(error.message));
@@ -91,7 +93,7 @@ test("[critical] primary navigation, layout, and settings work at every breakpoi
   await expectNoHorizontalOverflow(page);
   await expectAppControlsAreUsable(page);
 
-  await page.getByRole("link", { name: "Schedule", exact: true }).click();
+  await page.getByRole("link", { name: TASKS_SCHEDULE_LINK_NAME }).click();
   await expect(page).toHaveURL(/\/schedule/);
   await expect(page.getByRole("heading", { name: "Schedule", exact: true })).toBeVisible();
   await expect(page.getByRole("tab", { name: "Today", exact: true })).toHaveAttribute(
@@ -135,7 +137,7 @@ test("[critical] clear natural-language schedule becomes a saved schedule", asyn
   await page.getByRole("button", { name: "Add to schedule", exact: true }).click();
   await expect(page.getByTestId("inline-promise")).toBeHidden();
 
-  await page.getByRole("link", { name: "Schedule", exact: true }).click();
+  await page.getByRole("link", { name: TASKS_SCHEDULE_LINK_NAME }).click();
   await page.getByRole("tab", { name: "Upcoming", exact: true }).click();
   await expect(page.getByText(/Dentist/i).first()).toBeVisible();
   await expectNoHorizontalOverflow(page);
@@ -154,7 +156,7 @@ test("[critical] an ambiguous weekend plan is resolved inline without a dead end
   await expect(page.getByTestId("promise-confirm-sunday")).toBeVisible();
   await page.getByTestId("promise-confirm-saturday").click();
 
-  await page.getByRole("link", { name: "Schedule", exact: true }).click();
+  await page.getByRole("link", { name: TASKS_SCHEDULE_LINK_NAME }).click();
   await page.getByRole("tab", { name: "Upcoming", exact: true }).click();
   await expect(page.getByText(/Meet Maya/i).first()).toBeVisible();
 
