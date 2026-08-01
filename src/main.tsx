@@ -21,6 +21,7 @@ import "./ui-fields-and-states.css";
 import "./ui-premium.css";
 import "./ui-wwdc-quality.css";
 import "./ui-responsive-pro.css";
+import "./ui-responsive-master.css";
 
 import { registerServiceWorker } from "@/lib/swReminders";
 import { installPushSubscriptionAuthSync } from "@/lib/push/pushAuthSync";
