@@ -1,16 +1,15 @@
 /*
  * Itjima responsive master layer
- * Phone, tablet, desktop and ultrawide layout contracts.
+ * Device-specific layout contracts from 320px phones to 1920px workstations.
  */
 
 :root {
-  --ij-mobile-gutter: clamp(12px, 4vw, 18px);
-  --ij-tablet-gutter: clamp(24px, 4vw, 44px);
-  --ij-desktop-gutter: clamp(32px, 4vw, 64px);
-  --ij-desktop-sidebar: 248px;
-  --ij-desktop-chat: 760px;
-  --ij-desktop-content: 920px;
-  --ij-workspace-max: 1380px;
+  --ij-shell-gap: clamp(0px, 1.4vw, 24px);
+  --ij-mobile-inline: clamp(12px, 4vw, 18px);
+  --ij-tablet-inline: clamp(24px, 4vw, 44px);
+  --ij-desktop-inline: clamp(32px, 4vw, 64px);
+  --ij-readable: 70rem;
+  --ij-chat-readable: 55rem;
 }
 
 html,
@@ -29,22 +28,20 @@ body {
 }
 
 .itjima-app-stage {
-  width: 100%;
   min-height: 100svh;
   min-height: 100dvh;
+  width: 100%;
   overflow: clip;
 }
 
 .itjima-app-workspace {
   isolation: isolate;
-  container: itjima-workspace / inline-size;
+  container-type: inline-size;
+  container-name: itjima-workspace;
 }
 
 .itjima-app-content,
-.itjima-app-scroll,
-.phone-frame .page-shell,
-.phone-frame .home-chat-lane,
-.phone-frame form.composer-hero {
+.itjima-app-scroll {
   min-width: 0;
   min-height: 0;
 }
@@ -54,7 +51,7 @@ body {
   scrollbar-gutter: stable;
 }
 
-.phone-frame :where(h1, h2, h3, p, li, span, strong, small, button, a) {
+.phone-frame :where(h1, h2, h3, p, li, span, small, strong, button, a) {
   overflow-wrap: anywhere;
 }
 
@@ -67,7 +64,9 @@ body {
   -webkit-tap-highlight-color: transparent;
 }
 
-.phone-frame :where(input, textarea, select) {
+.phone-frame .page-shell,
+.phone-frame .home-chat-lane,
+.phone-frame form.composer-hero {
   min-width: 0;
 }
 
@@ -95,7 +94,15 @@ body {
   }
 }
 
-/* Phones: one-hand layout and full-bleed app surface. */
+@media (hover: hover) and (pointer: fine) {
+  .itjima-desktop-nav-item,
+  .phone-frame button,
+  .phone-frame a {
+    transition-duration: 160ms;
+  }
+}
+
+/* Small and standard phones: one-hand reach, full-bleed surface. */
 @media (max-width: 639px) {
   .itjima-app-stage[data-layout="app"] {
     padding: 0 !important;
@@ -109,10 +116,8 @@ body {
     height: 100dvh !important;
     min-height: 100svh !important;
     min-height: 100dvh !important;
-    margin: 0 !important;
     border: 0 !important;
     border-radius: 0 !important;
-    box-shadow: none !important;
   }
 
   .phone-frame .app-top-nav {
@@ -121,7 +126,7 @@ body {
 
   .phone-frame .app-top-nav-bar {
     min-height: 52px;
-    padding-inline: var(--ij-mobile-gutter) !important;
+    padding-inline: var(--ij-mobile-inline) !important;
   }
 
   .phone-frame .app-brand-trigger,
@@ -132,7 +137,7 @@ body {
 
   .phone-frame .app-primary-tabs {
     gap: 2px;
-    padding-inline: max(8px, calc(var(--ij-mobile-gutter) - 4px)) !important;
+    padding-inline: max(8px, calc(var(--ij-mobile-inline) - 4px)) !important;
   }
 
   .phone-frame .app-primary-tab {
@@ -142,36 +147,24 @@ body {
   }
 
   .phone-frame .home-chat-lane {
-    width: 100% !important;
-    max-width: none !important;
-    padding-inline: var(--ij-mobile-gutter) !important;
+    padding-inline: var(--ij-mobile-inline) !important;
     scroll-padding-bottom: calc(190px + env(safe-area-inset-bottom));
   }
 
   .phone-frame form.composer-hero {
-    width: calc(100% - (var(--ij-mobile-gutter) * 2)) !important;
-    max-width: none !important;
-    margin-inline: var(--ij-mobile-gutter) !important;
+    width: calc(100% - (var(--ij-mobile-inline) * 2)) !important;
+    margin-inline: var(--ij-mobile-inline) !important;
     padding-bottom: max(6px, env(safe-area-inset-bottom));
   }
 
   .phone-frame form.composer-hero > div:first-child {
-    flex-wrap: nowrap !important;
-    overflow-x: auto;
     scroll-snap-type: x proximity;
-    scrollbar-width: none;
-    -webkit-overflow-scrolling: touch;
-  }
-
-  .phone-frame form.composer-hero > div:first-child::-webkit-scrollbar {
-    display: none;
+    scroll-padding-inline: 2px;
   }
 
   .phone-frame form.composer-hero > div:first-child > button {
-    flex: 0 0 auto;
     min-height: 44px !important;
     height: 44px !important;
-    white-space: nowrap;
     scroll-snap-align: start;
   }
 
@@ -183,12 +176,6 @@ body {
 
   .phone-frame :where(input, textarea, select) {
     font-size: max(16px, 1em);
-  }
-
-  .phone-frame .decision-launcher-bar,
-  .phone-frame [data-testid="decision-launcher"] {
-    width: calc(100% - (var(--ij-mobile-gutter) * 2)) !important;
-    max-width: none !important;
   }
 
   .bottom-sheet-root[data-layout="sheet"] {
@@ -207,7 +194,6 @@ body {
   }
 }
 
-/* Compact phones. */
 @media (max-width: 359px) {
   .phone-frame .app-top-nav-bar {
     min-height: 48px;
@@ -230,9 +216,12 @@ body {
   .phone-frame .itjima-empty-hero {
     padding-inline: 2px !important;
   }
+
+  .phone-frame .itjima-empty-proof {
+    min-width: 0;
+  }
 }
 
-/* Large phones. */
 @media (min-width: 480px) and (max-width: 639px) {
   .phone-frame .home-chat-lane,
   .phone-frame form.composer-hero {
@@ -246,11 +235,12 @@ body {
   }
 }
 
-/* Short and landscape phones. */
+/* Short phones and landscape phones: keep the composer and primary action reachable. */
 @media (max-height: 620px) and (max-width: 1023px) {
   .phone-frame .app-top-nav-bar {
     min-height: 44px;
-    padding-block: 1px !important;
+    padding-top: 1px !important;
+    padding-bottom: 1px !important;
   }
 
   .phone-frame .app-primary-tab {
@@ -275,7 +265,7 @@ body {
   }
 }
 
-/* Portrait tablets: centered focus canvas. */
+/* Portrait tablets: focused centered canvas with generous touch spacing. */
 @media (min-width: 640px) and (max-width: 899px) {
   .itjima-app-stage[data-layout="app"] {
     padding: clamp(12px, 2.2vw, 20px) !important;
@@ -292,14 +282,12 @@ body {
 
   .phone-frame .app-top-nav-bar {
     max-width: 780px !important;
-    margin-inline: auto;
-    padding-inline: var(--ij-tablet-gutter) !important;
+    padding-inline: var(--ij-tablet-inline) !important;
   }
 
   .phone-frame .app-primary-tabs {
     width: min(100%, 620px) !important;
     max-width: 620px !important;
-    margin-inline: auto;
   }
 
   .phone-frame .home-chat-lane,
@@ -314,6 +302,10 @@ body {
     margin-inline: auto;
   }
 
+  .phone-frame [data-testid="inbox-context-menu"] {
+    margin-bottom: 32px !important;
+  }
+
   .bottom-sheet-root[data-layout="panel"] {
     align-items: center;
     justify-content: center;
@@ -326,7 +318,7 @@ body {
   }
 }
 
-/* Landscape and large tablets. */
+/* Large / landscape tablets: wider reading rail without becoming a desktop app. */
 @media (min-width: 900px) and (max-width: 1023px) {
   .itjima-app-stage[data-layout="app"] {
     padding: 18px !important;
@@ -343,7 +335,6 @@ body {
 
   .phone-frame .app-top-nav-bar {
     max-width: 900px !important;
-    margin-inline: auto;
     padding-inline: 40px !important;
   }
 
@@ -367,7 +358,7 @@ body {
   }
 }
 
-/* Compact desktop workspace. */
+/* Compact desktops: sidebar workspace with enough room for actual work. */
 @media (min-width: 1024px) and (max-width: 1279px) {
   :root {
     --ij-desktop-sidebar: 224px;
@@ -398,13 +389,13 @@ body {
   }
 }
 
-/* Standard desktop workspace. */
+/* Standard desktops. */
 @media (min-width: 1280px) and (max-width: 1599px) {
   :root {
+    --ij-desktop-frame-max: 1400px;
     --ij-desktop-sidebar: 260px;
     --ij-desktop-content: 980px;
     --ij-desktop-chat: 820px;
-    --ij-workspace-max: 1400px;
   }
 
   .itjima-app-stage[data-layout="app"] {
@@ -412,8 +403,8 @@ body {
   }
 
   .itjima-responsive-frame {
-    width: min(calc(100vw - 40px), var(--ij-workspace-max)) !important;
-    max-width: var(--ij-workspace-max) !important;
+    width: min(calc(100vw - 40px), var(--ij-desktop-frame-max)) !important;
+    max-width: var(--ij-desktop-frame-max) !important;
     height: calc(100dvh - 40px) !important;
     min-height: calc(100dvh - 40px) !important;
     border-radius: 30px !important;
@@ -426,13 +417,13 @@ body {
   }
 }
 
-/* Wide and ultrawide desktops. */
+/* Wide and ultrawide desktops: cap line length while using the canvas. */
 @media (min-width: 1600px) {
   :root {
+    --ij-desktop-frame-max: 1520px;
     --ij-desktop-sidebar: 280px;
     --ij-desktop-content: 1060px;
     --ij-desktop-chat: 880px;
-    --ij-workspace-max: 1520px;
   }
 
   .itjima-app-stage[data-layout="app"] {
@@ -440,8 +431,8 @@ body {
   }
 
   .itjima-responsive-frame {
-    width: min(calc(100vw - 56px), var(--ij-workspace-max)) !important;
-    max-width: var(--ij-workspace-max) !important;
+    width: min(calc(100vw - 56px), var(--ij-desktop-frame-max)) !important;
+    max-width: var(--ij-desktop-frame-max) !important;
     height: calc(100dvh - 56px) !important;
     min-height: calc(100dvh - 56px) !important;
     border-radius: 34px !important;
@@ -470,8 +461,8 @@ body {
     max-width: none !important;
     height: 100dvh !important;
     min-height: 100dvh !important;
-    border: 0 !important;
     border-radius: 0 !important;
+    border: 0 !important;
   }
 }
 
