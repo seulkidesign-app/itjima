@@ -86,6 +86,19 @@ function addIssue(issues, severity, rule, file, source, node, message) {
   });
 }
 
+function intentionallyHiddenControl(tag, attributes) {
+  if (!formControlTags.has(tag)) return false;
+  if (attributes.has("hidden")) return true;
+  const className = attrText(attributes.get("className"));
+  const ariaHidden = attrText(attributes.get("aria-hidden"));
+  const tabIndex = attrText(attributes.get("tabIndex"));
+  return (
+    /(^|\s)hidden(\s|$)/.test(className) ||
+    ariaHidden === "true" ||
+    tabIndex === "-1"
+  );
+}
+
 const files = listFiles(SRC);
 const inventory = [];
 const issues = [];
@@ -105,6 +118,7 @@ for (const file of files) {
       const opening = ts.isJsxElement(node) ? node.openingElement : node;
       const tag = tagName(opening);
       const attributes = attrs(opening);
+      const hiddenControl = intentionallyHiddenControl(tag, attributes);
       const onClick = attributes.get("onClick");
       const role = attrText(attributes.get("role"));
       const testId = attrText(attributes.get("data-testid"));
@@ -114,7 +128,8 @@ for (const file of files) {
       const accessibleName = Boolean(
         ariaLabel || ariaLabelledBy || title || (ts.isJsxElement(node) && hasMeaningfulChild(node)),
       );
-      const isInteractive = interactiveTags.has(tag) || Boolean(onClick);
+      const isInteractive =
+        !hiddenControl && (interactiveTags.has(tag) || Boolean(onClick));
 
       if (isInteractive) {
         inventory.push({
@@ -152,7 +167,7 @@ for (const file of files) {
         );
       }
 
-      if (formControlTags.has(tag)) {
+      if (formControlTags.has(tag) && !hiddenControl) {
         const hasProgrammaticLabel = Boolean(
           attributes.has("id") ||
             attributes.has("aria-label") ||
