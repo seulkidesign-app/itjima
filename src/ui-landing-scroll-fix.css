@@ -1,0 +1,15 @@
+/* Restore document scrolling for the full-page landing route.
+ * The desktop app shell intentionally locks html/body/#root, but /about is
+ * rendered outside that shell and must use normal page scrolling. */
+
+@media (min-width: 1024px) {
+  html:has(.itjima-launch-page),
+  body:has(.itjima-launch-page),
+  body:has(.itjima-launch-page) #root {
+    width: 100% !important;
+    height: auto !important;
+    min-height: 100% !important;
+    overflow-x: hidden !important;
+    overflow-y: auto !important;
+  }
+}
