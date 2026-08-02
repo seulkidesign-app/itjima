@@ -23,3 +23,14 @@ body:has(.itjima-launch-page) #root {
   overscroll-behavior-y: auto;
   touch-action: pan-y;
 }
+
+/* Keep the fixed install education visible without turning its whole card into
+ * an invisible click blocker. Only the actual controls should receive input. */
+[data-testid="pwa-install-nudge"] {
+  pointer-events: none;
+}
+
+[data-testid="pwa-install-nudge"] button,
+[data-testid="pwa-install-nudge"] a {
+  pointer-events: auto;
+}
