@@ -9,6 +9,7 @@ import { DesktopAppNav } from "@/components/DesktopAppNav";
 import { PageTransition } from "@/components/PageTransition";
 import { GlobalInteractions } from "@/components/GlobalInteractions";
 import { ScheduleDeepLinkBridge } from "@/components/ScheduleDeepLinkBridge";
+import { PwaInstallExperience } from "@/components/PwaInstallExperience";
 import { LanguageProvider } from "@/lib/i18n";
 import { useArchiveMetaSync } from "@/hooks/useArchiveMetaSync";
 import { useTimezoneChangeSync } from "@/hooks/useTimezoneChangeSync";
@@ -36,6 +37,7 @@ function AppRuntimeServices() {
     <>
       <GlobalInteractions />
       <ScheduleDeepLinkBridge />
+      <PwaInstallExperience />
     </>
   );
 }
