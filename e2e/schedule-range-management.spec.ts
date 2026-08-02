@@ -204,6 +204,8 @@ test("all-day ranges include both the start and end date", async ({ page }) => {
         start_time: string;
         end_time: string;
         all_day?: boolean;
+        start_all_day?: boolean;
+        end_all_day?: boolean;
       }>;
       return items.find((item) => item.text === title) ?? null;
     },
@@ -211,13 +213,33 @@ test("all-day ranges include both the start and end date", async ({ page }) => {
   );
 
   expect(saved?.all_day).toBe(true);
-  const savedStart = new Date(saved!.start_time);
-  const savedEnd = new Date(saved!.end_time);
-  expect(savedStart.getDate()).toBe(4);
-  expect(savedStart.getHours()).toBe(0);
-  expect(savedEnd.getDate()).toBe(5);
-  expect(savedEnd.getHours()).toBe(23);
-  expect(savedEnd.getMinutes()).toBe(59);
+  expect(saved?.start_all_day).toBe(true);
+  expect(saved?.end_all_day).toBe(true);
+
+  const localBounds = await page.evaluate(
+    ({ startIso, endIso }) => {
+      const savedStart = new Date(startIso);
+      const savedEnd = new Date(endIso);
+      return {
+        startDay: savedStart.getDate(),
+        startHour: savedStart.getHours(),
+        startMinute: savedStart.getMinutes(),
+        endDay: savedEnd.getDate(),
+        endHour: savedEnd.getHours(),
+        endMinute: savedEnd.getMinutes(),
+      };
+    },
+    { startIso: saved!.start_time, endIso: saved!.end_time },
+  );
+
+  expect(localBounds).toEqual({
+    startDay: 4,
+    startHour: 0,
+    startMinute: 0,
+    endDay: 5,
+    endHour: 23,
+    endMinute: 59,
+  });
 });
 
 test("an armed reminder is visible on the schedule card with its fire time", async ({
