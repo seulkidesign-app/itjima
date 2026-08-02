@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { X } from "lucide-react";
 import { toast } from "sonner";
 import { BottomSheet } from "./BottomSheet";
-import { ScheduleChoiceFlow } from "./ScheduleChoiceFlow";
+import { ScheduleRangeChoiceFlow } from "./ScheduleRangeChoiceFlow";
 import { useT, useLang } from "@/lib/i18n";
 import { calmSuggestionReason } from "@/lib/dateDetect";
 import type { RepeatRule } from "@/lib/store";
@@ -71,8 +71,12 @@ export function ScheduleSheet({
     <BottomSheet
       open={open}
       onClose={onClose}
-      maxHeight="88dvh"
-      title={saveLabel ? t("그때 수정", "Edit when") : t("그때 남기기", "Remember for then")}
+      maxHeight="92dvh"
+      title={
+        saveLabel
+          ? t("일정 수정", "Edit schedule")
+          : t("일정 추가", "Add schedule")
+      }
     >
       <div className="flex min-h-0 flex-1 flex-col">
         <div className="flex shrink-0 items-center justify-end px-5 pb-1">
@@ -85,7 +89,7 @@ export function ScheduleSheet({
             <X size={20} strokeWidth={2.25} />
           </button>
         </div>
-        <ScheduleChoiceFlow
+        <ScheduleRangeChoiceFlow
           open={open}
           title={text}
           onTitleChange={setText}
@@ -112,7 +116,12 @@ export function ScheduleSheet({
               );
               return;
             }
-            onSave(text.trim() || t("그때", "When"), start, end, opts);
+            onSave(
+              text.trim() || t("새 일정", "New schedule"),
+              start,
+              end,
+              opts,
+            );
           }}
         />
       </div>
