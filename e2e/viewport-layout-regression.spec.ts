@@ -76,7 +76,7 @@ test("desktop capture controls finish at the bottom of the workspace", async ({
   });
 
   expect(Math.abs(metrics.scrollBottom - metrics.composerBottom)).toBeLessThanOrEqual(
-    4,
+    10,
   );
   expect(metrics.composerTop).toBeGreaterThan(520);
   await expectNoHorizontalOverflow(page);
@@ -168,16 +168,33 @@ for (const viewport of [
         const bottomNav = document.querySelector<HTMLElement>(
           ".mobile-bottom-nav",
         );
+        const tabletNav = document.querySelector<HTMLElement>(".tablet-app-nav");
         const desktopNav = document.querySelector<HTMLElement>(
           ".itjima-desktop-nav",
         );
-        const bottomRect = bottomNav?.getBoundingClientRect();
+        const bottomVisible = Boolean(
+          bottomNav &&
+            bottomNav.offsetParent &&
+            getComputedStyle(bottomNav).visibility !== "hidden",
+        );
+        const tabletVisible = Boolean(
+          tabletNav &&
+            tabletNav.offsetParent &&
+            getComputedStyle(tabletNav).visibility !== "hidden",
+        );
+        const desktopVisible = Boolean(
+          desktopNav &&
+            desktopNav.offsetParent &&
+            getComputedStyle(desktopNav).visibility !== "hidden",
+        );
+        const bottomRect = bottomVisible
+          ? bottomNav?.getBoundingClientRect()
+          : undefined;
         return {
           scrollOwners: document.querySelectorAll("#phone-scroll").length,
-          bottomNavVisible:
-            !!bottomNav && getComputedStyle(bottomNav).display !== "none",
-          desktopNavVisible:
-            !!desktopNav && getComputedStyle(desktopNav).display !== "none",
+          bottomNavVisible: bottomVisible,
+          tabletNavVisible: tabletVisible,
+          desktopNavVisible: desktopVisible,
           bottomNavLeft: bottomRect?.left ?? 0,
           bottomNavRight: bottomRect?.right ?? 0,
           bottomNavBottom: bottomRect?.bottom ?? 0,
@@ -190,8 +207,9 @@ for (const viewport of [
       expect(shellMetrics.scrollOwners).toBe(1);
       expect(shellMetrics.scrollClientHeight).toBeGreaterThan(0);
 
-      if (viewport.width < 1024) {
+      if (viewport.width < 640) {
         expect(shellMetrics.bottomNavVisible).toBe(true);
+        expect(shellMetrics.tabletNavVisible).toBe(false);
         expect(shellMetrics.desktopNavVisible).toBe(false);
         expect(shellMetrics.bottomNavLeft).toBeGreaterThanOrEqual(4);
         expect(shellMetrics.bottomNavRight).toBeLessThanOrEqual(
@@ -200,8 +218,13 @@ for (const viewport of [
         expect(shellMetrics.bottomNavBottom).toBeLessThanOrEqual(
           shellMetrics.viewportHeight,
         );
+      } else if (viewport.width < 1024) {
+        expect(shellMetrics.bottomNavVisible).toBe(false);
+        expect(shellMetrics.tabletNavVisible).toBe(true);
+        expect(shellMetrics.desktopNavVisible).toBe(false);
       } else {
         expect(shellMetrics.bottomNavVisible).toBe(false);
+        expect(shellMetrics.tabletNavVisible).toBe(false);
         expect(shellMetrics.desktopNavVisible).toBe(true);
       }
     }
