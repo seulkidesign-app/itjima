@@ -1,6 +1,6 @@
 /* Mobile Capture has two independent regions: a scrollable conversation and
-   a fixed composer directly above the bottom navigation. */
-@media (max-width: 1023px) {
+   a composer anchored directly above the persistent bottom navigation. */
+@media (max-width: 639px) {
   .itjima-app-stage[data-route="home"] .itjima-app-scroll {
     overflow: hidden !important;
   }
@@ -18,7 +18,7 @@
     min-height: 0 !important;
     flex-direction: column;
     overflow: hidden;
-    padding-bottom: var(--ij-layout-touch-nav-space);
+    padding-bottom: 0 !important;
   }
 
   .itjima-app-stage[data-route="home"] .home-chat-lane {
@@ -56,12 +56,7 @@
     > div:first-child
     > div.composer-hero
     > form.composer-hero {
+    bottom: auto !important;
     padding-bottom: 0 !important;
-  }
-}
-
-@media (max-width: 359px) {
-  .itjima-app-stage[data-route="home"] .page-shell > div:first-child {
-    padding-bottom: calc(78px + env(safe-area-inset-bottom));
   }
 }
