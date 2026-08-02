@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { X } from "lucide-react";
 import { toast } from "sonner";
 import { BottomSheet } from "./BottomSheet";
-import { ScheduleRangeChoiceFlow } from "./ScheduleRangeChoiceFlow";
+import { ScheduleManagerFlow } from "./ScheduleManagerFlow";
 import { useT, useLang } from "@/lib/i18n";
 import { calmSuggestionReason } from "@/lib/dateDetect";
 import type { RepeatRule } from "@/lib/store";
@@ -89,7 +89,7 @@ export function ScheduleSheet({
             <X size={20} strokeWidth={2.25} />
           </button>
         </div>
-        <ScheduleRangeChoiceFlow
+        <ScheduleManagerFlow
           open={open}
           title={text}
           onTitleChange={setText}
