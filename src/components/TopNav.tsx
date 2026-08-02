@@ -71,8 +71,9 @@ export function TopNav() {
 
   const renderBrand = (className: string) => (
     <Link
-      to="/"
-      aria-label={t("잊지마 홈", "Itjima home")}
+      to="/about"
+      onClick={tap}
+      aria-label={t("잊지마 소개로 이동", "Open Itjima introduction")}
       className={className}
     >
       ITJIMA

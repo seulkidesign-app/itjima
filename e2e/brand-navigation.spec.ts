@@ -1,0 +1,44 @@
+import { expect, test } from "@playwright/test";
+
+async function useEnglish(page: import("@playwright/test").Page) {
+  await page.goto("/");
+  await page.evaluate(() => {
+    localStorage.setItem("itjima_lang", "en");
+  });
+  await page.reload();
+}
+
+for (const viewport of [
+  { name: "touch", width: 390, height: 844 },
+  { name: "desktop", width: 1440, height: 900 },
+]) {
+  test(`${viewport.name} brand opens the landing page while Capture remains app home`, async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width: viewport.width, height: viewport.height });
+    await useEnglish(page);
+
+    await page.goto("/schedule");
+    const brand = page.getByRole("link", {
+      name: "Open Itjima introduction",
+    });
+    await expect(brand).toBeVisible();
+    await brand.click();
+    await expect(page).toHaveURL(/\/about$/);
+
+    const openApp = page
+      .getByRole("banner")
+      .getByRole("link", { name: "Open app", exact: true });
+    await expect(openApp).toBeVisible();
+    await openApp.click();
+    await expect(page).toHaveURL(/\/$/);
+
+    await page.getByRole("link", {
+      name: "Schedule — tasks and undated to-dos",
+    }).click();
+    await expect(page).toHaveURL(/\/schedule$/);
+
+    await page.getByRole("link", { name: "Capture", exact: true }).click();
+    await expect(page).toHaveURL(/\/$/);
+  });
+}
