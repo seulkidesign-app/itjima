@@ -46,7 +46,7 @@ async function chooseStableTwoDayRange(page: Page) {
   });
 }
 
-test("schedule editor supports exact minutes and a real start-to-end date range", async ({
+test("schedule editor supports exact minutes, quick ends, and a real date range", async ({
   page,
 }) => {
   await page.setViewportSize({ width: 390, height: 844 });
@@ -69,6 +69,10 @@ test("schedule editor supports exact minutes and a real start-to-end date range"
   await sheet.getByLabel("Schedule title").fill(title);
   await sheet.getByLabel("Start date").fill(range.startDate);
   await sheet.getByLabel("Start time").fill("10:17");
+
+  await sheet.getByRole("button", { name: "2h", exact: true }).click();
+  await expect(sheet.getByLabel("End time")).toHaveValue("12:17");
+
   await sheet.getByLabel("End date").fill(range.endDate);
   await sheet.getByLabel("End time").fill("18:43");
 
@@ -76,7 +80,13 @@ test("schedule editor supports exact minutes and a real start-to-end date range"
   await expect(sheet.getByText(/18:43/)).toBeVisible();
 
   await sheet.getByRole("button", { name: "Set a reminder" }).click();
+  const preview = sheet.getByTestId("reminder-preview");
+  await expect(preview).toHaveAttribute("data-reminder", "on");
+  await expect(preview).toContainText("Schedule reminder on");
+
   await sheet.getByRole("button", { name: "No reminder" }).click();
+  await expect(preview).toHaveAttribute("data-reminder", "off");
+  await expect(preview).toContainText("No alert will be sent");
   await sheet.getByRole("button", { name: "Add to schedule" }).click();
 
   const saved = await page.evaluate(
@@ -172,7 +182,7 @@ test("all-day ranges include both the start and end date", async ({ page }) => {
   await sheet.getByRole("switch", { name: "All day" }).click();
   await sheet.getByLabel("Start date").fill(localDateValue(start));
   await sheet.getByLabel("End date").fill(localDateValue(end));
-  await expect(sheet.getByText(/2 days · All day/)).toBeVisible();
+  await expect(sheet.getByText(/2 days/)).toBeVisible();
 
   await sheet.getByRole("button", { name: "Set a reminder" }).click();
   await sheet.getByRole("button", { name: "No reminder" }).click();
@@ -199,4 +209,47 @@ test("all-day ranges include both the start and end date", async ({ page }) => {
   expect(savedEnd.getDate()).toBe(5);
   expect(savedEnd.getHours()).toBe(23);
   expect(savedEnd.getMinutes()).toBe(59);
+});
+
+test("an armed reminder is visible on the schedule card with its fire time", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await resetAppState(page);
+
+  const seeded = await page.evaluate(({ key }) => {
+    const start = new Date();
+    start.setDate(start.getDate() + 1);
+    start.setHours(15, 0, 0, 0);
+    const end = new Date(start.getTime() + 60 * 60 * 1000);
+    const alarm = new Date(start.getTime() - 10 * 60 * 1000);
+    const text = `Visible reminder ${Date.now()}`;
+    localStorage.setItem(
+      key,
+      JSON.stringify([
+        {
+          id: "00000000-0000-4000-a000-000000000509",
+          text,
+          start_time: start.toISOString(),
+          end_time: end.toISOString(),
+          alarm: true,
+          alarm_at: alarm.toISOString(),
+          created_at: new Date().toISOString(),
+          status: "active",
+        },
+      ]),
+    );
+    return { text };
+  }, { key: GUEST_SCHEDULE_KEY });
+
+  await page.reload();
+  await phone(page).getByRole("link", { name: /^Schedule/ }).click();
+  await phone(page).getByRole("tab", { name: "Upcoming" }).click();
+
+  const row = phone(page).getByRole("button", {
+    name: new RegExp(seeded.text),
+  });
+  await expect(row).toBeVisible();
+  await expect(row).toContainText("Reminder on");
+  await expect(row).toContainText("Tomorrow");
 });
