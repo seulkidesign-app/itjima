@@ -161,12 +161,17 @@ export function CalendarDragLayer({
 
   return (
     <>
-      {children({
-        startDrag,
-        hoverDay,
-        draggingId: drag?.id ?? null,
-        draggingIds: drag?.groupIds ?? [],
-      })}
+      <div
+        className="calendar-experience-shell"
+        data-testid="calendar-experience"
+      >
+        {children({
+          startDrag,
+          hoverDay,
+          draggingId: drag?.id ?? null,
+          draggingIds: drag?.groupIds ?? [],
+        })}
+      </div>
       <AnimatePresence>
         {drag && (
           <motion.div
@@ -326,9 +331,9 @@ export function CalendarWeekSpanBars({
   const laneCount = Math.max(...segments.map((s) => s.lane)) + 1;
 
   return (
-    <div className="mt-0.5 space-y-0.5">
+    <div className="calendar-span-stack mt-0.5 space-y-0.5">
       {Array.from({ length: laneCount }, (_, lane) => (
-        <div key={lane} className="grid grid-cols-7 gap-1">
+        <div key={lane} className="calendar-span-lane grid grid-cols-7 gap-1">
           {segments
             .filter((seg) => seg.lane === lane)
             .map((seg) => {
@@ -341,7 +346,7 @@ export function CalendarWeekSpanBars({
                     e.stopPropagation();
                     onDragStart(e, seg.item);
                   }}
-                  className={`flex h-[18px] touch-none items-center gap-0.5 bg-primary/45 px-1.5 active:scale-[0.97] ${
+                  className={`calendar-span-bar flex h-[18px] touch-none items-center gap-0.5 bg-primary/45 px-1.5 active:scale-[0.97] ${
                     seg.roundLeft ? "rounded-l-[9px]" : ""
                   } ${seg.roundRight ? "rounded-r-[9px]" : ""} ${
                     hidden ? "opacity-0" : ""
@@ -410,7 +415,7 @@ export function CalendarDayCell({
     }
   };
 
-  const onDown = (e: ReactPointerEvent) => {
+  const onDown = () => {
     moved.current = false;
     clearLong();
     if (!hasEvents && onLongPressEmpty) {
@@ -427,36 +432,44 @@ export function CalendarDayCell({
 
   const onUp = () => clearLong();
 
+  const dragPreview = (e: ReactPointerEvent) => {
+    if (!firstEvent || !onDragStart) return;
+    onDragStart(e, firstEvent);
+  };
+
   return (
     <motion.button
       type="button"
       data-cal-day={day}
+      data-today={isToday ? "true" : undefined}
+      data-selected={isSelected ? "true" : undefined}
+      data-has-events={hasEvents ? "true" : undefined}
       onClick={onSelect}
       onPointerDown={onDown}
       onPointerMove={onMove}
       onPointerUp={onUp}
       onPointerCancel={onUp}
       animate={{
-        scale: isHover ? 1.04 : 1,
+        scale: isHover ? 1.035 : 1,
         backgroundColor: isHover
-          ? "oklch(0.92 0.08 95 / 0.55)"
+          ? "oklch(0.93 0.075 95 / 0.78)"
           : isSelected
-            ? "oklch(0.97 0.03 95 / 0.9)"
+            ? "oklch(0.975 0.04 95 / 0.98)"
             : "transparent",
       }}
       transition={{ duration: isHover ? 0.12 : 0.15, ...SPRING_SNAP_BACK }}
-      className={`relative flex min-h-[44px] flex-col items-stretch rounded-[var(--radius-sm)] p-1.5 text-left transition-shadow ${
+      className={`calendar-day-cell relative flex min-h-[44px] flex-col items-stretch rounded-[var(--radius-sm)] p-1.5 text-left transition-shadow ${
         isHover
-          ? "ring-1 ring-primary/40"
+          ? "ring-2 ring-primary/55"
           : isSelected
             ? "ring-[1.5px] ring-ink/20 bg-primary/10 shadow-[inset_0_0_0_1px_rgba(0,0,0,0.04)]"
             : isToday
-              ? "ring-1 ring-dashed ring-ink/18"
+              ? "ring-1 ring-ink/16"
               : "hover:bg-ink/[0.03]"
       }`}
     >
       <span
-        className={`text-[11px] font-semibold leading-none tabular-nums ${
+        className={`calendar-day-number inline-flex text-[11px] font-semibold leading-none tabular-nums ${
           isWeekend ? "text-ink-soft/55" : "text-ink-soft"
         } ${isToday || isSelected ? "font-bold text-ink" : ""}`}
       >
@@ -464,11 +477,30 @@ export function CalendarDayCell({
       </span>
 
       {hasEvents && (
-        <div className="mt-auto flex items-center justify-center px-0.5 pb-0.5">
-          <span
-            className="h-1 w-1 rounded-full bg-primary/65"
-            aria-hidden
-          />
+        <div className="calendar-day-events mt-auto min-w-0 px-0.5 pb-0.5">
+          <div className="calendar-day-dots flex items-center justify-center gap-0.5" aria-hidden>
+            {Array.from({ length: Math.min(eventCount, 3) }, (_, index) => (
+              <span
+                key={index}
+                className="h-1 w-1 rounded-full bg-primary/75"
+              />
+            ))}
+          </div>
+          {preview && (
+            <div className="calendar-day-preview-row mt-1 hidden min-w-0 items-center gap-1">
+              <span
+                className="calendar-day-preview min-w-0 flex-1 truncate text-[10px] font-semibold leading-tight text-ink/78"
+                onPointerDown={dragPreview}
+              >
+                {preview}
+              </span>
+              {eventCount > 1 && (
+                <span className="calendar-day-more shrink-0 text-[9px] font-bold text-ink-soft/65">
+                  +{eventCount - 1}
+                </span>
+              )}
+            </div>
+          )}
         </div>
       )}
     </motion.button>
