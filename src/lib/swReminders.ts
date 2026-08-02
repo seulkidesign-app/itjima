@@ -1,21 +1,104 @@
 /** Service worker registration only — no client-side reminder scheduling. */
 
+export type AppUpdateStrategy = "service-worker" | "reload";
+
 export const APP_UPDATE_READY_EVENT = "itjima:app-update-ready";
 
 let registrationPromise: Promise<ServiceWorkerRegistration | null> | null = null;
 let activeRegistration: ServiceWorkerRegistration | null = null;
 let lastUpdateCheckAt = 0;
+let lastDocumentUpdateCheckAt = 0;
 let lifecycleListenersInstalled = false;
+let documentUpdateDetected = false;
 
-function emitUpdateReady() {
+function emitUpdateReady(strategy: AppUpdateStrategy) {
   if (typeof window === "undefined") return;
-  window.dispatchEvent(new CustomEvent(APP_UPDATE_READY_EVENT));
+  window.dispatchEvent(
+    new CustomEvent(APP_UPDATE_READY_EVENT, {
+      detail: { strategy },
+    }),
+  );
+}
+
+function normalizedAssetUrl(value: string, baseUrl: string): string | null {
+  try {
+    const parsed = new URL(value, baseUrl);
+    if (!parsed.pathname.startsWith("/assets/")) return null;
+    return `${parsed.pathname}${parsed.search}`;
+  } catch {
+    return null;
+  }
+}
+
+function fingerprintFromDocument(doc: Document, baseUrl: string): string {
+  const assets = [
+    ...Array.from(doc.querySelectorAll<HTMLScriptElement>('script[type="module"][src]')).map(
+      (node) => node.getAttribute("src") ?? "",
+    ),
+    ...Array.from(doc.querySelectorAll<HTMLLinkElement>('link[rel="stylesheet"][href]')).map(
+      (node) => node.getAttribute("href") ?? "",
+    ),
+  ]
+    .map((value) => normalizedAssetUrl(value, baseUrl))
+    .filter((value): value is string => Boolean(value))
+    .sort();
+
+  return assets.join("|");
+}
+
+export function extractBuildFingerprint(
+  html: string,
+  baseUrl = "https://itjima.app/",
+): string {
+  if (typeof DOMParser === "undefined") return "";
+  const parsed = new DOMParser().parseFromString(html, "text/html");
+  return fingerprintFromDocument(parsed, baseUrl);
+}
+
+function currentBuildFingerprint(): string {
+  if (typeof document === "undefined" || typeof window === "undefined") return "";
+  return fingerprintFromDocument(document, window.location.href);
+}
+
+async function checkForDocumentUpdate() {
+  if (
+    typeof window === "undefined" ||
+    documentUpdateDetected ||
+    document.visibilityState === "hidden"
+  ) {
+    return;
+  }
+
+  const now = Date.now();
+  if (now - lastDocumentUpdateCheckAt < 60_000) return;
+  lastDocumentUpdateCheckAt = now;
+
+  const current = currentBuildFingerprint();
+  if (!current) return;
+
+  try {
+    const url = new URL("/", window.location.origin);
+    url.searchParams.set("__itjima_update_check", String(now));
+    const response = await fetch(url, {
+      cache: "no-store",
+      headers: { "x-itjima-update-check": "1" },
+    });
+    if (!response.ok) return;
+
+    const remote = extractBuildFingerprint(await response.text(), url.href);
+    if (!remote || remote === current) return;
+
+    documentUpdateDetected = true;
+    emitUpdateReady("reload");
+  } catch {
+    // Update checks are best-effort. Normal app loading must never depend on them.
+  }
 }
 
 function watchRegistration(registration: ServiceWorkerRegistration) {
   const notifyIfWaiting = () => {
     if (registration.waiting && navigator.serviceWorker.controller) {
-      emitUpdateReady();
+      emitUpdateReady("service-worker");
     }
   };
 
@@ -40,14 +123,19 @@ function installLifecycleListeners(registration: ServiceWorkerRegistration) {
   if (lifecycleListenersInstalled || typeof window === "undefined") return;
   lifecycleListenersInstalled = true;
 
-  window.addEventListener("online", () => {
+  const checkAllUpdates = () => {
     void checkForUpdate(registration);
-  });
+    void checkForDocumentUpdate();
+  };
+
+  window.addEventListener("online", checkAllUpdates);
+  window.addEventListener("focus", checkAllUpdates);
   document.addEventListener("visibilitychange", () => {
-    if (document.visibilityState === "visible") {
-      void checkForUpdate(registration);
-    }
+    if (document.visibilityState === "visible") checkAllUpdates();
   });
+  window.setInterval(() => {
+    if (document.visibilityState === "visible") checkAllUpdates();
+  }, 5 * 60_000);
 }
 
 export async function registerServiceWorker(): Promise<ServiceWorkerRegistration | null> {
@@ -69,6 +157,7 @@ export async function registerServiceWorker(): Promise<ServiceWorkerRegistration
       watchRegistration(registration);
       installLifecycleListeners(registration);
       void checkForUpdate(registration);
+      void checkForDocumentUpdate();
       return registration;
     } catch {
       registrationPromise = null;
