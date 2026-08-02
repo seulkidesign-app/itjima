@@ -1,14 +1,18 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
+import { toast } from "sonner";
 import {
   DecisionDeck,
   type DecisionMeta,
   type DecisionResult,
   type UndoSnapshot,
 } from "@/components/DecisionDeck";
+import { FocusScheduleSheet } from "@/components/FocusScheduleSheet";
+import type { ScheduleConfirmOptions } from "@/components/ScheduleChoiceFlow";
 import { useLang, useT } from "@/lib/i18n";
 import { track } from "@/lib/analytics";
 import { tap } from "@/lib/haptics";
 import type { DecisionOutcome, InboxItem } from "@/lib/store";
+import { withInboxScheduleDraft } from "@/lib/inboxScheduleDefaults";
 import {
   captureDecisionStorage,
   clearInboxTombstones,
@@ -89,6 +93,13 @@ type DeckProps = {
   onUndo: (snapshot: UndoSnapshot) => Promise<void>;
 };
 
+type PendingScheduleDecision = {
+  item: InboxItem;
+  meta: DecisionMeta;
+  resolve: (result: DecisionResult) => void;
+  reject: (reason?: unknown) => void;
+};
+
 export function DecisionLauncher({
   open,
   startItemId,
@@ -98,8 +109,11 @@ export function DecisionLauncher({
   onDecide,
   onUndo,
 }: DeckProps) {
+  const t = useT();
   const sessionItemsRef = useRef<InboxItem[]>(items);
   const wasOpenRef = useRef(false);
+  const [pendingSchedule, setPendingSchedule] =
+    useState<PendingScheduleDecision | null>(null);
 
   // Freeze the card list for one sorting session. Parent storage updates after a
   // decision must not prune the deck a second time and skip the next card.
@@ -113,11 +127,87 @@ export function DecisionLauncher({
     wasOpenRef.current = open;
   }, [open]);
 
+  useEffect(() => {
+    if (open || !pendingSchedule) return;
+    pendingSchedule.reject(new Error("schedule_setup_cancelled"));
+    setPendingSchedule(null);
+  }, [open, pendingSchedule]);
+
+  const requestScheduleSetup = (
+    item: InboxItem,
+    meta: DecisionMeta,
+  ): Promise<DecisionResult> =>
+    new Promise((resolve, reject) => {
+      track("schedule_setup_opened", {
+        source: "decision_deck",
+        position: meta.position,
+        total: meta.total,
+      });
+      setPendingSchedule({ item, meta, resolve, reject });
+    });
+
+  const commitConfiguredSchedule = async (
+    text: string,
+    start: Date,
+    end: Date,
+    options: ScheduleConfirmOptions,
+  ) => {
+    const pending = pendingSchedule;
+    if (!pending) return;
+
+    const configuredItem = withInboxScheduleDraft(pending.item, {
+      text,
+      start,
+      end,
+      options,
+    });
+    const before = captureDecisionStorage(pending.item.id);
+
+    try {
+      const result = await onDecide("today", configuredItem, pending.meta);
+      track("schedule_setup_confirmed", {
+        source: "decision_deck",
+        position: pending.meta.position,
+        total: pending.meta.total,
+      });
+      setPendingSchedule(null);
+      pending.resolve(result ?? {});
+    } catch (error) {
+      const recovered = recoverLocallyCommittedDecision(
+        "today",
+        pending.item.id,
+        before,
+      );
+      if (recovered) {
+        setPendingSchedule(null);
+        pending.resolve(recovered);
+        return;
+      }
+      toast.error(
+        t(
+          "일정을 저장하지 못했어요. 다시 시도해 주세요.",
+          "Couldn't save the schedule. Try again.",
+        ),
+      );
+    }
+  };
+
+  const cancelScheduleSetup = () => {
+    const pending = pendingSchedule;
+    if (!pending) return;
+    setPendingSchedule(null);
+    pending.reject(new Error("schedule_setup_cancelled"));
+  };
+
   const handleDecideSafely = async (
     outcome: DecisionOutcome,
     item: InboxItem,
     meta: DecisionMeta,
   ): Promise<DecisionResult | void> => {
+    if (outcome === "today") {
+      return requestScheduleSetup(item, meta);
+    }
+
     const before = captureDecisionStorage(item.id);
     try {
       return await onDecide(outcome, item, meta);
@@ -142,14 +232,25 @@ export function DecisionLauncher({
   };
 
   return (
-    <DecisionDeck
-      open={open}
-      startItemId={startItemId}
-      items={open ? sessionItemsRef.current : items}
-      onClose={onClose}
-      onCapture={onCapture}
-      onDecide={handleDecideSafely}
-      onUndo={handleUndoSafely}
-    />
+    <>
+      <DecisionDeck
+        open={open}
+        startItemId={startItemId}
+        items={open ? sessionItemsRef.current : items}
+        onClose={onClose}
+        onCapture={onCapture}
+        onDecide={handleDecideSafely}
+        onUndo={handleUndoSafely}
+      />
+
+      <FocusScheduleSheet
+        item={pendingSchedule?.item ?? null}
+        open={Boolean(pendingSchedule)}
+        onClose={cancelScheduleSetup}
+        onConfirm={(text, start, end, options) => {
+          void commitConfiguredSchedule(text, start, end, options);
+        }}
+      />
+    </>
   );
 }

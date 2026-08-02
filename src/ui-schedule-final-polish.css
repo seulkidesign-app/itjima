@@ -18,7 +18,9 @@
   min-width: 0;
   height: 22px !important;
   pointer-events: auto;
-  overflow: hidden;
+  overflow: visible !important;
+  cursor: grab;
+  touch-action: none;
   border-color: rgba(183, 130, 0, 0.2) !important;
   background: linear-gradient(
     90deg,
@@ -28,11 +30,97 @@
   box-shadow: 0 5px 14px -10px rgba(99, 65, 0, 0.72) !important;
 }
 
+.calendar-span-bar:active {
+  cursor: grabbing;
+}
+
 .calendar-span-bar > span {
   min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+/* A single-day title is also the drag handle for moving that schedule. */
+.calendar-day-preview {
+  pointer-events: auto !important;
+  cursor: grab;
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.calendar-day-preview:active {
+  cursor: grabbing;
+}
+
+/* The middle moves the full range; the two edge controls resize it. */
+.calendar-resize-handle {
+  position: relative;
+  z-index: 6;
+  display: inline-flex;
+  width: 18px !important;
+  min-width: 18px !important;
+  max-width: 18px !important;
+  height: 18px !important;
+  min-height: 18px !important;
+  max-height: 18px !important;
+  flex: 0 0 18px;
+  align-items: center;
+  justify-content: center;
+  padding: 0 !important;
+  border: 1px solid rgba(117, 80, 0, 0.18) !important;
+  border-radius: 999px !important;
+  background: rgba(255, 255, 255, 0.94) !important;
+  color: rgba(17, 17, 17, 0.82) !important;
+  box-shadow: 0 2px 7px -3px rgba(52, 34, 0, 0.58);
+  cursor: ew-resize;
+  touch-action: none;
+}
+
+.calendar-resize-handle-start {
+  margin-left: -5px;
+}
+
+.calendar-resize-handle-end {
+  margin-right: -5px;
+}
+
+.calendar-resize-handle:active {
+  transform: scale(1.08) !important;
+  background: #fff !important;
+}
+
+.calendar-day-cell[data-cal-resize-hover] {
+  z-index: 9;
+  background: rgba(255, 211, 61, 0.24) !important;
+  box-shadow:
+    inset 0 0 0 2px rgba(188, 136, 0, 0.34),
+    0 8px 20px -16px rgba(76, 50, 0, 0.8) !important;
+}
+
+.calendar-day-cell[data-cal-resize-hover="start"]::before,
+.calendar-day-cell[data-cal-resize-hover="end"]::before {
+  position: absolute;
+  right: 4px;
+  bottom: 4px;
+  z-index: 5;
+  border-radius: 999px;
+  background: #111;
+  padding: 2px 5px;
+  color: #fff;
+  font-size: 8px;
+  font-weight: 800;
+  line-height: 1.2;
+  pointer-events: none;
+}
+
+.calendar-day-cell[data-cal-resize-hover="start"]::before {
+  content: "시작";
+}
+
+.calendar-day-cell[data-cal-resize-hover="end"]::before {
+  content: "종료";
 }
 
 /* Keep start/end card headers and switches inside their own cards. */
@@ -120,6 +208,16 @@ li[data-reminder="on"] > span.min-w-0.flex-1 > span:nth-child(n + 3) {
   .calendar-span-bar {
     height: 18px !important;
     padding-inline: 5px !important;
+  }
+
+  .calendar-resize-handle {
+    width: 20px !important;
+    min-width: 20px !important;
+    max-width: 20px !important;
+    height: 20px !important;
+    min-height: 20px !important;
+    max-height: 20px !important;
+    flex-basis: 20px;
   }
 
   [data-testid="schedule-manager-flow"] section > div.grid,

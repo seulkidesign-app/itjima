@@ -6,8 +6,16 @@ import {
   type RefObject,
 } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Pin, GripVertical } from "lucide-react";
-import type { ScheduleItem } from "@/lib/store";
+import { ChevronLeft, ChevronRight, GripVertical, Pin } from "lucide-react";
+import { toast } from "sonner";
+import {
+  useSchedules,
+  useUserId,
+  type ScheduleItem,
+} from "@/lib/store";
+import { resolveScheduleAllDayFlags } from "@/lib/scheduleTime";
+import { syncScheduleReminderDetailed } from "@/lib/push/scheduledRemindersSync";
+import { useT } from "@/lib/i18n";
 import { SPRING_DEFAULT, SPRING_SNAP_BACK } from "@/lib/motion";
 import { tick, confirm as hapticConfirm } from "@/lib/haptics";
 
@@ -23,6 +31,24 @@ type DragState = {
   x: number;
   y: number;
   pinned: boolean;
+};
+
+type CalendarTarget = {
+  day: number;
+  month: number;
+  year: number;
+  element: HTMLElement;
+};
+
+type ResizeEdge = "start" | "end";
+
+type ResizeState = {
+  item: ScheduleItem;
+  edge: ResizeEdge;
+  pointerId: number;
+  x: number;
+  y: number;
+  target: CalendarTarget | null;
 };
 
 type Props = {
@@ -46,6 +72,43 @@ type Props = {
   }) => React.ReactNode;
 };
 
+function targetFromPoint(x: number, y: number): CalendarTarget | null {
+  const element = document
+    .elementFromPoint(x, y)
+    ?.closest<HTMLElement>("[data-cal-day]");
+  if (!element) return null;
+
+  const shell = element.closest<HTMLElement>(".calendar-experience-shell");
+  const day = Number(element.dataset.calDay);
+  const month = Number(shell?.dataset.calMonth);
+  const year = Number(shell?.dataset.calYear);
+  if (![day, month, year].every(Number.isFinite)) return null;
+  return { day, month, year, element };
+}
+
+function dateWithOriginalTime(
+  target: CalendarTarget,
+  original: Date,
+  allDay: boolean,
+  edge: ResizeEdge,
+): Date {
+  if (allDay && edge === "start") {
+    return new Date(target.year, target.month, target.day, 0, 0, 0, 0);
+  }
+  if (allDay && edge === "end") {
+    return new Date(target.year, target.month, target.day, 23, 59, 59, 999);
+  }
+  return new Date(
+    target.year,
+    target.month,
+    target.day,
+    original.getHours(),
+    original.getMinutes(),
+    original.getSeconds(),
+    original.getMilliseconds(),
+  );
+}
+
 export function CalendarDragLayer({
   month,
   year,
@@ -66,30 +129,31 @@ export function CalendarDragLayer({
   useEffect(() => {
     if (!drag) return;
 
-    const dayFromPoint = (x: number, y: number) => {
-      const el = document.elementFromPoint(x, y)?.closest("[data-cal-day]");
-      if (!el) return null;
-      const day = Number(el.getAttribute("data-cal-day"));
-      return Number.isFinite(day) ? day : null;
-    };
-
     const onMove = (e: PointerEvent) => {
       if (e.pointerId !== drag.pointerId) return;
       posRef.current = { x: e.clientX, y: e.clientY };
-      const day = dayFromPoint(e.clientX, e.clientY);
-      hoverRef.current = day;
-      setHoverDay(day);
-      setDrag((d) => (d ? { ...d, x: e.clientX, y: e.clientY } : null));
+      const target = targetFromPoint(e.clientX, e.clientY);
+      hoverRef.current = target?.day ?? null;
+      setHoverDay(target?.day ?? null);
+      setDrag((current) =>
+        current ? { ...current, x: e.clientX, y: e.clientY } : null,
+      );
     };
 
     const onUp = (e: PointerEvent) => {
       if (e.pointerId !== drag.pointerId) return;
-      const day = hoverRef.current;
+      const target = targetFromPoint(e.clientX, e.clientY);
+      const day = target?.day ?? hoverRef.current;
       if (day != null) {
         hapticConfirm();
         setDropped(true);
         window.setTimeout(() => setDropped(false), 280);
-        onDropToDate(drag.groupIds, day, month, year);
+        onDropToDate(
+          drag.groupIds,
+          day,
+          target?.month ?? month,
+          target?.year ?? year,
+        );
       }
       setDrag(null);
       setHoverDay(null);
@@ -112,20 +176,25 @@ export function CalendarDragLayer({
 
     const loop = () => {
       const { x, y } = posRef.current;
-      const vw = window.innerWidth;
-      const vh = window.innerHeight;
-      const scrollEl = scrollParent ?? document.documentElement;
+      const viewportWidth = window.innerWidth;
+      const viewportHeight = window.innerHeight;
+      const scrollElement = scrollParent ?? document.documentElement;
       const now = Date.now();
 
-      if (y < EDGE_ZONE) scrollEl.scrollTop -= SCROLL_STEP;
-      if (y > vh - EDGE_ZONE) scrollEl.scrollTop += SCROLL_STEP;
+      if (y < EDGE_ZONE) scrollElement.scrollTop -= SCROLL_STEP;
+      if (y > viewportHeight - EDGE_ZONE) {
+        scrollElement.scrollTop += SCROLL_STEP;
+      }
 
       if (onEdgeMonth) {
-        if (x < EDGE_ZONE && now - monthEdgeAt.current > MONTH_EDGE_COOLDOWN_MS) {
+        if (
+          x < EDGE_ZONE &&
+          now - monthEdgeAt.current > MONTH_EDGE_COOLDOWN_MS
+        ) {
           monthEdgeAt.current = now;
           onEdgeMonth(-1);
         } else if (
-          x > vw - EDGE_ZONE &&
+          x > viewportWidth - EDGE_ZONE &&
           now - monthEdgeAt.current > MONTH_EDGE_COOLDOWN_MS
         ) {
           monthEdgeAt.current = now;
@@ -140,23 +209,23 @@ export function CalendarDragLayer({
     return () => cancelAnimationFrame(raf);
   }, [drag, onEdgeMonth, scrollParent]);
 
-  const startDrag = (e: ReactPointerEvent, item: ScheduleItem) => {
-    e.preventDefault();
-    e.stopPropagation();
+  const startDrag = (event: ReactPointerEvent, item: ScheduleItem) => {
+    event.preventDefault();
+    event.stopPropagation();
     tick();
     const groupIds = getDragGroup?.(item) ?? [item.id];
-    posRef.current = { x: e.clientX, y: e.clientY };
+    posRef.current = { x: event.clientX, y: event.clientY };
     monthEdgeAt.current = 0;
     setDrag({
       id: item.id,
       item,
       groupIds,
-      pointerId: e.pointerId,
-      x: e.clientX,
-      y: e.clientY,
+      pointerId: event.pointerId,
+      x: event.clientX,
+      y: event.clientY,
       pinned: pinned(item.id),
     });
-    (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
+    (event.currentTarget as HTMLElement).setPointerCapture(event.pointerId);
   };
 
   return (
@@ -164,6 +233,8 @@ export function CalendarDragLayer({
       <div
         className="calendar-experience-shell"
         data-testid="calendar-experience"
+        data-cal-month={month}
+        data-cal-year={year}
       >
         {children({
           startDrag,
@@ -211,12 +282,12 @@ export function useCalendarScrollParent(
   const [parent, setParent] = useState<HTMLElement | null>(null);
 
   useEffect(() => {
-    const el = ref.current;
-    if (!el) return;
-    let node: HTMLElement | null = el.parentElement;
+    const element = ref.current;
+    if (!element) return;
+    let node: HTMLElement | null = element.parentElement;
     while (node) {
-      const oy = getComputedStyle(node).overflowY;
-      if (oy === "auto" || oy === "scroll") {
+      const overflowY = getComputedStyle(node).overflowY;
+      if (overflowY === "auto" || overflowY === "scroll") {
         setParent(node);
         return;
       }
@@ -262,23 +333,29 @@ type SpanSegment = {
   colSpan: number;
   roundLeft: boolean;
   roundRight: boolean;
+  startHandle: boolean;
+  endHandle: boolean;
   lane: number;
 };
 
-function assignSpanLanes(segments: Omit<SpanSegment, "lane">[]): SpanSegment[] {
+function assignSpanLanes(
+  segments: Omit<SpanSegment, "lane">[],
+): SpanSegment[] {
   const sorted = [...segments].sort(
     (a, b) => a.colStart - b.colStart || b.colSpan - a.colSpan,
   );
   const laneEnds: number[] = [];
   const placed: SpanSegment[] = [];
-  for (const seg of sorted) {
-    let lane = laneEnds.findIndex((endCol) => endCol < seg.colStart);
+  for (const segment of sorted) {
+    let lane = laneEnds.findIndex(
+      (endColumn) => endColumn < segment.colStart,
+    );
     if (lane < 0) {
       lane = laneEnds.length;
       laneEnds.push(-1);
     }
-    laneEnds[lane] = seg.colStart + seg.colSpan - 1;
-    placed.push({ ...seg, lane });
+    laneEnds[lane] = segment.colStart + segment.colSpan - 1;
+    placed.push({ ...segment, lane });
   }
   return placed;
 }
@@ -289,7 +366,7 @@ export function computeWeekSpanSegments(
   year: number,
   month: number,
 ): SpanSegment[] {
-  const weekDays = week.filter((d): d is number => d != null);
+  const weekDays = week.filter((day): day is number => day != null);
   if (!weekDays.length) return [];
   const weekStart = weekDays[0];
   const weekEnd = weekDays[weekDays.length - 1];
@@ -299,18 +376,29 @@ export function computeWeekSpanSegments(
     if (!isMultiDaySchedule(item)) continue;
     const range = scheduleRangeInMonth(item, year, month);
     if (!range) continue;
-    const segStart = Math.max(range.startDay, weekStart);
-    const segEnd = Math.min(range.endDay, weekEnd);
-    if (segStart > segEnd) continue;
-    const colStart = week.indexOf(segStart);
-    const colEnd = week.indexOf(segEnd);
-    if (colStart < 0 || colEnd < 0) continue;
+    const segmentStart = Math.max(range.startDay, weekStart);
+    const segmentEnd = Math.min(range.endDay, weekEnd);
+    if (segmentStart > segmentEnd) continue;
+    const columnStart = week.indexOf(segmentStart);
+    const columnEnd = week.indexOf(segmentEnd);
+    if (columnStart < 0 || columnEnd < 0) continue;
+
+    const actualStart = new Date(item.start_time);
+    const actualEnd = new Date(item.end_time);
+    const startIsInMonth =
+      actualStart.getFullYear() === year && actualStart.getMonth() === month;
+    const endIsInMonth =
+      actualEnd.getFullYear() === year && actualEnd.getMonth() === month;
+
     raw.push({
       item,
-      colStart,
-      colSpan: colEnd - colStart + 1,
-      roundLeft: segStart === range.startDay,
-      roundRight: segEnd === range.endDay,
+      colStart: columnStart,
+      colSpan: columnEnd - columnStart + 1,
+      roundLeft: segmentStart === range.startDay,
+      roundRight: segmentEnd === range.endDay,
+      startHandle:
+        startIsInMonth && segmentStart === actualStart.getDate(),
+      endHandle: endIsInMonth && segmentEnd === actualEnd.getDate(),
     });
   }
   return assignSpanLanes(raw);
@@ -325,53 +413,267 @@ export function CalendarWeekSpanBars({
   segments: SpanSegment[];
   titleFor: (item: ScheduleItem) => string;
   draggingIds: string[];
-  onDragStart: (e: ReactPointerEvent, item: ScheduleItem) => void;
+  onDragStart: (event: ReactPointerEvent, item: ScheduleItem) => void;
 }) {
+  const t = useT();
+  const userId = useUserId();
+  const { update } = useSchedules();
+  const [resize, setResize] = useState<ResizeState | null>(null);
+  const resizeTargetRef = useRef<CalendarTarget | null>(null);
+  const previousHoverRef = useRef<HTMLElement | null>(null);
+
+  const clearResizeHover = () => {
+    previousHoverRef.current?.removeAttribute("data-cal-resize-hover");
+    previousHoverRef.current = null;
+  };
+
+  const showResizeHover = (
+    target: CalendarTarget | null,
+    edge: ResizeEdge,
+  ) => {
+    if (previousHoverRef.current === target?.element) return;
+    clearResizeHover();
+    if (target) {
+      target.element.setAttribute("data-cal-resize-hover", edge);
+      previousHoverRef.current = target.element;
+    }
+  };
+
+  const saveResizedRange = async (
+    item: ScheduleItem,
+    edge: ResizeEdge,
+    target: CalendarTarget,
+  ) => {
+    const start = new Date(item.start_time);
+    const end = new Date(item.end_time);
+    const flags = resolveScheduleAllDayFlags(item);
+    const nextBoundary = dateWithOriginalTime(
+      target,
+      edge === "start" ? start : end,
+      edge === "start" ? flags.startAllDay : flags.endAllDay,
+      edge,
+    );
+
+    if (edge === "start" && nextBoundary.getTime() > end.getTime()) {
+      toast.error(
+        t(
+          "시작일은 종료일보다 뒤로 갈 수 없어요.",
+          "The start can't be after the end.",
+        ),
+      );
+      return;
+    }
+    if (edge === "end" && nextBoundary.getTime() < start.getTime()) {
+      toast.error(
+        t(
+          "종료일은 시작일보다 앞으로 갈 수 없어요.",
+          "The end can't be before the start.",
+        ),
+      );
+      return;
+    }
+
+    const patch: Partial<ScheduleItem> =
+      edge === "start"
+        ? { start_time: nextBoundary.toISOString() }
+        : { end_time: nextBoundary.toISOString() };
+
+    if (edge === "start" && item.alarm && item.alarm_at) {
+      const alarm = new Date(item.alarm_at);
+      const reminderOffset = start.getTime() - alarm.getTime();
+      patch.alarm_at = new Date(
+        nextBoundary.getTime() - reminderOffset,
+      ).toISOString();
+    }
+
+    try {
+      const updated = await update(item.id, patch);
+      if (!updated) throw new Error("update_failed");
+      hapticConfirm();
+
+      if (userId && item.alarm) {
+        await syncScheduleReminderDetailed(userId, {
+          ...item,
+          ...patch,
+        });
+      }
+
+      toast.success(
+        edge === "start"
+          ? t("시작일을 바꿨어요", "Start date updated")
+          : t("종료일을 바꿨어요", "End date updated"),
+      );
+    } catch {
+      toast.error(
+        t(
+          "일정 기간을 바꾸지 못했어요.",
+          "Couldn't update the schedule range.",
+        ),
+      );
+    }
+  };
+
+  useEffect(() => {
+    if (!resize) return;
+
+    const onMove = (event: PointerEvent) => {
+      if (event.pointerId !== resize.pointerId) return;
+      const target = targetFromPoint(event.clientX, event.clientY);
+      resizeTargetRef.current = target;
+      showResizeHover(target, resize.edge);
+      setResize((current) =>
+        current
+          ? {
+              ...current,
+              x: event.clientX,
+              y: event.clientY,
+              target,
+            }
+          : null,
+      );
+    };
+
+    const onUp = (event: PointerEvent) => {
+      if (event.pointerId !== resize.pointerId) return;
+      const target =
+        targetFromPoint(event.clientX, event.clientY) ??
+        resizeTargetRef.current;
+      clearResizeHover();
+      setResize(null);
+      resizeTargetRef.current = null;
+      if (target) {
+        void saveResizedRange(resize.item, resize.edge, target);
+      }
+    };
+
+    window.addEventListener("pointermove", onMove);
+    window.addEventListener("pointerup", onUp);
+    window.addEventListener("pointercancel", onUp);
+    return () => {
+      window.removeEventListener("pointermove", onMove);
+      window.removeEventListener("pointerup", onUp);
+      window.removeEventListener("pointercancel", onUp);
+      clearResizeHover();
+    };
+  }, [resize]);
+
+  const startResize = (
+    event: ReactPointerEvent,
+    item: ScheduleItem,
+    edge: ResizeEdge,
+  ) => {
+    event.preventDefault();
+    event.stopPropagation();
+    tick();
+    resizeTargetRef.current = null;
+    setResize({
+      item,
+      edge,
+      pointerId: event.pointerId,
+      x: event.clientX,
+      y: event.clientY,
+      target: null,
+    });
+    (event.currentTarget as HTMLElement).setPointerCapture(event.pointerId);
+  };
+
   if (!segments.length) return null;
-  const laneCount = Math.max(...segments.map((s) => s.lane)) + 1;
+  const laneCount = Math.max(...segments.map((segment) => segment.lane)) + 1;
 
   return (
-    <div className="calendar-span-stack mt-0.5 space-y-0.5">
-      {Array.from({ length: laneCount }, (_, lane) => (
-        <div key={lane} className="calendar-span-lane grid grid-cols-7 gap-1">
-          {segments
-            .filter((seg) => seg.lane === lane)
-            .map((seg) => {
-              const hidden = draggingIds.includes(seg.item.id);
-              return (
-                <div
-                  key={`${seg.item.id}-${seg.colStart}-${seg.lane}`}
-                  role="presentation"
-                  onPointerDown={(e) => {
-                    e.stopPropagation();
-                    onDragStart(e, seg.item);
-                  }}
-                  className={`calendar-span-bar flex h-[18px] touch-none items-center gap-0.5 bg-primary/45 px-1.5 active:scale-[0.97] ${
-                    seg.roundLeft ? "rounded-l-[9px]" : ""
-                  } ${seg.roundRight ? "rounded-r-[9px]" : ""} ${
-                    hidden ? "opacity-0" : ""
-                  }`}
-                  style={{
-                    gridColumn: `${seg.colStart + 1} / span ${seg.colSpan}`,
-                  }}
-                >
-                  {seg.roundLeft && (
-                    <GripVertical
-                      size={9}
-                      strokeWidth={2.5}
-                      className="shrink-0 text-ink/45"
-                      aria-hidden
-                    />
-                  )}
-                  <span className="line-clamp-1 text-[10px] font-semibold leading-tight text-ink">
-                    {titleFor(seg.item)}
-                  </span>
-                </div>
-              );
-            })}
-        </div>
-      ))}
-    </div>
+    <>
+      <div className="calendar-span-stack mt-0.5 space-y-0.5">
+        {Array.from({ length: laneCount }, (_, lane) => (
+          <div key={lane} className="calendar-span-lane grid grid-cols-7 gap-1">
+            {segments
+              .filter((segment) => segment.lane === lane)
+              .map((segment) => {
+                const hidden = draggingIds.includes(segment.item.id);
+                return (
+                  <div
+                    key={`${segment.item.id}-${segment.colStart}-${segment.lane}`}
+                    role="presentation"
+                    onPointerDown={(event) => {
+                      event.stopPropagation();
+                      onDragStart(event, segment.item);
+                    }}
+                    className={`calendar-span-bar group relative flex h-[18px] touch-none items-center gap-0.5 bg-primary/45 px-1.5 active:scale-[0.97] ${
+                      segment.roundLeft ? "rounded-l-[9px]" : ""
+                    } ${segment.roundRight ? "rounded-r-[9px]" : ""} ${
+                      hidden ? "opacity-0" : ""
+                    }`}
+                    style={{
+                      gridColumn: `${segment.colStart + 1} / span ${segment.colSpan}`,
+                    }}
+                  >
+                    {segment.startHandle && (
+                      <button
+                        type="button"
+                        data-testid="calendar-resize-start"
+                        aria-label={t("시작일 조정", "Resize start date")}
+                        className="calendar-resize-handle calendar-resize-handle-start"
+                        onPointerDown={(event) =>
+                          startResize(event, segment.item, "start")
+                        }
+                      >
+                        <ChevronLeft size={11} strokeWidth={3} />
+                      </button>
+                    )}
+                    {segment.roundLeft && !segment.startHandle && (
+                      <GripVertical
+                        size={9}
+                        strokeWidth={2.5}
+                        className="shrink-0 text-ink/45"
+                        aria-hidden
+                      />
+                    )}
+                    <span className="pointer-events-none line-clamp-1 min-w-0 flex-1 text-[10px] font-semibold leading-tight text-ink">
+                      {titleFor(segment.item)}
+                    </span>
+                    {segment.endHandle && (
+                      <button
+                        type="button"
+                        data-testid="calendar-resize-end"
+                        aria-label={t("종료일 조정", "Resize end date")}
+                        className="calendar-resize-handle calendar-resize-handle-end"
+                        onPointerDown={(event) =>
+                          startResize(event, segment.item, "end")
+                        }
+                      >
+                        <ChevronRight size={11} strokeWidth={3} />
+                      </button>
+                    )}
+                  </div>
+                );
+              })}
+          </div>
+        ))}
+      </div>
+
+      <AnimatePresence>
+        {resize && (
+          <motion.div
+            className="pointer-events-none fixed z-[110] rounded-full bg-ink px-3 py-1.5 text-[11px] font-bold text-white shadow-float"
+            style={{
+              left: resize.x,
+              top: resize.y,
+              x: "-50%",
+              y: "calc(-100% - 12px)",
+            }}
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.92 }}
+          >
+            {resize.edge === "start"
+              ? t("시작일 변경", "Change start")
+              : t("종료일 변경", "Change end")}
+            {resize.target
+              ? ` · ${resize.target.month + 1}/${resize.target.day}`
+              : ""}
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </>
   );
 }
 
@@ -400,7 +702,7 @@ export function CalendarDayCell({
   firstEvent?: ScheduleItem;
   onSelect: () => void;
   onLongPressEmpty?: () => void;
-  onDragStart?: (e: ReactPointerEvent, item: ScheduleItem) => void;
+  onDragStart?: (event: ReactPointerEvent, item: ScheduleItem) => void;
 }) {
   const isHover = hoverDay === day && dragging;
   const isWeekend = weekday === 0 || weekday === 6;
@@ -432,9 +734,9 @@ export function CalendarDayCell({
 
   const onUp = () => clearLong();
 
-  const dragPreview = (e: ReactPointerEvent) => {
+  const dragPreview = (event: ReactPointerEvent) => {
     if (!firstEvent || !onDragStart) return;
-    onDragStart(e, firstEvent);
+    onDragStart(event, firstEvent);
   };
 
   return (
@@ -478,7 +780,10 @@ export function CalendarDayCell({
 
       {hasEvents && (
         <div className="calendar-day-events mt-auto min-w-0 px-0.5 pb-0.5">
-          <div className="calendar-day-dots flex items-center justify-center gap-0.5" aria-hidden>
+          <div
+            className="calendar-day-dots flex items-center justify-center gap-0.5"
+            aria-hidden
+          >
             {Array.from({ length: Math.min(eventCount, 3) }, (_, index) => (
               <span
                 key={index}
