@@ -17,6 +17,40 @@ for (const route of ["/about", "/"] as const) {
   }
 }
 
+for (const viewport of [
+  { name: "mobile", width: 390, height: 844 },
+  { name: "desktop", width: 1280, height: 800 },
+]) {
+  test(`${viewport.name} install education does not cover capture tools`, async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width: viewport.width, height: viewport.height });
+    await page.goto("/");
+
+    const prompt = page.getByTestId("pwa-install-nudge");
+    const tools = page.getByRole("button", { name: "Attachment tools" });
+    await expect(prompt).toBeVisible();
+    await expect(tools).toBeVisible();
+
+    const [promptBox, toolsBox] = await Promise.all([
+      prompt.boundingBox(),
+      tools.boundingBox(),
+    ]);
+    expect(promptBox).not.toBeNull();
+    expect(toolsBox).not.toBeNull();
+
+    const overlaps =
+      promptBox!.x < toolsBox!.x + toolsBox!.width &&
+      promptBox!.x + promptBox!.width > toolsBox!.x &&
+      promptBox!.y < toolsBox!.y + toolsBox!.height &&
+      promptBox!.y + promptBox!.height > toolsBox!.y;
+    expect(overlaps).toBe(false);
+
+    await tools.click();
+    await expect(tools).toHaveAttribute("aria-expanded", "true");
+  });
+}
+
 test("Chrome guide explains desktop, Android, and iPhone installation", async ({
   page,
 }) => {
