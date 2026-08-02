@@ -26,7 +26,9 @@ for (const viewport of [
     await brand.click();
     await expect(page).toHaveURL(/\/about$/);
 
-    const openApp = page.getByRole("link", { name: "Open app" });
+    const openApp = page
+      .getByRole("banner")
+      .getByRole("link", { name: "Open app", exact: true });
     await expect(openApp).toBeVisible();
     await openApp.click();
     await expect(page).toHaveURL(/\/$/);
