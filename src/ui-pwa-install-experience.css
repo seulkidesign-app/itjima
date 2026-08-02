@@ -1,0 +1,18 @@
+/* Keep the install education visible without covering the capture composer.
+ * Mobile places it below the app/landing header; wider screens use a compact
+ * top-right panel away from the desktop capture controls. */
+
+[data-testid="pwa-install-nudge"] {
+  top: calc(76px + env(safe-area-inset-top)) !important;
+  bottom: auto !important;
+}
+
+@media (min-width: 640px) {
+  [data-testid="pwa-install-nudge"] {
+    top: 20px !important;
+    right: 20px !important;
+    left: auto !important;
+    width: min(420px, calc(100vw - 40px)) !important;
+    margin: 0 !important;
+  }
+}
