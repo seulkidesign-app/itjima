@@ -1,13 +1,20 @@
 import { useRef, useState, type PointerEvent as ReactPointerEvent } from "react";
 import { animate } from "framer-motion";
 import type { ScheduleItem } from "@/lib/store";
-import { formatUpcomingScheduleTime, resolveScheduleAllDayFlags } from "@/lib/scheduleTime";
+import {
+  formatUpcomingScheduleTime,
+  resolveScheduleAllDayFlags,
+} from "@/lib/scheduleTime";
 import { scheduleDisplayTitle } from "@/lib/thoughtProvenance";
 import { isMissed } from "@/lib/scheduleGroups";
 import { useT, useLang } from "@/lib/i18n";
 import { haptic, confirm as hapticConfirm } from "@/lib/haptics";
 import { SPRING_ROW, SPRING_SNAP_BACK } from "@/lib/motion";
-import { Check, Bell } from "lucide-react";
+import {
+  effectiveAlarmAt,
+  formatAlarmLabel,
+} from "@/lib/scheduleReminders";
+import { Check, BellRing } from "lucide-react";
 
 export type ScheduleCompactRowProps = {
   s: ScheduleItem;
@@ -20,6 +27,89 @@ export type ScheduleCompactRowProps = {
   onAlarm?: () => void;
 };
 
+function sameCalendarDay(a: Date, b: Date): boolean {
+  return (
+    a.getFullYear() === b.getFullYear() &&
+    a.getMonth() === b.getMonth() &&
+    a.getDate() === b.getDate()
+  );
+}
+
+function formatDay(date: Date, lang: "ko" | "en"): string {
+  return date.toLocaleDateString(lang === "ko" ? "ko-KR" : "en-US", {
+    month: "short",
+    day: "numeric",
+  });
+}
+
+function formatRangeLabel(
+  start: Date,
+  end: Date,
+  startAllDay: boolean,
+  endAllDay: boolean,
+  lang: "ko" | "en",
+): string {
+  const sameDay = sameCalendarDay(start, end);
+
+  if (startAllDay && endAllDay) {
+    if (sameDay) return lang === "ko" ? "종일" : "All day";
+    return lang === "ko"
+      ? `${formatDay(start, lang)} → ${formatDay(end, lang)} · 종일`
+      : `${formatDay(start, lang)} → ${formatDay(end, lang)} · All day`;
+  }
+
+  const startTime = formatUpcomingScheduleTime(start, lang);
+  const endTime = formatUpcomingScheduleTime(end, lang);
+
+  if (sameDay) {
+    return end.getTime() > start.getTime() + 30 * 60 * 1000
+      ? `${startTime}–${endTime}`
+      : startTime;
+  }
+
+  return `${formatDay(start, lang)} ${startTime} → ${formatDay(end, lang)} ${endTime}`;
+}
+
+function ReminderStatus({
+  label,
+  onOpen,
+  t,
+}: {
+  label: string;
+  onOpen?: () => void;
+  t: ReturnType<typeof useT>;
+}) {
+  const content = (
+    <>
+      <BellRing size={13} strokeWidth={2.4} />
+      <span>{t("알림 켜짐", "Reminder on")}</span>
+      <span className="text-ink-soft/70">· {label}</span>
+    </>
+  );
+
+  if (!onOpen) {
+    return (
+      <span className="mt-1 inline-flex max-w-full items-center gap-1 rounded-full bg-primary/18 px-2 py-1 text-[11px] font-bold text-ink">
+        {content}
+      </span>
+    );
+  }
+
+  return (
+    <button
+      type="button"
+      onClick={(event) => {
+        event.stopPropagation();
+        onOpen();
+      }}
+      className="mt-1 inline-flex max-w-full items-center gap-1 rounded-full bg-primary/22 px-2 py-1 text-[11px] font-bold text-ink ring-1 ring-primary/30 touch-press active:bg-primary/32"
+      aria-label={`${t("알림 켜짐", "Reminder on")} · ${label}`}
+    >
+      {content}
+    </button>
+  );
+}
+
 export function ScheduleCompactRow({
   s,
   pinned,
@@ -31,20 +121,22 @@ export function ScheduleCompactRow({
 }: ScheduleCompactRowProps) {
   const t = useT();
   const { lang } = useLang();
+  const locale = lang === "en" ? "en" : "ko";
   const title = scheduleDisplayTitle(s);
   const flags = resolveScheduleAllDayFlags(s);
   const start = new Date(s.start_time);
   const end = new Date(s.end_time);
-  const timeLabel = flags.startAllDay
-    ? t("종일", "All day")
-    : formatUpcomingScheduleTime(start, lang);
-  const rangeLabel =
-    !flags.startAllDay &&
-    !flags.endAllDay &&
-    end.getTime() > start.getTime() + 30 * 60 * 1000
-      ? `${formatUpcomingScheduleTime(start, lang)}–${formatUpcomingScheduleTime(end, lang)}`
-      : null;
-  const displayTime = rangeLabel ?? timeLabel;
+  const displayTime = formatRangeLabel(
+    start,
+    end,
+    flags.startAllDay,
+    flags.endAllDay,
+    locale,
+  );
+  const alarmAt = effectiveAlarmAt(s);
+  const alarmLabel = alarmAt
+    ? formatAlarmLabel(alarmAt, locale)
+    : t("시간 확인 필요", "Check time");
   const missed = !done && !inPastSection && isMissed(s);
   const dxRef = useRef(0);
   const [dx, setDx] = useState(0);
@@ -105,8 +197,13 @@ export function ScheduleCompactRow({
       }`}
       role="button"
       tabIndex={0}
-      aria-label={`${title}. ${t("탭하면 다듬기", "Tap to refine")}`}
+      aria-label={`${title}. ${displayTime}. ${
+        s.alarm
+          ? `${t("알림 켜짐", "Reminder on")} ${alarmLabel}. `
+          : ""
+      }${t("탭하면 다듬기", "Tap to refine")}`}
       data-gesture={dragging.current || acting ? "true" : undefined}
+      data-reminder={s.alarm ? "on" : "off"}
       style={{
         transform: `translate3d(${dx}px, 0, 0)`,
         transition: dragging.current || acting ? "none" : undefined,
@@ -153,24 +250,25 @@ export function ScheduleCompactRow({
         {done && <Check size={12} strokeWidth={3} />}
       </button>
       <span className="min-w-0 flex-1">
-        {displayTime && (
-          <span
-            className={`block text-[13px] font-semibold tabular-nums leading-snug ${
-              flags.startAllDay
-                ? "text-ink-soft/80"
-                : "text-semantic-schedule"
-            }`}
-          >
-            {displayTime}
-          </span>
-        )}
         <span
-          className={`block text-[16px] font-semibold leading-snug tracking-[-0.01em] text-ink ${
+          className={`block text-[13px] font-semibold tabular-nums leading-snug ${
+            flags.startAllDay && flags.endAllDay
+              ? "text-ink-soft/80"
+              : "text-semantic-schedule"
+          }`}
+        >
+          {displayTime}
+        </span>
+        <span
+          className={`mt-0.5 block text-[16px] font-semibold leading-snug tracking-[-0.01em] text-ink ${
             done ? "line-through decoration-ink/20" : ""
-          } ${displayTime ? "mt-0.5" : ""}`}
+          }`}
         >
           {title}
         </span>
+        {s.alarm && !done && (
+          <ReminderStatus label={alarmLabel} onOpen={onAlarm} t={t} />
+        )}
         {(missed || pinned) && (
           <span className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[12px] text-ink-soft/75">
             {missed && (
@@ -184,19 +282,6 @@ export function ScheduleCompactRow({
           </span>
         )}
       </span>
-      {onAlarm && !done && s.alarm && (
-        <button
-          type="button"
-          onClick={(e) => {
-            e.stopPropagation();
-            onAlarm();
-          }}
-          className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-ink-soft touch-press active:bg-ink/[0.06] active:text-ink"
-          aria-label={t("빠른 알림", "Quick alarm")}
-        >
-          <Bell size={17} strokeWidth={2} />
-        </button>
-      )}
     </li>
   );
 }
