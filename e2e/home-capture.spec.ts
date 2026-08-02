@@ -128,7 +128,7 @@ async function readComposerValue(page: Page) {
 
 async function scrollMetrics(page: Page) {
   return page.evaluate(() => {
-    const el = document.getElementById("phone-scroll");
+    const el = document.querySelector<HTMLElement>(".home-chat-lane");
     if (!el) return null;
     return {
       scrollTop: el.scrollTop,
@@ -142,16 +142,13 @@ async function scrollMetrics(page: Page) {
 
 async function isLatestTurnNearBottom(page: Page, text: string) {
   return page.evaluate(({ thoughtText }) => {
-    const container = document.getElementById("phone-scroll");
+    const container = document.querySelector<HTMLElement>(".home-chat-lane");
     if (!container) return false;
     const turns = [...document.querySelectorAll('[data-testid="chat-turn"]')];
     const turn = turns.find((node) => node.textContent?.includes(thoughtText));
     if (!turn) return false;
-    const sticky = document.querySelector(".sticky.bottom-0");
-    const stickyTop =
-      sticky?.getBoundingClientRect().top ?? container.getBoundingClientRect().bottom;
     const turnRect = turn.getBoundingClientRect();
-    return turnRect.bottom <= stickyTop - 4;
+    return turnRect.bottom <= container.getBoundingClientRect().bottom - 4;
   }, { thoughtText: text });
 }
 
@@ -276,7 +273,7 @@ test.describe("Home capture UX", () => {
       }
 
       await phone(page).locator("#capture-input").blur();
-      const scroll = page.locator("#phone-scroll");
+      const scroll = phone(page).locator(".home-chat-lane");
       await scroll.hover();
       await page.mouse.wheel(0, -1200);
       await page.waitForTimeout(200);

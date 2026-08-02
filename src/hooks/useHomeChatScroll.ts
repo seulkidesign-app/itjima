@@ -2,8 +2,11 @@ import { useCallback, useEffect, useRef, useState } from "react";
 
 const BOTTOM_THRESHOLD_PX = 120;
 
-function getScrollContainer() {
-  return document.getElementById("phone-scroll");
+function getScrollContainer(): HTMLElement | null {
+  return (
+    document.querySelector<HTMLElement>(".home-chat-lane") ??
+    document.getElementById("phone-scroll")
+  );
 }
 
 function isNearBottom(container: HTMLElement) {
@@ -85,15 +88,15 @@ export function useHomeChatScroll(itemCount: number) {
   }, []);
 
   useEffect(() => {
-    const prev = prevCountRef.current;
-    if (itemCount > prev) {
-      const added = itemCount - prev;
+    const previous = prevCountRef.current;
+    if (itemCount > previous) {
+      const added = itemCount - previous;
       const submittedByThisComposer = submitScrollRef.current;
 
       if (submittedByThisComposer || nearBottomRef.current) {
         scrollToBottom(submittedByThisComposer ? "smooth" : "auto");
       } else {
-        setUnreadBelow((n) => n + added);
+        setUnreadBelow((count) => count + added);
       }
       submitScrollRef.current = false;
     }
@@ -101,8 +104,6 @@ export function useHomeChatScroll(itemCount: number) {
   }, [itemCount, scrollToBottom]);
 
   const notifyThoughtSubmitted = useCallback(() => {
-    // Keep this flag set until the item-count effect observes the new row.
-    // Clearing it in the next frame caused async captures to miss auto-scroll.
     submitScrollRef.current = true;
     nearBottomRef.current = true;
     setUnreadBelow(0);
