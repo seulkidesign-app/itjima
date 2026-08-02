@@ -66,6 +66,20 @@ async function clickDeckDecision(
   await deck.getByTestId(testId).click();
 }
 
+async function confirmDeckSchedule(page: Page) {
+  const flow = page.getByTestId("schedule-choice-flow");
+  await expect(flow).toBeVisible({ timeout: 15_000 });
+  await flow.getByRole("button", { name: /selected$/i }).click();
+  await flow
+    .getByRole("button", { name: "Set a reminder", exact: true })
+    .click();
+  await flow
+    .getByRole("button", { name: "No reminder", exact: true })
+    .click();
+  await flow.getByRole("button", { name: /Add to schedule/i }).click();
+  await expect(flow).toBeHidden({ timeout: 15_000 });
+}
+
 async function dragDeckCard(page: Page, deltaX: number, deltaY = 0) {
   const card = phone(page).getByTestId("decision-deck-active-card");
   await card.waitFor({ state: "visible" });
@@ -144,7 +158,9 @@ test.describe("Decision deck swipe", () => {
     await expect(phone(page).getByTestId("decision-deck-complete")).toHaveCount(0);
   });
 
-  test("right swipe schedules (Today)", async ({ page }) => {
+  test("right swipe opens schedule setup and saves only after confirmation", async ({
+    page,
+  }) => {
     const text = `Schedule swipe ${Date.now()}`;
     await addThought(page, text);
     await openDeck(page);
@@ -152,6 +168,13 @@ test.describe("Decision deck swipe", () => {
       await phone(page).getByTestId("decision-deck-active-card").boundingBox()
     )!.width;
     await dragDeckCard(page, width * 0.38);
+
+    const flow = page.getByTestId("schedule-choice-flow");
+    await expect(flow).toBeVisible({ timeout: 15_000 });
+    expect((await readGuestList(page, GUEST_SCHEDULE_KEY)).length).toBe(0);
+    expect((await readGuestList(page, GUEST_INBOX_KEY)).length).toBe(1);
+
+    await confirmDeckSchedule(page);
     await expect
       .poll(async () => (await readGuestList(page, GUEST_SCHEDULE_KEY)).length)
       .toBe(1);
@@ -254,6 +277,7 @@ test.describe("Decision deck swipe", () => {
     const activeCard = deck.getByTestId("decision-deck-active-card");
     await expect(activeCard.getByText(second)).toBeVisible();
     await clickDeckDecision(page, "decision-btn-today");
+    await confirmDeckSchedule(page);
     await expect
       .poll(async () => {
         const schedule = (await readGuestList(page, GUEST_SCHEDULE_KEY)) as {
@@ -312,6 +336,7 @@ test.describe("Decision deck swipe", () => {
     await openDeck(page);
     const deck = phone(page);
     await clickDeckDecision(page, "decision-btn-today");
+    await confirmDeckSchedule(page);
     await clickDeckDecision(page, "decision-btn-later");
     await clickDeckDecision(page, "decision-btn-archive");
     const complete = deck.getByTestId("decision-deck-complete");
