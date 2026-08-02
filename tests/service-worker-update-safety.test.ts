@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
+import { extractBuildFingerprint } from "@/lib/swReminders";
 
 function source(path: string) {
   return readFileSync(resolve(process.cwd(), path), "utf8");
@@ -41,6 +42,27 @@ describe("service worker update safety", () => {
     expect(registration).toContain('updateViaCache: "none"');
     expect(registration).toContain("APP_UPDATE_READY_EVENT");
     expect(registration).toContain('waiting.postMessage({ type: "SKIP_WAITING" })');
+  });
+
+  it("detects regular web deploys when the service worker file is unchanged", () => {
+    expect(registration).toContain("__itjima_update_check");
+    expect(registration).toContain('cache: "no-store"');
+    expect(registration).toContain('emitUpdateReady("reload")');
+
+    const oldBuild = extractBuildFingerprint(`
+      <!doctype html>
+      <link rel="stylesheet" href="/assets/app-old.css" />
+      <script type="module" src="/assets/app-old.js"></script>
+    `);
+    const newBuild = extractBuildFingerprint(`
+      <!doctype html>
+      <link rel="stylesheet" href="/assets/app-new.css" />
+      <script type="module" src="/assets/app-new.js"></script>
+    `);
+
+    expect(oldBuild).toBe("/assets/app-old.css|/assets/app-old.js");
+    expect(newBuild).toBe("/assets/app-new.css|/assets/app-new.js");
+    expect(newBuild).not.toBe(oldBuild);
   });
 
   it("serves the worker with revalidation headers", () => {
