@@ -75,9 +75,8 @@ test("schedule editor supports exact minutes, quick ends, and a real date range"
 
   await sheet.getByLabel("End date").fill(range.endDate);
   await sheet.getByLabel("End time").fill("18:43");
-
-  await expect(sheet.getByText(/10:17/)).toBeVisible();
-  await expect(sheet.getByText(/18:43/)).toBeVisible();
+  await expect(sheet.getByLabel("Start time")).toHaveValue("10:17");
+  await expect(sheet.getByLabel("End time")).toHaveValue("18:43");
 
   await sheet.getByRole("button", { name: "Set a reminder" }).click();
   const preview = sheet.getByTestId("reminder-preview");
@@ -87,7 +86,9 @@ test("schedule editor supports exact minutes, quick ends, and a real date range"
   await sheet.getByRole("button", { name: "No reminder" }).click();
   await expect(preview).toHaveAttribute("data-reminder", "off");
   await expect(preview).toContainText("No alert will be sent");
-  await sheet.getByRole("button", { name: "Add to schedule" }).click();
+  const save = sheet.getByRole("button", { name: "Add to schedule" });
+  await expect(save).toBeEnabled();
+  await save.click();
 
   const saved = await page.evaluate(
     ({ key, title }) => {
@@ -179,14 +180,18 @@ test("all-day ranges include both the start and end date", async ({ page }) => {
   const title = `Inclusive all-day range ${Date.now()}`;
 
   await sheet.getByLabel("Schedule title").fill(title);
-  await sheet.getByRole("switch", { name: "All day" }).click();
+  const allDaySwitches = sheet.getByRole("switch", { name: "All-day" });
+  await allDaySwitches.nth(0).click();
+  await allDaySwitches.nth(1).click();
   await sheet.getByLabel("Start date").fill(localDateValue(start));
   await sheet.getByLabel("End date").fill(localDateValue(end));
   await expect(sheet.getByText(/2 days/)).toBeVisible();
 
   await sheet.getByRole("button", { name: "Set a reminder" }).click();
   await sheet.getByRole("button", { name: "No reminder" }).click();
-  await sheet.getByRole("button", { name: "Add to schedule" }).click();
+  const save = sheet.getByRole("button", { name: "Add to schedule" });
+  await expect(save).toBeEnabled();
+  await save.click();
 
   const saved = await page.evaluate(
     ({ key, title }) => {
