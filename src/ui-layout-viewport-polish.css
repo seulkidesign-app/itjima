@@ -1,0 +1,369 @@
+/*
+ * Itjima viewport and layout contract.
+ *
+ * This file is imported last. It owns geometry only: scroll ownership,
+ * viewport filling, readable rails, sticky-control density, safe areas and
+ * overflow containment. Product colors and component behavior stay elsewhere.
+ */
+
+:root {
+  --ij-layout-gutter-mobile: clamp(16px, 5vw, 22px);
+  --ij-layout-gutter-tablet: clamp(24px, 4vw, 36px);
+  --ij-layout-gutter-desktop: clamp(28px, 3vw, 44px);
+  --ij-layout-readable: 700px;
+  --ij-layout-chat: 560px;
+  --ij-layout-wide: 980px;
+  --ij-layout-touch-nav-space: calc(84px + env(safe-area-inset-bottom));
+  --ij-layout-sticky-surface: rgba(255, 255, 255, 0.94);
+  --ij-layout-separator: rgba(60, 60, 67, 0.09);
+}
+
+html,
+body,
+#root,
+.itjima-app-stage,
+.itjima-desktop-shell,
+.itjima-responsive-frame,
+.itjima-app-content,
+.itjima-app-scroll,
+.page-shell {
+  box-sizing: border-box;
+  min-width: 0;
+  max-width: 100%;
+}
+
+body,
+.itjima-app-scroll,
+.page-shell {
+  overflow-x: clip;
+}
+
+.page-shell {
+  width: 100%;
+}
+
+.page-shell > * {
+  min-width: 0;
+}
+
+.phone-frame :is(input, textarea, select, button, a) {
+  min-width: 0;
+}
+
+.phone-frame :is(img, video, canvas, svg) {
+  max-width: 100%;
+}
+
+/* One vertical scroll owner: #phone-scroll. Route roots fill that owner and
+   should not create a second viewport-height scroller. */
+.itjima-app-scroll > .page-shell {
+  min-height: 100%;
+}
+
+.itjima-app-scroll > .page-shell > div:first-child {
+  min-height: 100%;
+}
+
+/* Dialogs and sheets remain reachable on short screens and with large text. */
+.phone-frame [role="dialog"]:not(.fixed.inset-0) {
+  max-width: min(calc(100vw - 24px), 680px);
+  max-height: calc(
+    100dvh - env(safe-area-inset-top) - env(safe-area-inset-bottom) - 24px
+  );
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+@media (max-width: 1023px) {
+  .itjima-app-stage {
+    height: 100dvh;
+    min-height: 100dvh;
+    overflow: hidden;
+  }
+
+  .itjima-responsive-frame,
+  .itjima-app-content,
+  .itjima-app-scroll {
+    min-height: 0;
+  }
+
+  .itjima-app-scroll {
+    overscroll-behavior-y: contain;
+    -webkit-overflow-scrolling: touch;
+    scroll-padding-bottom: var(--ij-layout-touch-nav-space);
+  }
+
+  .page-shell {
+    min-height: 100%;
+  }
+
+  .page-shell :is(.page-title, .page-eyebrow) {
+    text-wrap: pretty;
+  }
+
+  /* Bottom navigation is always inside the visible safe area. */
+  .mobile-bottom-nav {
+    right: max(10px, env(safe-area-inset-right)) !important;
+    bottom: max(8px, env(safe-area-inset-bottom)) !important;
+    left: max(10px, env(safe-area-inset-left)) !important;
+  }
+
+  /* Home: conversation owns the remaining height; launcher and composer form
+     one stable bottom control region above navigation. */
+  .itjima-app-stage[data-route="home"] .page-shell,
+  .itjima-app-stage[data-route="home"] .page-shell > div {
+    min-height: 100%;
+  }
+
+  .itjima-app-stage[data-route="home"] .home-chat-lane {
+    flex: 1 1 auto;
+    padding-bottom: 16px !important;
+  }
+
+  .itjima-app-stage[data-route="home"]
+    .page-shell
+    > div
+    > div.composer-hero {
+    position: sticky !important;
+    bottom: 0 !important;
+    margin-top: auto;
+    padding-bottom: 8px;
+  }
+
+  /* Schedule: the descriptive title scrolls away. Only the actionable tabs
+     remain sticky, preventing the oversized header shown on real devices. */
+  .itjima-app-stage[data-route="schedule"]
+    .page-shell
+    > div
+    > .sticky:has(#schedule-tab-today) {
+    display: contents !important;
+  }
+
+  .itjima-app-stage[data-route="schedule"]
+    .sticky:has(#schedule-tab-today)
+    > div:first-of-type {
+    position: relative;
+    padding: clamp(18px, 4.5vw, 26px) var(--ij-layout-gutter-mobile) 12px !important;
+  }
+
+  .itjima-app-stage[data-route="schedule"]
+    .sticky:has(#schedule-tab-today)
+    > div:first-of-type
+    .page-eyebrow {
+    margin-top: 6px !important;
+    line-height: 1.48 !important;
+  }
+
+  .itjima-app-stage[data-route="schedule"]
+    .sticky:has(#schedule-tab-today)
+    > div:nth-of-type(2) {
+    position: sticky !important;
+    top: 0;
+    z-index: 24;
+    padding: 8px var(--ij-layout-gutter-mobile) 9px !important;
+    border-bottom: 1px solid var(--ij-layout-separator);
+    background: var(--ij-layout-sticky-surface);
+    box-shadow: 0 10px 28px -26px rgba(0, 0, 0, 0.34);
+    backdrop-filter: blur(22px) saturate(155%);
+    -webkit-backdrop-filter: blur(22px) saturate(155%);
+  }
+
+  .itjima-app-stage[data-route="schedule"]
+    .sticky:has(#schedule-tab-today)
+    + div {
+    padding-inline: var(--ij-layout-gutter-mobile) !important;
+  }
+
+  .itjima-app-stage[data-route="schedule"] .segment-nav {
+    min-height: 46px !important;
+    padding: 3px !important;
+    border-radius: 15px !important;
+  }
+
+  .itjima-app-stage[data-route="schedule"] .segment-nav-item {
+    min-height: 40px !important;
+    border-radius: 12px !important;
+    font-size: 13px !important;
+  }
+
+  /* Archive follows the same hierarchy: title and description scroll; search,
+     view controls and filters stay available in a compact sticky tool region. */
+  .itjima-app-stage[data-route="archive"]
+    .page-shell
+    > div
+    > .sticky.top-0 {
+    display: contents !important;
+  }
+
+  .itjima-app-stage[data-route="archive"]
+    .page-shell
+    > div
+    > .sticky.top-0
+    > div:first-of-type {
+    padding: clamp(18px, 4.5vw, 26px) var(--ij-layout-gutter-mobile) 12px !important;
+  }
+
+  .itjima-app-stage[data-route="archive"]
+    .page-shell
+    > div
+    > .sticky.top-0
+    > .space-y-2 {
+    position: sticky;
+    top: 0;
+    z-index: 24;
+    margin: 0;
+    padding: 8px var(--ij-layout-gutter-mobile) 9px !important;
+    border-bottom: 1px solid var(--ij-layout-separator);
+    background: var(--ij-layout-sticky-surface);
+    box-shadow: 0 10px 28px -26px rgba(0, 0, 0, 0.34);
+    backdrop-filter: blur(22px) saturate(155%);
+    -webkit-backdrop-filter: blur(22px) saturate(155%);
+  }
+
+  .itjima-app-stage[data-route="archive"]
+    [data-testid="archive-category-filters"] {
+    max-width: 100%;
+    overscroll-behavior-x: contain;
+  }
+
+  /* Rediscovery and empty states should feel vertically intentional instead of
+     sticking to the top on tall phones. */
+  .itjima-app-stage[data-route="/rediscovery"] .page-shell > div,
+  .itjima-app-stage[data-route="rediscovery"] .page-shell > div {
+    min-height: 100%;
+  }
+}
+
+@media (min-width: 640px) and (max-width: 1023px) {
+  .itjima-app-stage[data-route="schedule"]
+    .sticky:has(#schedule-tab-today)
+    > div:first-of-type,
+  .itjima-app-stage[data-route="schedule"]
+    .sticky:has(#schedule-tab-today)
+    > div:nth-of-type(2),
+  .itjima-app-stage[data-route="schedule"]
+    .sticky:has(#schedule-tab-today)
+    + div,
+  .itjima-app-stage[data-route="archive"]
+    .page-shell
+    > div
+    > .sticky.top-0
+    > div:first-of-type,
+  .itjima-app-stage[data-route="archive"]
+    .page-shell
+    > div
+    > .sticky.top-0
+    > .space-y-2 {
+    padding-inline: var(--ij-layout-gutter-tablet) !important;
+  }
+}
+
+@media (min-width: 1024px) {
+  .itjima-desktop-shell .page-shell,
+  .itjima-desktop-shell .page-shell > div:first-child {
+    box-sizing: border-box;
+    min-height: 100dvh !important;
+  }
+
+  /* Desktop route content gets predictable readable rails rather than mobile
+     content stretching across the whole browser canvas. */
+  .itjima-desktop-shell[data-route="schedule"]
+    .sticky:has(#schedule-tab-today)
+    > div,
+  .itjima-desktop-shell[data-route="schedule"]
+    .sticky:has(#schedule-tab-today)
+    + div,
+  .itjima-desktop-shell[data-route="archive"]
+    .page-shell
+    > div
+    > .sticky
+    > div,
+  .itjima-desktop-shell[data-route="archive"]
+    .page-shell
+    > div
+    > .sticky
+    + div {
+    width: 100%;
+    max-width: var(--ij-layout-readable) !important;
+    margin-inline: auto;
+    padding-inline: var(--ij-layout-gutter-desktop) !important;
+  }
+
+  .itjima-desktop-shell[data-route="archive"]
+    .archive-space-page
+    > .sticky
+    > div,
+  .itjima-desktop-shell[data-route="archive"]
+    .archive-space-page
+    > .sticky
+    + div {
+    max-width: var(--ij-layout-wide) !important;
+  }
+
+  /* Capture: the chat area grows and the launcher/composer finishes at the
+     bottom of the workspace even when only one thought exists. */
+  .itjima-desktop-shell[data-route="home"] .page-shell > div {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .itjima-desktop-shell[data-route="home"] .home-chat-lane {
+    width: 100%;
+    max-width: var(--ij-layout-chat) !important;
+    flex: 1 1 auto;
+    margin-inline: auto;
+    padding: clamp(20px, 3vh, 34px) 20px clamp(24px, 4vh, 48px) !important;
+  }
+
+  .itjima-desktop-shell[data-route="home"]
+    .page-shell
+    > div
+    > div.composer-hero {
+    bottom: 0 !important;
+    margin-top: auto;
+    border-top: 1px solid var(--ij-layout-separator);
+    background: linear-gradient(
+      180deg,
+      rgba(248, 248, 250, 0.7) 0%,
+      rgba(248, 248, 250, 0.98) 18%,
+      #f8f8fa 100%
+    );
+    box-shadow: 0 -18px 42px -34px rgba(0, 0, 0, 0.34);
+  }
+
+  .itjima-desktop-shell[data-route="home"]
+    :is(form.composer-hero, [data-testid="decision-launcher"]) {
+    width: min(100%, var(--ij-layout-chat)) !important;
+    margin-inline: auto !important;
+  }
+}
+
+@media (max-width: 359px) {
+  :root {
+    --ij-layout-gutter-mobile: 14px;
+  }
+
+  .mobile-bottom-nav {
+    right: max(6px, env(safe-area-inset-right)) !important;
+    left: max(6px, env(safe-area-inset-left)) !important;
+  }
+
+  .itjima-app-stage[data-route="schedule"] .segment-nav-item {
+    font-size: 12px !important;
+  }
+}
+
+@media (prefers-reduced-transparency: reduce) {
+  .itjima-app-stage[data-route="schedule"]
+    .sticky:has(#schedule-tab-today)
+    > div:nth-of-type(2),
+  .itjima-app-stage[data-route="archive"]
+    .page-shell
+    > div
+    > .sticky.top-0
+    > .space-y-2 {
+    background: #ffffff;
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+  }
+}
