@@ -1,0 +1,146 @@
+/* Final schedule polish: visible ranges, stable switches, right-aligned reminders. */
+
+/* Multi-day blocks should read as one continuous period across every included day. */
+.calendar-span-stack {
+  position: relative;
+  z-index: 4;
+  margin-top: -23px !important;
+  margin-bottom: 5px !important;
+  padding-inline: 0;
+  pointer-events: none;
+}
+
+.calendar-span-lane {
+  min-height: 23px !important;
+}
+
+.calendar-span-bar {
+  min-width: 0;
+  height: 22px !important;
+  pointer-events: auto;
+  overflow: hidden;
+  border-color: rgba(183, 130, 0, 0.2) !important;
+  background: linear-gradient(
+    90deg,
+    rgba(255, 204, 36, 0.84),
+    rgba(255, 220, 96, 0.78)
+  ) !important;
+  box-shadow: 0 5px 14px -10px rgba(99, 65, 0, 0.72) !important;
+}
+
+.calendar-span-bar > span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Keep start/end card headers and switches inside their own cards. */
+[data-testid="schedule-manager-flow"] section > div:has(button[role="switch"]),
+[data-testid="schedule-choice-flow"] section > div:has(button[role="switch"]) {
+  display: grid !important;
+  grid-template-columns: minmax(0, 1fr) auto !important;
+  align-items: center !important;
+  gap: 12px !important;
+  min-width: 0;
+}
+
+[data-testid="schedule-manager-flow"] section > div:has(button[role="switch"]) > div:first-child,
+[data-testid="schedule-choice-flow"] section > div:has(button[role="switch"]) > div:first-child {
+  min-width: 0;
+}
+
+[data-testid="schedule-manager-flow"] section > div:has(button[role="switch"]) > div:last-child,
+[data-testid="schedule-choice-flow"] section > div:has(button[role="switch"]) > div:last-child {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: flex-end !important;
+  gap: 8px !important;
+  min-width: 0;
+  margin-left: auto;
+}
+
+[data-testid="schedule-manager-flow"] button[role="switch"],
+[data-testid="schedule-choice-flow"] button[role="switch"] {
+  width: 51px !important;
+  min-width: 51px !important;
+  max-width: 51px !important;
+  height: 31px !important;
+  min-height: 31px !important;
+  max-height: 31px !important;
+  flex: 0 0 51px !important;
+  padding: 0 !important;
+  overflow: hidden !important;
+  border: 0 !important;
+  border-radius: 999px !important;
+}
+
+[data-testid="schedule-manager-flow"] button[role="switch"] > span,
+[data-testid="schedule-choice-flow"] button[role="switch"] > span {
+  max-width: none !important;
+}
+
+/* Alarm is metadata: keep it on the right side of the schedule row. */
+li[data-reminder="on"] > span.min-w-0.flex-1 {
+  display: grid !important;
+  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-rows: auto auto auto;
+  column-gap: 12px;
+  align-items: center;
+}
+
+li[data-reminder="on"] > span.min-w-0.flex-1 > span:nth-child(1) {
+  grid-column: 1;
+  grid-row: 1;
+}
+
+li[data-reminder="on"] > span.min-w-0.flex-1 > span:nth-child(2) {
+  grid-column: 1;
+  grid-row: 2;
+}
+
+li[data-reminder="on"] > span.min-w-0.flex-1 > button {
+  grid-column: 2;
+  grid-row: 1 / span 2;
+  align-self: center;
+  justify-self: end;
+  margin-top: 0 !important;
+  max-width: min(210px, 38vw) !important;
+}
+
+li[data-reminder="on"] > span.min-w-0.flex-1 > span:nth-child(n + 3) {
+  grid-column: 1;
+}
+
+@media (max-width: 639px) {
+  .calendar-span-stack {
+    margin-top: -19px !important;
+  }
+
+  .calendar-span-bar {
+    height: 18px !important;
+    padding-inline: 5px !important;
+  }
+
+  [data-testid="schedule-manager-flow"] section > div.grid,
+  [data-testid="schedule-choice-flow"] section > div.grid {
+    grid-template-columns: minmax(0, 1fr) !important;
+  }
+
+  li[data-reminder="on"] > span.min-w-0.flex-1 > button {
+    max-width: 150px !important;
+    padding-inline: 7px !important;
+    font-size: 10px !important;
+  }
+}
+
+@media (min-width: 1024px) {
+  .calendar-span-stack {
+    margin-top: -28px !important;
+    margin-bottom: 7px !important;
+  }
+
+  .calendar-span-bar {
+    height: 24px !important;
+  }
+}
