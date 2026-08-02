@@ -23,3 +23,15 @@ body:has(.itjima-launch-page) #root {
   overscroll-behavior-y: auto;
   touch-action: pan-y;
 }
+
+/* The landing install card is intentionally fixed and visible, but its empty
+ * surface must never block the language menu, header CTA, or page scrolling.
+ * Only its explicit controls remain interactive. */
+[data-testid="pwa-install-nudge"] {
+  pointer-events: none;
+}
+
+[data-testid="pwa-install-nudge"] button,
+[data-testid="pwa-install-nudge"] a {
+  pointer-events: auto;
+}
