@@ -61,9 +61,10 @@ export function DesktopAppNav() {
         aria-label={t("주요 메뉴", "Primary navigation")}
       >
         <Link
-          to="/"
+          to="/about"
+          onClick={tap}
           className="itjima-desktop-brand flex min-h-16 items-center gap-3 px-5 no-underline"
-          aria-label={t("잊지마 홈", "Itjima home")}
+          aria-label={t("잊지마 소개로 이동", "Open Itjima introduction")}
         >
           <span className="grid h-10 w-10 place-items-center rounded-[14px] bg-primary text-[13px] font-black text-ink shadow-card">
             IJ
