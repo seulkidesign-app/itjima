@@ -105,13 +105,18 @@ test("mobile calendar gives a clear month overview and selected-day agenda", asy
   await expect(todayCell.locator(".calendar-day-preview-row")).toBeHidden();
 
   await todayCell.click();
-  await expect(page.getByText("Morning focus", { exact: true })).toBeVisible();
-  await expect(page.getByText("Lunch with Mina", { exact: true })).toBeVisible();
-  await expect(page.getByText("Send portfolio", { exact: true })).toBeVisible();
+  const agenda = page
+    .getByTestId("calendar-experience")
+    .locator(":scope > div > div:nth-of-type(2) ul");
+  await expect(agenda.getByText("Morning focus", { exact: true })).toBeVisible();
+  await expect(agenda.getByText("Lunch with Mina", { exact: true })).toBeVisible();
+  await expect(agenda.getByText("Send portfolio", { exact: true })).toBeVisible();
   await expect(
     page.getByRole("button", { name: "Remember for then" }),
   ).toBeVisible();
-  await expect(page.locator(".calendar-span-bar").filter({ hasText: "Design sprint" })).toBeVisible();
+  await expect(
+    page.locator(".calendar-span-bar").filter({ hasText: "Design sprint" }),
+  ).toBeVisible();
   await expectNoHorizontalOverflow(page);
 });
 
