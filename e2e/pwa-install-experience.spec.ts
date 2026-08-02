@@ -1,22 +1,42 @@
 import { expect, test } from "@playwright/test";
 
-test.beforeEach(async ({ page }) => {
-  await page.addInitScript(() => {
-    localStorage.removeItem("itjima_pwa_install_dismissed_until");
-  });
-});
+for (const route of ["/about", "/"] as const) {
+  for (const viewport of [
+    { name: "mobile web", width: 390, height: 844 },
+    { name: "desktop web", width: 1280, height: 800 },
+  ]) {
+    test(`${viewport.name} shows installation guidance immediately on ${route}`, async ({
+      page,
+    }) => {
+      await page.setViewportSize({ width: viewport.width, height: viewport.height });
+      await page.goto(route);
 
-test("landing gives a clear home-screen installation guide", async ({ page }) => {
+      await expect(page.getByTestId("pwa-install-nudge")).toBeVisible();
+      await expect(page.getByTestId("pwa-install-guide-action")).toBeVisible();
+    });
+  }
+}
+
+test("Chrome guide explains desktop, Android, and iPhone installation", async ({
+  page,
+}) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto("/about");
 
-  const nudge = page.getByTestId("pwa-install-nudge");
-  await expect(nudge).toBeVisible();
-  await page.getByTestId("pwa-install-action").click();
+  await page.getByTestId("pwa-install-guide-action").click();
   await expect(page.getByTestId("pwa-install-guide")).toBeVisible();
+
+  await page.getByTestId("pwa-guide-desktop-tab").click();
+  await expect(page.getByTestId("pwa-guide-chrome-desktop")).toBeVisible();
+
+  await page.getByTestId("pwa-guide-android-tab").click();
+  await expect(page.getByTestId("pwa-guide-chrome-android")).toBeVisible();
+
+  await page.getByTestId("pwa-guide-ios-tab").click();
+  await expect(page.getByTestId("pwa-guide-ios")).toBeVisible();
 });
 
-test("uses the browser install prompt when it is available", async ({ page }) => {
+test("uses the browser install prompt when Chrome exposes it", async ({ page }) => {
   await page.setViewportSize({ width: 1280, height: 800 });
   await page.goto("/about");
 
