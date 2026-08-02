@@ -11,14 +11,8 @@ import type { ScheduleConfirmOptions } from "@/components/ScheduleChoiceFlow";
 import { useLang, useT } from "@/lib/i18n";
 import { track } from "@/lib/analytics";
 import { tap } from "@/lib/haptics";
-import {
-  useInbox,
-  useSchedules,
-  type DecisionOutcome,
-  type InboxItem,
-} from "@/lib/store";
-import { scheduleFromInbox } from "@/lib/thoughtProvenance";
-import { allCloudSynced } from "@/lib/syncFeedback";
+import type { DecisionOutcome, InboxItem } from "@/lib/store";
+import { withInboxScheduleDraft } from "@/lib/inboxScheduleDefaults";
 import {
   captureDecisionStorage,
   clearInboxTombstones,
@@ -116,8 +110,6 @@ export function DecisionLauncher({
   onUndo,
 }: DeckProps) {
   const t = useT();
-  const inbox = useInbox();
-  const schedules = useSchedules();
   const sessionItemsRef = useRef<InboxItem[]>(items);
   const wasOpenRef = useRef(false);
   const [pendingSchedule, setPendingSchedule] =
@@ -163,40 +155,34 @@ export function DecisionLauncher({
     const pending = pendingSchedule;
     if (!pending) return;
 
-    try {
-      const payload = scheduleFromInbox(pending.item, {
-        text,
-        start_time: start.toISOString(),
-        end_time: end.toISOString(),
-        alarm: options.reminderMinutes !== null,
-        all_day: options.allDay,
-        start_all_day: options.startAllDay,
-        end_all_day: options.endAllDay,
-        repeat: options.repeat,
-      });
-      const { item: created, cloudSynced: scheduleSynced } =
-        await schedules.add({
-          ...payload,
-          ...(options.reminderMinutes !== null
-            ? {
-                alarm_at: new Date(
-                  start.getTime() - options.reminderMinutes * 60 * 1000,
-                ).toISOString(),
-              }
-            : {}),
-        });
-      const inboxSynced = await inbox.remove(pending.item.id);
-      if (!allCloudSynced(scheduleSynced, inboxSynced)) {
-        throw new Error("sync_failed");
-      }
+    const configuredItem = withInboxScheduleDraft(pending.item, {
+      text,
+      start,
+      end,
+      options,
+    });
+    const before = captureDecisionStorage(pending.item.id);
 
-      track("schedule_created", {
-        source: "decision_deck_configured",
-        text_length: text.length,
+    try {
+      const result = await onDecide("today", configuredItem, pending.meta);
+      track("schedule_setup_confirmed", {
+        source: "decision_deck",
+        position: pending.meta.position,
+        total: pending.meta.total,
       });
       setPendingSchedule(null);
-      pending.resolve({ scheduleId: created.id });
-    } catch {
+      pending.resolve(result ?? {});
+    } catch (error) {
+      const recovered = recoverLocallyCommittedDecision(
+        "today",
+        pending.item.id,
+        before,
+      );
+      if (recovered) {
+        setPendingSchedule(null);
+        pending.resolve(recovered);
+        return;
+      }
       toast.error(
         t(
           "일정을 저장하지 못했어요. 다시 시도해 주세요.",
