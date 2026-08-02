@@ -112,7 +112,7 @@ test.describe("CRUD flows (guest / offline)", () => {
     const sheet = page.getByRole("dialog");
     await sheet.getByRole("button", { name: "Today" }).click();
     await sheet.getByRole("button", { name: /Pick a time|Add time/i }).click();
-    await sheet.getByPlaceholder("What was this again?").fill(text);
+    await sheet.getByLabel("Schedule title").fill(text);
     await completeScheduleDialog(page);
 
     const notification = page.getByRole("dialog", { name: "Notification" });
