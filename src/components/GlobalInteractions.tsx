@@ -7,6 +7,7 @@ import {
   APP_UPDATE_READY_EVENT,
   activateWaitingServiceWorker,
   hasWaitingServiceWorker,
+  type AppUpdateStrategy,
 } from "@/lib/swReminders";
 
 const APP_UPDATE_TOAST_ID = "itjima-app-update";
@@ -76,6 +77,7 @@ export function GlobalInteractions() {
   useEffect(() => {
     let disposed = false;
     let updateReady = false;
+    let updateStrategy: AppUpdateStrategy = "service-worker";
     let composerWatch: number | null = null;
 
     const clearComposerWatch = () => {
@@ -104,21 +106,23 @@ export function GlobalInteractions() {
       }
 
       clearComposerWatch();
-      toast.loading(t("업데이트 중이에요", "Updating"), {
+      toast.loading(t("최신 버전으로 여는 중이에요", "Opening the latest version"), {
         id: APP_UPDATE_TOAST_ID,
       });
+
+      if (updateStrategy === "reload") {
+        window.location.reload();
+        return;
+      }
+
       void activateWaitingServiceWorker().then((activated) => {
         if (activated) {
           window.location.reload();
           return;
         }
-        toast.error(
-          t(
-            "업데이트를 적용하지 못했어요. 잠시 후 다시 시도해 주세요.",
-            "The update could not be applied. Please try again shortly.",
-          ),
-          { id: APP_UPDATE_TOAST_ID, duration: 5_000 },
-        );
+        // The waiting worker may already have activated. A network-first reload
+        // still retrieves the latest HTML and hashed application assets.
+        window.location.reload();
       });
     };
 
@@ -162,23 +166,35 @@ export function GlobalInteractions() {
         id: APP_UPDATE_TOAST_ID,
         duration: Infinity,
         description: t(
-          "업데이트하면 최신 버전으로 다시 열려요.",
-          "Update now to reopen the latest version.",
+          "지금 업데이트하면 최신 화면으로 다시 열려요.",
+          "Update now to reopen with the latest version.",
         ),
         action: {
-          label: t("업데이트", "Update"),
+          label: t("지금 업데이트", "Update now"),
           onClick: activateUpdate,
         },
       });
     };
 
-    const onUpdateReady = () => {
+    const markUpdateReady = (strategy: AppUpdateStrategy) => {
+      // A waiting service worker must activate before reload, so it takes
+      // priority when both update signals arrive.
+      if (!updateReady || strategy === "service-worker") {
+        updateStrategy = strategy;
+      }
       updateReady = true;
       showReadyToast();
     };
+
+    const onUpdateReady = (event: Event) => {
+      const customEvent = event as CustomEvent<{
+        strategy?: AppUpdateStrategy;
+      }>;
+      markUpdateReady(customEvent.detail?.strategy ?? "service-worker");
+    };
     window.addEventListener(APP_UPDATE_READY_EVENT, onUpdateReady);
     void hasWaitingServiceWorker().then((waiting) => {
-      if (waiting) onUpdateReady();
+      if (waiting) markUpdateReady("service-worker");
     });
 
     return () => {
