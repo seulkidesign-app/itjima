@@ -1,0 +1,67 @@
+/* Mobile Capture has two independent regions: a scrollable conversation and
+   a fixed composer directly above the bottom navigation. */
+@media (max-width: 1023px) {
+  .itjima-app-stage[data-route="home"] .itjima-app-scroll {
+    overflow: hidden !important;
+  }
+
+  .itjima-app-stage[data-route="home"] .page-shell {
+    height: 100%;
+    min-height: 0 !important;
+    overflow: hidden;
+  }
+
+  .itjima-app-stage[data-route="home"] .page-shell > div:first-child {
+    box-sizing: border-box;
+    display: flex;
+    height: 100%;
+    min-height: 0 !important;
+    flex-direction: column;
+    overflow: hidden;
+    padding-bottom: var(--ij-layout-touch-nav-space);
+  }
+
+  .itjima-app-stage[data-route="home"] .home-chat-lane {
+    min-height: 0;
+    flex: 1 1 auto;
+    overflow-y: auto;
+    overflow-x: hidden;
+    overscroll-behavior-y: contain;
+    -webkit-overflow-scrolling: touch;
+    padding-bottom: 12px !important;
+    scroll-padding-bottom: 16px;
+  }
+
+  .itjima-app-stage[data-route="home"]
+    .page-shell
+    > div:first-child
+    > div.composer-hero {
+    position: relative !important;
+    inset: auto !important;
+    bottom: auto !important;
+    z-index: 30;
+    min-width: 0;
+    flex: 0 0 auto;
+    margin-top: 0 !important;
+    padding-bottom: 4px;
+    border-top: 1px solid rgba(60, 60, 67, 0.08);
+    background: rgba(255, 255, 255, 0.98);
+    box-shadow: 0 -16px 34px -30px rgba(0, 0, 0, 0.45);
+    backdrop-filter: blur(22px) saturate(155%);
+    -webkit-backdrop-filter: blur(22px) saturate(155%);
+  }
+
+  .itjima-app-stage[data-route="home"]
+    .page-shell
+    > div:first-child
+    > div.composer-hero
+    > form.composer-hero {
+    padding-bottom: 0 !important;
+  }
+}
+
+@media (max-width: 359px) {
+  .itjima-app-stage[data-route="home"] .page-shell > div:first-child {
+    padding-bottom: calc(78px + env(safe-area-inset-bottom));
+  }
+}
