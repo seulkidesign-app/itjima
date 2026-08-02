@@ -83,7 +83,9 @@ test("schedule editor supports exact minutes, quick ends, and a real date range"
   await expect(preview).toHaveAttribute("data-reminder", "on");
   await expect(preview).toContainText("Schedule reminder on");
 
-  await sheet.getByRole("button", { name: "No reminder" }).click();
+  await sheet
+    .getByRole("button", { name: "No reminder", exact: true })
+    .click();
   await expect(preview).toHaveAttribute("data-reminder", "off");
   await expect(preview).toContainText("No alert will be sent");
   const save = sheet.getByRole("button", { name: "Add to schedule" });
@@ -188,7 +190,9 @@ test("all-day ranges include both the start and end date", async ({ page }) => {
   await expect(sheet.getByText(/2 days/)).toBeVisible();
 
   await sheet.getByRole("button", { name: "Set a reminder" }).click();
-  await sheet.getByRole("button", { name: "No reminder" }).click();
+  await sheet
+    .getByRole("button", { name: "No reminder", exact: true })
+    .click();
   const save = sheet.getByRole("button", { name: "Add to schedule" });
   await expect(save).toBeEnabled();
   await save.click();
