@@ -10,6 +10,7 @@ import { PageTransition } from "@/components/PageTransition";
 import { GlobalInteractions } from "@/components/GlobalInteractions";
 import { ScheduleDeepLinkBridge } from "@/components/ScheduleDeepLinkBridge";
 import { PwaInstallExperience } from "@/components/PwaInstallExperience";
+import { PwaInstallHomeBar } from "@/components/PwaInstallHomeBar";
 import { LanguageProvider } from "@/lib/i18n";
 import { useArchiveMetaSync } from "@/hooks/useArchiveMetaSync";
 import { useTimezoneChangeSync } from "@/hooks/useTimezoneChangeSync";
@@ -37,7 +38,6 @@ function AppRuntimeServices() {
     <>
       <GlobalInteractions />
       <ScheduleDeepLinkBridge />
-      <PwaInstallExperience />
     </>
   );
 }
@@ -73,6 +73,7 @@ function AppRouteOutlet({ routeKey }: { routeKey: string }) {
 
 function AdaptiveAppShell({ routeKey }: { routeKey: string }) {
   const isDesktop = useDesktopLayout();
+  const showInstallBar = routeKey === "home";
 
   if (isDesktop) {
     return (
@@ -84,6 +85,7 @@ function AdaptiveAppShell({ routeKey }: { routeKey: string }) {
         <div className="phone-frame itjima-desktop-style-scope contents">
           <DesktopAppNav />
           <div className="itjima-app-content flex min-h-0 min-w-0 flex-1 flex-col">
+            {showInstallBar && <PwaInstallHomeBar />}
             <main
               id="phone-scroll"
               className="itjima-app-scroll min-h-0 min-w-0 flex-1 overflow-y-auto overflow-x-hidden"
@@ -110,6 +112,7 @@ function AdaptiveAppShell({ routeKey }: { routeKey: string }) {
     >
       <div className="phone-frame itjima-responsive-frame itjima-app-workspace flex flex-col">
         <TopNav />
+        {showInstallBar && <PwaInstallHomeBar />}
         <div className="itjima-app-content flex min-h-0 min-w-0 flex-1 flex-col">
           <main
             id="phone-scroll"
@@ -173,6 +176,7 @@ function RootLayout() {
       {isFullPage ? (
         <>
           <Outlet />
+          <PwaInstallExperience />
           <Toaster position="top-center" theme="system" richColors closeButton />
         </>
       ) : isAdmin ? (

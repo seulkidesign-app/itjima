@@ -1,15 +1,25 @@
-/* Restore document scrolling for the full-page landing route.
- * The desktop app shell intentionally locks html/body/#root, but /about is
- * rendered outside that shell and must use normal page scrolling. */
+/* Restore normal document scrolling for the full-page landing route.
+ * App routes deliberately lock the viewport and assign scrolling to their app
+ * shell. `/about` lives outside that shell, so it must opt out at every width,
+ * including narrow Chrome windows and device emulation driven by a trackpad. */
 
-@media (min-width: 1024px) {
-  html:has(.itjima-launch-page),
-  body:has(.itjima-launch-page),
-  body:has(.itjima-launch-page) #root {
-    width: 100% !important;
-    height: auto !important;
-    min-height: 100% !important;
-    overflow-x: hidden !important;
-    overflow-y: auto !important;
-  }
+html:has(.itjima-launch-page),
+body:has(.itjima-launch-page),
+body:has(.itjima-launch-page) #root {
+  width: 100% !important;
+  height: auto !important;
+  min-height: 100% !important;
+  overflow-x: hidden !important;
+  overflow-y: auto !important;
+  overscroll-behavior-y: auto !important;
+  touch-action: pan-y !important;
+  -webkit-overflow-scrolling: touch;
+}
+
+.itjima-launch-page {
+  position: relative;
+  min-height: 100dvh;
+  overflow: visible;
+  overscroll-behavior-y: auto;
+  touch-action: pan-y;
 }
