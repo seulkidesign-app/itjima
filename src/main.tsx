@@ -24,6 +24,7 @@ import "./ui-responsive-pro.css";
 import "./ui-responsive-master.css";
 import "./ui-adaptive-navigation.css";
 import "./ui-mobile-light-contract.css";
+import "./ui-layout-viewport-polish.css";
 
 import { registerServiceWorker } from "@/lib/swReminders";
 import { installPushSubscriptionAuthSync } from "@/lib/push/pushAuthSync";
