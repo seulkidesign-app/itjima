@@ -97,7 +97,6 @@ body,
     min-height: 100%;
   }
 
-  /* Consistent content gutters across route-level screens. */
   .page-shell :is(.page-title, .page-eyebrow) {
     text-wrap: pretty;
   }
@@ -121,7 +120,10 @@ body,
     padding-bottom: 16px !important;
   }
 
-  .itjima-app-stage[data-route="home"] .composer-hero {
+  .itjima-app-stage[data-route="home"]
+    .page-shell
+    > div
+    > div.composer-hero {
     position: sticky !important;
     bottom: 0 !important;
     margin-top: auto;
@@ -313,7 +315,10 @@ body,
     padding: clamp(20px, 3vh, 34px) 20px clamp(24px, 4vh, 48px) !important;
   }
 
-  .itjima-desktop-shell[data-route="home"] .composer-hero {
+  .itjima-desktop-shell[data-route="home"]
+    .page-shell
+    > div
+    > div.composer-hero {
     bottom: 0 !important;
     margin-top: auto;
     border-top: 1px solid var(--ij-layout-separator);
