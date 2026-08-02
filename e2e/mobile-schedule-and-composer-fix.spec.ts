@@ -106,10 +106,18 @@ test("capture scheduling always shows start and end dates and time switches reve
   await expect(flow).toBeVisible();
   await flow.getByRole("button", { name: /선택$/ }).click();
 
-  const startDate = flow.getByLabel("시작 날짜");
-  const endDate = flow.getByLabel("종료 날짜");
-  const startSwitch = flow.getByRole("switch", { name: "시작 시간 설정" });
-  const endSwitch = flow.getByRole("switch", { name: "종료 시간 설정" });
+  const startDate = flow.locator('input[type="date"][aria-label="시작 날짜"]');
+  const endDate = flow.locator('input[type="date"][aria-label="종료 날짜"]');
+  const startTime = flow.locator('input[type="time"][aria-label="시작 시간"]');
+  const endTime = flow.locator('input[type="time"][aria-label="종료 시간"]');
+  const startSwitch = flow.getByRole("switch", {
+    name: "시작 시간 설정",
+    exact: true,
+  });
+  const endSwitch = flow.getByRole("switch", {
+    name: "종료 시간 설정",
+    exact: true,
+  });
 
   await expect(startDate).toBeVisible();
   await expect(endDate).toBeVisible();
@@ -117,16 +125,16 @@ test("capture scheduling always shows start and end dates and time switches reve
   await expect(endSwitch).toBeVisible();
   await expect(startSwitch).toHaveAttribute("aria-checked", "true");
   await expect(endSwitch).toHaveAttribute("aria-checked", "true");
-  await expect(flow.getByLabel("시작 시간")).toBeVisible();
-  await expect(flow.getByLabel("종료 시간")).toBeVisible();
+  await expect(startTime).toBeVisible();
+  await expect(endTime).toBeVisible();
 
   await startSwitch.click();
   await expect(startSwitch).toHaveAttribute("aria-checked", "false");
-  await expect(flow.getByLabel("시작 시간")).toHaveCount(0);
+  await expect(startTime).toHaveCount(0);
   await expect(startDate).toBeVisible();
 
   await startSwitch.click();
-  await expect(flow.getByLabel("시작 시간")).toBeVisible();
+  await expect(startTime).toBeVisible();
 
   const startBox = await startSwitch.boundingBox();
   const endBox = await endSwitch.boundingBox();
