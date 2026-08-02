@@ -69,22 +69,24 @@ test("capture scheduling always shows start and end dates and time switches reve
   await page.setViewportSize({ width: 390, height: 844 });
   await resetAppState(page);
 
+  const id = "00000000-0000-4000-a000-000000000712";
   const text = `Thinking about this ${Date.now()}`;
   await page.evaluate(
-    ({ key, text }) => {
+    ({ key, id, text }) => {
       localStorage.setItem(
         key,
         JSON.stringify([
           {
-            id: "00000000-0000-4000-a000-000000000712",
+            id,
             text,
             images: [],
             created_at: new Date().toISOString(),
           },
         ]),
       );
+      localStorage.setItem("itjima.nl.acknowledged.guest", JSON.stringify([id]));
     },
-    { key: GUEST_INBOX_KEY, text },
+    { key: GUEST_INBOX_KEY, id, text },
   );
   await page.reload();
 
@@ -96,15 +98,17 @@ test("capture scheduling always shows start and end dates and time switches reve
     .click();
 
   const detail = page.getByRole("dialog", { name: "This thought" });
+  await expect(detail).toBeVisible();
   await detail.getByRole("button", { name: "Send to schedule" }).click();
 
-  const sheet = page.getByRole("dialog").last();
-  await sheet.getByRole("button", { name: /selected$/ }).click();
+  const flow = page.getByTestId("schedule-choice-flow");
+  await expect(flow).toBeVisible();
+  await flow.getByRole("button", { name: /selected$/ }).click();
 
-  const startDate = sheet.getByLabel("Start date");
-  const endDate = sheet.getByLabel("End date");
-  const startSwitch = sheet.getByRole("switch", { name: "Set start time" });
-  const endSwitch = sheet.getByRole("switch", { name: "Set end time" });
+  const startDate = flow.getByLabel("Start date");
+  const endDate = flow.getByLabel("End date");
+  const startSwitch = flow.getByRole("switch", { name: "Set start time" });
+  const endSwitch = flow.getByRole("switch", { name: "Set end time" });
 
   await expect(startDate).toBeVisible();
   await expect(endDate).toBeVisible();
@@ -112,27 +116,27 @@ test("capture scheduling always shows start and end dates and time switches reve
   await expect(endSwitch).toBeVisible();
   await expect(startSwitch).toHaveAttribute("aria-checked", "true");
   await expect(endSwitch).toHaveAttribute("aria-checked", "true");
-  await expect(sheet.getByLabel("Start time")).toBeVisible();
-  await expect(sheet.getByLabel("End time")).toBeVisible();
+  await expect(flow.getByLabel("Start time")).toBeVisible();
+  await expect(flow.getByLabel("End time")).toBeVisible();
 
   await startSwitch.click();
   await expect(startSwitch).toHaveAttribute("aria-checked", "false");
-  await expect(sheet.getByLabel("Start time")).toHaveCount(0);
+  await expect(flow.getByLabel("Start time")).toHaveCount(0);
   await expect(startDate).toBeVisible();
 
   await startSwitch.click();
-  await expect(sheet.getByLabel("Start time")).toBeVisible();
+  await expect(flow.getByLabel("Start time")).toBeVisible();
 
   const startBox = await startSwitch.boundingBox();
   const endBox = await endSwitch.boundingBox();
-  const dialogBox = await sheet.boundingBox();
+  const flowBox = await flow.boundingBox();
   expect(startBox).not.toBeNull();
   expect(endBox).not.toBeNull();
-  expect(dialogBox).not.toBeNull();
+  expect(flowBox).not.toBeNull();
   expect(startBox!.x + startBox!.width).toBeLessThanOrEqual(
-    dialogBox!.x + dialogBox!.width - 12,
+    flowBox!.x + flowBox!.width - 12,
   );
   expect(endBox!.x + endBox!.width).toBeLessThanOrEqual(
-    dialogBox!.x + dialogBox!.width - 12,
+    flowBox!.x + flowBox!.width - 12,
   );
 });
