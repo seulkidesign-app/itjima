@@ -1,6 +1,18 @@
-import { useEffect, useState, useSyncExternalStore } from "react";
+import {
+  useEffect,
+  useState,
+  useSyncExternalStore,
+  type ReactNode,
+} from "react";
 import { useRouterState } from "@tanstack/react-router";
-import { Download, MoreVertical, PlusSquare, Share2, Smartphone, X } from "lucide-react";
+import {
+  Download,
+  MoreVertical,
+  PlusSquare,
+  Share2,
+  Smartphone,
+  X,
+} from "lucide-react";
 import { toast } from "sonner";
 import { BottomSheet } from "./BottomSheet";
 import { useT } from "@/lib/i18n";
@@ -27,7 +39,9 @@ function rememberDismissal() {
 
 export function PwaInstallExperience() {
   const t = useT();
-  const pathname = useRouterState({ select: (state) => state.location.pathname });
+  const pathname = useRouterState({
+    select: (state) => state.location.pathname,
+  });
   const mode = useSyncExternalStore(
     subscribePwaInstall,
     getPwaInstallSnapshot,
@@ -43,7 +57,9 @@ export function PwaInstallExperience() {
     }
 
     const eligibleRoute = pathname === "/about" || pathname === "/";
-    if (!eligibleRoute || Date.now() < readDismissedUntil()) {
+    const dismissedOnAppHome =
+      pathname === "/" && Date.now() < readDismissedUntil();
+    if (!eligibleRoute || dismissedOnAppHome) {
       setVisible(false);
       return;
     }
@@ -85,7 +101,12 @@ export function PwaInstallExperience() {
       return;
     }
     if (outcome === "dismissed") {
-      toast(t("나중에 설정에서 다시 추가할 수 있어요", "You can install it later"));
+      toast(
+        t(
+          "랜딩페이지에서 언제든 다시 추가할 수 있어요",
+          "You can install it later from the landing page",
+        ),
+      );
       return;
     }
     setGuideOpen(true);
@@ -93,7 +114,7 @@ export function PwaInstallExperience() {
 
   const dismiss = () => {
     tap();
-    rememberDismissal();
+    if (pathname === "/") rememberDismissal();
     setVisible(false);
   };
 
@@ -168,20 +189,38 @@ export function PwaInstallExperience() {
                 <GuideStep
                   icon={<Share2 size={18} aria-hidden />}
                   number="1"
-                  title={t("Safari의 공유 버튼 누르기", "Tap Safari's Share button")}
-                  detail={t("화면 아래의 네모와 위쪽 화살표 아이콘이에요.", "It is the square icon with an upward arrow.")}
+                  title={t(
+                    "Safari의 공유 버튼 누르기",
+                    "Tap Safari's Share button",
+                  )}
+                  detail={t(
+                    "화면 아래의 네모와 위쪽 화살표 아이콘이에요.",
+                    "It is the square icon with an upward arrow.",
+                  )}
                 />
                 <GuideStep
                   icon={<PlusSquare size={18} aria-hidden />}
                   number="2"
-                  title={t("‘홈 화면에 추가’ 선택", "Choose Add to Home Screen")}
-                  detail={t("메뉴를 아래로 조금 내리면 보여요.", "Scroll the share menu a little if needed.")}
+                  title={t(
+                    "‘홈 화면에 추가’ 선택",
+                    "Choose Add to Home Screen",
+                  )}
+                  detail={t(
+                    "메뉴를 아래로 조금 내리면 보여요.",
+                    "Scroll the share menu a little if needed.",
+                  )}
                 />
                 <GuideStep
                   icon={<Download size={18} aria-hidden />}
                   number="3"
-                  title={t("오른쪽 위 ‘추가’ 누르기", "Tap Add in the top-right")}
-                  detail={t("이제 홈 화면의 잊지마 아이콘으로 열 수 있어요.", "You can now open Itjima from its home-screen icon.")}
+                  title={t(
+                    "오른쪽 위 ‘추가’ 누르기",
+                    "Tap Add in the top-right",
+                  )}
+                  detail={t(
+                    "이제 홈 화면의 잊지마 아이콘으로 열 수 있어요.",
+                    "You can now open Itjima from its home-screen icon.",
+                  )}
                 />
               </>
             ) : (
@@ -190,13 +229,19 @@ export function PwaInstallExperience() {
                   icon={<MoreVertical size={18} aria-hidden />}
                   number="1"
                   title={t("브라우저 메뉴 열기", "Open the browser menu")}
-                  detail={t("주소창 옆의 메뉴 아이콘을 눌러요.", "Use the menu icon next to the address bar.")}
+                  detail={t(
+                    "주소창 옆의 메뉴 아이콘을 눌러요.",
+                    "Use the menu icon next to the address bar.",
+                  )}
                 />
                 <GuideStep
                   icon={<Download size={18} aria-hidden />}
                   number="2"
                   title={t("‘앱 설치’ 선택", "Choose Install app")}
-                  detail={t("기기에 따라 ‘홈 화면에 추가’로 표시될 수 있어요.", "Some devices call this Add to Home Screen.")}
+                  detail={t(
+                    "기기에 따라 ‘홈 화면에 추가’로 표시될 수 있어요.",
+                    "Some devices call this Add to Home Screen.",
+                  )}
                 />
               </>
             )}
@@ -213,7 +258,7 @@ function GuideStep({
   title,
   detail,
 }: {
-  icon: React.ReactNode;
+  icon: ReactNode;
   number: string;
   title: string;
   detail: string;
