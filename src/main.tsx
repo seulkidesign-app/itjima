@@ -28,6 +28,7 @@ import "./ui-layout-viewport-polish.css";
 import "./ui-calendar-experience.css";
 import "./ui-home-fixed-composer.css";
 import "./ui-schedule-final-polish.css";
+import "./ui-landing-scroll-fix.css";
 
 import { registerServiceWorker } from "@/lib/swReminders";
 import { installPushSubscriptionAuthSync } from "@/lib/push/pushAuthSync";
