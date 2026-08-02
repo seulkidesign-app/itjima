@@ -28,8 +28,8 @@ async function resetForIa(page: Page) {
 
 async function seedGuestData(page: Page) {
   const now = Date.now();
-  const start = new Date(now + 2 * 60 * 60 * 1000);
-  const end = new Date(now + 3 * 60 * 60 * 1000);
+  const start = new Date(now + 10 * 60 * 1000);
+  const end = new Date(now + 70 * 60 * 1000);
   await page.evaluate(
     ({ sk, ak, startIso, endIso, createdIso }) => {
       localStorage.setItem(
