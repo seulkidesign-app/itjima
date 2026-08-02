@@ -26,6 +26,7 @@ import "./ui-adaptive-navigation.css";
 import "./ui-mobile-light-contract.css";
 import "./ui-layout-viewport-polish.css";
 import "./ui-calendar-experience.css";
+import "./ui-home-fixed-composer.css";
 
 import { registerServiceWorker } from "@/lib/swReminders";
 import { installPushSubscriptionAuthSync } from "@/lib/push/pushAuthSync";
