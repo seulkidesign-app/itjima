@@ -170,15 +170,15 @@ test("[critical] manual schedule creation completes every step and can be marked
   await page.goto("/schedule?lang=en");
 
   await page.getByRole("button", { name: "Add task", exact: true }).click();
-  await expect(page.getByRole("dialog", { name: "Remember for then" })).toBeVisible();
+  await expect(page.getByRole("dialog", { name: "Add schedule" })).toBeVisible();
   await page.getByRole("button", { name: "Tomorrow", exact: true }).click();
-  await page.getByRole("button", { name: "Add time", exact: true }).click();
-  await page.getByPlaceholder("What was this again?").fill("Product review");
+  await page.getByRole("button", { name: "Add time and end", exact: true }).click();
+  await page.getByLabel("Schedule title").fill("Product review");
   await page.getByRole("button", { name: "Set a reminder", exact: true }).click();
-  await page.getByRole("button", { name: "Off", exact: true }).click();
+  await page.getByRole("button", { name: "No reminder", exact: true }).click();
   await page.getByRole("button", { name: /Add to schedule/i }).click();
 
-  await expect(page.getByRole("dialog", { name: "Remember for then" })).toBeHidden();
+  await expect(page.getByRole("dialog", { name: "Add schedule" })).toBeHidden();
   await page.getByRole("tab", { name: "Upcoming", exact: true }).click();
   const row = page.getByRole("button", { name: /Product review.*Tap to refine/i });
   await expect(row).toBeVisible();
