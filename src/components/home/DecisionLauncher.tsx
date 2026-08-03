@@ -40,10 +40,10 @@ export function DecisionLauncherCard({
   const label =
     lang === "en"
       ? itemCount === 1
-        ? "One thought is ready"
-        : `${itemCount} thoughts are ready`
+        ? "1 thought waiting"
+        : `${itemCount} thoughts waiting for you`
       : itemCount === 1
-        ? "생각 하나가 기다리고 있어요"
+        ? "생각 1개가 기다리고 있어요"
         : `생각 ${itemCount}개가 기다리고 있어요`;
   const ariaLabel =
     lang === "en"
@@ -70,7 +70,7 @@ export function DecisionLauncherCard({
       <span className="decision-launcher-symbol relative grid h-11 w-11 shrink-0 place-items-center rounded-[15px] bg-primary text-ink">
         <Sparkles size={20} strokeWidth={2.15} aria-hidden />
         <span
-          className="decision-launcher-count-badge absolute -right-1.5 -top-1.5 grid min-h-5 min-w-5 place-items-center rounded-full bg-ink px-1 text-[10px] font-black text-white"
+          className="decision-launcher-count decision-launcher-count-badge absolute -right-1.5 -top-1.5 grid min-h-5 min-w-5 place-items-center rounded-full bg-ink px-1 text-[10px] font-black text-white"
           aria-hidden
         >
           {itemCount > 99 ? "99+" : itemCount}
