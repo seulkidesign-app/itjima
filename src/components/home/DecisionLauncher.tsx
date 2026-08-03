@@ -1,5 +1,4 @@
 import { useEffect, useRef, useState } from "react";
-import { ArrowUpRight, Sparkles } from "lucide-react";
 import { toast } from "sonner";
 import {
   DecisionDeck,
@@ -65,34 +64,16 @@ export function DecisionLauncherCard({
       data-testid="decision-launcher"
       aria-label={ariaLabel}
       onClick={handleClick}
-      className="decision-launcher-bar touch-press mx-3 mb-1 mt-2 flex w-[calc(100%-1.5rem)] items-center gap-3 rounded-[20px] border border-ink/[0.07] bg-white px-3 py-2.5 text-left shadow-card transition-transform active:scale-[0.99]"
+      className="decision-launcher-bar touch-press mx-3 mb-0.5 mt-2 flex w-[calc(100%-1.5rem)] items-center justify-between gap-2 rounded-[var(--radius-md)] border border-ink/[0.06] bg-white/80 px-3 py-1.5 text-left shadow-[0_1px_2px_oklch(0_0_0/0.03)] transition-transform active:scale-[0.99]"
     >
-      <span className="decision-launcher-symbol relative grid h-11 w-11 shrink-0 place-items-center rounded-[15px] bg-primary text-ink">
-        <Sparkles size={20} strokeWidth={2.15} aria-hidden />
-        <span
-          className="decision-launcher-count decision-launcher-count-badge absolute -right-1.5 -top-1.5 grid min-h-5 min-w-5 place-items-center rounded-full bg-ink px-1 text-[10px] font-black text-white"
-          aria-hidden
-        >
-          {itemCount > 99 ? "99+" : itemCount}
-        </span>
-      </span>
-      <span className="min-w-0 flex-1">
-        <strong
-          className="block truncate text-[13px] font-bold tracking-[-0.015em] text-ink"
-          data-testid="decision-launcher-count"
-        >
-          {label}
-        </strong>
-        <span className="mt-0.5 block truncate text-[11px] font-medium text-ink-soft">
-          {t(
-            "카드를 넘기며 일정·보관·나중으로 정리해요",
-            "Swipe each card into schedule, archive, or later",
-          )}
-        </span>
-      </span>
-      <span className="decision-launcher-cta pill-yellow inline-flex min-h-9 shrink-0 items-center gap-1 rounded-full bg-ink px-3 text-[11px] font-bold text-white">
+      <p
+        className="min-w-0 truncate text-[13px] font-semibold tracking-[-0.01em] text-ink"
+        data-testid="decision-launcher-count"
+      >
+        {label}
+      </p>
+      <span className="pill-yellow shrink-0 px-3 py-1.5 text-[11px] font-bold text-ink">
         {t("정리하기", "Sort them")}
-        <ArrowUpRight size={14} aria-hidden />
       </span>
     </button>
   );
@@ -134,6 +115,8 @@ export function DecisionLauncher({
   const [pendingSchedule, setPendingSchedule] =
     useState<PendingScheduleDecision | null>(null);
 
+  // Freeze the card list for one sorting session. Parent storage updates after a
+  // decision must not prune the deck a second time and skip the next card.
   if (open && !wasOpenRef.current) {
     sessionItemsRef.current = [...items];
   } else if (!open) {
@@ -236,6 +219,8 @@ export function DecisionLauncher({
   };
 
   const handleUndoSafely = async (snapshot: UndoSnapshot) => {
+    // A failed cloud delete may have queued a tombstone. Undo means that
+    // tombstone is no longer valid, even when the original row still exists.
     clearInboxTombstones(snapshot.item.id);
     try {
       await onUndo(snapshot);
