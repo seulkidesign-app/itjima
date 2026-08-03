@@ -56,10 +56,7 @@ export function DeckCardContent({ item }: Props) {
         </div>
       )}
 
-      <div
-        className="deck-card-thought mt-5 select-text"
-        onPointerDown={(e) => e.stopPropagation()}
-      >
+      <div className="deck-card-thought mt-5 select-text">
         <p
           className={`whitespace-pre-wrap text-[23px] font-semibold leading-[1.48] tracking-[-0.03em] text-ink ${
             clamped ? "line-clamp-6" : ""
@@ -83,7 +80,6 @@ export function DeckCardContent({ item }: Props) {
           className="deck-mirror-panel mt-6 rounded-[18px] border border-ink/[0.07] bg-ink/[0.025] p-4"
           role="complementary"
           aria-label={t("Brain Mirror 해석", "Brain Mirror interpretation")}
-          onPointerDown={(e) => e.stopPropagation()}
         >
           <p className="flex items-center gap-1.5 text-[10px] font-black uppercase tracking-[0.12em] text-ink/35">
             <Clock3 size={13} strokeWidth={2.2} aria-hidden />
@@ -105,7 +101,6 @@ export function DeckCardContent({ item }: Props) {
           className="deck-mirror-panel mt-6 rounded-[18px] border border-ink/[0.07] bg-ink/[0.025] p-4"
           role="complementary"
           aria-label={t("다시 이해하기", "Understand again")}
-          onPointerDown={(e) => e.stopPropagation()}
         >
           <BrainMirrorReflectionBody
             result={legacyBm}
