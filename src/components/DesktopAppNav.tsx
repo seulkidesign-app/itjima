@@ -9,7 +9,6 @@ import {
 } from "lucide-react";
 import { useState } from "react";
 import { SettingsSheet } from "./SettingsSheet";
-import { ItjimaBrandMark } from "./ItjimaBrandMark";
 import { useT } from "@/lib/i18n";
 import { useUserId } from "@/lib/store";
 import { tap } from "@/lib/haptics";
@@ -64,19 +63,20 @@ export function DesktopAppNav() {
         <Link
           to="/about"
           onClick={tap}
-          className="itjima-desktop-brand app-brand-trigger-v2 flex min-h-[76px] items-center gap-3 px-5 no-underline"
+          className="itjima-desktop-brand flex min-h-16 items-center gap-3 px-5 no-underline"
           aria-label={t("잊지마 소개로 이동", "Open Itjima introduction")}
         >
-          <ItjimaBrandMark size={43} className="app-brand-mark shrink-0" />
-          <span className="min-w-0">
-            <strong className="block font-display text-[19px] uppercase tracking-[0.065em] text-ink">
+          <span className="grid h-10 w-10 place-items-center rounded-[14px] bg-primary text-[13px] font-black text-ink shadow-card">
+            IJ
+          </span>
+          <span>
+            <strong className="block font-display text-[18px] uppercase tracking-[0.06em] text-ink">
               ITJIMA
             </strong>
-            <small className="mt-0.5 block truncate text-[10px] font-bold uppercase tracking-[0.12em] text-ink/38">
-              {t("생각을 던지면, 일정이 된다", "Drop it. It becomes a plan.")}
+            <small className="mt-0.5 block text-[10px] font-bold uppercase tracking-[0.12em] text-ink/38">
+              {t("말하듯 남기는 일정", "Natural scheduling")}
             </small>
           </span>
-          <span className="app-brand-memory-dot ml-auto" aria-hidden />
         </Link>
 
         <nav className="mt-5 flex flex-col gap-1.5 px-3">
@@ -96,7 +96,7 @@ export function DesktopAppNav() {
                 }`}
               >
                 <span
-                  className={`itjima-desktop-nav-icon grid h-9 w-9 shrink-0 place-items-center rounded-[12px] ${
+                  className={`grid h-9 w-9 shrink-0 place-items-center rounded-[12px] ${
                     active ? "bg-white/14" : "bg-ink/[0.055] text-ink-soft"
                   }`}
                 >
@@ -124,14 +124,14 @@ export function DesktopAppNav() {
           })}
         </nav>
 
-        <div className="desktop-brand-principle mx-4 mt-5 rounded-[18px] border border-ink/[0.06] bg-ink/[0.025] px-3.5 py-3.5">
+        <div className="mx-4 mt-5 rounded-[16px] border border-ink/[0.06] bg-ink/[0.025] px-3 py-3">
           <p className="text-[10px] font-bold uppercase tracking-[0.1em] text-ink/36">
-            {t("잊지마의 약속", "The Itjima promise")}
+            {t("기본 원칙", "Core principle")}
           </p>
-          <p className="mt-1.5 text-[11px] font-semibold leading-[1.6] text-ink-soft">
+          <p className="mt-1.5 text-[11px] font-semibold leading-[1.55] text-ink-soft">
             {t(
-              "대충 던져도 괜찮아요. 확실한 건 채우고, 애매한 것만 물을게요.",
-              "Drop it roughly. We fill what is clear and ask only about the rest.",
+              "확실한 정보는 채우고, 애매한 부분만 확인해요.",
+              "Fill what is clear. Confirm only what matters.",
             )}
           </p>
         </div>
@@ -146,7 +146,7 @@ export function DesktopAppNav() {
             }}
             aria-haspopup="dialog"
             aria-expanded={settingsOpen}
-            className="desktop-settings-card flex min-h-[58px] w-full items-center gap-3 rounded-[18px] border border-ink/[0.07] bg-white/74 px-3.5 text-left shadow-card transition-colors hover:bg-white active:bg-ink/[0.04]"
+            className="flex min-h-[58px] w-full items-center gap-3 rounded-[18px] border border-ink/[0.07] bg-white/74 px-3.5 text-left shadow-card transition-colors hover:bg-white active:bg-ink/[0.04]"
           >
             <span className="grid h-9 w-9 shrink-0 place-items-center rounded-[12px] bg-ink/[0.055] text-ink-soft">
               {userId ? <User size={18} aria-hidden /> : <Settings size={18} aria-hidden />}

@@ -5,10 +5,7 @@
 
 html:has(.itjima-launch-page),
 body:has(.itjima-launch-page),
-body:has(.itjima-launch-page) #root,
-html:has(.marketing-landing),
-body:has(.marketing-landing),
-body:has(.marketing-landing) #root {
+body:has(.itjima-launch-page) #root {
   width: 100% !important;
   height: auto !important;
   min-height: 100% !important;
@@ -19,8 +16,7 @@ body:has(.marketing-landing) #root {
   -webkit-overflow-scrolling: touch;
 }
 
-.itjima-launch-page,
-.marketing-landing {
+.itjima-launch-page {
   position: relative;
   min-height: 100dvh;
   overflow: visible;
