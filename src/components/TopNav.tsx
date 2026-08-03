@@ -7,6 +7,7 @@ import { SPRING_TAB } from "@/lib/motion";
 import { useUserId } from "@/lib/store";
 import { tap } from "@/lib/haptics";
 import { SettingsSheet } from "./SettingsSheet";
+import { ItjimaBrandMark } from "./ItjimaBrandMark";
 
 export function TopNav() {
   const t = useT();
@@ -74,10 +75,13 @@ export function TopNav() {
       to="/about"
       onClick={tap}
       aria-label={t("잊지마 소개로 이동", "Open Itjima introduction")}
-      className={className}
+      className={`${className} app-brand-trigger-v2`}
     >
-      ITJIMA
-      <span className="ml-1 inline-block h-1.5 w-1.5 -translate-y-1 rounded-full bg-primary align-middle" />
+      <ItjimaBrandMark size={31} className="app-brand-mark" />
+      <span className="app-brand-wordmark font-display text-[18px] uppercase leading-none tracking-[0.055em] text-ink">
+        ITJIMA
+      </span>
+      <span className="app-brand-memory-dot" aria-hidden />
     </Link>
   );
 
@@ -92,7 +96,7 @@ export function TopNav() {
         >
           <div className="mobile-app-header-bar flex min-h-[52px] items-center justify-between gap-3 px-4 py-1.5">
             {renderBrand(
-              "app-brand-trigger rounded-[12px] px-1 py-1 font-display text-[19px] uppercase leading-none tracking-wide text-ink",
+              "flex min-h-11 items-center gap-2 rounded-[14px] py-1 pr-2 no-underline",
             )}
             <button
               ref={mobileSettingsRef}
@@ -133,7 +137,7 @@ export function TopNav() {
                   {active && (
                     <motion.span
                       layoutId="mobile-nav-active"
-                      className="absolute inset-1 rounded-[14px] bg-ink/[0.07]"
+                      className="mobile-nav-active-pill absolute inset-1 rounded-[14px] bg-ink/[0.07]"
                       transition={SPRING_TAB}
                       aria-hidden
                     />
@@ -153,7 +157,7 @@ export function TopNav() {
         }`}
       >
         {renderBrand(
-          "app-brand-trigger shrink-0 rounded-[12px] px-1 py-1 font-display text-[19px] uppercase leading-none tracking-wide text-ink",
+          "flex min-h-11 shrink-0 items-center gap-2 rounded-[14px] py-1 pr-2 no-underline",
         )}
 
         <LayoutGroup id="tablet-primary-navigation">
@@ -177,7 +181,7 @@ export function TopNav() {
                   {active && (
                     <motion.span
                       layoutId="tablet-nav-active"
-                      className="absolute inset-0 rounded-[14px] bg-white shadow-card"
+                      className="tablet-nav-active-pill absolute inset-0 rounded-[14px] bg-white shadow-card"
                       transition={SPRING_TAB}
                       aria-hidden
                     />
