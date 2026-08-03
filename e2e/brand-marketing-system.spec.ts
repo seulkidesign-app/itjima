@@ -46,7 +46,9 @@ test("app home keeps branded navigation and capture controls usable", async ({ p
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto("/");
 
-  await expect(page.locator(".app-brand-trigger-v2 .itjima-brand-mark")).toBeVisible();
+  await expect(
+    page.locator(".mobile-app-chrome .app-brand-trigger-v2 .itjima-brand-mark"),
+  ).toBeVisible();
   const tools = page.getByRole("button", { name: "Attachment tools" });
   await expect(tools).toBeVisible();
   await tools.click();
