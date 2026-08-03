@@ -26,8 +26,7 @@ test("landing and app use the pre-brand UI while Home motion stays active", asyn
     .getByRole("link", { name: "앱 열기", exact: true })
     .click();
   await expect(page).toHaveURL(/\/(?:\?lang=ko)?$/);
-  const visibleBrand = page.locator(".app-brand-trigger").filter({ visible: true });
-  await expect(visibleBrand).toContainText("ITJIMA");
+  await expect(page.locator(".app-brand-trigger:visible")).toContainText("ITJIMA");
   await expect(page.locator(".app-brand-trigger .itjima-brand-mark")).toHaveCount(0);
 
   await addThought(page, `모션 유지 ${Date.now()}`);
