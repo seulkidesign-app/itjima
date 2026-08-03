@@ -65,11 +65,18 @@ export function InboxChat({
       ) : (
         itemsAsc.map((it) => {
           const isNewest = it.id === newestId;
+          const showPromise =
+            featureEnabled("INLINE_PROMISE") &&
+            !acknowledgedIds.has(it.id) &&
+            shouldShowInlinePromise(it.text, uiLang);
+
           return (
             <div
               key={it.id}
               className="home-chat-turn flex flex-col gap-0.5"
               data-testid="chat-turn"
+              data-newest={isNewest ? "true" : "false"}
+              data-has-promise={showPromise ? "true" : "false"}
             >
               <ChatBubble
                 item={it}
@@ -96,9 +103,7 @@ export function InboxChat({
                 )}
               </ChatBubble>
 
-              {featureEnabled("INLINE_PROMISE") &&
-                !acknowledgedIds.has(it.id) &&
-                shouldShowInlinePromise(it.text, uiLang) && (
+              {showPromise && (
                 <InlinePromise
                   item={it}
                   acknowledged={acknowledgedIds.has(it.id)}
