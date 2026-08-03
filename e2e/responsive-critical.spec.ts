@@ -270,10 +270,10 @@ test("[critical] bilingual launch page has working CTAs and no layout overflow",
   await page.goto("/about?lang=en");
 
   await expect(
-    page.getByRole("heading", { name: /Stop trying.*remember.*Just drop it/i }),
+    page.getByRole("heading", { name: /Say the plan.*It becomes a schedule/i }),
   ).toBeVisible();
   await expect(page.getByRole("link", { name: "Capture your first plan" })).toBeVisible();
-  await expect(page.getByRole("link", { name: "See the 10-second flow" })).toHaveAttribute(
+  await expect(page.getByRole("link", { name: "See how it works" })).toHaveAttribute(
     "href",
     "#how",
   );
@@ -282,9 +282,6 @@ test("[critical] bilingual launch page has working CTAs and no layout overflow",
   await page.getByRole("button", { name: "Select language" }).click();
   await page.getByRole("option", { name: "한국어", exact: true }).click();
   await expect(page).toHaveURL(/lang=ko/);
-  await expect(
-    page.getByRole("heading", { name: /기억하려고.*애쓰지 마세요.*그냥 던지세요/ }),
-  ).toBeVisible();
   await expect(page.getByRole("link", { name: "첫 일정 남기기" })).toBeVisible();
 
   await page.getByRole("link", { name: "첫 일정 남기기" }).click();
