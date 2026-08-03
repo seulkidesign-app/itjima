@@ -36,7 +36,10 @@ export function ChatBubble({
 
   return (
     <motion.div
+      layout="position"
       className="home-chat-bubble-row flex w-full flex-col items-end"
+      data-newest={isNewest ? "true" : "false"}
+      data-capture-state={item.capture_state ?? "saved"}
       initial={isNewest ? { opacity: 0, y: 8 } : { opacity: 0, y: 4 }}
       animate={{ opacity: 1, y: 0 }}
       transition={TRANSITION_CALM}
