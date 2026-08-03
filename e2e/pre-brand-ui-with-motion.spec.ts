@@ -21,7 +21,10 @@ test("landing and app use the pre-brand UI while Home motion stays active", asyn
   await expect(page.locator(".marketing-landing")).toHaveCount(0);
   await expect(page.locator(".itjima-brand-mark")).toHaveCount(0);
 
-  await page.getByRole("link", { name: "앱 열기", exact: true }).click();
+  await page
+    .getByRole("banner")
+    .getByRole("link", { name: "앱 열기", exact: true })
+    .click();
   await expect(page).toHaveURL(/\/(?:\?lang=ko)?$/);
   await expect(page.locator(".app-brand-trigger")).toContainText("ITJIMA");
   await expect(page.locator(".app-brand-trigger .itjima-brand-mark")).toHaveCount(0);
