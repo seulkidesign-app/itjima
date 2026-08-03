@@ -64,10 +64,15 @@ test("card drag activates a directional environment before commit", async ({ pag
 
   const outcome = card.getByTestId("decision-outcome-label");
   await expect(outcome).toHaveAttribute("data-outcome", "today");
-  const auraOpacity = await dialog.evaluate(
-    (element) => getComputedStyle(element, "::before").opacity,
-  );
-  expect(Number(auraOpacity)).toBeGreaterThan(0);
+  await expect
+    .poll(async () =>
+      Number(
+        await dialog.evaluate(
+          (element) => getComputedStyle(element, "::before").opacity,
+        ),
+      ),
+    )
+    .toBeGreaterThan(0);
 
   await page.mouse.up();
   await expect(card).toBeVisible();
