@@ -43,8 +43,8 @@ export function DecisionLauncherCard({
         ? "1 thought waiting"
         : `${itemCount} thoughts waiting for you`
       : itemCount === 1
-        ? "생각 1개가 기다리고 있어요"
-        : `생각 ${itemCount}개가 기다리고 있어요`;
+        ? "하나, 정리해 볼까요?"
+        : `${itemCount}개, 정리해 볼까요?`;
   const ariaLabel =
     lang === "en"
       ? `Sort ${itemCount} thoughts`
@@ -90,8 +90,8 @@ export function DecisionLauncherCard({
           )}
         </span>
       </span>
-      <span className="decision-launcher-cta inline-flex min-h-9 shrink-0 items-center gap-1 rounded-full bg-ink px-3 text-[11px] font-bold text-white">
-        {t("정리", "Sort")}
+      <span className="decision-launcher-cta pill-yellow inline-flex min-h-9 shrink-0 items-center gap-1 rounded-full bg-ink px-3 text-[11px] font-bold text-white">
+        {t("정리하기", "Sort them")}
         <ArrowUpRight size={14} aria-hidden />
       </span>
     </button>
