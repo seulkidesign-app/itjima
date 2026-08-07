@@ -6,6 +6,7 @@ import {
   resolveNaturalScheduleStart,
 } from "@/lib/naturalScheduleDraft";
 import { buildReminderUpsert } from "@/lib/push/scheduledRemindersSync";
+import { shouldShowInlinePromise } from "@/lib/promiseCard";
 import type { InboxItem, ScheduleItem } from "@/lib/store";
 
 function thought(text: string): InboxItem {
@@ -104,5 +105,7 @@ describe("natural schedule commitment parsing", () => {
     expect(hasNaturalRepeatIntent("매주 월요일 오전 9시 팀 회의")).toBe(true);
     expect(hasNaturalRepeatIntent("every month review bills")).toBe(true);
     expect(hasNaturalRepeatIntent("내일 오후 3시 치과")).toBe(false);
+    expect(shouldShowInlinePromise("매주 월요일 오전 9시 팀 회의", "ko")).toBe(false);
+    expect(shouldShowInlinePromise("every month review bills", "en")).toBe(false);
   });
 });
