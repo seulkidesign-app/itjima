@@ -80,9 +80,10 @@ describe("inbox schedule defaults", () => {
     expect(result.options.repeat).toBe("weekly");
   });
 
-  it("uses a future working-hour default only when no date was supplied", () => {
+  it("uses a future working-hour fallback without inventing an alarm when no date was supplied", () => {
     const result = inboxScheduleDefaults(thought("엄마한테 전화"));
     expect(result.options.allDay).toBe(false);
+    expect(result.options.reminderMinutes).toBeNull();
     expect(result.start.getTime()).toBeGreaterThan(Date.now());
   });
 });
