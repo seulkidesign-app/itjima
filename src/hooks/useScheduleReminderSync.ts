@@ -36,7 +36,10 @@ export function useScheduleReminderSync() {
   );
 
   useEffect(() => {
-    if (!userId || schedules.syncState === "syncing") return;
+    // Never derive destructive backend reconciliation from an unhydrated,
+    // syncing, or failed local snapshot. `ready` means the signed-in cloud list
+    // and local schedule bucket have completed their merge successfully.
+    if (!userId || schedules.syncState !== "ready") return;
     if (import.meta.env.VITE_E2E === "true") return;
 
     let disposed = false;
@@ -65,8 +68,8 @@ export function useScheduleReminderSync() {
     };
 
     // Local schedule writes happen before the signed-in cloud write resolves.
-    // A short debounce lets the canonical schedule row land first, while the
-    // retry above covers slow/offline networks without losing the reminder.
+    // Debounce lets the canonical schedule row land first; the backend helper
+    // also retries an FK race once. Failed hydration never reaches this point.
     const timer = window.setTimeout(() => void run(), 700);
 
     const onOnline = () => void run();
