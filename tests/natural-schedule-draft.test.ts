@@ -1,8 +1,8 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   buildNaturalScheduleDraft,
+  hasNaturalRepeatIntent,
   inferNaturalReminderMinutes,
-  inferNaturalRepeat,
   resolveNaturalScheduleStart,
 } from "@/lib/naturalScheduleDraft";
 import { buildReminderUpsert } from "@/lib/push/scheduledRemindersSync";
@@ -41,6 +41,7 @@ describe("natural schedule commitment parsing", () => {
     expect(draft.start.getHours()).toBe(18);
     expect(draft.options.allDay).toBe(false);
     expect(draft.options.reminderMinutes).toBe(24 * 60);
+    expect(draft.options.repeat).toBeNull();
     expect(draft.reminderExplicit).toBe(true);
     expect(draft.text).toBe("치과");
   });
@@ -62,7 +63,7 @@ describe("natural schedule commitment parsing", () => {
       all_day: draft.options.allDay,
       start_all_day: draft.options.startAllDay,
       end_all_day: draft.options.endAllDay,
-      repeat: draft.options.repeat,
+      repeat: null,
       created_at: new Date().toISOString(),
       status: "active",
     };
@@ -83,16 +84,6 @@ describe("natural schedule commitment parsing", () => {
     expect(start!.getHours()).toBe(15);
   });
 
-  it("recognizes recurring plans and explicit reminder offsets", () => {
-    const draft = buildNaturalScheduleDraft(
-      thought("매주 월요일 오전 9시 팀 회의 30분 전 알려줘"),
-    );
-    expect(draft.options.repeat).toBe("weekly");
-    expect(draft.options.reminderMinutes).toBe(30);
-    expect(draft.start.getDay()).toBe(1);
-    expect(draft.start.getHours()).toBe(9);
-  });
-
   it("defaults precise timed commitments to an at-start reminder", () => {
     const draft = buildNaturalScheduleDraft(thought("내일 오후 3시 치과"));
     expect(draft.options.reminderMinutes).toBe(0);
@@ -105,12 +96,13 @@ describe("natural schedule commitment parsing", () => {
     expect(draft.options.reminderMinutes).toBeNull();
   });
 
-  it("supports reminder and repeat phrases independently", () => {
+  it("recognizes reminder offsets without pretending recurrence is a one-off", () => {
     expect(inferNaturalReminderMinutes("1시간 전 알려줘", true)).toEqual({
       minutes: 60,
       explicit: true,
     });
-    expect(inferNaturalRepeat("매년 생일 체크")).toBe("yearly");
-    expect(inferNaturalRepeat("every month review bills")).toBe("monthly");
+    expect(hasNaturalRepeatIntent("매주 월요일 오전 9시 팀 회의")).toBe(true);
+    expect(hasNaturalRepeatIntent("every month review bills")).toBe(true);
+    expect(hasNaturalRepeatIntent("내일 오후 3시 치과")).toBe(false);
   });
 });
