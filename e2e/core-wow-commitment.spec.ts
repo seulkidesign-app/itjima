@@ -7,14 +7,14 @@ import {
   resetAppState,
 } from "./helpers";
 
-test("one messy sentence becomes the exact schedule and reminder shown to the user", async ({
+test("one clear sentence becomes the exact schedule and reminder shown to the user", async ({
   page,
 }) => {
   await resetAppState(page);
   await page.evaluate(() => localStorage.setItem("itjima_lang", "ko"));
   await page.reload();
 
-  const text = "다음 주 금요일 퇴근하고 치과. 전날에도 알려줘";
+  const text = "다음 주 금요일 오후 6시 치과. 전날에도 알려줘";
   const frame = phone(page);
   const input = frame.locator("textarea").first();
   await input.fill(text);
@@ -49,7 +49,7 @@ test("one messy sentence becomes the exact schedule and reminder shown to the us
   expect(saved.text).toBe("치과");
   expect(saved.alarm).toBe(true);
   expect(saved.repeat ?? null).toBeNull();
-  expect(saved.raw_text).toContain("다음 주 금요일");
+  expect(saved.raw_text).toBe(text);
   expect(start.getDay()).toBe(5);
   expect(start.getHours()).toBe(18);
   expect(start.getTime() - alarmAt.getTime()).toBe(24 * 60 * 60 * 1000);
@@ -58,6 +58,53 @@ test("one messy sentence becomes the exact schedule and reminder shown to the us
     text: string;
   }>;
   expect(inbox.some((item) => item.text === text)).toBe(false);
+});
+
+test("a conversational after-work phrase asks only the missing time and preserves the original sentence", async ({
+  page,
+}) => {
+  await resetAppState(page);
+  await page.evaluate(() => localStorage.setItem("itjima_lang", "ko"));
+  await page.reload();
+
+  const original = "다음 주 금요일 퇴근하고 치과. 전날에도 알려줘";
+  const frame = phone(page);
+  const input = frame.locator("textarea").first();
+  await input.fill(original);
+  await input.press("Control+Enter");
+
+  const clarification = frame.getByTestId("inline-promise");
+  await expect(clarification).toBeVisible();
+  await expect(clarification).toHaveAttribute("data-needs-confirmation", "true");
+  await expect(
+    clarification.getByTestId("promise-confirm-after_work_18"),
+  ).toBeVisible();
+  await expect(
+    clarification.getByTestId("promise-confirm-after_work_19"),
+  ).toBeVisible();
+
+  await clarification.getByTestId("promise-confirm-after_work_18").click();
+
+  await expect
+    .poll(async () => (await readGuestList(page, GUEST_SCHEDULE_KEY)).length)
+    .toBe(1);
+  const schedules = (await readGuestList(page, GUEST_SCHEDULE_KEY)) as Array<{
+    text: string;
+    start_time: string;
+    alarm: boolean;
+    alarm_at?: string | null;
+    raw_text?: string | null;
+  }>;
+  const saved = schedules[0];
+  const start = new Date(saved.start_time);
+  const alarmAt = new Date(saved.alarm_at ?? "");
+
+  expect(saved.text).toBe("치과");
+  expect(saved.raw_text).toBe(original);
+  expect(start.getDay()).toBe(5);
+  expect(start.getHours()).toBe(18);
+  expect(saved.alarm).toBe(true);
+  expect(start.getTime() - alarmAt.getTime()).toBe(24 * 60 * 60 * 1000);
 });
 
 test("timed plans default to an honest at-start reminder and can be adjusted before saving", async ({
