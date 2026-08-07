@@ -5,7 +5,8 @@ import {
   inferNaturalRepeat,
   resolveNaturalScheduleStart,
 } from "@/lib/naturalScheduleDraft";
-import type { InboxItem } from "@/lib/store";
+import { buildReminderUpsert } from "@/lib/push/scheduledRemindersSync";
+import type { InboxItem, ScheduleItem } from "@/lib/store";
 
 function thought(text: string): InboxItem {
   return {
@@ -42,6 +43,37 @@ describe("natural schedule commitment parsing", () => {
     expect(draft.options.reminderMinutes).toBe(24 * 60);
     expect(draft.reminderExplicit).toBe(true);
     expect(draft.text).toBe("치과");
+  });
+
+  it("turns the parsed reminder into the exact backend queue due time", () => {
+    const draft = buildNaturalScheduleDraft(
+      thought("다음 주 금요일 퇴근하고 치과. 전날에도 알려줘"),
+    );
+    const alarmAt = new Date(
+      draft.start.getTime() - draft.options.reminderMinutes! * 60_000,
+    );
+    const schedule: ScheduleItem = {
+      id: "schedule-1",
+      text: draft.text,
+      start_time: draft.start.toISOString(),
+      end_time: draft.end.toISOString(),
+      alarm: true,
+      alarm_at: alarmAt.toISOString(),
+      all_day: draft.options.allDay,
+      start_all_day: draft.options.startAllDay,
+      end_all_day: draft.options.endAllDay,
+      repeat: draft.options.repeat,
+      created_at: new Date().toISOString(),
+      status: "active",
+    };
+
+    const queued = buildReminderUpsert("user-1", schedule);
+    expect(queued).not.toBeNull();
+    expect(queued!.schedule_id).toBe("schedule-1");
+    expect(queued!.due_at_utc).toBe(alarmAt.toISOString());
+    expect(new Date(queued!.due_at_utc).getTime()).toBe(
+      draft.start.getTime() - 24 * 60 * 60 * 1000,
+    );
   });
 
   it("keeps next-week weekday semantics instead of choosing the nearest weekday", () => {
