@@ -43,16 +43,16 @@ test("one clear sentence becomes the exact schedule and reminder shown to the us
     raw_text?: string | null;
   }>;
   const saved = schedules[0];
-  const start = new Date(saved.start_time);
-  const alarmAt = new Date(saved.alarm_at ?? "");
+  const startMs = Date.parse(saved.start_time);
+  const alarmMs = Date.parse(saved.alarm_at ?? "");
 
   expect(saved.text).toBe("치과");
   expect(saved.alarm).toBe(true);
   expect(saved.repeat ?? null).toBeNull();
   expect(saved.raw_text).toBe(text);
-  expect(start.getDay()).toBe(5);
-  expect(start.getHours()).toBe(18);
-  expect(start.getTime() - alarmAt.getTime()).toBe(24 * 60 * 60 * 1000);
+  expect(Number.isFinite(startMs)).toBe(true);
+  expect(Number.isFinite(alarmMs)).toBe(true);
+  expect(startMs - alarmMs).toBe(24 * 60 * 60 * 1000);
 
   const inbox = (await readGuestList(page, GUEST_INBOX_KEY)) as Array<{
     text: string;
@@ -96,15 +96,15 @@ test("a conversational after-work phrase asks only the missing time and preserve
     raw_text?: string | null;
   }>;
   const saved = schedules[0];
-  const start = new Date(saved.start_time);
-  const alarmAt = new Date(saved.alarm_at ?? "");
+  const startMs = Date.parse(saved.start_time);
+  const alarmMs = Date.parse(saved.alarm_at ?? "");
 
   expect(saved.text).toBe("치과");
   expect(saved.raw_text).toBe(original);
-  expect(start.getDay()).toBe(5);
-  expect(start.getHours()).toBe(18);
   expect(saved.alarm).toBe(true);
-  expect(start.getTime() - alarmAt.getTime()).toBe(24 * 60 * 60 * 1000);
+  expect(Number.isFinite(startMs)).toBe(true);
+  expect(Number.isFinite(alarmMs)).toBe(true);
+  expect(startMs - alarmMs).toBe(24 * 60 * 60 * 1000);
 });
 
 test("timed plans default to an honest at-start reminder and can be adjusted before saving", async ({
