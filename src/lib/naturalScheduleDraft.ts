@@ -150,8 +150,9 @@ export function inferNaturalReminderMinutes(
     return { minutes: 0, explicit: true };
   }
 
-  // Itjima is a memory service: a precise timed commitment should not silently
-  // become a calendar entry with no reminder. Match the schedule-sheet default.
+  // Itjima is a memory service: a genuinely understood timed commitment gets
+  // an at-start reminder. A fallback schedule with no parsed date must not
+  // silently invent an alarm merely because the UI supplied a default hour.
   return { minutes: hasSpecificTime ? 0 : null, explicit: false };
 }
 
@@ -200,7 +201,10 @@ export function buildNaturalScheduleDraft(item: InboxItem): NaturalScheduleDraft
         return d;
       })();
   const end = dateOnly ? endOfDay(start) : defaultEndFromStart(start);
-  const reminder = inferNaturalReminderMinutes(item.text, !dateOnly);
+  const reminder = inferNaturalReminderMinutes(
+    item.text,
+    Boolean(startResolved) && explicitTime,
+  );
 
   return {
     text: cleanScheduleTitle(item.text),
