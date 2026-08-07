@@ -9,6 +9,7 @@ import {
   understandNaturalLanguage,
   type ClarifyPick,
 } from "@/lib/nlSchedule";
+import { scheduleConfirmationReason } from "@/lib/nlScheduleSafety";
 import { shouldShowInlinePromise } from "@/lib/promiseCard";
 import type { InboxItem } from "@/lib/store";
 import type { RevivalHint } from "@/lib/memoryRevival";
@@ -76,7 +77,12 @@ export function InboxChat({
           const understanding = showPromise
             ? understandNaturalLanguage(it.text, uiLang)
             : null;
-          const showCommitment = understanding?.intent === "schedule_exact";
+          const confirmationReason =
+            understanding?.intent === "schedule_exact"
+              ? scheduleConfirmationReason(it.text)
+              : null;
+          const showCommitment =
+            understanding?.intent === "schedule_exact" && !confirmationReason;
 
           return (
             <div
