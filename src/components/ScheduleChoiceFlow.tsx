@@ -363,70 +363,72 @@ function SchedulePickCalendar({
   onNextMonth: () => void;
   lang: "ko" | "en";
 }) {
-  const today = startOfToday();
+  const t = useT();
   const first = new Date(viewYear, viewMonth, 1);
-  const startDay = first.getDay();
-  const daysInMonth = new Date(viewYear, viewMonth + 1, 0).getDate();
-  const monthLabel =
-    lang === "en"
-      ? first.toLocaleString("en-US", { month: "long", year: "numeric" })
-      : `${viewYear}년 ${viewMonth + 1}월`;
+  const last = new Date(viewYear, viewMonth + 1, 0);
   const weekdays =
-    lang === "en"
-      ? ["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"]
-      : ["일", "월", "화", "수", "목", "금", "토"];
-
+    lang === "ko"
+      ? ["일", "월", "화", "수", "목", "금", "토"]
+      : ["S", "M", "T", "W", "T", "F", "S"];
   const cells: Array<number | null> = [];
-  for (let index = 0; index < startDay; index += 1) cells.push(null);
-  for (let day = 1; day <= daysInMonth; day += 1) cells.push(day);
+  for (let i = 0; i < first.getDay(); i += 1) cells.push(null);
+  for (let day = 1; day <= last.getDate(); day += 1) cells.push(day);
+  while (cells.length % 7 !== 0) cells.push(null);
+  const today = startOfToday();
 
   return (
-    <div className="mt-3 overflow-hidden rounded-[18px] bg-ink/[0.035] p-3 ring-1 ring-ink/[0.05]">
-      <div className="mb-2 flex items-center justify-between">
+    <div className="rounded-[22px] border border-ink/[0.08] bg-white p-3.5">
+      <div className="mb-3 flex items-center justify-between">
         <button
           type="button"
           onClick={onPrevMonth}
-          className="touch-press flex h-9 w-9 items-center justify-center rounded-full text-ink-soft active:bg-ink/[0.06]"
-          aria-label={lang === "en" ? "Previous month" : "이전 달"}
+          aria-label={t("이전 달", "Previous month")}
+          className="touch-press grid h-11 w-11 place-items-center rounded-full text-ink-soft hover:bg-ink/[0.05]"
         >
-          <ChevronLeft size={18} strokeWidth={2.25} />
+          <ChevronLeft size={20} />
         </button>
-        <span className="text-[15px] font-bold text-ink">{monthLabel}</span>
+        <p className="text-[15px] font-black tracking-[-0.02em] text-ink">
+          {new Date(viewYear, viewMonth, 1).toLocaleDateString(
+            lang === "ko" ? "ko-KR" : "en-US",
+            { year: "numeric", month: "long" },
+          )}
+        </p>
         <button
           type="button"
           onClick={onNextMonth}
-          className="touch-press flex h-9 w-9 items-center justify-center rounded-full text-ink-soft active:bg-ink/[0.06]"
-          aria-label={lang === "en" ? "Next month" : "다음 달"}
+          aria-label={t("다음 달", "Next month")}
+          className="touch-press grid h-11 w-11 place-items-center rounded-full text-ink-soft hover:bg-ink/[0.05]"
         >
-          <ChevronRight size={18} strokeWidth={2.25} />
+          <ChevronRight size={20} />
         </button>
       </div>
 
-      <div className="grid grid-cols-7 gap-1 text-center text-[10px] font-semibold text-ink-soft/65">
-        {weekdays.map((weekday) => (
-          <span key={weekday} className="py-1">
+      <div className="grid grid-cols-7 gap-y-1 text-center text-[10px] font-bold text-ink-soft/55">
+        {weekdays.map((weekday, index) => (
+          <span key={`${weekday}-${index}`} className="py-1">
             {weekday}
           </span>
         ))}
       </div>
 
-      <div className="mt-1 grid grid-cols-7 gap-1">
+      <div className="mt-1 grid grid-cols-7 gap-y-1">
         {cells.map((day, index) => {
-          if (day === null) return <div key={`empty-${index}`} aria-hidden />;
+          if (!day) return <span key={`blank-${index}`} className="h-10" />;
           const date = new Date(viewYear, viewMonth, day, 0, 0, 0, 0);
           const isPast = date.getTime() < today.getTime();
+          const isSelected = Boolean(selected && sameCalendarDay(date, selected));
           const isToday = sameCalendarDay(date, today);
-          const isSelected = selected
-            ? sameCalendarDay(date, selected)
-            : false;
-
           return (
             <button
-              key={day}
+              key={`${viewYear}-${viewMonth}-${day}`}
               type="button"
               disabled={isPast}
               onClick={() => onSelectDay(day)}
-              className={`touch-press flex h-10 items-center justify-center rounded-[12px] text-[13px] font-semibold tabular-nums ${
+              aria-label={date.toLocaleDateString(
+                lang === "ko" ? "ko-KR" : "en-US",
+                { year: "numeric", month: "long", day: "numeric" },
+              )}
+              className={`mx-auto grid h-10 w-10 place-items-center rounded-full text-[13px] font-bold transition-colors ${
                 isPast
                   ? "cursor-not-allowed text-ink-soft/25"
                   : isSelected
@@ -537,14 +539,15 @@ export function ScheduleChoiceFlow({
     setEndTimeEnabled(!resolved.endAllDay);
     setRepeat(repeatRuleToKey(initialRepeat));
     setReminder(
-      editMode
-        ? initialReminderKey ?? "off"
-        : defaultReminderForNewSchedule(
-            scheduleHasSpecificTime(
-              resolved.startAllDay,
-              resolved.endAllDay,
-            ),
-          ),
+      initialReminderKey ??
+        (editMode
+          ? "off"
+          : defaultReminderForNewSchedule(
+              scheduleHasSpecificTime(
+                resolved.startAllDay,
+                resolved.endAllDay,
+              ),
+            )),
     );
 
     const picked = startOfDay(seedStart);
@@ -680,7 +683,7 @@ export function ScheduleChoiceFlow({
     }
     if (step === "time") {
       if (!validRange) return;
-      if (!editMode) {
+      if (!editMode && initialReminderKey === undefined) {
         setReminder(
           defaultReminderForNewSchedule(
             scheduleHasSpecificTime(startAllDay, endAllDay),
