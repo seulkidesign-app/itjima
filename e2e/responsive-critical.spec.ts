@@ -69,7 +69,15 @@ async function captureText(page: Page, text: string) {
   await expect(input).toBeVisible();
   await input.fill(text);
   await page.getByTestId("capture-submit").click();
-  await expect(page.getByTestId("inline-promise")).toBeVisible();
+
+  const commitment = page.getByTestId("schedule-commitment-card");
+  const clarification = page.getByTestId("inline-promise");
+  await expect
+    .poll(async () =>
+      (await commitment.isVisible().catch(() => false)) ||
+      (await clarification.isVisible().catch(() => false)),
+    )
+    .toBe(true);
 }
 
 test.beforeEach(async ({ page }) => {
@@ -134,8 +142,12 @@ test("[critical] clear natural-language schedule becomes a saved schedule", asyn
   await page.goto("/?lang=en");
 
   await captureText(page, "Dentist tomorrow at 3 PM");
-  await page.getByRole("button", { name: "Add to schedule", exact: true }).click();
-  await expect(page.getByTestId("inline-promise")).toBeHidden();
+  const commitment = page.getByTestId("schedule-commitment-card");
+  await expect(commitment).toBeVisible();
+  await expect(commitment.getByTestId("commitment-title")).toContainText("Dentist");
+  await expect(commitment).toHaveAttribute("data-reminder", "0");
+  await commitment.getByTestId("commitment-confirm").click();
+  await expect(commitment).toBeHidden();
 
   await page.getByRole("link", { name: TASKS_SCHEDULE_LINK_NAME }).click();
   await page.getByRole("tab", { name: "Upcoming", exact: true }).click();
@@ -152,6 +164,7 @@ test("[critical] an ambiguous weekend plan is resolved inline without a dead end
   await page.goto("/?lang=en");
 
   await captureText(page, "Meet Maya this weekend");
+  await expect(page.getByTestId("inline-promise")).toBeVisible();
   await expect(page.getByTestId("promise-confirm-saturday")).toBeVisible();
   await expect(page.getByTestId("promise-confirm-sunday")).toBeVisible();
   await page.getByTestId("promise-confirm-saturday").click();

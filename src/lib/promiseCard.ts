@@ -4,6 +4,7 @@ import {
   type NlIntent,
   type ScheduleConfidence,
 } from "@/lib/nlSchedule";
+import { hasNaturalRepeatIntent } from "@/lib/naturalScheduleDraft";
 import type { ThoughtCategory } from "@/lib/ruleEngine";
 
 export type PromisePrimaryAction =
@@ -105,13 +106,16 @@ function confidenceScore(level: ScheduleConfidence): number {
 
 /**
  * v1 exposes only the focused schedule/task interpretation surface. Archive,
- * memory, and low-confidence notes stay quiet until separately validated.
+ * memory, low-confidence notes, and recurrence stay quiet until their full
+ * persistence semantics are validated end to end.
  */
 export function shouldShowInlinePromise(
   text: string,
   lang: "ko" | "en",
 ): boolean {
-  const nl = understandNaturalLanguage(text.trim(), lang);
+  const trimmed = text.trim();
+  if (hasNaturalRepeatIntent(trimmed)) return false;
+  const nl = understandNaturalLanguage(trimmed, lang);
   return (
     nl.confidence !== "low" &&
     (nl.intent === "schedule_exact" ||

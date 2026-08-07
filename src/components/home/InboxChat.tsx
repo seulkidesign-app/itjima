@@ -2,9 +2,14 @@ import { ChatLongPressRow } from "@/components/ChatLongPressRow";
 import { ChatBubble } from "@/components/ChatBubble";
 import { InlinePromise } from "@/components/InlinePromise";
 import { MemoryRevivalHint } from "@/components/MemoryRevivalHint";
+import { ScheduleCommitmentCard } from "@/components/home/ScheduleCommitmentCard";
 import { featureEnabled } from "@/lib/features";
 import { useLang, useT } from "@/lib/i18n";
-import type { ClarifyPick } from "@/lib/nlSchedule";
+import {
+  understandNaturalLanguage,
+  type ClarifyPick,
+} from "@/lib/nlSchedule";
+import { scheduleConfirmationReason } from "@/lib/nlScheduleSafety";
 import { shouldShowInlinePromise } from "@/lib/promiseCard";
 import type { InboxItem } from "@/lib/store";
 import type { RevivalHint } from "@/lib/memoryRevival";
@@ -69,6 +74,15 @@ export function InboxChat({
             featureEnabled("INLINE_PROMISE") &&
             !acknowledgedIds.has(it.id) &&
             shouldShowInlinePromise(it.text, uiLang);
+          const understanding = showPromise
+            ? understandNaturalLanguage(it.text, uiLang)
+            : null;
+          const confirmationReason =
+            understanding?.intent === "schedule_exact"
+              ? scheduleConfirmationReason(it.text)
+              : null;
+          const showCommitment =
+            understanding?.intent === "schedule_exact" && !confirmationReason;
 
           return (
             <div
@@ -103,7 +117,19 @@ export function InboxChat({
                 )}
               </ChatBubble>
 
-              {showPromise && (
+              {showPromise && showCommitment && (
+                <ScheduleCommitmentCard
+                  item={it}
+                  onConfirm={onConfirmScheduleQuick}
+                  onAdjust={onOpenPromiseSchedule}
+                  onDismiss={() => {
+                    onAcknowledgeItem(it.id);
+                    onMaybeNudgeLogin();
+                  }}
+                />
+              )}
+
+              {showPromise && !showCommitment && (
                 <InlinePromise
                   item={it}
                   acknowledged={acknowledgedIds.has(it.id)}

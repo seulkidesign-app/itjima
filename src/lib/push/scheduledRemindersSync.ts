@@ -150,15 +150,77 @@ export async function syncScheduleReminderDetailed(
   }
 }
 
+async function cancelStaleServerReminders(
+  userId: string,
+  activeScheduleIds: Set<string>,
+): Promise<boolean> {
+  if (import.meta.env.VITE_E2E === "true") return true;
+
+  const { data, error } = await supabase
+    .from("scheduled_reminders")
+    .select("schedule_id")
+    .eq("user_id", userId)
+    .in("status", ["pending", "processing"]);
+
+  if (error) {
+    console.error("[reminders] stale lookup failed", error.message);
+    rememberReminderSyncResult(false);
+    return false;
+  }
+
+  const staleIds = [
+    ...new Set(
+      (data ?? [])
+        .map((row) => row.schedule_id as string | null)
+        .filter((id): id is string => Boolean(id) && !activeScheduleIds.has(id!)),
+    ),
+  ];
+
+  let ok = true;
+  for (const scheduleId of staleIds) {
+    if (!(await cancelScheduleReminders(userId, scheduleId))) ok = false;
+  }
+  return ok;
+}
+
+/**
+ * Reconcile the backend queue from the canonical schedule list.
+ *
+ * This is deliberately surface-agnostic: Home natural-language confirmation,
+ * Decision Deck, calendar edits, reminder toggles and deletions all converge on
+ * the same schedule store, so every path receives the same closed-app reminder
+ * guarantees without duplicating backend code in each UI.
+ */
 export async function syncAllScheduleReminders(
   userId: string,
   schedules: ScheduleItem[],
-): Promise<void> {
-  if (import.meta.env.VITE_E2E === "true") return;
-  for (const s of schedules) {
-    if (s.alarm && s.status !== "done") {
-      const ok = await syncScheduleReminder(userId, s);
-      if (!ok) console.error("[reminders] bulk sync deferred", s.id);
+): Promise<boolean> {
+  if (import.meta.env.VITE_E2E === "true") return true;
+
+  const active = schedules.filter(
+    (schedule) =>
+      schedule.alarm &&
+      schedule.status !== "done" &&
+      Boolean(buildReminderUpsert(userId, schedule)),
+  );
+  const activeIds = new Set(active.map((schedule) => schedule.id));
+
+  let allOk = await cancelStaleServerReminders(userId, activeIds);
+
+  for (const schedule of active) {
+    let result = await syncScheduleReminderDetailed(userId, schedule);
+
+    // A just-created signed-in schedule is written locally first and then to
+    // Supabase. If the reminder FK arrives a beat early, retry once after the
+    // canonical schedule row has had time to land.
+    if (!result.ok) {
+      await new Promise((resolve) => setTimeout(resolve, 650));
+      result = await syncScheduleReminderDetailed(userId, schedule);
     }
+
+    if (!result.ok) allOk = false;
   }
+
+  rememberReminderSyncResult(allOk);
+  return allOk;
 }
