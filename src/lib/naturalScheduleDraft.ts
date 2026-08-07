@@ -5,11 +5,14 @@ import {
   endOfDay,
   startOfDay,
 } from "@/lib/scheduleChoices";
-import type { InboxItem, RepeatRule } from "@/lib/store";
+import type { InboxItem } from "@/lib/store";
 import { thoughtFirstLine } from "@/lib/brainMirror";
 
 const EXPLICIT_TIME_RE =
   /(?:오전|오후|아침|점심|저녁|밤|새벽|퇴근\s*(?:후|하고|하고서|뒤)|\d{1,2}\s*시(?:\s*\d{1,2}\s*분)?|\b(?:morning|afternoon|evening|tonight|noon|midnight|after\s+work)\b|\b\d{1,2}(?::\d{2})?\s*(?:am|pm)\b|\b(?:[01]?\d|2[0-3]):[0-5]\d\b)/i;
+
+const REPEAT_INTENT_RE =
+  /(?:매일|매일마다|매주|매주마다|매월|매달|매년|해마다|every\s+(?:day|week|month|year)|daily|weekly|monthly|yearly|annually)/i;
 
 const KO_WEEKDAY: Record<string, number> = {
   일: 0,
@@ -43,12 +46,9 @@ export function hasNaturalScheduleTime(text: string): boolean {
   return EXPLICIT_TIME_RE.test(text.trim());
 }
 
-export function inferNaturalRepeat(text: string): RepeatRule | null {
-  if (/(?:매일|매일마다|every\s+day|daily)/i.test(text)) return "daily";
-  if (/(?:매주|매주마다|every\s+week|weekly)/i.test(text)) return "weekly";
-  if (/(?:매월|매달|every\s+month|monthly)/i.test(text)) return "monthly";
-  if (/(?:매년|해마다|every\s+year|yearly|annually)/i.test(text)) return "yearly";
-  return null;
+/** Recurrence is deliberately not collapsed into a one-off schedule. */
+export function hasNaturalRepeatIntent(text: string): boolean {
+  return REPEAT_INTENT_RE.test(text.trim());
 }
 
 function startOfNextWeek(now: Date): Date {
@@ -173,8 +173,6 @@ function cleanScheduleTitle(text: string): string {
     .replace(/\b\d{1,2}(?::\d{2})?\s*(?:am|pm)\b/gi, " ")
     .replace(/퇴근\s*(?:후|하고|하고서|뒤)/g, " ")
     .replace(/\bafter\s+work\b/gi, " ")
-    .replace(/(?:매일|매주|매월|매달|매년|해마다)/g, " ")
-    .replace(/\b(?:daily|weekly|monthly|yearly|annually|every\s+(?:day|week|month|year))\b/gi, " ")
     .replace(/[,.]\s*$/g, "")
     .replace(/\s+/g, " ")
     .trim();
@@ -216,7 +214,7 @@ export function buildNaturalScheduleDraft(item: InboxItem): NaturalScheduleDraft
       allDay: dateOnly,
       startAllDay: dateOnly,
       endAllDay: dateOnly,
-      repeat: inferNaturalRepeat(item.text),
+      repeat: null,
     },
   };
 }
@@ -255,18 +253,4 @@ export function formatCommitmentReminder(
   if (minutes === 120) return lang === "en" ? "2 hours before" : "2시간 전";
   if (minutes === 24 * 60) return lang === "en" ? "1 day before" : "전날";
   return lang === "en" ? `${minutes} min before` : `${minutes}분 전`;
-}
-
-export function formatCommitmentRepeat(
-  repeat: RepeatRule | null,
-  lang: "ko" | "en",
-): string | null {
-  if (!repeat) return null;
-  const labels = {
-    daily: lang === "en" ? "Daily" : "매일",
-    weekly: lang === "en" ? "Weekly" : "매주",
-    monthly: lang === "en" ? "Monthly" : "매월",
-    yearly: lang === "en" ? "Yearly" : "매년",
-  } as const;
-  return labels[repeat];
 }
