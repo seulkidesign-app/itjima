@@ -7,6 +7,7 @@ import {
   Repeat2,
 } from "lucide-react";
 import { toast } from "sonner";
+import type { ReactNode } from "react";
 import type { InboxItem } from "@/lib/store";
 import {
   buildNaturalScheduleDraft,
@@ -33,7 +34,13 @@ type Props = {
 async function prepareNotificationsBestEffort(
   hasReminder: boolean,
 ): Promise<"granted" | "skipped" | "blocked" | "unsupported"> {
-  if (!hasReminder || typeof window === "undefined") return "skipped";
+  if (
+    !hasReminder ||
+    typeof window === "undefined" ||
+    import.meta.env.VITE_E2E === "true"
+  ) {
+    return "skipped";
+  }
 
   const support = pushSupportState();
   if (support === "not_installed" || support === "unsupported") {
@@ -52,14 +59,12 @@ async function prepareNotificationsBestEffort(
   }
   if (permission !== "granted") return "blocked";
 
-  // Background registration requires an authenticated account. This is
-  // best-effort and never blocks the schedule itself from being saved.
   try {
-    await ensurePushSubscriptionForCurrentUser();
+    const push = await ensurePushSubscriptionForCurrentUser();
+    return push.ok ? "granted" : "unsupported";
   } catch {
-    // The schedule remains valid even when this device cannot register push.
+    return "unsupported";
   }
-  return "granted";
 }
 
 export function ScheduleCommitmentCard({
@@ -85,8 +90,8 @@ export function ScheduleCommitmentCard({
       reminder_explicit: draft.reminderExplicit,
     });
 
-    // Start the permission request from the actual user gesture. Saving does
-    // not depend on it, so a blocked browser permission never loses the plan.
+    // Permission is requested from this real click. Saving never depends on
+    // permission: the schedule is canonical even when this device cannot push.
     const notificationPromise = prepareNotificationsBestEffort(hasReminder);
 
     try {
@@ -104,14 +109,19 @@ export function ScheduleCommitmentCard({
       } else if (hasReminder && notification === "unsupported") {
         toast.message(
           t(
-            "일정은 기억했어요. 이 환경에서는 백그라운드 알림이 제한될 수 있어요.",
-            "The plan is saved. Background alerts may be limited in this environment.",
+            "일정은 기억했어요. 닫힌 앱 알림은 로그인·PWA 설치 후 사용할 수 있어요.",
+            "The plan is saved. Closed-app alerts need a signed-in installed PWA.",
           ),
           { duration: 4200 },
         );
       }
     } catch {
-      toast.error(t("아직 기억하지 못했어요. 다시 눌러 주세요.", "Not saved yet. Please try again."));
+      toast.error(
+        t(
+          "아직 기억하지 못했어요. 다시 눌러 주세요.",
+          "Not saved yet. Please try again.",
+        ),
+      );
     }
   };
 
@@ -221,7 +231,7 @@ function CommitmentRow({
   value,
   testId,
 }: {
-  icon: React.ReactNode;
+  icon: ReactNode;
   label: string;
   value: string;
   testId: string;
