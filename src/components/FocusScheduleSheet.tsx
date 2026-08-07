@@ -39,6 +39,7 @@ function reminderKeyFromMinutes(minutes: number | null): ReminderKey {
   if (minutes === 10) return "10m";
   if (minutes === 30) return "30m";
   if (minutes === 60) return "1h";
+  if (minutes === 120) return "2h";
   if (minutes === 24 * 60) return "1d";
   return "off";
 }
