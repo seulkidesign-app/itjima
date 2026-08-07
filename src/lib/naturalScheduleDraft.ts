@@ -173,7 +173,11 @@ function cleanScheduleTitle(text: string): string {
     .replace(/\b\d{1,2}(?::\d{2})?\s*(?:am|pm)\b/gi, " ")
     .replace(/퇴근\s*(?:후|하고|하고서|뒤)/g, " ")
     .replace(/\bafter\s+work\b/gi, " ")
-    .replace(/[,.]\s*$/g, "")
+    // Removing an English time can leave its scheduling preposition behind
+    // ("Dentist tomorrow at 3pm" -> "Dentist at"). Only strip a dangling
+    // terminal connector so semantic phrases such as "Meet at the clinic" stay.
+    .replace(/\b(?:at|on|by)\b(?=\s*(?:[,.!?]|$))/gi, " ")
+    .replace(/[,.!?]\s*$/g, "")
     .replace(/\s+/g, " ")
     .trim();
 
