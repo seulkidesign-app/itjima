@@ -38,13 +38,13 @@ describe("inbox schedule defaults", () => {
     expect(result.end.getMinutes()).toBe(59);
   });
 
-  it("keeps an explicitly timed thought as a timed schedule", () => {
+  it("keeps an explicitly timed thought as a timed schedule with an at-start reminder", () => {
     const result = inboxScheduleDefaults(thought("내일 오후 3시 치과"));
     expect(result.options).toMatchObject({
       allDay: false,
       startAllDay: false,
       endAllDay: false,
-      reminderMinutes: null,
+      reminderMinutes: 0,
     });
     expect(result.start.getHours()).toBe(15);
   });
@@ -52,19 +52,32 @@ describe("inbox schedule defaults", () => {
   it("maps bare 3시 to a 15:00 timed schedule", () => {
     const result = inboxScheduleDefaults(thought("내일 3시에 치과"));
     expect(result.options.allDay).toBe(false);
+    expect(result.options.reminderMinutes).toBe(0);
     expect(result.start.getHours()).toBe(15);
   });
 
-  it("treats 퇴근 후 as an evening timed schedule", () => {
-    const result = inboxScheduleDefaults(thought("오늘 퇴근 후 장보기"));
-    expect(result.options.allDay).toBe(false);
-    expect(result.start.getHours()).toBe(18);
+  it("treats 퇴근 후 and 퇴근하고 as evening timed schedules", () => {
+    const after = inboxScheduleDefaults(thought("오늘 퇴근 후 장보기"));
+    const conjunction = inboxScheduleDefaults(thought("내일 퇴근하고 장보기"));
+    expect(after.options.allDay).toBe(false);
+    expect(after.start.getHours()).toBe(18);
+    expect(conjunction.options.allDay).toBe(false);
+    expect(conjunction.start.getHours()).toBe(18);
   });
 
   it("recognizes common Korean and English time phrases", () => {
     expect(hasExplicitScheduleTime("내일 저녁 치과")).toBe(true);
     expect(hasExplicitScheduleTime("tomorrow at 3pm dentist")).toBe(true);
+    expect(hasExplicitScheduleTime("내일 퇴근하고 장보기")).toBe(true);
     expect(hasExplicitScheduleTime("내일 치과")).toBe(false);
+  });
+
+  it("preserves explicit natural reminders and repeat rules", () => {
+    const result = inboxScheduleDefaults(
+      thought("매주 월요일 오전 9시 팀 회의 30분 전 알려줘"),
+    );
+    expect(result.options.reminderMinutes).toBe(30);
+    expect(result.options.repeat).toBe("weekly");
   });
 
   it("uses a future working-hour default only when no date was supplied", () => {
