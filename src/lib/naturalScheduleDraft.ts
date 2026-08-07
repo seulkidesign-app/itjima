@@ -128,9 +128,6 @@ export function inferNaturalReminderMinutes(
   if (/(?:전날|하루\s*전|1\s*일\s*전|day\s+before|1\s*day\s+before)/i.test(value)) {
     return { minutes: 24 * 60, explicit: true };
   }
-  if (/(?:2\s*시간\s*전|2\s*hours?\s+before)/i.test(value)) {
-    return { minutes: 120, explicit: true };
-  }
   if (/(?:1\s*시간\s*전|한\s*시간\s*전|1\s*hour\s+before|an\s+hour\s+before)/i.test(value)) {
     return { minutes: 60, explicit: true };
   }
@@ -160,8 +157,8 @@ function cleanScheduleTitle(text: string): string {
   let title = thoughtFirstLine(text);
 
   title = title
-    .replace(/(?:그리고\s*)?(?:전날|하루\s*전|1\s*일\s*전|2\s*시간\s*전|1\s*시간\s*전|한\s*시간\s*전|30\s*분\s*전|10\s*분\s*전|5\s*분\s*전|그때|시작할\s*때)?\s*(?:에도?\s*)?(?:알려\s*줘|알려줘|알림\s*(?:해|줘)|리마인드(?:\s*해줘)?)/gi, " ")
-    .replace(/\b(?:remind|notify)\s+me(?:\s+(?:the\s+day\s+before|\d+\s*(?:minutes?|hours?|days?)\s+before|then))?\b/gi, " ")
+    .replace(/(?:그리고\s*)?(?:전날|하루\s*전|1\s*일\s*전|1\s*시간\s*전|한\s*시간\s*전|30\s*분\s*전|10\s*분\s*전|5\s*분\s*전|그때|시작할\s*때)?\s*(?:에도?\s*)?(?:알려\s*줘|알려줘|알림\s*(?:해|줘)|리마인드(?:\s*해줘)?)/gi, " ")
+    .replace(/\b(?:remind|notify)\s+me(?:\s+(?:the\s+day\s+before|(?:1\s*hour|30\s*minutes?|10\s*minutes?|5\s*minutes?)\s+before|then))?\b/gi, " ")
     .replace(/(?:다음\s*주|이번\s*주)\s*/g, " ")
     .replace(/\b(?:next|this)\s+week\b/gi, " ")
     .replace(/(일|월|화|수|목|금|토)요일/g, " ")
@@ -254,7 +251,6 @@ export function formatCommitmentReminder(
   if (minutes === 10) return lang === "en" ? "10 min before" : "10분 전";
   if (minutes === 30) return lang === "en" ? "30 min before" : "30분 전";
   if (minutes === 60) return lang === "en" ? "1 hour before" : "1시간 전";
-  if (minutes === 120) return lang === "en" ? "2 hours before" : "2시간 전";
   if (minutes === 24 * 60) return lang === "en" ? "1 day before" : "전날";
   return lang === "en" ? `${minutes} min before` : `${minutes}분 전`;
 }
