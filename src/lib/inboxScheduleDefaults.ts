@@ -11,7 +11,7 @@ import { hasNaturalScheduleTime } from "@/lib/naturalScheduleDraft";
 
 const DECK_SCHEDULE_DRAFT = "__itjimaDeckScheduleDraft" as const;
 
-type InboxScheduleDraft = {
+export type InboxScheduleDraft = {
   text: string;
   startIso: string;
   endIso: string;
@@ -24,6 +24,30 @@ type InboxItemWithDraft = InboxItem & {
 
 export function hasExplicitScheduleTime(text: string): boolean {
   return hasNaturalScheduleTime(text.trim());
+}
+
+export function readInboxScheduleDraft(
+  item: InboxItem | null | undefined,
+): {
+  text: string;
+  start: Date;
+  end: Date;
+  options: ScheduleConfirmOptions;
+} | null {
+  if (!item) return null;
+  const draft = (item as InboxItemWithDraft)[DECK_SCHEDULE_DRAFT];
+  if (!draft) return null;
+  const start = new Date(draft.startIso);
+  const end = new Date(draft.endIso);
+  if (!Number.isFinite(start.getTime()) || !Number.isFinite(end.getTime())) {
+    return null;
+  }
+  return {
+    text: draft.text,
+    start,
+    end,
+    options: draft.options,
+  };
 }
 
 /**
@@ -69,15 +93,8 @@ export function defaultScheduleStart(item: InboxItem): Date {
 }
 
 export function inboxScheduleDefaults(item: InboxItem) {
-  const draft = (item as InboxItemWithDraft)[DECK_SCHEDULE_DRAFT];
-  if (draft) {
-    return {
-      start: new Date(draft.startIso),
-      end: new Date(draft.endIso),
-      text: draft.text,
-      options: draft.options,
-    };
-  }
+  const draft = readInboxScheduleDraft(item);
+  if (draft) return draft;
 
   const detected = detectDate(item.text);
   const dateOnly = Boolean(detected) && !hasExplicitScheduleTime(item.text);
