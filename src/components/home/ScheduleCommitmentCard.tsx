@@ -4,7 +4,6 @@ import {
   Check,
   Clock3,
   Pencil,
-  Repeat2,
 } from "lucide-react";
 import { toast } from "sonner";
 import type { ReactNode } from "react";
@@ -13,9 +12,9 @@ import {
   buildNaturalScheduleDraft,
   formatCommitmentDate,
   formatCommitmentReminder,
-  formatCommitmentRepeat,
   formatCommitmentTime,
 } from "@/lib/naturalScheduleDraft";
+import { withInboxScheduleDraft } from "@/lib/inboxScheduleDefaults";
 import {
   ensurePushSubscriptionForCurrentUser,
   pushSupportState,
@@ -77,7 +76,6 @@ export function ScheduleCommitmentCard({
   const { lang } = useLang();
   const uiLang = lang === "en" ? "en" : "ko";
   const draft = buildNaturalScheduleDraft(item);
-  const repeatLabel = formatCommitmentRepeat(draft.options.repeat, uiLang);
   const hasReminder = draft.options.reminderMinutes !== null;
 
   const confirm = async () => {
@@ -85,7 +83,6 @@ export function ScheduleCommitmentCard({
     track("commitment_card_confirmed", {
       has_reminder: hasReminder,
       reminder_minutes: draft.options.reminderMinutes ?? undefined,
-      repeat: draft.options.repeat ?? undefined,
       all_day: draft.options.allDay,
       reminder_explicit: draft.reminderExplicit,
     });
@@ -95,7 +92,10 @@ export function ScheduleCommitmentCard({
     const notificationPromise = prepareNotificationsBestEffort(hasReminder);
 
     try {
-      await onConfirm(item);
+      // The exact values displayed above are attached as an ephemeral draft.
+      // Persistence keeps `item.text` as raw provenance, while the schedule
+      // stores this resolved title/date/time/reminder without reparsing it.
+      await onConfirm(withInboxScheduleDraft(item, draft));
       onDismiss();
       const notification = await notificationPromise;
       if (hasReminder && notification === "blocked") {
@@ -130,7 +130,6 @@ export function ScheduleCommitmentCard({
       className="commitment-card ml-1 w-full max-w-[min(360px,95%)] overflow-hidden rounded-[20px] border border-ink/8 bg-[#fafaf8] shadow-card"
       data-testid="schedule-commitment-card"
       data-reminder={draft.options.reminderMinutes ?? "off"}
-      data-repeat={draft.options.repeat ?? "none"}
     >
       <div className="px-3.5 pb-2 pt-3.5">
         <div className="flex items-center gap-2">
@@ -147,7 +146,6 @@ export function ScheduleCommitmentCard({
             onClick={() => {
               track("commitment_card_adjusted", {
                 has_reminder: hasReminder,
-                repeat: draft.options.repeat ?? undefined,
               });
               onAdjust(item);
             }}
@@ -193,14 +191,6 @@ export function ScheduleCommitmentCard({
           )}
           testId="commitment-reminder"
         />
-        {repeatLabel && (
-          <CommitmentRow
-            icon={<Repeat2 size={14} aria-hidden />}
-            label={t("반복", "Repeat")}
-            value={repeatLabel}
-            testId="commitment-repeat"
-          />
-        )}
       </div>
 
       <div className="flex gap-2 p-3">
