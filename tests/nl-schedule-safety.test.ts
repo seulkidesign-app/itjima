@@ -26,6 +26,9 @@ describe("natural-language schedule safety", () => {
     expect(scheduleConfirmationReason("내일 퇴근 후 장보기", now)).toBe(
       "after_work_time",
     );
+    expect(scheduleConfirmationReason("내일 퇴근하고 장보기", now)).toBe(
+      "after_work_time",
+    );
   });
 
   it("asks before assuming PM for a bare early hour", () => {
@@ -83,9 +86,9 @@ describe("inline ambiguity resolution", () => {
     ]);
   });
 
-  it("offers practical after-work times", () => {
+  it("offers practical after-work times for natural conversational wording", () => {
     const choices = scheduleConfirmationChoices(
-      "내일 퇴근 후 장보기",
+      "내일 퇴근하고 장보기",
       "after_work_time",
       "ko",
       now,
