@@ -192,6 +192,13 @@ async function forceAcknowledgeInlinePromises(page: Page) {
 
 export async function dismissInlinePromise(page: Page) {
   const frame = phone(page);
+
+  const commitment = frame.getByTestId("schedule-commitment-card").first();
+  if (await commitment.isVisible().catch(() => false)) {
+    await commitment.getByTestId("commitment-keep-in-inbox").click({ force: true });
+    await page.waitForTimeout(150);
+  }
+
   for (let attempt = 0; attempt < 4; attempt += 1) {
     const promise = frame.getByTestId("inline-promise").first();
     if (!(await promise.isVisible().catch(() => false))) return;
