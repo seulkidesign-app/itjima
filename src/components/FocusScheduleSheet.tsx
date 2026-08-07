@@ -9,7 +9,11 @@ import type { InboxItem } from "@/lib/store";
 import { thoughtFirstLine } from "@/lib/brainMirror";
 import { readCachedTimingExtra } from "@/lib/brainMirrorApi";
 import { resolveScheduleGuidanceReason } from "@/lib/dateDetect";
-import { defaultScheduleStart } from "@/lib/inboxScheduleDefaults";
+import {
+  defaultScheduleStart,
+  readInboxScheduleDraft,
+} from "@/lib/inboxScheduleDefaults";
+import type { ReminderKey } from "@/lib/scheduleChoices";
 import { useLang } from "@/lib/i18n";
 import {
   scheduleValidationMessage,
@@ -28,24 +32,41 @@ type Props = {
   ) => void;
 };
 
+function reminderKeyFromMinutes(minutes: number | null): ReminderKey {
+  if (minutes === null) return "off";
+  if (minutes === 0) return "at";
+  if (minutes === 5) return "5m";
+  if (minutes === 10) return "10m";
+  if (minutes === 30) return "30m";
+  if (minutes === 60) return "1h";
+  if (minutes === 24 * 60) return "1d";
+  return "off";
+}
+
 export function FocusScheduleSheet({ item, open, onClose, onConfirm }: Props) {
   const [title, setTitle] = useState("");
   const { lang } = useLang();
 
+  const interpretedDraft = useMemo(
+    () => (item && open ? readInboxScheduleDraft(item) : null),
+    [item, open],
+  );
+
   const guidanceReason = useMemo(() => {
-    if (!item || !open) return null;
+    if (!item || !open || interpretedDraft) return null;
     return resolveScheduleGuidanceReason(readCachedTimingExtra(item.text));
-  }, [item, open]);
+  }, [item, open, interpretedDraft]);
 
   const initialStart = useMemo(
-    () => (item ? defaultScheduleStart(item) : undefined),
-    [item],
+    () =>
+      interpretedDraft?.start ?? (item ? defaultScheduleStart(item) : undefined),
+    [item, interpretedDraft],
   );
 
   useEffect(() => {
     if (!open || !item) return;
-    setTitle(thoughtFirstLine(item.text));
-  }, [open, item]);
+    setTitle(interpretedDraft?.text ?? thoughtFirstLine(item.text));
+  }, [open, item, interpretedDraft]);
 
   if (!item) return null;
 
@@ -58,6 +79,16 @@ export function FocusScheduleSheet({ item, open, onClose, onConfirm }: Props) {
         thoughtText={item.text}
         guidanceReason={guidanceReason}
         initialStart={initialStart}
+        initialEnd={interpretedDraft?.end}
+        initialAllDay={interpretedDraft?.options.allDay}
+        initialStartAllDay={interpretedDraft?.options.startAllDay}
+        initialEndAllDay={interpretedDraft?.options.endAllDay}
+        initialRepeat={interpretedDraft?.options.repeat}
+        initialReminderKey={
+          interpretedDraft
+            ? reminderKeyFromMinutes(interpretedDraft.options.reminderMinutes)
+            : undefined
+        }
         onConfirm={(start, end, options) => {
           const validation = validateScheduleRange(start, end);
           if (!validation.ok) {
@@ -70,7 +101,7 @@ export function FocusScheduleSheet({ item, open, onClose, onConfirm }: Props) {
             return;
           }
           onConfirm(
-            title.trim() || thoughtFirstLine(item.text),
+            title.trim() || interpretedDraft?.text || thoughtFirstLine(item.text),
             start,
             end,
             options,
