@@ -107,21 +107,52 @@ test("a conversational after-work phrase asks only the missing time and preserve
   expect(startMs - alarmMs).toBe(24 * 60 * 60 * 1000);
 });
 
-test("timed plans default to an honest at-start reminder and can be adjusted before saving", async ({
+test("adjust keeps the interpreted title, time, and reminder instead of making the user start over", async ({
   page,
 }) => {
   await resetAppState(page);
 
+  const original = "Dentist tomorrow at 3pm remind me 1 hour before";
   const frame = phone(page);
   const input = frame.locator("textarea").first();
-  await input.fill("Dentist tomorrow at 3pm");
+  await input.fill(original);
   await input.press("Control+Enter");
 
   const card = frame.getByTestId("schedule-commitment-card");
   await expect(card).toBeVisible();
-  await expect(card).toHaveAttribute("data-reminder", "0");
-  await expect(card.getByTestId("commitment-reminder")).toHaveText("At start");
+  await expect(card.getByTestId("commitment-title")).toHaveText("Dentist");
+  await expect(card).toHaveAttribute("data-reminder", "60");
+  await expect(card.getByTestId("commitment-reminder")).toHaveText("1 hour before");
 
   await card.getByTestId("commitment-adjust").click();
-  await expect(page.getByRole("dialog").last()).toBeVisible();
+  const dialog = page.getByRole("dialog").last();
+  await expect(dialog).toBeVisible();
+
+  // The interpreted date is already selected; advance without re-entering it.
+  await dialog.locator(".sheet-cta-bar button").click();
+  await expect(dialog.getByLabel("Schedule title")).toHaveValue("Dentist");
+  await expect(dialog.getByLabel("Start time")).toHaveValue("15:00");
+
+  await dialog.getByRole("button", { name: "Set a reminder" }).click();
+  const oneHour = dialog.getByRole("button", { name: "1 hour before" });
+  await expect(oneHour).toHaveClass(/bg-primary\/30/);
+
+  await dialog.getByRole("button", { name: /Add to schedule/i }).click();
+  await expect(dialog).toBeHidden();
+
+  await expect
+    .poll(async () => (await readGuestList(page, GUEST_SCHEDULE_KEY)).length)
+    .toBe(1);
+  const schedules = (await readGuestList(page, GUEST_SCHEDULE_KEY)) as Array<{
+    text: string;
+    start_time: string;
+    alarm_at?: string | null;
+    raw_text?: string | null;
+  }>;
+  const saved = schedules[0];
+  expect(saved.text).toBe("Dentist");
+  expect(saved.raw_text).toBe(original);
+  expect(Date.parse(saved.start_time) - Date.parse(saved.alarm_at ?? "")).toBe(
+    60 * 60 * 1000,
+  );
 });
