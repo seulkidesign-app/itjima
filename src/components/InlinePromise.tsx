@@ -16,10 +16,8 @@ import {
   scheduleConfirmationReason,
   type ScheduleConfirmationReason,
 } from "@/lib/nlScheduleSafety";
-import {
-  inboxScheduleDefaults,
-  withInboxScheduleDraft,
-} from "@/lib/inboxScheduleDefaults";
+import { withInboxScheduleDraft } from "@/lib/inboxScheduleDefaults";
+import { buildNaturalScheduleDraft } from "@/lib/naturalScheduleDraft";
 import { useLang, useT } from "@/lib/i18n";
 import { track } from "@/lib/analytics";
 
@@ -111,7 +109,7 @@ function schedulePreview(text: string, lang: "ko" | "en"): SchedulePreview {
 }
 
 function resolvedChoiceItem(item: InboxItem, resolvedText: string): InboxItem {
-  const resolved = inboxScheduleDefaults({ ...item, text: resolvedText });
+  const resolved = buildNaturalScheduleDraft({ ...item, text: resolvedText });
   return withInboxScheduleDraft(item, resolved);
 }
 
