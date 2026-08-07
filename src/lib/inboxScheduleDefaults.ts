@@ -1,9 +1,13 @@
-import type { ScheduleConfirmOptions } from "@/components/ScheduleChoiceFlow";
+import { detectDate } from "@/lib/dateDetect";
+import { thoughtFirstLine } from "@/lib/brainMirror";
 import {
-  buildNaturalScheduleDraft,
-  hasNaturalScheduleTime,
-} from "@/lib/naturalScheduleDraft";
+  defaultEndFromStart,
+  endOfDay,
+  startOfDay,
+} from "@/lib/scheduleChoices";
+import type { ScheduleConfirmOptions } from "@/components/ScheduleChoiceFlow";
 import type { InboxItem } from "@/lib/store";
+import { hasNaturalScheduleTime } from "@/lib/naturalScheduleDraft";
 
 const DECK_SCHEDULE_DRAFT = "__itjimaDeckScheduleDraft" as const;
 
@@ -19,7 +23,7 @@ type InboxItemWithDraft = InboxItem & {
 };
 
 export function hasExplicitScheduleTime(text: string): boolean {
-  return hasNaturalScheduleTime(text);
+  return hasNaturalScheduleTime(text.trim());
 }
 
 /**
@@ -46,9 +50,22 @@ export function withInboxScheduleDraft(
   } as InboxItem;
 }
 
-/** Default schedule anchor when no sheet is shown. */
+/** Default schedule anchor when no sheet is shown (matches FocusScheduleSheet). */
 export function defaultScheduleStart(item: InboxItem): Date {
-  return buildNaturalScheduleDraft(item).start;
+  const det =
+    detectDate(item.text) ??
+    (item.brain_mirror?.suggestedDateText
+      ? detectDate(item.brain_mirror.suggestedDateText)
+      : null);
+  if (det) return det.start;
+  const d = new Date();
+  d.setMinutes(0, 0, 0);
+  if (d.getHours() < 9) d.setHours(9, 0, 0, 0);
+  else if (d.getHours() >= 18) {
+    d.setDate(d.getDate() + 1);
+    d.setHours(9, 0, 0, 0);
+  } else d.setHours(d.getHours() + 1, 0, 0, 0);
+  return d;
 }
 
 export function inboxScheduleDefaults(item: InboxItem) {
@@ -62,11 +79,19 @@ export function inboxScheduleDefaults(item: InboxItem) {
     };
   }
 
-  const natural = buildNaturalScheduleDraft(item);
-  return {
-    start: natural.start,
-    end: natural.end,
-    text: natural.text,
-    options: natural.options,
+  const detected = detectDate(item.text);
+  const dateOnly = Boolean(detected) && !hasExplicitScheduleTime(item.text);
+  const start = dateOnly
+    ? startOfDay(detected!.start)
+    : defaultScheduleStart(item);
+  const end = dateOnly ? endOfDay(start) : defaultEndFromStart(start);
+  const text = thoughtFirstLine(item.text);
+  const options: ScheduleConfirmOptions = {
+    reminderMinutes: null,
+    allDay: dateOnly,
+    startAllDay: dateOnly,
+    endAllDay: dateOnly,
+    repeat: null,
   };
+  return { start, end, text, options };
 }
