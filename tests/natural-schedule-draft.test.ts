@@ -47,6 +47,20 @@ describe("natural schedule commitment parsing", () => {
     expect(draft.text).toBe("치과");
   });
 
+  it("cleans English scheduling grammar without damaging the semantic title", () => {
+    const draft = buildNaturalScheduleDraft(
+      thought("Dentist tomorrow at 3pm remind me 1 hour before"),
+    );
+    expect(draft.text).toBe("Dentist");
+    expect(draft.start.getHours()).toBe(15);
+    expect(draft.options.reminderMinutes).toBe(60);
+
+    const locationDraft = buildNaturalScheduleDraft(
+      thought("Meet at the clinic tomorrow at 3pm"),
+    );
+    expect(locationDraft.text).toBe("Meet at the clinic");
+  });
+
   it("turns the parsed reminder into the exact backend queue due time", () => {
     const draft = buildNaturalScheduleDraft(
       thought("다음 주 금요일 퇴근하고 치과. 전날에도 알려줘"),
