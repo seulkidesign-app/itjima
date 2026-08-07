@@ -76,6 +76,7 @@ export function ScheduleCommitmentCard({
   const { lang } = useLang();
   const uiLang = lang === "en" ? "en" : "ko";
   const draft = buildNaturalScheduleDraft(item);
+  const resolvedItem = withInboxScheduleDraft(item, draft);
   const hasReminder = draft.options.reminderMinutes !== null;
 
   const confirm = async () => {
@@ -87,15 +88,10 @@ export function ScheduleCommitmentCard({
       reminder_explicit: draft.reminderExplicit,
     });
 
-    // Permission is requested from this real click. Saving never depends on
-    // permission: the schedule is canonical even when this device cannot push.
     const notificationPromise = prepareNotificationsBestEffort(hasReminder);
 
     try {
-      // The exact values displayed above are attached as an ephemeral draft.
-      // Persistence keeps `item.text` as raw provenance, while the schedule
-      // stores this resolved title/date/time/reminder without reparsing it.
-      await onConfirm(withInboxScheduleDraft(item, draft));
+      await onConfirm(resolvedItem);
       onDismiss();
       const notification = await notificationPromise;
       if (hasReminder && notification === "blocked") {
@@ -147,7 +143,7 @@ export function ScheduleCommitmentCard({
               track("commitment_card_adjusted", {
                 has_reminder: hasReminder,
               });
-              onAdjust(item);
+              onAdjust(resolvedItem);
             }}
             className="touch-press inline-flex min-h-9 items-center gap-1 rounded-full px-2.5 text-[11px] font-semibold text-ink-soft hover:bg-ink/[0.05]"
             data-testid="commitment-adjust"
