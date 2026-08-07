@@ -3,16 +3,7 @@ import { reminderToMinutes } from "@/lib/scheduleChoices";
 import type { ScheduleItem } from "@/lib/store";
 import { effectiveAlarmAt } from "@/lib/scheduleReminders";
 
-const REMINDER_KEYS: ReminderKey[] = [
-  "at",
-  "5m",
-  "10m",
-  "30m",
-  "1h",
-  "2h",
-  "1d",
-  "off",
-];
+const REMINDER_KEYS: ReminderKey[] = ["at", "5m", "10m", "30m", "1h", "1d", "off"];
 
 export function defaultReminderForNewSchedule(hasSpecificTime: boolean): ReminderKey {
   return hasSpecificTime ? "at" : "off";

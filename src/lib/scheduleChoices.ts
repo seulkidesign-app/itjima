@@ -10,15 +10,7 @@ export type WhenKey =
 
 export type TimeKey = "morning" | "afternoon" | "evening" | "custom";
 
-export type ReminderKey =
-  | "at"
-  | "5m"
-  | "10m"
-  | "30m"
-  | "1h"
-  | "2h"
-  | "1d"
-  | "off";
+export type ReminderKey = "at" | "5m" | "10m" | "30m" | "1h" | "1d" | "off";
 
 export type RepeatKey = "none" | RepeatRule;
 
@@ -141,8 +133,6 @@ export function reminderToMinutes(key: ReminderKey): number | null {
       return 30;
     case "1h":
       return 60;
-    case "2h":
-      return 120;
     case "1d":
       return 24 * 60;
   }
