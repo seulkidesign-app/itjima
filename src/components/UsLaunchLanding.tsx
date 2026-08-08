@@ -1,14 +1,5 @@
 import { Link } from "@tanstack/react-router";
-import {
-  ArrowRight,
-  BellRing,
-  CalendarDays,
-  Check,
-  CircleHelp,
-  MapPin,
-  MessageCircleMore,
-  Sparkles,
-} from "lucide-react";
+import { ArrowRight, BellRing, CalendarDays, Check, CircleHelp, MessageCircleMore } from "lucide-react";
 import { FormEvent, useEffect, useMemo, useState } from "react";
 import { LanguageToggle, useLang, useT } from "@/lib/i18n";
 import {
@@ -41,24 +32,22 @@ const DEMOS: DemoPreset[] = [
     reminderEn: "Reminder at 2:00 PM",
   },
   {
-    ko: "다음에 다이소 가면 건전지 사기",
-    en: "Next time I'm at Daiso, buy batteries",
-    titleKo: "건전지 사기",
-    titleEn: "Buy batteries",
-    metaKo: "다이소에 갈 때",
-    metaEn: "When you're at Daiso",
-    reminderKo: "장소 기반 기억",
-    reminderEn: "Place-based memory",
-  },
-  {
     ko: "이번 주말에 엄마한테 전화",
     en: "Call mom this weekend",
     titleKo: "엄마한테 전화",
     titleEn: "Call mom",
     metaKo: "이번 주말",
     metaEn: "This weekend",
-    reminderKo: "시간은 아직 미정",
-    reminderEn: "Time not set yet",
+    reminderKo: "날짜만 확인하면 돼요",
+    reminderEn: "Just needs a date check",
+  },
+  {
+    ko: "여권 갱신하기",
+    en: "Renew my passport",
+    titleKo: "여권 갱신하기",
+    titleEn: "Renew my passport",
+    metaKo: "날짜 없는 할 일",
+    metaEn: "Undated task",
   },
 ];
 
@@ -94,7 +83,7 @@ export function UsLaunchLanding() {
       {
         q: t("애매하게 말해도 되나요?", "What if what I say is ambiguous?"),
         a: t(
-          "잊지마는 모르는 정보를 멋대로 확정하지 않습니다. 일정에 꼭 필요한 정보만 한 번 확인합니다.",
+          "잊지마는 모르는 정보를 멋대로 확정하지 않습니다. 일정에 꼭 필요한 정보만 확인합니다.",
           "Itjima does not silently invent missing details. It asks only for the information needed to make the commitment usable.",
         ),
       },
@@ -108,11 +97,11 @@ export function UsLaunchLanding() {
       canonicalPath: "/about",
       locale: lang,
       title: isEnglish
-        ? "Itjima | Drop the thought. We'll remember it."
+        ? "Itjima | Just drop the thought"
         : "잊지마 Itjima | 생각났으면, 그냥 던져",
       description: isEnglish
-        ? "Drop a thought naturally. Itjima understands schedules, tasks, and memories, then brings them back when they matter."
-        : "일정도, 할 일도, 언젠가 필요한 기억도 말하듯 남기세요. 잊지마가 이해하고 필요한 순간에 다시 가져옵니다.",
+        ? "Capture schedules, tasks, and reminders in natural language. Itjima turns what you say into something you can actually act on later."
+        : "일정과 할 일을 말하듯 남기세요. 잊지마가 날짜와 시간을 이해하고, 애매한 부분만 확인해 실제로 다시 챙길 수 있게 정리합니다.",
     });
     injectJsonLd(
       "ld-launch-landing",
@@ -172,13 +161,20 @@ export function UsLaunchLanding() {
       </header>
 
       <main id="main-content" className="overflow-hidden">
-        <section className="px-4 pb-24 pt-16 sm:pt-24 lg:pb-32 lg:pt-28">
-          <div className="mx-auto max-w-[1180px]">
+        <section className="relative px-4 pb-24 pt-16 sm:pt-24 lg:pb-36 lg:pt-28">
+          <div aria-hidden className="pointer-events-none absolute inset-0 overflow-hidden text-[13px] font-bold text-black/[0.055] sm:text-[16px]">
+            <span className="absolute left-[5%] top-[17%] -rotate-6">엄마한테 전화</span>
+            <span className="absolute right-[8%] top-[22%] rotate-6">Renew passport</span>
+            <span className="absolute bottom-[16%] left-[8%] rotate-3">다음주 PT</span>
+            <span className="absolute bottom-[12%] right-[7%] -rotate-4">회의 준비</span>
+          </div>
+
+          <div className="relative mx-auto max-w-[1180px]">
             <div className="mx-auto max-w-[980px] text-center">
               <p className="mb-5 text-[12px] font-black uppercase tracking-[.17em] text-black/38">
-                {t("기억을 위한 가장 짧은 입력", "The shortest path from thought to memory")}
+                {t("생각에서 행동까지 가장 짧은 길", "The shortest path from thought to action")}
               </p>
-              <h1 className="text-balance text-[clamp(54px,10vw,104px)] font-black leading-[.92] tracking-[-.075em]">
+              <h1 className="text-balance text-[clamp(54px,10vw,108px)] font-black leading-[.9] tracking-[-.075em]">
                 {t("생각났으면,", "Had a thought?")}
                 <br />
                 <span className="relative inline-block">
@@ -186,17 +182,17 @@ export function UsLaunchLanding() {
                   <span className="absolute bottom-[.03em] left-[-.02em] right-[-.03em] h-[.16em] -rotate-1 rounded-full bg-[#f1db32]" aria-hidden />
                 </span>
               </h1>
-              <p className="mx-auto mt-7 max-w-[680px] text-balance text-[17px] leading-[1.7] text-black/55 sm:text-[20px]">
+              <p className="mx-auto mt-7 max-w-[650px] text-balance text-[17px] leading-[1.7] text-black/55 sm:text-[20px]">
                 {t(
-                  "일정도, 할 일도, 언젠가 필요한 기억도. 정리하지 말고 말하듯 남기세요. 필요한 순간까지 잊지마가 들고 있을게요.",
-                  "Schedules, tasks, or something you'll need someday. Don't organize it. Just say it. Itjima will hold onto it until it matters.",
+                  "정리부터 하지 마세요. 일정도, 할 일도 말하듯 남기면 잊지마가 필요한 정보만 정리합니다.",
+                  "Don't organize first. Drop schedules and tasks the way you'd say them, and Itjima pulls out only what matters.",
                 )}
               </p>
             </div>
 
             <div className="mx-auto mt-12 max-w-[840px] sm:mt-16">
-              <div className="rounded-[32px] border border-black/[0.08] bg-white p-3 shadow-[0_30px_90px_-35px_rgba(17,17,14,.28)] sm:p-4">
-                <form onSubmit={submitDemo} className="rounded-[24px] bg-[#f7f7f2] p-4 sm:p-5">
+              <div className="rounded-[34px] border border-black/[0.08] bg-white p-3 shadow-[0_32px_100px_-38px_rgba(17,17,14,.3)] sm:p-4">
+                <form onSubmit={submitDemo} className="rounded-[26px] bg-[#f7f7f2] p-4 sm:p-5">
                   <label htmlFor="landing-demo" className="sr-only">
                     {t("기억 남기기", "Leave a memory")}
                   </label>
@@ -209,20 +205,25 @@ export function UsLaunchLanding() {
                         setSubmitted(false);
                       }}
                       rows={2}
-                      className="min-h-[72px] flex-1 resize-none bg-transparent text-[19px] font-bold leading-[1.55] tracking-[-.025em] outline-none placeholder:text-black/25 sm:text-[22px]"
+                      className="min-h-[76px] flex-1 resize-none bg-transparent text-[19px] font-bold leading-[1.55] tracking-[-.025em] outline-none placeholder:text-black/25 sm:text-[22px]"
                       placeholder={t("무엇이든 남겨보세요…", "Drop anything here…")}
                     />
                     <button
                       type="submit"
                       aria-label={t("기억하기", "Remember this")}
-                      className="grid h-12 w-12 shrink-0 place-items-center rounded-full bg-[#11110e] text-white transition-transform hover:-translate-y-0.5"
+                      className="grid h-12 w-12 shrink-0 place-items-center rounded-full bg-[#11110e] text-white transition-transform duration-200 hover:-translate-y-0.5 active:translate-y-0"
                     >
                       <ArrowRight size={20} aria-hidden />
                     </button>
                   </div>
                 </form>
 
-                <div className={`grid transition-all duration-500 ${submitted ? "grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-0"}`}>
+                <div
+                  className={`grid transition-all duration-500 ${
+                    submitted ? "grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-0"
+                  }`}
+                  aria-live="polite"
+                >
                   <div className="overflow-hidden">
                     <div className="mx-1 mb-1 mt-3 rounded-[24px] border border-black/[0.07] bg-[#fffdf5] p-5 sm:p-6">
                       <div className="flex items-center gap-2 text-[12px] font-extrabold text-black/42">
@@ -232,16 +233,26 @@ export function UsLaunchLanding() {
                       <div className="mt-5 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
                         <div>
                           <h2 className="text-[25px] font-black tracking-[-.045em] sm:text-[30px]">
-                            {input.trim() === demoInput ? demoTitle : t("방금 남긴 기억", "Your new memory")}
+                            {input.trim() === demoInput ? demoTitle : t("방금 남긴 내용", "Your new thought")}
                           </h2>
                           <div className="mt-2 flex flex-wrap gap-x-4 gap-y-2 text-[14px] font-semibold text-black/53">
-                            <span className="inline-flex items-center gap-1.5"><CalendarDays size={15} aria-hidden />{input.trim() === demoInput ? demoMeta : t("잊지마가 내용을 확인합니다", "Itjima checks the details")}</span>
-                            {input.trim() === demoInput && demoReminder ? <span className="inline-flex items-center gap-1.5"><BellRing size={15} aria-hidden />{demoReminder}</span> : null}
+                            <span className="inline-flex items-center gap-1.5">
+                              <CalendarDays size={15} aria-hidden />
+                              {input.trim() === demoInput
+                                ? demoMeta
+                                : t("잊지마에서 내용을 확인합니다", "Itjima checks the details")}
+                            </span>
+                            {input.trim() === demoInput && demoReminder ? (
+                              <span className="inline-flex items-center gap-1.5">
+                                <BellRing size={15} aria-hidden />
+                                {demoReminder}
+                              </span>
+                            ) : null}
                           </div>
                         </div>
                         <Link
                           to="/"
-                          className="inline-flex min-h-11 shrink-0 items-center justify-center gap-2 rounded-full bg-[#f1db32] px-5 text-[13px] font-black no-underline"
+                          className="inline-flex min-h-11 shrink-0 items-center justify-center gap-2 rounded-full bg-[#f1db32] px-5 text-[13px] font-black no-underline transition-transform hover:-translate-y-0.5"
                         >
                           {t("잊지마에서 이어가기", "Continue in Itjima")}
                           <ArrowRight size={16} aria-hidden />
@@ -251,13 +262,18 @@ export function UsLaunchLanding() {
                   </div>
                 </div>
               </div>
+
               <div className="mt-4 flex flex-wrap justify-center gap-2">
                 {DEMOS.map((demo, index) => (
                   <button
                     key={demo.en}
                     type="button"
                     onClick={() => setDemoIndex(index)}
-                    className={`rounded-full border px-3.5 py-2 text-[12px] font-bold transition-colors ${index === demoIndex ? "border-black/15 bg-white text-black/70" : "border-transparent text-black/38 hover:text-black/65"}`}
+                    className={`rounded-full border px-3.5 py-2 text-[12px] font-bold transition-colors ${
+                      index === demoIndex
+                        ? "border-black/15 bg-white text-black/70"
+                        : "border-transparent text-black/38 hover:text-black/65"
+                    }`}
                   >
                     {lang === "en" ? demo.en : demo.ko}
                   </button>
@@ -267,124 +283,161 @@ export function UsLaunchLanding() {
           </div>
         </section>
 
-        <section className="border-y border-black/[0.06] bg-[#11110e] px-4 py-24 text-white sm:py-32">
+        <section className="border-y border-black/[0.06] bg-[#11110e] px-4 py-24 text-white sm:py-36">
           <div className="mx-auto max-w-[1180px] text-center">
             <p className="text-[12px] font-black uppercase tracking-[.16em] text-white/35">THE PROBLEM</p>
-            <h2 className="mx-auto mt-5 max-w-[920px] text-balance text-[clamp(46px,8vw,84px)] font-black leading-[.98] tracking-[-.065em]">
+            <h2 className="mx-auto mt-5 max-w-[920px] text-balance text-[clamp(46px,8vw,86px)] font-black leading-[.96] tracking-[-.065em]">
               {t('"아 맞다."를 줄여드립니다.', 'Fewer “oh, right.” moments.')}
             </h2>
-            <div className="mx-auto mt-12 grid max-w-[900px] gap-3 text-left sm:grid-cols-2">
-              {[t("나에게 카톡으로 보내둔 할 일", "That task you messaged to yourself"), t("언젠가 가고 싶어서 저장한 장소", "That place you saved for someday"), t("알람 만들기 귀찮아서 기억해둔 약속", "That plan you meant to remember without an alarm"), t("메모장 어딘가에 묻힌 생각", "That thought buried somewhere in Notes")].map((copy) => (
-                <div key={copy} className="rounded-[22px] border border-white/10 bg-white/[0.045] px-5 py-4 text-[15px] font-semibold text-white/68">
-                  {copy}
-                </div>
-              ))}
-            </div>
+            <p className="mx-auto mt-7 max-w-[650px] text-[17px] leading-[1.75] text-white/52">
+              {t(
+                "기억력이 부족해서가 아니라, 생각을 일정으로 만드는 과정이 너무 길어서 놓칠 때가 있으니까.",
+                "Not because your memory is bad. Because turning a passing thought into something actionable is still too much work.",
+              )}
+            </p>
           </div>
         </section>
 
-        <section className="px-4 py-24 sm:py-32">
+        <section className="px-4 py-24 sm:py-36">
           <div className="mx-auto max-w-[1180px]">
             <div className="grid items-start gap-12 lg:grid-cols-[.82fr_1.18fr] lg:gap-20">
               <div className="lg:sticky lg:top-28">
                 <p className="text-[12px] font-black uppercase tracking-[.16em] text-black/38">HOW IT WORKS</p>
-                <h2 className="mt-4 text-balance text-[clamp(42px,6vw,66px)] font-black leading-[1] tracking-[-.06em]">
-                  {t("생각 → 기억 → 다시.", "Thought → memory → back to you.")}
+                <h2 className="mt-4 text-balance text-[clamp(42px,6vw,68px)] font-black leading-[1] tracking-[-.06em]">
+                  {t("생각 → 이해 → 저장.", "Thought → understood → saved.")}
                 </h2>
                 <p className="mt-6 max-w-[480px] text-[17px] leading-[1.7] text-black/52">
-                  {t("날짜를 고르고, 시간을 입력하고, 알림 메뉴를 찾는 중간 과정을 줄였습니다.", "We removed the form-filling between having a thought and making it useful.")}
+                  {t(
+                    "필드를 채우는 대신, 먼저 생각을 남깁니다. 잊지마가 날짜·시간·알림을 이해하고 확인 가능한 형태로 바꿉니다.",
+                    "Instead of filling fields first, you drop the thought. Itjima turns dates, times, and reminders into something you can verify.",
+                  )}
                 </p>
               </div>
 
               <div className="space-y-5">
-                <StoryCard number="01" icon={<MessageCircleMore size={23} />} title={t("말하듯 남기고", "Say it naturally")} body={t("“다음 주 금요일 오후 6시 치과. 전날에도 알려줘.”", '“Dentist next Friday at 6. Remind me the day before.”')} />
-                <StoryCard number="02" icon={<Sparkles size={23} />} title={t("알아서 이해하고", "It understands the commitment")} body={t("치과 · 다음 주 금요일 · 오후 6:00 · 하루 전 알림", "Dentist · Next Friday · 6:00 PM · Reminder one day before")} highlighted />
-                <StoryCard number="03" icon={<BellRing size={23} />} title={t("필요한 순간에 다시", "It comes back when it matters")} body={t("저장보다 중요한 건 다시 떠올리는 일이니까.", "Because remembering later matters more than filing it perfectly now.")} />
+                <StoryCard
+                  number="01"
+                  icon={<MessageCircleMore size={23} aria-hidden />}
+                  title={t("말하듯 남기고", "Say it naturally")}
+                  body={t(
+                    "“다음 주 금요일 오후 6시 치과. 전날에도 알려줘.”",
+                    '“Dentist next Friday at 6. Remind me the day before.”',
+                  )}
+                />
+                <StoryCard
+                  number="02"
+                  icon={<CalendarDays size={23} aria-hidden />}
+                  title={t("확인 가능한 일정으로", "See what Itjima understood")}
+                  body={t(
+                    "치과 · 다음 주 금요일 · 오후 6:00 · 하루 전 알림",
+                    "Dentist · Next Friday · 6:00 PM · Reminder one day before",
+                  )}
+                  highlighted
+                />
+                <StoryCard
+                  number="03"
+                  icon={<BellRing size={23} aria-hidden />}
+                  title={t("다시 챙길 수 있게", "Ready for the reminder")}
+                  body={t(
+                    "저장한 뒤에도 일정과 알림 상태를 다시 확인하고 수정할 수 있습니다.",
+                    "After saving, the schedule and reminder remain visible and editable.",
+                  )}
+                />
               </div>
             </div>
           </div>
         </section>
 
-        <section className="border-y border-black/[0.06] bg-white px-4 py-24 sm:py-32">
+        <section className="border-y border-black/[0.06] bg-white px-4 py-24 sm:py-36">
           <div className="mx-auto grid max-w-[1180px] gap-12 lg:grid-cols-2 lg:items-center lg:gap-20">
             <div>
               <p className="text-[12px] font-black uppercase tracking-[.16em] text-black/38">TRUST</p>
-              <h2 className="mt-4 text-[clamp(44px,7vw,72px)] font-black leading-[1] tracking-[-.065em]">
+              <h2 className="mt-4 text-[clamp(44px,7vw,74px)] font-black leading-[1] tracking-[-.065em]">
                 {t("아는 척하지 않아요.", "It doesn't pretend to know.")}
               </h2>
               <p className="mt-6 max-w-[530px] text-[17px] leading-[1.75] text-black/54">
-                {t("애매하면 마음대로 시간을 만들지 않습니다. 일정에 꼭 필요한 것만 한 번 물어봅니다.", "When something is ambiguous, Itjima does not silently invent the answer. It asks for just the missing piece.")}
+                {t(
+                  "애매하면 시간을 만들어내지 않습니다. 일정에 필요한 정보만 짧게 확인합니다.",
+                  "When something is ambiguous, Itjima does not silently invent the answer. It asks for the missing piece.",
+                )}
               </p>
             </div>
+
             <div className="rounded-[30px] border border-black/[0.07] bg-[#f7f7f2] p-4 sm:p-6">
               <div className="ml-auto max-w-[80%] rounded-[20px_20px_6px_20px] bg-[#f1db32] px-4 py-3 text-[15px] font-bold">
                 {t("퇴근하고 치과", "Dentist after work")}
               </div>
               <div className="mt-4 max-w-[88%] rounded-[24px] border border-black/[0.07] bg-white p-5">
-                <div className="flex items-center gap-2 text-[12px] font-black text-black/42"><CircleHelp size={15} />{t("한 가지만 확인할게요", "One quick check")}</div>
-                <p className="mt-3 text-[20px] font-black tracking-[-.035em]">{t("퇴근은 몇 시쯤인가요?", "What time do you usually leave work?")}</p>
+                <div className="flex items-center gap-2 text-[12px] font-black text-black/42">
+                  <CircleHelp size={15} aria-hidden />
+                  {t("한 가지만 확인할게요", "One quick check")}
+                </div>
+                <p className="mt-3 text-[20px] font-black tracking-[-.035em]">
+                  {t("퇴근은 몇 시쯤인가요?", "What time do you usually leave work?")}
+                </p>
                 <div className="mt-5 flex flex-wrap gap-2">
-                  {[t("오후 6시", "6 PM"), t("오후 7시", "7 PM"), t("직접 입력", "Enter time")].map((option) => <span key={option} className="rounded-full border border-black/10 bg-[#f7f7f2] px-4 py-2.5 text-[13px] font-bold">{option}</span>)}
+                  {[t("오후 6시", "6 PM"), t("오후 7시", "7 PM"), t("직접 입력", "Enter time")].map(
+                    (option) => (
+                      <span
+                        key={option}
+                        className="rounded-full border border-black/10 bg-[#f7f7f2] px-4 py-2.5 text-[13px] font-bold"
+                      >
+                        {option}
+                      </span>
+                    ),
+                  )}
                 </div>
               </div>
             </div>
           </div>
         </section>
 
-        <section className="bg-[#fff6a7] px-4 py-24 sm:py-32">
-          <div className="mx-auto max-w-[1180px]">
-            <div className="mx-auto max-w-[860px] text-center">
-              <p className="text-[12px] font-black uppercase tracking-[.16em] text-black/38">BEYOND THE CALENDAR</p>
-              <h2 className="mt-4 text-balance text-[clamp(44px,8vw,80px)] font-black leading-[.98] tracking-[-.065em]">
-                {t("모든 기억에 날짜가 있는 건 아니니까.", "Not every memory belongs on a date.")}
-              </h2>
-              <p className="mx-auto mt-6 max-w-[660px] text-[17px] leading-[1.75] text-black/55">
-                {t("언젠가 필요한 생각도 일정에 억지로 끼워 넣지 마세요. 잊지마는 다시 꺼낼 맥락까지 함께 기억하는 제품을 만들고 있습니다.", "Don't force someday-thoughts into calendar slots. Itjima is being built to remember the context that makes a memory useful again.")}
-              </p>
-            </div>
-            <div className="mx-auto mt-14 grid max-w-[900px] gap-4 sm:grid-cols-2">
-              <MemoryCard icon={<MapPin size={20} />} input={t("다음에 다이소 가면 건전지", "Next time I'm at Daiso, batteries")} output={t("다이소에 갈 때 다시", "Bring it back at Daiso")} />
-              <MemoryCard icon={<CalendarDays size={20} />} input={t("제주 가면 그 카페 가보기", "Try that cafe when I'm in Jeju")} output={t("제주에서 다시", "Bring it back in Jeju")} />
-            </div>
-          </div>
-        </section>
-
-        <section className="px-4 py-28 sm:py-40">
+        <section className="bg-[#fff6a7] px-4 py-24 sm:py-36">
           <div className="mx-auto max-w-[980px] text-center">
-            <p className="text-[12px] font-black uppercase tracking-[.16em] text-black/38">REDISCOVERY</p>
-            <h2 className="mt-5 text-balance text-[clamp(50px,9vw,92px)] font-black leading-[.94] tracking-[-.07em]">
-              {t("생각은 사라져도 됩니다.", "The thought can disappear.")}
-              <br />
-              <span className="text-black/28">{t("필요할 때 다시 가져올게요.", "We'll bring it back when it matters.")}</span>
+            <p className="text-[12px] font-black uppercase tracking-[.16em] text-black/38">NO DATE REQUIRED</p>
+            <h2 className="mt-4 text-balance text-[clamp(44px,8vw,80px)] font-black leading-[.98] tracking-[-.065em]">
+              {t("모든 할 일에 날짜가 필요한 건 아니니까.", "Not every task needs a date yet.")}
             </h2>
-            <div className="mx-auto mt-16 max-w-[620px] rounded-[28px] border border-black/[0.07] bg-white p-5 text-left shadow-[0_26px_70px_-36px_rgba(17,17,14,.28)] sm:p-7">
-              <div className="flex items-center justify-between gap-4">
-                <span className="text-[12px] font-black text-black/35">ITJIMA</span>
-                <span className="text-[12px] font-semibold text-black/35">7 {t("개월 전", "months ago")}</span>
-              </div>
-              <p className="mt-5 text-[13px] font-bold text-black/44">{t("예전에 남긴 기억이 있어요", "You left this for yourself")}</p>
-              <p className="mt-2 text-[22px] font-black tracking-[-.04em]">{t("제주 가면 여기 가보기", "Try this place when I'm in Jeju")}</p>
+            <p className="mx-auto mt-6 max-w-[660px] text-[17px] leading-[1.75] text-black/55">
+              {t(
+                "‘여권 갱신하기’처럼 아직 날짜가 없는 일도 그대로 남겨둘 수 있습니다. 필요할 때 일정으로 구체화하세요.",
+                "A task like “renew my passport” can stay undated. Add a date only when you're ready to commit.",
+              )}
+            </p>
+            <div className="mx-auto mt-14 max-w-[620px] rounded-[28px] border border-black/[0.08] bg-white p-6 text-left sm:p-7">
+              <span className="text-[12px] font-black text-black/38">TASK</span>
+              <p className="mt-7 text-[24px] font-black tracking-[-.04em]">{t("여권 갱신하기", "Renew my passport")}</p>
+              <div className="my-5 h-px bg-black/[0.07]" />
+              <p className="text-[13px] font-bold text-black/50">{t("날짜 없이 나중 할 일로", "Keep it as an undated task")}</p>
             </div>
           </div>
         </section>
 
-        <section className="border-t border-black/[0.06] px-4 py-24 sm:py-32">
-          <div className="mx-auto max-w-[1180px]">
-            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-              <FeatureCard title={t("말하듯 남기기", "Capture naturally")} body={t("필드를 채우기 전에 생각부터 남기세요.", "Capture the thought before filling fields.")} />
-              <FeatureCard title={t("애매함만 확인", "Clarify only ambiguity")} body={t("모르는 건 추측하지 않고 필요한 것만 묻습니다.", "It asks instead of silently guessing.")} />
-              <FeatureCard title={t("정해진 건 명확하게", "Clear when committed")} body={t("확정된 일정은 실제 캘린더처럼 관리합니다.", "Committed plans stay clear and manageable.")} />
-              <FeatureCard title={t("날짜 없는 기억도", "Memories without dates")} body={t("언젠가 필요할 생각까지 한곳에 둡니다.", "Keep the thoughts you'll need someday, too.")} />
-            </div>
+        <section className="px-4 py-28 sm:py-44">
+          <div className="mx-auto max-w-[980px] text-center">
+            <p className="text-[12px] font-black uppercase tracking-[.16em] text-black/38">ITJIMA</p>
+            <h2 className="mt-5 text-balance text-[clamp(50px,9vw,94px)] font-black leading-[.94] tracking-[-.07em]">
+              {t("정리는 잊지마가 할게요.", "Let Itjima handle the organizing.")}
+              <br />
+              <span className="text-black/28">{t("당신은 생각만 남기세요.", "You just drop the thought.")}</span>
+            </h2>
           </div>
         </section>
 
-        <section className="bg-[#11110e] px-4 py-28 text-white sm:py-36">
+        <section className="bg-[#11110e] px-4 py-28 text-white sm:py-40">
           <div className="mx-auto max-w-[940px] text-center">
-            <h2 className="text-[clamp(60px,11vw,112px)] font-black leading-[.9] tracking-[-.075em]">{t("생각났어?", "Thought of something?")}</h2>
-            <p className="mx-auto mt-7 max-w-[560px] text-[17px] leading-[1.7] text-white/52">{t("잊기 전에 하나 남겨보세요. 정리는 잊지마가 할게요.", "Drop it before it disappears. Itjima can handle the organizing.")}</p>
-            <Link to="/" className="mt-9 inline-flex min-h-[58px] items-center justify-center gap-2 rounded-full bg-[#f1db32] px-7 text-[15px] font-black text-[#11110e] no-underline transition-transform hover:-translate-y-1">
-              {t("첫 기억 남기기", "Leave your first memory")}
+            <h2 className="text-balance text-[clamp(58px,11vw,112px)] font-black leading-[.9] tracking-[-.075em]">
+              {t("생각났어?", "Thought of something?")}
+            </h2>
+            <p className="mx-auto mt-7 max-w-[560px] text-[17px] leading-[1.7] text-white/52">
+              {t("잊기 전에 하나 남겨보세요.", "Drop it before it disappears.")}
+            </p>
+            <Link
+              to="/"
+              className="group mt-9 inline-flex min-h-[58px] items-center justify-center gap-2 rounded-full bg-[#f1db32] px-7 text-[15px] font-black text-[#11110e] no-underline transition-transform hover:-translate-y-1"
+            >
+              <span className="group-hover:hidden">{t("첫 기억 남기기", "Leave your first memory")}</span>
+              <span className="hidden group-hover:inline">{t("잊기 전에.", "Before you forget.")}</span>
               <ArrowRight size={18} aria-hidden />
             </Link>
           </div>
@@ -394,43 +447,38 @@ export function UsLaunchLanding() {
       <footer className="border-t border-white/8 bg-[#11110e] px-4 py-8 text-white">
         <div className="mx-auto flex max-w-[1180px] flex-col gap-4 text-[12px] font-semibold text-white/38 sm:flex-row sm:items-center sm:justify-between">
           <span>© 2026 잊지마 Itjima</span>
-          <span>{t("생각은 가볍게. 기억은 오래.", "Light thoughts. Lasting memory.")}</span>
+          <span>{t("생각은 가볍게. 기억은 오래.", "Think less. Remember better.")}</span>
         </div>
       </footer>
     </div>
   );
 }
 
-function StoryCard({ number, icon, title, body, highlighted = false }: { number: string; icon: React.ReactNode; title: string; body: string; highlighted?: boolean }) {
+function StoryCard({
+  number,
+  icon,
+  title,
+  body,
+  highlighted = false,
+}: {
+  number: string;
+  icon: React.ReactNode;
+  title: string;
+  body: string;
+  highlighted?: boolean;
+}) {
   return (
-    <article className={`rounded-[28px] border p-6 sm:p-8 ${highlighted ? "border-[#d2bc19]/35 bg-[#fff7ad]" : "border-black/[0.07] bg-white"}`}>
+    <article
+      className={`rounded-[28px] border p-6 sm:p-8 ${
+        highlighted ? "border-[#d2bc19]/35 bg-[#fff7ad]" : "border-black/[0.07] bg-white"
+      }`}
+    >
       <div className="flex items-center justify-between gap-4 text-black/38">
         <span className="text-[11px] font-black tracking-[.14em]">{number}</span>
         {icon}
       </div>
       <h3 className="mt-10 text-[26px] font-black tracking-[-.045em]">{title}</h3>
       <p className="mt-3 text-[15px] font-semibold leading-[1.65] text-black/50">{body}</p>
-    </article>
-  );
-}
-
-function MemoryCard({ icon, input, output }: { icon: React.ReactNode; input: string; output: string }) {
-  return (
-    <article className="rounded-[28px] border border-black/[0.08] bg-white p-6 text-left sm:p-7">
-      <div className="flex items-center gap-2 text-[12px] font-black text-black/38">{icon} MEMORY</div>
-      <p className="mt-7 text-[20px] font-black tracking-[-.035em]">“{input}”</p>
-      <div className="my-5 h-px bg-black/[0.07]" />
-      <p className="text-[13px] font-bold text-black/50">→ {output}</p>
-    </article>
-  );
-}
-
-function FeatureCard({ title, body }: { title: string; body: string }) {
-  return (
-    <article className="min-h-[220px] rounded-[26px] border border-black/[0.07] bg-white p-6">
-      <div className="grid h-9 w-9 place-items-center rounded-full bg-[#f1db32]"><Check size={16} /></div>
-      <h3 className="mt-10 text-[20px] font-black tracking-[-.04em]">{title}</h3>
-      <p className="mt-3 text-[14px] font-semibold leading-[1.65] text-black/48">{body}</p>
     </article>
   );
 }
