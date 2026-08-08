@@ -15,7 +15,7 @@ test("landing and app use the pre-brand UI while Home motion stays active", asyn
   await page.goto("/about?lang=ko");
 
   await expect(
-    page.getByRole("heading", { name: /말하듯 남기면.*일정이 됩니다/ }),
+    page.getByRole("heading", { name: /생각났으면.*그냥 던져/ }),
   ).toBeVisible();
   await expect(page.getByText("IJ", { exact: true }).first()).toBeVisible();
   await expect(page.locator(".marketing-landing")).toHaveCount(0);
