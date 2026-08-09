@@ -36,7 +36,7 @@ for (const viewport of [
     await page.goto("/");
 
     const prompt = page.getByTestId("pwa-install-home-bar");
-    const tools = page.getByRole("button", { name: "Attachment tools" });
+    const tools = page.getByRole("button", { name: "첨부 도구" });
     await expect(prompt).toBeVisible();
     await expect(tools).toBeVisible();
 
