@@ -9,7 +9,9 @@ export const BRAND = {
   landingPath: "/",
   landingUrl: "https://itjima.app/",
   logoUrl: "https://itjima.app/favicon.svg",
-  ogImageUrl: "https://itjima.app/og-card.svg",
+  ogImageUrl: "https://itjima.app/og-itjima-schedule-v2.png",
+  ogImageAlt:
+    "잊지마에서 ‘내일 3시 치과’를 일정으로 정리하고 오전·오후만 확인하는 예시",
   logoAlt: "잊지마(Itjima) 자연어 일정 캡처 도구",
   taglineKo: "말하듯 남기면 일정이 돼요.",
   taglineEn: "Say it naturally. Turn it into a schedule.",
@@ -34,7 +36,10 @@ export const BRAND = {
   releaseNotes: {
     version: "Beta",
     date: "2026-07-31",
-    title: { ko: "자연어 일정 캡처 베타", en: "Natural-language schedule beta" },
+    title: {
+      ko: "자연어 일정 캡처 베타",
+      en: "Natural-language schedule beta",
+    },
     highlights: {
       ko: [
         "말하듯 일정과 할 일 남기기",

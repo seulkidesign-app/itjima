@@ -12,51 +12,41 @@ import {
 export type Lang = "ko" | "en";
 
 export const LANGUAGE_STORAGE_KEY = "itjima_lang";
-
-export function languageFromBrowser(
-  languages: readonly string[] | null | undefined,
-): Lang {
-  const normalized = (languages ?? [])
-    .map((value) => value.trim().toLowerCase())
-    .filter(Boolean);
-  return normalized.some(
-    (value) => value === "ko" || value.startsWith("ko-"),
-  )
-    ? "ko"
-    : "en";
-}
+export const DEFAULT_LANGUAGE: Lang = "ko";
 
 export function languageFromSearch(search: string): Lang | null {
   const value = new URLSearchParams(search).get("lang")?.toLowerCase();
   return value === "ko" || value === "en" ? value : null;
 }
 
-function detectInitial(): Lang {
-  if (typeof window === "undefined") return "en";
-
-  const requested = languageFromSearch(window.location.search);
+export function resolveInitialLanguage(
+  search: string,
+  stored: string | null | undefined,
+): Lang {
+  const requested = languageFromSearch(search);
   if (requested) return requested;
+  if (stored === "ko" || stored === "en") return stored;
+  return DEFAULT_LANGUAGE;
+}
 
+function detectInitial(): Lang {
+  if (typeof window === "undefined") return DEFAULT_LANGUAGE;
+
+  let stored: string | null = null;
   try {
-    const stored = window.localStorage.getItem(LANGUAGE_STORAGE_KEY);
-    if (stored === "ko" || stored === "en") return stored;
+    stored = window.localStorage.getItem(LANGUAGE_STORAGE_KEY);
   } catch {
-    // Browser language is still a safe fallback.
+    // Use the Korean product default when storage is unavailable.
   }
 
-  const languages =
-    typeof navigator === "undefined"
-      ? []
-      : navigator.languages?.length
-        ? navigator.languages
-        : [navigator.language];
-  return languageFromBrowser(languages);
+  return resolveInitialLanguage(window.location.search, stored);
 }
 
 function reflectLanguageInUrl(lang: Lang) {
   if (typeof window === "undefined") return;
   const url = new URL(window.location.href);
-  if (!url.pathname.startsWith("/about") && !url.searchParams.has("lang")) return;
+  if (!url.pathname.startsWith("/about") && !url.searchParams.has("lang"))
+    return;
   url.searchParams.set("lang", lang);
   window.history.replaceState(window.history.state, "", url);
 }

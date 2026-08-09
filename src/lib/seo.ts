@@ -155,13 +155,17 @@ export function applyLandingSeo(options: LandingSeoOptions = {}) {
   );
   upsertMeta("og:site_name", BRAND.displayEn, "property");
   upsertMeta("og:image", BRAND.ogImageUrl, "property");
-  upsertMeta("og:image:alt", BRAND.logoAlt, "property");
+  upsertMeta("og:image:secure_url", BRAND.ogImageUrl, "property");
+  upsertMeta("og:image:type", "image/png", "property");
+  upsertMeta("og:image:width", "1200", "property");
+  upsertMeta("og:image:height", "630", "property");
+  upsertMeta("og:image:alt", BRAND.ogImageAlt, "property");
 
   upsertMeta("twitter:card", "summary_large_image");
   upsertMeta("twitter:title", title);
   upsertMeta("twitter:description", description);
   upsertMeta("twitter:image", BRAND.ogImageUrl);
-  upsertMeta("twitter:image:alt", BRAND.logoAlt);
+  upsertMeta("twitter:image:alt", BRAND.ogImageAlt);
 }
 
 export function landingOrganizationLd(locale: Lang = "ko") {
@@ -300,9 +304,7 @@ export function landingSoftwareApplicationLd(locale: Lang = "ko") {
   };
 }
 
-export function landingFaqLd(
-  items: { question: string; answer: string }[],
-) {
+export function landingFaqLd(items: { question: string; answer: string }[]) {
   return {
     "@type": "FAQPage",
     "@id": `${SITE_URL}/about#faq`,
