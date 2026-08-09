@@ -1,8 +1,5 @@
 import { afterEach, describe, expect, it } from "vitest";
-import {
-  applyLandingSeo,
-  landingStructuredDataGraph,
-} from "@/lib/seo";
+import { applyLandingSeo, landingStructuredDataGraph } from "@/lib/seo";
 
 afterEach(() => {
   document.head.innerHTML = "";
@@ -34,6 +31,12 @@ describe("launch SEO localization", () => {
     expect(document.documentElement.lang).toBe("ko");
     expect(document.title).toContain("말하듯 남기는 일정 캡처");
     expect(metaContent('meta[property="og:locale"]')).toBe("ko_KR");
+    expect(metaContent('meta[property="og:image"]')).toBe(
+      "https://itjima.app/og-itjima-schedule-v2.png",
+    );
+    expect(metaContent('meta[property="og:image:type"]')).toBe("image/png");
+    expect(metaContent('meta[property="og:image:width"]')).toBe("1200");
+    expect(metaContent('meta[property="og:image:height"]')).toBe("630");
   });
 
   it("provides alternate-language links", () => {
