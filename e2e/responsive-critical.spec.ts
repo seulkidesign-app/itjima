@@ -263,29 +263,36 @@ test("[critical] authentication form exposes labels, validation, and reversible 
   expect(errors).toEqual([]);
 });
 
-test("[critical] bilingual launch page has working CTAs and no layout overflow", async ({
+test("[critical] bilingual launch page demonstrates capture and has no layout overflow", async ({
   page,
 }) => {
   const errors = collectPageErrors(page);
   await page.goto("/about?lang=en");
 
   await expect(
-    page.getByRole("heading", { name: /Say the plan.*It becomes a schedule/i }),
+    page.getByRole("heading", { name: /Had a thought.*Just drop it/i }),
   ).toBeVisible();
-  await expect(page.getByRole("link", { name: "Capture your first plan" })).toBeVisible();
-  await expect(page.getByRole("link", { name: "See how it works" })).toHaveAttribute(
-    "href",
-    "#how",
-  );
+  const demo = page.getByLabel("Leave a memory");
+  await expect(demo).toBeVisible();
+  await expect(demo).toHaveValue(/Dentist tomorrow at 3/);
+  await page.getByRole("button", { name: "Remember this" }).click();
+  await expect(page.getByText("Got it", { exact: true })).toBeVisible();
+  await expect(page.getByRole("link", { name: "Continue in Itjima" })).toBeVisible();
   await expectNoHorizontalOverflow(page);
 
   await page.getByRole("button", { name: "Select language" }).click();
   await page.getByRole("option", { name: "한국어", exact: true }).click();
   await expect(page).toHaveURL(/lang=ko/);
-  await expect(page.getByRole("link", { name: "첫 일정 남기기" })).toBeVisible();
+  await expect(
+    page.getByRole("heading", { name: /생각났으면.*그냥 던져/ }),
+  ).toBeVisible();
+  await expect(page.getByLabel("기억 남기기")).toBeVisible();
 
-  await page.getByRole("link", { name: "첫 일정 남기기" }).click();
-  await expect(page).toHaveURL(/\/?(?:\?lang=ko)?$/);
+  await page
+    .getByRole("banner")
+    .getByRole("link", { name: "앱 열기", exact: true })
+    .click();
+  await expect(page).toHaveURL(/\/(?:\?lang=ko)?$/);
   await expect(page.locator("#capture-input")).toBeVisible();
 
   expect(errors).toEqual([]);
