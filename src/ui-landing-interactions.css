@@ -1,0 +1,421 @@
+/* Landing interaction layer
+ * Restores the motion language from the branded landing experiment without
+ * changing the reverted layout, color palette, or typography.
+ */
+
+.landing-motion {
+  --landing-motion-spring: cubic-bezier(0.18, 0.92, 0.24, 1);
+  --landing-motion-settle: cubic-bezier(0.22, 0.72, 0, 1);
+  --landing-motion-press: cubic-bezier(0.2, 0.8, 0.2, 1);
+  overflow-x: clip;
+}
+
+.landing-motion-header {
+  transition:
+    background-color 180ms ease,
+    box-shadow 180ms ease;
+}
+
+.landing-motion-wordmark,
+.landing-motion-header-cta,
+.landing-motion-primary-cta,
+.landing-motion-secondary-cta {
+  transform: translateZ(0);
+  transition:
+    transform 180ms var(--landing-motion-spring),
+    box-shadow 180ms ease,
+    background-color 180ms ease;
+}
+
+.landing-motion-wordmark > span:first-child {
+  transform-origin: 50% 58%;
+}
+
+.landing-motion-header-cta,
+.landing-motion-primary-cta {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+}
+
+.landing-motion-header-cta::after,
+.landing-motion-primary-cta::after {
+  position: absolute;
+  inset: 0;
+  content: "";
+  pointer-events: none;
+  background: linear-gradient(
+    110deg,
+    transparent 20%,
+    rgba(255, 255, 255, 0.5) 48%,
+    transparent 76%
+  );
+  transform: translateX(-135%);
+  animation: landing-cta-shine 5.5s ease-in-out infinite 1.4s;
+}
+
+.landing-motion-demo-wrap {
+  perspective: 1200px;
+}
+
+.landing-motion-demo-shell {
+  transform: rotateY(-2.5deg) rotateX(1deg);
+  transform-style: preserve-3d;
+  transition:
+    transform 420ms var(--landing-motion-spring),
+    box-shadow 420ms ease;
+}
+
+.landing-motion-demo-glow {
+  animation: landing-glow-breathe 4.2s ease-in-out infinite;
+}
+
+.landing-motion-confirm {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+}
+
+.landing-motion-confirm::after {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 8px;
+  height: 8px;
+  border: 1px solid rgba(20, 20, 16, 0.34);
+  border-radius: 999px;
+  content: "";
+  pointer-events: none;
+  animation: landing-confirm-ring 3.8s ease-out infinite 2.15s;
+}
+
+.landing-motion-adjust {
+  transition:
+    transform 160ms var(--landing-motion-press),
+    background-color 160ms ease;
+}
+
+.landing-motion-lift,
+.landing-motion-final {
+  transition:
+    transform 240ms var(--landing-motion-spring),
+    border-color 240ms ease,
+    box-shadow 240ms ease;
+}
+
+.landing-motion-proof > div > div {
+  transition: background-color 180ms ease;
+}
+
+.landing-motion-faq details {
+  transition: background-color 220ms ease;
+}
+
+.landing-motion-faq summary {
+  transition:
+    padding 180ms var(--landing-motion-spring),
+    color 180ms ease;
+}
+
+.landing-motion-faq details[open] {
+  background: linear-gradient(90deg, rgba(255, 212, 59, 0.08), transparent 72%);
+}
+
+.landing-motion-faq details[open] summary {
+  padding-left: 10px;
+}
+
+/* The class is attached in a layout effect, so entrance states are applied
+   before the first painted frame while no-JS content remains fully visible. */
+.landing-motion[data-motion="ready"] .landing-motion-eyebrow {
+  animation: landing-rise-in 700ms var(--landing-motion-spring) both;
+}
+
+.landing-motion[data-motion="ready"] .landing-motion-title {
+  animation: landing-rise-in 820ms var(--landing-motion-spring) both 80ms;
+}
+
+.landing-motion[data-motion="ready"] .landing-motion-highlight {
+  transform-origin: left center;
+  animation: landing-highlight-draw 760ms var(--landing-motion-spring) both
+    520ms;
+}
+
+.landing-motion[data-motion="ready"] .landing-motion-description {
+  animation: landing-rise-in 780ms var(--landing-motion-spring) both 160ms;
+}
+
+.landing-motion[data-motion="ready"] .landing-motion-actions {
+  animation: landing-rise-in 780ms var(--landing-motion-spring) both 240ms;
+}
+
+.landing-motion[data-motion="ready"] .landing-motion-demo-wrap {
+  animation: landing-demo-arrive 920ms var(--landing-motion-spring) both 160ms;
+}
+
+.landing-motion[data-motion="ready"] .landing-motion-message {
+  transform-origin: right bottom;
+  animation: landing-message-pop 540ms var(--landing-motion-spring) both 650ms;
+}
+
+.landing-motion[data-motion="ready"] .landing-motion-result {
+  transform-origin: left top;
+  animation: landing-card-form 700ms var(--landing-motion-spring) both 980ms;
+}
+
+.landing-motion[data-motion="ready"] .landing-motion-confirm,
+.landing-motion[data-motion="ready"] .landing-motion-adjust {
+  animation: landing-control-settle 560ms var(--landing-motion-spring) both
+    1.38s;
+}
+
+.landing-motion[data-motion="ready"] .landing-motion-input {
+  animation: landing-control-settle 560ms var(--landing-motion-spring) both
+    1.56s;
+}
+
+.landing-motion[data-motion="ready"] [data-landing-reveal] {
+  opacity: 0;
+  transform: translateY(26px);
+  transition:
+    opacity 560ms ease var(--landing-delay, 0ms),
+    transform 680ms var(--landing-motion-settle) var(--landing-delay, 0ms);
+}
+
+.landing-motion[data-motion="ready"]
+  [data-landing-reveal][data-landing-visible="true"] {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.landing-motion[data-motion="reduced"] [data-landing-reveal] {
+  opacity: 1;
+  transform: none;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .landing-motion-wordmark:hover > span:first-child {
+    animation: landing-mark-nudge 600ms var(--landing-motion-spring);
+  }
+
+  .landing-motion-header-cta:hover,
+  .landing-motion-primary-cta:hover,
+  .landing-motion-secondary-cta:hover {
+    transform: translateY(-2px);
+  }
+
+  .landing-motion-header-cta:hover {
+    box-shadow: 0 15px 32px -15px rgba(20, 20, 16, 0.52);
+  }
+
+  .landing-motion-primary-cta:hover {
+    box-shadow: 0 20px 42px -16px rgba(126, 96, 0, 0.44);
+  }
+
+  .landing-motion-secondary-cta:hover {
+    background-color: #fff;
+    box-shadow: 0 18px 48px -28px rgba(20, 20, 16, 0.32);
+  }
+
+  .landing-motion-demo-wrap:hover .landing-motion-demo-shell {
+    transform: rotateY(0deg) rotateX(0deg) translateY(-4px);
+    box-shadow: 0 42px 110px rgba(20, 20, 16, 0.2);
+  }
+
+  .landing-motion-lift:hover {
+    transform: translateY(-6px);
+    border-color: rgba(20, 20, 16, 0.16);
+    box-shadow: 0 30px 74px -34px rgba(20, 20, 16, 0.32);
+  }
+
+  .landing-motion-lift-dark:hover {
+    border-color: rgba(255, 212, 59, 0.34);
+    box-shadow: 0 30px 74px -34px rgba(0, 0, 0, 0.82);
+  }
+
+  .landing-motion-proof > div > div:hover {
+    background-color: rgba(255, 212, 59, 0.08);
+  }
+
+  .landing-motion-adjust:hover {
+    transform: translateY(-1px);
+    background-color: #fff;
+  }
+}
+
+.landing-motion-header-cta:active,
+.landing-motion-primary-cta:active,
+.landing-motion-secondary-cta:active,
+.landing-motion-adjust:active {
+  transform: translateY(1px) scale(0.96);
+}
+
+@keyframes landing-rise-in {
+  from {
+    opacity: 0;
+    transform: translateY(18px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes landing-highlight-draw {
+  from {
+    transform: scaleX(0) rotate(-1deg);
+  }
+  to {
+    transform: scaleX(1) rotate(-1deg);
+  }
+}
+
+@keyframes landing-demo-arrive {
+  from {
+    opacity: 0;
+    transform: translateY(28px) scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes landing-glow-breathe {
+  0%,
+  100% {
+    opacity: 0.62;
+    transform: scale(0.96);
+  }
+  50% {
+    opacity: 0.9;
+    transform: scale(1.08);
+  }
+}
+
+@keyframes landing-message-pop {
+  from {
+    opacity: 0;
+    transform: translateY(12px) scale(0.9);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes landing-card-form {
+  from {
+    opacity: 0;
+    filter: blur(4px);
+    transform: translateY(18px) scale(0.94);
+  }
+  to {
+    opacity: 1;
+    filter: blur(0);
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes landing-control-settle {
+  from {
+    opacity: 0;
+    transform: translateY(10px) scale(0.96);
+  }
+  65% {
+    opacity: 1;
+    transform: translateY(-2px) scale(1.01);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes landing-confirm-ring {
+  0%,
+  20% {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(0.4);
+  }
+  28% {
+    opacity: 1;
+  }
+  48% {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(11);
+  }
+  100% {
+    opacity: 0;
+  }
+}
+
+@keyframes landing-cta-shine {
+  0%,
+  65%,
+  100% {
+    transform: translateX(-135%);
+  }
+  78% {
+    transform: translateX(135%);
+  }
+}
+
+@keyframes landing-mark-nudge {
+  0%,
+  100% {
+    transform: rotate(0deg) scale(1);
+  }
+  35% {
+    transform: rotate(-5deg) scale(1.05);
+  }
+  65% {
+    transform: rotate(3deg) scale(1.02);
+  }
+}
+
+@media (max-width: 1023px) {
+  .landing-motion-demo-shell {
+    transform: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .landing-motion *,
+  .landing-motion *::before,
+  .landing-motion *::after {
+    scroll-behavior: auto !important;
+  }
+
+  .landing-motion-eyebrow,
+  .landing-motion-title,
+  .landing-motion-highlight,
+  .landing-motion-description,
+  .landing-motion-actions,
+  .landing-motion-demo-wrap,
+  .landing-motion-demo-glow,
+  .landing-motion-message,
+  .landing-motion-result,
+  .landing-motion-confirm,
+  .landing-motion-adjust,
+  .landing-motion-input,
+  .landing-motion-header-cta::after,
+  .landing-motion-primary-cta::after,
+  .landing-motion-confirm::after {
+    animation: none !important;
+  }
+
+  .landing-motion-demo-shell,
+  .landing-motion-wordmark,
+  .landing-motion-header-cta,
+  .landing-motion-primary-cta,
+  .landing-motion-secondary-cta,
+  .landing-motion-lift,
+  .landing-motion-final,
+  .landing-motion-faq summary,
+  .landing-motion [data-landing-reveal] {
+    opacity: 1 !important;
+    transform: none !important;
+    transition-duration: 0.01ms !important;
+  }
+}

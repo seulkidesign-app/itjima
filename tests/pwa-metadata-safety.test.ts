@@ -51,9 +51,10 @@ describe("PWA product metadata safety", () => {
   });
 
   it("keeps search and share descriptions aligned with the focused promise", () => {
-    expect(html).toContain("자연어로 말하듯 남기면");
+    expect(html).toContain("‘내일 3시 치과’처럼 말하거나 적어보세요");
     expect(html).toContain("애매한 부분만 확인");
-    expect(html).toContain("말하듯 남기는 일정 캡처");
+    expect(html).toContain("말로 쓰는 일정 관리 앱");
+    expect(html).toContain("대충 말해도 일정이 돼요");
     expect(html).toContain("og-itjima-schedule-v2.png");
     expect(html).toContain('property="og:image:type" content="image/png"');
     expect(html).toContain('property="og:image:width" content="1200"');

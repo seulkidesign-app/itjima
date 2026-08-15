@@ -15,19 +15,34 @@ test("landing and app use the pre-brand UI while Home motion stays active", asyn
   await page.goto("/about?lang=ko");
 
   await expect(
-    page.getByRole("heading", { name: /말하듯 남기면.*일정이 됩니다/ }),
+    page.getByRole("heading", { name: /대충 말해도.*일정이 됩니다/ }),
   ).toBeVisible();
   await expect(page.getByText("IJ", { exact: true }).first()).toBeVisible();
   await expect(page.locator(".marketing-landing")).toHaveCount(0);
   await expect(page.locator(".itjima-brand-mark")).toHaveCount(0);
+  await expect(page.locator(".landing-motion")).toHaveAttribute(
+    "data-motion",
+    "ready",
+  );
+  await expect
+    .poll(() =>
+      page
+        .locator(".landing-motion-message")
+        .evaluate((element) => getComputedStyle(element).animationName),
+    )
+    .toContain("landing-message-pop");
 
   await page
     .getByRole("banner")
     .getByRole("link", { name: "앱 열기", exact: true })
     .click();
   await expect(page).toHaveURL(/\/(?:\?lang=ko)?$/);
-  await expect(page.locator(".app-brand-trigger:visible")).toContainText("ITJIMA");
-  await expect(page.locator(".app-brand-trigger .itjima-brand-mark")).toHaveCount(0);
+  await expect(page.locator(".app-brand-trigger:visible")).toContainText(
+    "ITJIMA",
+  );
+  await expect(
+    page.locator(".app-brand-trigger .itjima-brand-mark"),
+  ).toHaveCount(0);
 
   await addThought(page, `모션 유지 ${Date.now()}`);
   const newestBubble = phone(page).locator(
@@ -43,7 +58,32 @@ test("landing and app use the pre-brand UI while Home motion stays active", asyn
     .toContain("ij-thought-land");
 });
 
-test("pre-brand deck card keeps whole-card directional interaction", async ({ page }) => {
+test("landing motion respects reduced-motion preference", async ({
+  browser,
+}) => {
+  const context = await browser.newContext({ reducedMotion: "reduce" });
+  const page = await context.newPage();
+  await page.goto("/about?lang=ko");
+
+  await expect(page.locator(".landing-motion")).toHaveAttribute(
+    "data-motion",
+    "reduced",
+  );
+  await expect
+    .poll(() =>
+      page
+        .locator(".landing-motion-message")
+        .evaluate((element) => getComputedStyle(element).animationName),
+    )
+    .toBe("none");
+  await expect(page.locator("[data-landing-reveal]").first()).toBeVisible();
+
+  await context.close();
+});
+
+test("pre-brand deck card keeps whole-card directional interaction", async ({
+  page,
+}) => {
   await addThought(page, `카드 모션 유지 ${Date.now()}`);
   const app = phone(page);
   await app.getByTestId("decision-launcher").click();

@@ -29,6 +29,7 @@ import "./ui-calendar-experience.css";
 import "./ui-home-fixed-composer.css";
 import "./ui-schedule-final-polish.css";
 import "./ui-landing-scroll-fix.css";
+import "./ui-landing-interactions.css";
 import "./ui-pwa-install-experience.css";
 import "./ui-interaction-craft.css";
 

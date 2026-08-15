@@ -6,29 +6,29 @@ export const SITE_URL = BRAND.siteUrl;
 
 const SEO_BY_LOCALE = {
   ko: {
-    landingTitle: "잊지마 Itjima | 말하듯 남기는 일정 캡처",
+    landingTitle: "잊지마 | 말로 쓰는 일정 관리 앱",
     landingDescription:
-      "말하듯 일정을 남기면 확실한 정보는 채우고, 애매한 날짜와 시간만 확인해 일정으로 만듭니다.",
-    ogTitle: "잊지마 Itjima | 자연어 일정 캡처",
+      "‘내일 3시 치과’처럼 말하거나 적어보세요. 잊지마가 날짜와 시간을 정리하고, 애매한 부분만 확인해 일정과 할 일로 만들어 줍니다. 설치 없이 무료로 시작하세요.",
+    ogTitle: "대충 말해도 일정이 돼요 | 잊지마",
     ogDescription:
-      "자연어로 일정을 남기고, 위험한 추측이 필요한 날짜와 시간만 확인하세요.",
+      "말하거나 적으면 날짜와 시간을 정리하고, 애매한 부분만 물어보는 일정 관리 앱.",
     appDescription:
-      "잊지마 Itjima는 자연어 입력을 일정과 할 일로 바꾸는 한국어·영어 웹앱입니다.",
+      "잊지마는 자연어·음성 입력을 일정과 할 일로 정리하고, 애매한 날짜와 시간만 확인하는 일정 관리 웹앱입니다.",
     keywords:
-      "잊지마, Itjima, 자연어 일정, 일정 캡처, 음성 일정, 할 일, 캘린더, 리마인더",
+      "잊지마, 잊지마 앱, Itjima, 일정 관리, 일정 관리 앱, 음성 일정, 자연어 일정, 할 일 관리, 캘린더, 리마인더",
     locale: "ko_KR",
     language: "ko-KR",
     currency: "KRW",
   },
   en: {
-    landingTitle: "Itjima | Natural-language schedule capture",
+    landingTitle: "Itjima | Schedule planner by voice or text",
     landingDescription:
-      "Say a plan naturally. Itjima fills what is clear, asks only about ambiguous date and time details, and turns it into a usable schedule.",
-    ogTitle: "Itjima | Natural-language scheduling",
+      "Type or say a plan naturally. Itjima organizes the date and time, asks only about ambiguous details, and turns it into a usable schedule.",
+    ogTitle: "Say it roughly. It becomes a schedule. | Itjima",
     ogDescription:
-      "Capture plans in your own words, confirm only uncertain date and time details, and add a usable schedule in one tap.",
+      "A schedule planner that organizes natural voice or text input and asks only about ambiguous details.",
     appDescription:
-      "Itjima is an English and Korean web app that turns natural-language input into schedules and tasks.",
+      "Itjima is an English and Korean scheduling web app that turns natural voice or text input into schedules and tasks.",
     keywords:
       "Itjima, natural language scheduling, schedule capture, voice schedule, task capture, calendar, reminder",
     locale: "en_US",
@@ -118,6 +118,8 @@ export type LandingSeoOptions = {
   canonicalPath?: string;
   title?: string;
   description?: string;
+  ogTitle?: string;
+  ogDescription?: string;
   locale?: Lang;
 };
 
@@ -128,6 +130,8 @@ export function applyLandingSeo(options: LandingSeoOptions = {}) {
   const canonicalPath = options.canonicalPath ?? "/about";
   const title = options.title ?? seo.landingTitle;
   const description = options.description ?? seo.landingDescription;
+  const ogTitle = options.ogTitle ?? seo.ogTitle;
+  const ogDescription = options.ogDescription ?? seo.ogDescription;
   const canonical = `${SITE_URL}${canonicalPath}`;
 
   document.title = title;
@@ -143,8 +147,8 @@ export function applyLandingSeo(options: LandingSeoOptions = {}) {
   upsertLink("alternate", `${SITE_URL}/about?lang=en`, "en");
   upsertLink("alternate", `${SITE_URL}/about`, "x-default");
 
-  upsertMeta("og:title", title, "property");
-  upsertMeta("og:description", description, "property");
+  upsertMeta("og:title", ogTitle, "property");
+  upsertMeta("og:description", ogDescription, "property");
   upsertMeta("og:type", "website", "property");
   upsertMeta("og:url", canonical, "property");
   upsertMeta("og:locale", seo.locale, "property");
@@ -162,8 +166,8 @@ export function applyLandingSeo(options: LandingSeoOptions = {}) {
   upsertMeta("og:image:alt", BRAND.ogImageAlt, "property");
 
   upsertMeta("twitter:card", "summary_large_image");
-  upsertMeta("twitter:title", title);
-  upsertMeta("twitter:description", description);
+  upsertMeta("twitter:title", ogTitle);
+  upsertMeta("twitter:description", ogDescription);
   upsertMeta("twitter:image", BRAND.ogImageUrl);
   upsertMeta("twitter:image:alt", BRAND.ogImageAlt);
 }
@@ -289,9 +293,10 @@ export function landingSoftwareApplicationLd(locale: Lang = "ko") {
           "Data export and account deletion",
         ]
       : [
-          "자연어 일정 캡처",
-          "음성 입력",
-          "애매한 날짜와 시간 확인",
+          "자연어·음성 일정 입력",
+          "날짜와 시간 자동 정리",
+          "애매한 일정 정보만 확인",
+          "일정과 할 일 관리",
           "기기 간 동기화",
           "푸시 알림",
           "데이터 내려받기와 계정 삭제",

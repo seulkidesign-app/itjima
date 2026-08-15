@@ -15,9 +15,9 @@ describe("launch SEO localization", () => {
     applyLandingSeo({ locale: "en", canonicalPath: "/about" });
 
     expect(document.documentElement.lang).toBe("en");
-    expect(document.title).toContain("Natural-language schedule capture");
+    expect(document.title).toContain("Schedule planner by voice or text");
     expect(metaContent('meta[name="description"]')).toContain(
-      "Say a plan naturally",
+      "Type or say a plan naturally",
     );
     expect(metaContent('meta[property="og:locale"]')).toBe("en_US");
     expect(
@@ -29,7 +29,13 @@ describe("launch SEO localization", () => {
     applyLandingSeo({ locale: "ko", canonicalPath: "/about" });
 
     expect(document.documentElement.lang).toBe("ko");
-    expect(document.title).toContain("말하듯 남기는 일정 캡처");
+    expect(document.title).toContain("말로 쓰는 일정 관리 앱");
+    expect(metaContent('meta[property="og:title"]')).toContain(
+      "대충 말해도 일정이 돼요",
+    );
+    expect(metaContent('meta[property="og:description"]')).toContain(
+      "애매한 부분만 물어보는 일정 관리 앱",
+    );
     expect(metaContent('meta[property="og:locale"]')).toBe("ko_KR");
     expect(metaContent('meta[property="og:image"]')).toBe(
       "https://itjima.app/og-itjima-schedule-v2.png",
@@ -66,6 +72,19 @@ describe("launch SEO localization", () => {
     expect(software?.inLanguage).toEqual(["en-US", "ko-KR"]);
     expect(software?.featureList).toContain(
       "Natural-language schedule capture",
+    );
+  });
+
+  it("identifies LinkedIn as an official Itjima profile", () => {
+    const graph = landingStructuredDataGraph([], "ko") as {
+      "@graph": Array<Record<string, unknown>>;
+    };
+    const organization = graph["@graph"].find(
+      (node) => node["@type"] === "Organization",
+    );
+
+    expect(organization?.sameAs).toContain(
+      "https://www.linkedin.com/company/itjima",
     );
   });
 });

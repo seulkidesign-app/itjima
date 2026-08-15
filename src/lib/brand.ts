@@ -12,17 +12,19 @@ export const BRAND = {
   ogImageUrl: "https://itjima.app/og-itjima-schedule-v2.png",
   ogImageAlt:
     "잊지마에서 ‘내일 3시 치과’를 일정으로 정리하고 오전·오후만 확인하는 예시",
-  logoAlt: "잊지마(Itjima) 자연어 일정 캡처 도구",
-  taglineKo: "말하듯 남기면 일정이 돼요.",
-  taglineEn: "Say it naturally. Turn it into a schedule.",
+  logoAlt: "잊지마(Itjima) 일정 관리 앱",
+  taglineKo: "대충 말해도 일정이 돼요.",
+  taglineEn: "Say it roughly. Turn it into a schedule.",
   /** Verified external profiles that describe the same product entity. */
   sameAs: [
     "https://itjima.app",
     "https://itjima.app/about",
     "https://github.com/seulkidesign-app/itjima",
     "https://www.instagram.com/itjima.app",
+    "https://www.linkedin.com/company/itjima",
   ] as const,
   instagramUrl: "https://www.instagram.com/itjima.app",
+  linkedinUrl: "https://www.linkedin.com/company/itjima",
   privacyUrl: "https://itjima.app/privacy.html",
   termsUrl: "https://itjima.app/terms.html",
   foundingDate: "2026",
@@ -30,7 +32,7 @@ export const BRAND = {
   appVersionLabel: "Beta · 2026.07",
   category: "Natural-language schedule capture app",
   aboutIntro: {
-    ko: "잊지마(Itjima)는 자연어로 말하듯 남기면 확실한 일정 정보는 채우고, 애매한 부분만 확인하는 일정 캡처 도구입니다.",
+    ko: "잊지마(Itjima)는 일정과 할 일을 말하거나 적으면 날짜와 시간을 정리하고, 애매한 부분만 확인하는 일정 관리 앱입니다.",
     en: "Itjima (잊지마) turns rough natural-language input into usable schedules and asks only about details that are still ambiguous.",
   },
   releaseNotes: {
@@ -56,7 +58,7 @@ export const BRAND = {
 } as const;
 
 export function brandTitle(page?: string) {
-  const base = `${BRAND.displayKo} | 자연어 일정 캡처`;
+  const base = `${BRAND.displayKo} | 일정 관리 앱`;
   return page ? `${page} — ${BRAND.displayKo}` : base;
 }
 
