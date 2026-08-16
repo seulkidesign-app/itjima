@@ -49,31 +49,6 @@ function RootLanding() {
 
   useEffect(() => {
     applyLandingSeo({ canonicalPath: "/", locale: lang });
-
-    const routeAppLinks = (event: MouseEvent) => {
-      if (
-        event.defaultPrevented ||
-        event.button !== 0 ||
-        event.metaKey ||
-        event.ctrlKey ||
-        event.shiftKey ||
-        event.altKey
-      ) {
-        return;
-      }
-
-      const target = event.target;
-      if (!(target instanceof Element)) return;
-      const link = target.closest<HTMLAnchorElement>("a[href='/']");
-      if (!link || !link.closest(".itjima-launch-page")) return;
-
-      event.preventDefault();
-      event.stopPropagation();
-      window.location.assign("/app");
-    };
-
-    document.addEventListener("click", routeAppLinks, true);
-    return () => document.removeEventListener("click", routeAppLinks, true);
   }, [lang]);
 
   return (
@@ -195,6 +170,35 @@ function RootLayout() {
     authDebug("__root: pathname", { pathname });
     maybeRouteOAuthCallback();
   }, [pathname]);
+
+  useEffect(() => {
+    if (!isFullPage) return;
+
+    const routeAppLinks = (event: MouseEvent) => {
+      if (
+        event.defaultPrevented ||
+        event.button !== 0 ||
+        event.metaKey ||
+        event.ctrlKey ||
+        event.shiftKey ||
+        event.altKey
+      ) {
+        return;
+      }
+
+      const target = event.target;
+      if (!(target instanceof Element)) return;
+      const link = target.closest<HTMLAnchorElement>("a[href='/']");
+      if (!link || !link.closest(".itjima-launch-page")) return;
+
+      event.preventDefault();
+      event.stopPropagation();
+      window.location.assign("/app");
+    };
+
+    document.addEventListener("click", routeAppLinks, true);
+    return () => document.removeEventListener("click", routeAppLinks, true);
+  }, [isFullPage]);
 
   if (isAuth) {
     return (
