@@ -1,0 +1,407 @@
+/* Itjima landing — high-craft interaction layer.
+ * Concentrates the wow factor in the hero product object, while keeping supporting
+ * interactions quiet enough to feel like a real product rather than a demo reel.
+ */
+
+.itjima-launch-page {
+  --ij-pointer-x: 0;
+  --ij-pointer-y: 0;
+  --ij-pointer-px: 50%;
+  --ij-pointer-py: 50%;
+}
+
+/* -------------------------------------------------------------------------- */
+/* Hero object: remove the rectangular backdrop and let the product float.    */
+/* -------------------------------------------------------------------------- */
+
+.itjima-launch-page .landing-motion-demo-wrap {
+  width: min(980px, 100%) !important;
+  padding: clamp(18px, 3vw, 36px) 0 !important;
+  overflow: visible !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  isolation: isolate;
+  perspective: 1500px !important;
+}
+
+.itjima-launch-page .landing-motion-demo-wrap::before {
+  display: block !important;
+  position: absolute;
+  left: var(--ij-pointer-px, 50%);
+  top: var(--ij-pointer-py, 50%);
+  width: clamp(300px, 44vw, 560px);
+  height: clamp(300px, 44vw, 560px);
+  border-radius: 999px;
+  content: "" !important;
+  pointer-events: none;
+  opacity: 0.52 !important;
+  background:
+    radial-gradient(circle at 30% 32%, rgba(101, 191, 240, 0.48), transparent 47%),
+    radial-gradient(circle at 70% 34%, rgba(191, 233, 213, 0.44), transparent 45%),
+    radial-gradient(circle at 55% 72%, rgba(255, 216, 61, 0.42), transparent 48%) !important;
+  background-size: auto !important;
+  filter: blur(46px);
+  mask-image: none !important;
+  transform: translate(-50%, -50%) scale(0.86);
+  transition:
+    left 80ms linear,
+    top 80ms linear,
+    opacity 360ms ease,
+    transform 520ms cubic-bezier(.18,.9,.2,1);
+  z-index: -2;
+}
+
+.itjima-launch-page .landing-motion-demo-wrap::after {
+  position: absolute;
+  left: var(--ij-pointer-px, 50%);
+  top: var(--ij-pointer-py, 50%);
+  width: 160px;
+  height: 160px;
+  border-radius: 999px;
+  content: "";
+  pointer-events: none;
+  opacity: 0;
+  background: radial-gradient(circle, rgba(255,255,255,.92), rgba(255,255,255,.18) 34%, transparent 70%);
+  filter: blur(10px);
+  transform: translate(-50%, -50%) scale(.72);
+  transition: opacity 180ms ease, transform 300ms cubic-bezier(.18,.9,.2,1);
+  z-index: 2;
+  mix-blend-mode: soft-light;
+}
+
+.itjima-launch-page .landing-motion-demo-wrap[data-hero-active="true"]::before {
+  opacity: 0.78 !important;
+  transform: translate(-50%, -50%) scale(1.04);
+}
+
+.itjima-launch-page .landing-motion-demo-wrap[data-hero-active="true"]::after {
+  opacity: .62;
+  transform: translate(-50%, -50%) scale(1);
+}
+
+.itjima-launch-page .landing-motion-demo-glow {
+  display: none !important;
+}
+
+.itjima-launch-page .landing-motion-demo-shell {
+  position: relative;
+  width: min(840px, 100%) !important;
+  margin-inline: auto;
+  overflow: hidden;
+  border: 1px solid rgba(21, 22, 20, 0.085) !important;
+  border-radius: 30px !important;
+  background: rgba(255, 255, 252, 0.985) !important;
+  box-shadow:
+    0 36px 90px rgba(31, 55, 67, 0.13),
+    0 10px 24px rgba(31, 55, 67, 0.055),
+    inset 0 1px 0 rgba(255,255,255,.98) !important;
+  transform-style: preserve-3d;
+  transform:
+    perspective(1500px)
+    rotateX(calc(var(--ij-pointer-y, 0) * -7deg))
+    rotateY(calc(var(--ij-pointer-x, 0) * 9deg))
+    translate3d(
+      calc(var(--ij-pointer-x, 0) * 7px),
+      calc(var(--ij-pointer-y, 0) * 5px),
+      0
+    ) !important;
+  transform-origin: center center;
+  transition:
+    transform 520ms cubic-bezier(.18,.9,.2,1),
+    box-shadow 420ms ease,
+    border-color 260ms ease !important;
+  will-change: transform;
+}
+
+.itjima-launch-page .landing-motion-demo-wrap[data-hero-active="true"] .landing-motion-demo-shell {
+  border-color: rgba(35, 149, 208, 0.18) !important;
+  box-shadow:
+    calc(var(--ij-pointer-x, 0) * -22px) calc(40px + var(--ij-pointer-y, 0) * 6px) 96px rgba(31, 55, 67, 0.18),
+    0 14px 34px rgba(31, 55, 67, 0.075),
+    inset 0 1px 0 rgba(255,255,255,1) !important;
+  transition:
+    transform 70ms linear,
+    box-shadow 160ms ease,
+    border-color 160ms ease !important;
+}
+
+.itjima-launch-page .landing-motion-demo-shell::before {
+  position: absolute;
+  inset: 0;
+  z-index: 10;
+  border-radius: inherit;
+  content: "";
+  pointer-events: none;
+  opacity: 0;
+  background: radial-gradient(
+    circle at var(--ij-pointer-px, 50%) var(--ij-pointer-py, 50%),
+    rgba(255,255,255,.74),
+    rgba(255,255,255,.22) 13%,
+    transparent 34%
+  );
+  mix-blend-mode: soft-light;
+  transition: opacity 180ms ease;
+}
+
+.itjima-launch-page .landing-motion-demo-wrap[data-hero-active="true"] .landing-motion-demo-shell::before {
+  opacity: .84;
+}
+
+/* Layered depth inside the mock product. Uses independent translate so the
+   entrance transform animations remain intact. */
+.itjima-launch-page .landing-motion-demo-shell > div:first-child {
+  translate:
+    calc(var(--ij-pointer-x, 0) * -2px)
+    calc(var(--ij-pointer-y, 0) * -1.5px);
+  transition: translate 120ms linear;
+}
+
+.itjima-launch-page .landing-motion-message {
+  translate:
+    calc(var(--ij-pointer-x, 0) * 10px)
+    calc(var(--ij-pointer-y, 0) * 7px);
+  scale: 1;
+  transition:
+    translate 100ms linear,
+    scale 220ms cubic-bezier(.18,.9,.2,1),
+    box-shadow 220ms ease !important;
+}
+
+.itjima-launch-page .landing-motion-demo-wrap[data-hero-active="true"] .landing-motion-message {
+  scale: 1.018;
+  box-shadow: 0 12px 28px rgba(48, 156, 216, .17) !important;
+}
+
+.itjima-launch-page .landing-motion-result {
+  translate:
+    calc(var(--ij-pointer-x, 0) * -7px)
+    calc(var(--ij-pointer-y, 0) * -4px);
+  scale: 1;
+  transition:
+    translate 115ms linear,
+    scale 260ms cubic-bezier(.18,.9,.2,1),
+    box-shadow 260ms ease !important;
+}
+
+.itjima-launch-page .landing-motion-demo-wrap[data-hero-active="true"] .landing-motion-result {
+  scale: 1.012;
+  box-shadow: 0 13px 28px rgba(31, 55, 67, 0.065) !important;
+}
+
+.itjima-launch-page .landing-motion-confirm {
+  translate:
+    calc(var(--ij-pointer-x, 0) * 7px)
+    calc(var(--ij-pointer-y, 0) * 5px);
+  transition: translate 110ms linear, scale 180ms cubic-bezier(.2,.9,.2,1) !important;
+}
+
+.itjima-launch-page .landing-motion-adjust {
+  translate:
+    calc(var(--ij-pointer-x, 0) * 4px)
+    calc(var(--ij-pointer-y, 0) * 3px);
+  transition: translate 130ms linear, scale 180ms cubic-bezier(.2,.9,.2,1) !important;
+}
+
+.itjima-launch-page .landing-motion-input {
+  translate:
+    calc(var(--ij-pointer-x, 0) * -3px)
+    calc(var(--ij-pointer-y, 0) * -2px);
+  transition: translate 150ms linear, border-color 180ms ease, background-color 180ms ease !important;
+}
+
+.itjima-launch-page .landing-motion-demo-wrap[data-hero-active="true"] .landing-motion-input {
+  border-color: rgba(35,149,208,.16) !important;
+  background: rgba(255,255,255,.96) !important;
+}
+
+/* -------------------------------------------------------------------------- */
+/* Magnetic primary controls.                                                 */
+/* -------------------------------------------------------------------------- */
+
+.itjima-launch-page .landing-motion-header-cta,
+.itjima-launch-page .landing-motion-primary-cta,
+.itjima-launch-page .landing-motion-secondary-cta {
+  translate:
+    calc(var(--ij-magnet-x, 0) * 1px)
+    calc(var(--ij-magnet-y, 0) * 1px);
+  transition:
+    translate 360ms cubic-bezier(.18,.9,.2,1),
+    transform 180ms cubic-bezier(.18,.9,.2,1),
+    box-shadow 180ms ease,
+    background-color 180ms ease !important;
+}
+
+.itjima-launch-page [data-magnetic-active="true"] {
+  transition:
+    translate 75ms linear,
+    transform 180ms cubic-bezier(.18,.9,.2,1),
+    box-shadow 180ms ease !important;
+}
+
+/* -------------------------------------------------------------------------- */
+/* Supporting cards: small tilt + cursor light, hero remains the main event.  */
+/* -------------------------------------------------------------------------- */
+
+.itjima-launch-page #how article,
+.itjima-launch-page main > section:nth-of-type(4) article,
+.itjima-launch-page .landing-motion-final {
+  position: relative;
+  overflow: hidden;
+  transform:
+    perspective(1000px)
+    rotateX(calc(var(--ij-pointer-y, 0) * -1.8deg))
+    rotateY(calc(var(--ij-pointer-x, 0) * 2.2deg));
+  transform-origin: center;
+  transition:
+    transform 420ms cubic-bezier(.18,.9,.2,1),
+    box-shadow 260ms ease,
+    border-color 260ms ease !important;
+}
+
+.itjima-launch-page #how article::after,
+.itjima-launch-page main > section:nth-of-type(4) article::after,
+.itjima-launch-page .landing-motion-final::after {
+  position: absolute;
+  inset: 0;
+  content: "";
+  pointer-events: none;
+  opacity: 0;
+  background: radial-gradient(
+    circle at var(--ij-pointer-px, 50%) var(--ij-pointer-py, 50%),
+    rgba(255,255,255,.58),
+    rgba(255,255,255,.16) 18%,
+    transparent 42%
+  );
+  transition: opacity 180ms ease;
+  mix-blend-mode: soft-light;
+}
+
+.itjima-launch-page #how article[data-pointer-active="true"],
+.itjima-launch-page main > section:nth-of-type(4) article[data-pointer-active="true"] {
+  transition: transform 90ms linear, box-shadow 180ms ease, border-color 180ms ease !important;
+}
+
+.itjima-launch-page #how article[data-pointer-active="true"]::after,
+.itjima-launch-page main > section:nth-of-type(4) article[data-pointer-active="true"]::after,
+.itjima-launch-page .landing-motion-final[data-pointer-active="true"]::after {
+  opacity: .7;
+}
+
+.itjima-launch-page .landing-motion-final[data-pointer-active="true"] {
+  transform:
+    perspective(1200px)
+    rotateX(calc(var(--ij-pointer-y, 0) * -1.1deg))
+    rotateY(calc(var(--ij-pointer-x, 0) * 1.4deg))
+    translateY(-3px);
+  transition: transform 100ms linear !important;
+}
+
+/* -------------------------------------------------------------------------- */
+/* FAQ and button tactility.                                                  */
+/* -------------------------------------------------------------------------- */
+
+.itjima-launch-page .landing-motion-faq details {
+  overflow: clip;
+}
+
+.itjima-launch-page .landing-motion-faq summary > span:last-child {
+  transform-origin: center;
+  transition: transform 320ms cubic-bezier(.18,.9,.2,1), color 180ms ease !important;
+}
+
+.itjima-launch-page .landing-motion-faq details[open] summary > span:last-child {
+  transform: rotate(45deg) scale(1.08) !important;
+  color: #2797cd;
+}
+
+.itjima-launch-page .landing-motion-faq details > p {
+  animation: ij-faq-body-in 320ms cubic-bezier(.18,.9,.2,1) both;
+}
+
+.itjima-launch-page .landing-motion-confirm:hover {
+  scale: 1.035;
+}
+
+.itjima-launch-page .landing-motion-adjust:hover {
+  scale: 1.025;
+}
+
+@keyframes ij-faq-body-in {
+  from { opacity: 0; translate: 0 -7px; }
+  to { opacity: 1; translate: 0 0; }
+}
+
+/* -------------------------------------------------------------------------- */
+/* Mobile / accessibility: preserve the visual system without forced motion.  */
+/* -------------------------------------------------------------------------- */
+
+@media (max-width: 1023px), (hover: none), (pointer: coarse) {
+  .itjima-launch-page .landing-motion-demo-wrap {
+    padding: 12px 0 24px !important;
+  }
+
+  .itjima-launch-page .landing-motion-demo-wrap::before {
+    left: 50%;
+    top: 50%;
+    width: min(82vw, 440px);
+    height: min(82vw, 440px);
+    opacity: .48 !important;
+    transform: translate(-50%, -50%) scale(.92);
+  }
+
+  .itjima-launch-page .landing-motion-demo-wrap::after {
+    display: none;
+  }
+
+  .itjima-launch-page .landing-motion-demo-shell,
+  .itjima-launch-page #how article,
+  .itjima-launch-page main > section:nth-of-type(4) article,
+  .itjima-launch-page .landing-motion-final {
+    transform: none !important;
+  }
+
+  .itjima-launch-page .landing-motion-message,
+  .itjima-launch-page .landing-motion-result,
+  .itjima-launch-page .landing-motion-confirm,
+  .itjima-launch-page .landing-motion-adjust,
+  .itjima-launch-page .landing-motion-input,
+  .itjima-launch-page .landing-motion-demo-shell > div:first-child,
+  .itjima-launch-page .landing-motion-header-cta,
+  .itjima-launch-page .landing-motion-primary-cta,
+  .itjima-launch-page .landing-motion-secondary-cta {
+    translate: none !important;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .itjima-launch-page .landing-motion-demo-wrap::before,
+  .itjima-launch-page .landing-motion-demo-wrap::after,
+  .itjima-launch-page .landing-motion-demo-shell::before,
+  .itjima-launch-page #how article::after,
+  .itjima-launch-page main > section:nth-of-type(4) article::after,
+  .itjima-launch-page .landing-motion-final::after {
+    transition: none !important;
+  }
+
+  .itjima-launch-page .landing-motion-demo-shell,
+  .itjima-launch-page #how article,
+  .itjima-launch-page main > section:nth-of-type(4) article,
+  .itjima-launch-page .landing-motion-final {
+    transform: none !important;
+  }
+
+  .itjima-launch-page .landing-motion-message,
+  .itjima-launch-page .landing-motion-result,
+  .itjima-launch-page .landing-motion-confirm,
+  .itjima-launch-page .landing-motion-adjust,
+  .itjima-launch-page .landing-motion-input,
+  .itjima-launch-page .landing-motion-demo-shell > div:first-child,
+  .itjima-launch-page .landing-motion-header-cta,
+  .itjima-launch-page .landing-motion-primary-cta,
+  .itjima-launch-page .landing-motion-secondary-cta {
+    translate: none !important;
+    scale: 1 !important;
+  }
+}
