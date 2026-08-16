@@ -20,7 +20,7 @@ export function DesktopAppNav() {
   const [settingsOpen, setSettingsOpen] = useState(false);
   const items = [
     {
-      to: "/" as const,
+      to: "/app" as const,
       label: t("남기기", "Capture"),
       ariaLabel: t("남기기", "Capture"),
       description: t(
@@ -61,7 +61,7 @@ export function DesktopAppNav() {
         aria-label={t("주요 메뉴", "Primary navigation")}
       >
         <Link
-          to="/about"
+          to="/"
           onClick={tap}
           className="itjima-desktop-brand flex min-h-16 items-center gap-3 px-5 no-underline"
           aria-label={t("잊지마 소개로 이동", "Open Itjima introduction")}
