@@ -1,0 +1,82 @@
+/* Focused landing polish: hero weight + social icon treatment. */
+
+.itjima-launch-page .landing-motion-title {
+  font-weight: 700 !important;
+}
+
+.itjima-launch-page footer nav a[href*="instagram.com"],
+.itjima-launch-page footer nav a[href*="linkedin.com"],
+.itjima-launch-page footer nav a[href*="github.com"] {
+  display: inline-flex;
+  width: 40px;
+  height: 40px;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 40px;
+  padding: 0;
+  border: 1px solid rgba(20, 20, 16, 0.08);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.72);
+  color: #141410;
+  font-size: 0;
+  line-height: 0;
+  text-decoration: none;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.9);
+  transition:
+    transform 160ms ease,
+    background-color 160ms ease,
+    border-color 160ms ease;
+}
+
+.itjima-launch-page footer nav a[href*="instagram.com"]:hover,
+.itjima-launch-page footer nav a[href*="linkedin.com"]:hover,
+.itjima-launch-page footer nav a[href*="github.com"]:hover {
+  transform: translateY(-2px);
+  border-color: rgba(20, 20, 16, 0.14);
+  background: #fff;
+}
+
+.itjima-launch-page footer nav a[href*="instagram.com"]:focus-visible,
+.itjima-launch-page footer nav a[href*="linkedin.com"]:focus-visible,
+.itjima-launch-page footer nav a[href*="github.com"]:focus-visible {
+  outline: 3px solid rgba(87, 185, 239, 0.38);
+  outline-offset: 3px;
+}
+
+.itjima-launch-page footer nav a[href*="instagram.com"]::before,
+.itjima-launch-page footer nav a[href*="linkedin.com"]::before,
+.itjima-launch-page footer nav a[href*="github.com"]::before {
+  display: block;
+  width: 20px;
+  height: 20px;
+  content: "";
+  background-position: center;
+  background-repeat: no-repeat;
+  background-size: contain;
+}
+
+.itjima-launch-page footer nav a[href*="instagram.com"]::before {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%23141410' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect width='20' height='20' x='2' y='2' rx='5' ry='5'/%3E%3Cpath d='M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z'/%3E%3Cpath d='M17.5 6.5h.01'/%3E%3C/svg%3E");
+}
+
+.itjima-launch-page footer nav a[href*="linkedin.com"]::before {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%23141410' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M16 8a6 6 0 0 1 6 6v7h-4v-7a2 2 0 0 0-2-2 2 2 0 0 0-2 2v7h-4v-7a6 6 0 0 1 6-6z'/%3E%3Crect width='4' height='12' x='2' y='9'/%3E%3Ccircle cx='4' cy='4' r='2'/%3E%3C/svg%3E");
+}
+
+.itjima-launch-page footer nav a[href*="github.com"]::before {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%23141410' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M15 22v-4a4.8 4.8 0 0 0-1-3.5c3.28 0 6.72-2 6.72-5.5A4.5 4.5 0 0 0 19.5 5.7 4.2 4.2 0 0 0 19.4 2S18.4 1.7 15.9 3.5a13.38 13.38 0 0 0-7 0C6.4 1.7 5.4 2 5.4 2a4.2 4.2 0 0 0-.1 3.7A4.5 4.5 0 0 0 4.08 9c0 3.5 3.44 5.5 6.72 5.5A5.4 5.4 0 0 0 10 18v4'/%3E%3Cpath d='M9 18c-4.51 2-5-2-7-2'/%3E%3C/svg%3E");
+}
+
+@media (max-width: 639px) {
+  .itjima-launch-page footer nav {
+    align-items: center;
+  }
+
+  .itjima-launch-page footer nav a[href*="instagram.com"],
+  .itjima-launch-page footer nav a[href*="linkedin.com"],
+  .itjima-launch-page footer nav a[href*="github.com"] {
+    width: 38px;
+    height: 38px;
+    flex-basis: 38px;
+  }
+}
