@@ -1,280 +1,762 @@
-/* Itjima landing — product-grade visual refinement.
- * Design-only layer: clearer hierarchy, calmer surfaces, tighter spacing, stronger product focus.
+/* Itjima landing — Stitch-inspired product polish.
+ * Design-only layer. The goal is not to copy Google Stitch, but to apply the same
+ * product-led principles: generous whitespace, canvas-first storytelling, restrained
+ * chrome, large confident type, crisp UI surfaces, and deliberate color moments.
  */
 
 .itjima-launch-page .landing-motion {
-  --sv-line: rgba(18, 18, 15, 0.075);
-  --sv-line-strong: rgba(18, 18, 15, 0.11);
-  --sv-shadow-sm: 0 8px 24px rgba(26, 39, 45, 0.055);
-  --sv-shadow-md: 0 20px 52px rgba(26, 42, 49, 0.075);
-  --sv-shadow-lg: 0 34px 84px rgba(28, 50, 60, 0.11);
-  --sv-blue: #58b9ec;
-  --sv-yellow: #ffd83d;
-  --sv-text: #11110f;
-  --sv-muted: rgba(17, 17, 15, 0.57);
+  --st-bg: #f8f9f7;
+  --st-surface: #ffffff;
+  --st-surface-soft: #f2f4f1;
+  --st-ink: #151614;
+  --st-muted: rgba(21, 22, 20, 0.58);
+  --st-line: rgba(21, 22, 20, 0.09);
+  --st-line-soft: rgba(21, 22, 20, 0.055);
+  --st-blue: #72c7f4;
+  --st-blue-deep: #2395d0;
+  --st-yellow: #ffd83d;
+  --st-mint: #bfe9d5;
+  --st-shadow-sm: 0 10px 30px rgba(29, 40, 45, 0.06);
+  --st-shadow-md: 0 24px 70px rgba(29, 44, 51, 0.09);
+  --st-shadow-lg: 0 40px 110px rgba(28, 45, 53, 0.14);
   background:
-    radial-gradient(circle at 86% 5%, rgba(88, 185, 236, 0.055), transparent 29rem),
-    radial-gradient(circle at 12% 11%, rgba(255, 216, 61, 0.05), transparent 26rem),
-    #f8f7f2 !important;
+    radial-gradient(circle at 84% 2%, rgba(114, 199, 244, 0.055), transparent 30rem),
+    radial-gradient(circle at 15% 8%, rgba(255, 216, 61, 0.045), transparent 27rem),
+    var(--st-bg) !important;
+  color: var(--st-ink);
 }
+
+/* Kill the old texture; the new system gets depth from spacing and surfaces. */
+.itjima-launch-page .landing-motion::before {
+  opacity: 0 !important;
+}
+
+/* Do not cover the first product impression with an install prompt. */
+body:has(.itjima-launch-page) [data-testid="pwa-install-nudge"] {
+  display: none !important;
+}
+
+/* -------------------------------------------------------------------------- */
+/* Header                                                                     */
+/* -------------------------------------------------------------------------- */
 
 .itjima-launch-page .landing-motion-header {
-  top: 10px;
-  width: min(1180px, calc(100% - 28px));
-  border-color: rgba(255, 255, 255, 0.82) !important;
-  border-radius: 20px;
-  background: rgba(255, 254, 250, 0.86) !important;
-  box-shadow: 0 8px 28px rgba(24, 39, 45, 0.055);
-  backdrop-filter: blur(18px) saturate(1.05);
-  -webkit-backdrop-filter: blur(18px) saturate(1.05);
-}
-.itjima-launch-page .landing-motion-header > div { min-height: 62px; }
-.itjima-launch-page .landing-motion-wordmark { letter-spacing: -0.01em; }
-.itjima-launch-page .landing-motion-wordmark > span:first-child { width: 34px; height: 34px; border-radius: 11px; box-shadow: none; }
-.itjima-launch-page .landing-motion-header-cta {
-  min-height: 42px !important;
-  padding-inline: 17px !important;
-  border: 1px solid rgba(18, 18, 15, 0.06);
-  background: var(--sv-yellow) !important;
-  box-shadow: 0 7px 18px rgba(181, 149, 0, 0.11) !important;
+  top: 0 !important;
+  width: 100% !important;
+  margin: 0 !important;
+  border: 0 !important;
+  border-bottom: 1px solid rgba(21, 22, 20, 0.055) !important;
+  border-radius: 0 !important;
+  background: rgba(248, 249, 247, 0.9) !important;
+  box-shadow: none !important;
+  backdrop-filter: blur(18px) saturate(1.04);
+  -webkit-backdrop-filter: blur(18px) saturate(1.04);
 }
 
-.itjima-launch-page .landing-motion-hero { padding-top: 22px !important; padding-bottom: 20px !important; }
-.itjima-launch-page .landing-motion-hero > div {
-  min-height: 640px;
-  gap: clamp(36px, 5vw, 68px) !important;
-  padding: clamp(40px, 5.5vw, 68px) !important;
-  border-color: rgba(255, 255, 255, 0.94) !important;
-  border-radius: 34px !important;
-  background:
-    radial-gradient(circle at 91% 17%, rgba(88, 185, 236, 0.14), transparent 27%),
-    radial-gradient(circle at 75% 87%, rgba(255, 216, 61, 0.11), transparent 31%),
-    rgba(255, 255, 252, 0.94) !important;
-  box-shadow: var(--sv-shadow-md) !important;
+.itjima-launch-page .landing-motion-header > div {
+  min-height: 72px !important;
+  width: min(1240px, calc(100% - 48px)) !important;
 }
-.itjima-launch-page .landing-motion-hero > div::before {
-  right: -140px; top: -190px; width: 470px; height: 470px;
-  opacity: 0.11 !important; filter: blur(8px);
-}
-.itjima-launch-page .landing-motion-hero > div::after {
-  right: 190px; bottom: -280px; width: 440px; height: 440px;
-  opacity: 0.1 !important; filter: blur(10px);
-}
-.itjima-launch-page .landing-motion-eyebrow {
-  padding: 8px 11px !important;
-  border-color: rgba(18, 18, 15, 0.07) !important;
-  background: rgba(255, 255, 255, 0.74) !important;
-  box-shadow: none !important;
-  color: rgba(17, 17, 15, 0.62);
-  letter-spacing: 0.105em !important;
-}
-.itjima-launch-page .landing-motion-eyebrow svg { color: #319bd2; }
-.itjima-launch-page .landing-motion-title {
-  max-width: 650px !important;
-  margin-top: 24px !important;
-  font-size: clamp(47px, 6.7vw, 74px) !important;
-  font-weight: 700 !important;
-  line-height: 0.98 !important;
-  letter-spacing: -0.058em !important;
-  text-wrap: balance;
-}
-.itjima-launch-page .landing-motion-highlight {
-  bottom: 0.03em !important;
-  height: 0.13em !important;
-  background: var(--sv-yellow) !important;
-  box-shadow: none !important;
-  opacity: 0.94;
-}
-.itjima-launch-page .landing-motion-description {
-  max-width: 590px !important;
-  margin-top: 25px !important;
-  color: var(--sv-muted) !important;
-  font-size: clamp(16px, 1.6vw, 18px) !important;
-  line-height: 1.68 !important;
+
+.itjima-launch-page .landing-motion-wordmark {
+  gap: 10px !important;
   letter-spacing: -0.015em;
 }
-.itjima-launch-page .landing-motion-actions { margin-top: 30px !important; gap: 10px !important; }
+
+.itjima-launch-page .landing-motion-wordmark > span:first-child {
+  width: 32px !important;
+  height: 32px !important;
+  border-radius: 10px !important;
+  background: var(--st-yellow) !important;
+  box-shadow: none !important;
+}
+
+.itjima-launch-page .landing-motion-wordmark > span:last-child {
+  font-size: 17px !important;
+  letter-spacing: 0.02em !important;
+}
+
+.itjima-launch-page .landing-motion-header-cta {
+  min-height: 44px !important;
+  padding-inline: 19px !important;
+  border: 1px solid rgba(21, 22, 20, 0.06) !important;
+  border-radius: 999px !important;
+  background: var(--st-yellow) !important;
+  color: var(--st-ink) !important;
+  box-shadow: none !important;
+}
+
+/* -------------------------------------------------------------------------- */
+/* Hero — text first, then a large product canvas                             */
+/* -------------------------------------------------------------------------- */
+
+.itjima-launch-page .landing-motion-hero {
+  padding: 64px 24px 34px !important;
+}
+
+.itjima-launch-page .landing-motion-hero > div {
+  display: grid !important;
+  grid-template-columns: minmax(0, 1fr) !important;
+  gap: 54px !important;
+  max-width: 1240px !important;
+  min-height: auto !important;
+  padding: 0 !important;
+  overflow: visible !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+}
+
+.itjima-launch-page .landing-motion-hero > div::before,
+.itjima-launch-page .landing-motion-hero > div::after {
+  display: none !important;
+}
+
+.itjima-launch-page .landing-motion-copy {
+  width: min(940px, 100%);
+  margin-inline: auto;
+  text-align: center;
+}
+
+.itjima-launch-page .landing-motion-eyebrow {
+  min-height: 34px;
+  padding: 7px 12px !important;
+  border: 1px solid rgba(35, 149, 208, 0.12) !important;
+  border-radius: 999px !important;
+  background: #eef8fd !important;
+  box-shadow: none !important;
+  color: rgba(21, 22, 20, 0.62) !important;
+  letter-spacing: 0.085em !important;
+  backdrop-filter: none !important;
+}
+
+.itjima-launch-page .landing-motion-eyebrow svg {
+  color: var(--st-blue-deep) !important;
+}
+
+.itjima-launch-page .landing-motion-title {
+  max-width: 940px !important;
+  margin: 26px auto 0 !important;
+  font-size: clamp(58px, 8.2vw, 104px) !important;
+  font-weight: 700 !important;
+  line-height: 0.93 !important;
+  letter-spacing: -0.065em !important;
+  text-wrap: balance;
+}
+
+.itjima-launch-page .landing-motion-highlight {
+  bottom: 0.035em !important;
+  height: 0.105em !important;
+  left: 0 !important;
+  right: 0 !important;
+  rotate: 0deg !important;
+  background: var(--st-yellow) !important;
+  box-shadow: none !important;
+  opacity: 0.98;
+}
+
+.itjima-launch-page .landing-motion-description {
+  max-width: 720px !important;
+  margin: 30px auto 0 !important;
+  color: var(--st-muted) !important;
+  font-size: clamp(17px, 1.5vw, 20px) !important;
+  line-height: 1.65 !important;
+  letter-spacing: -0.018em;
+}
+
+.itjima-launch-page .landing-motion-actions {
+  justify-content: center;
+  margin-top: 32px !important;
+  gap: 10px !important;
+}
+
 .itjima-launch-page .landing-motion-primary-cta,
 .itjima-launch-page .landing-motion-secondary-cta {
-  min-height: 52px !important;
-  border-radius: 14px !important;
-  padding-inline: 20px !important;
-}
-.itjima-launch-page .landing-motion-primary-cta {
-  border-color: rgba(18, 18, 15, 0.06) !important;
-  background: var(--sv-yellow) !important;
-  box-shadow: 0 10px 24px rgba(181, 149, 0, 0.12) !important;
-}
-.itjima-launch-page .landing-motion-secondary-cta {
-  border-color: var(--sv-line) !important;
-  background: rgba(255, 255, 255, 0.72) !important;
-  box-shadow: none !important;
-  backdrop-filter: blur(8px);
-}
-
-.itjima-launch-page .landing-motion-demo-wrap { perspective: 1200px; }
-.itjima-launch-page .landing-motion-demo-glow {
-  inset: 14% !important;
-  background: rgba(88, 185, 236, 0.22) !important;
-  filter: blur(72px) !important;
-  opacity: 0.34 !important;
-}
-.itjima-launch-page .landing-motion-demo-shell {
-  overflow: hidden;
-  border-color: rgba(18, 18, 15, 0.085) !important;
-  border-radius: 26px !important;
-  background: rgba(255, 255, 253, 0.97) !important;
-  box-shadow: var(--sv-shadow-lg), inset 0 1px 0 rgba(255, 255, 255, 0.95) !important;
-  backdrop-filter: none;
-  -webkit-backdrop-filter: none;
-  transform: rotateY(-2deg) rotateX(1deg);
-  transform-origin: center;
-}
-.itjima-launch-page .landing-motion-demo-shell > div:first-child { min-height: 66px; background: rgba(250, 250, 246, 0.72); }
-.itjima-launch-page .landing-motion-message { background: #77c9f3 !important; box-shadow: none !important; }
-.itjima-launch-page .landing-motion-result { border-color: var(--sv-line) !important; background: #fbfbf8 !important; box-shadow: none !important; backdrop-filter: none; }
-.itjima-launch-page .landing-motion-confirm { background: var(--sv-yellow) !important; box-shadow: none !important; }
-.itjima-launch-page .landing-motion-adjust,
-.itjima-launch-page .landing-motion-input { border-color: var(--sv-line) !important; background: #fff !important; }
-
-.itjima-launch-page .landing-motion-proof { max-width: 1180px; padding: 8px 18px 20px !important; }
-.itjima-launch-page .landing-motion-proof > div { gap: 8px; }
-.itjima-launch-page .landing-motion-proof > div > div {
   min-height: 54px !important;
-  border-color: var(--sv-line) !important;
-  border-radius: 15px;
-  background: rgba(255, 255, 252, 0.74) !important;
-  box-shadow: none;
-  backdrop-filter: none;
+  padding-inline: 23px !important;
+  border-radius: 999px !important;
+  font-size: 14px !important;
 }
-.itjima-launch-page .landing-motion-proof svg { color: #2f9f69 !important; }
+
+.itjima-launch-page .landing-motion-primary-cta {
+  border: 1px solid rgba(21, 22, 20, 0.065) !important;
+  background: var(--st-yellow) !important;
+  color: var(--st-ink) !important;
+  box-shadow: 0 8px 20px rgba(171, 143, 0, 0.10) !important;
+}
+
+.itjima-launch-page .landing-motion-secondary-cta {
+  border: 1px solid var(--st-line) !important;
+  background: rgba(255, 255, 255, 0.82) !important;
+  box-shadow: none !important;
+  backdrop-filter: none !important;
+}
+
+/* Large “AI canvas” stage. The product UI is the hero visual, not decoration. */
+.itjima-launch-page .landing-motion-demo-wrap {
+  position: relative;
+  width: min(1080px, 100%);
+  margin-inline: auto;
+  padding: clamp(26px, 5vw, 58px) clamp(16px, 6vw, 76px);
+  overflow: hidden;
+  border: 1px solid rgba(21, 22, 20, 0.06);
+  border-radius: 40px;
+  background:
+    radial-gradient(circle at 14% 18%, rgba(114, 199, 244, 0.30), transparent 31%),
+    radial-gradient(circle at 88% 82%, rgba(255, 216, 61, 0.28), transparent 34%),
+    radial-gradient(circle at 78% 16%, rgba(191, 233, 213, 0.26), transparent 28%),
+    #f4f7f5;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.85);
+  perspective: none !important;
+  isolation: isolate;
+}
+
+.itjima-launch-page .landing-motion-demo-wrap::before {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  content: "";
+  opacity: 0.28;
+  background-image: radial-gradient(rgba(21, 22, 20, 0.16) 0.7px, transparent 0.7px);
+  background-size: 18px 18px;
+  mask-image: linear-gradient(to bottom, rgba(0,0,0,.65), transparent 92%);
+}
+
+.itjima-launch-page .landing-motion-demo-glow {
+  display: none !important;
+}
+
+.itjima-launch-page .landing-motion-demo-shell {
+  width: min(820px, 100%);
+  margin-inline: auto;
+  overflow: hidden;
+  border: 1px solid rgba(21, 22, 20, 0.105) !important;
+  border-radius: 26px !important;
+  background: rgba(255, 255, 253, 0.985) !important;
+  box-shadow: var(--st-shadow-lg) !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+  transform: none !important;
+}
+
+.itjima-launch-page .landing-motion-demo-shell > div:first-child {
+  min-height: 68px;
+  background: #fbfbf8;
+}
+
+.itjima-launch-page .landing-motion-message {
+  background: #7acaf2 !important;
+  box-shadow: none !important;
+}
+
+.itjima-launch-page .landing-motion-result {
+  border-color: var(--st-line) !important;
+  background: #fbfbf8 !important;
+  box-shadow: none !important;
+  backdrop-filter: none !important;
+}
+
+.itjima-launch-page .landing-motion-confirm {
+  background: var(--st-yellow) !important;
+  box-shadow: none !important;
+}
+
+.itjima-launch-page .landing-motion-adjust,
+.itjima-launch-page .landing-motion-input {
+  border-color: var(--st-line) !important;
+  background: #fff !important;
+}
+
+/* -------------------------------------------------------------------------- */
+/* Proof — quiet supporting facts, not four competing cards                   */
+/* -------------------------------------------------------------------------- */
+
+.itjima-launch-page .landing-motion-proof {
+  max-width: 980px !important;
+  padding: 4px 24px 62px !important;
+  border: 0 !important;
+  background: transparent !important;
+}
+
+.itjima-launch-page .landing-motion-proof > div {
+  display: flex !important;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 12px 28px !important;
+}
+
+.itjima-launch-page .landing-motion-proof > div > div {
+  width: auto !important;
+  min-height: 32px !important;
+  padding: 0 !important;
+  border: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  color: rgba(21, 22, 20, 0.58);
+  font-size: 12.5px !important;
+}
+
+.itjima-launch-page .landing-motion-proof svg {
+  color: #2b9e6c !important;
+}
+
+/* -------------------------------------------------------------------------- */
+/* Shared section rhythm                                                      */
+/* -------------------------------------------------------------------------- */
 
 .itjima-launch-page #how,
 .itjima-launch-page main > section:nth-of-type(4),
 .itjima-launch-page main > section:nth-of-type(5),
 .itjima-launch-page main > section:nth-of-type(6) {
-  width: min(1180px, calc(100% - 32px));
-  margin-top: 14px;
-  padding: clamp(58px, 7vw, 86px) clamp(28px, 5vw, 64px) !important;
-  border-color: rgba(255, 255, 255, 0.94) !important;
-  border-radius: 34px !important;
-  background: rgba(255, 255, 252, 0.9) !important;
-  box-shadow: 0 16px 52px rgba(30, 47, 54, 0.045), inset 0 1px 0 rgba(255, 255, 255, 0.95) !important;
-  backdrop-filter: none;
-  -webkit-backdrop-filter: none;
+  width: min(1180px, calc(100% - 48px));
+  margin: 28px auto 0 !important;
+  padding: clamp(72px, 8vw, 108px) clamp(30px, 6vw, 76px) !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
 }
+
 .itjima-launch-page #how h2,
 .itjima-launch-page main > section:nth-of-type(4) h2,
 .itjima-launch-page main > section:nth-of-type(5) h2,
-.itjima-launch-page .landing-motion-final h2 { font-weight: 700 !important; letter-spacing: -0.045em !important; }
-.itjima-launch-page #how h2,
-.itjima-launch-page main > section:nth-of-type(4) h2 { font-size: clamp(38px, 5.2vw, 58px) !important; line-height: 1.02 !important; }
-
-.itjima-launch-page #how { background: rgba(255, 255, 252, 0.9) !important; }
-.itjima-launch-page #how article {
-  min-height: 292px !important;
-  padding: 26px !important;
-  border-color: var(--sv-line) !important;
-  border-radius: 22px !important;
-  background: #fff !important;
-  box-shadow: var(--sv-shadow-sm) !important;
+.itjima-launch-page .landing-motion-final h2 {
+  font-weight: 700 !important;
+  letter-spacing: -0.05em !important;
 }
+
+.itjima-launch-page #how h2,
+.itjima-launch-page main > section:nth-of-type(4) h2 {
+  max-width: 820px !important;
+  font-size: clamp(42px, 5.7vw, 68px) !important;
+  line-height: 0.99 !important;
+}
+
+/* How it works: three clean editorial product cards. */
+.itjima-launch-page #how {
+  padding-top: 82px !important;
+}
+
+.itjima-launch-page #how > div > div:first-child {
+  max-width: 900px;
+}
+
+.itjima-launch-page #how article {
+  min-height: 340px !important;
+  padding: 30px !important;
+  border: 1px solid var(--st-line-soft) !important;
+  border-radius: 28px !important;
+  background: var(--st-surface) !important;
+  box-shadow: none !important;
+}
+
 .itjima-launch-page #how article:nth-child(1),
 .itjima-launch-page #how article:nth-child(2),
-.itjima-launch-page #how article:nth-child(3) { background: #fff !important; }
-.itjima-launch-page #how article:nth-child(1) { border-top: 3px solid rgba(88, 185, 236, 0.72) !important; }
-.itjima-launch-page #how article:nth-child(2) { border-top: 3px solid rgba(255, 216, 61, 0.86) !important; }
-.itjima-launch-page #how article:nth-child(3) { border-top: 3px solid rgba(133, 204, 183, 0.75) !important; }
-.itjima-launch-page #how article > div { border-color: var(--sv-line) !important; background: #f7f7f3 !important; box-shadow: none !important; }
+.itjima-launch-page #how article:nth-child(3) {
+  background: var(--st-surface) !important;
+  border-top: 1px solid var(--st-line-soft) !important;
+}
 
-.itjima-launch-page main > section:nth-of-type(4) { color: var(--sv-text) !important; background: #f1f5f6 !important; }
-.itjima-launch-page main > section:nth-of-type(4) article {
-  border-color: rgba(18, 18, 15, 0.08) !important;
-  border-radius: 22px !important;
-  background: rgba(255, 255, 255, 0.78) !important;
+.itjima-launch-page #how article > span:first-child {
+  display: grid;
+  width: 40px;
+  height: 40px;
+  place-items: center;
+  border-radius: 13px;
+  background: #eef8fd;
+  color: var(--st-blue-deep) !important;
+  letter-spacing: 0 !important;
+}
+
+.itjima-launch-page #how article:nth-child(2) > span:first-child {
+  background: #fff7cf;
+  color: #8b7200 !important;
+}
+
+.itjima-launch-page #how article:nth-child(3) > span:first-child {
+  background: #edf8f3;
+  color: #2d7d62 !important;
+}
+
+.itjima-launch-page #how article > div {
+  border: 0 !important;
+  border-radius: 14px !important;
+  background: #f5f6f3 !important;
   box-shadow: none !important;
 }
+
+/* Trust: a contained dark canvas creates one intentional contrast moment. */
+.itjima-launch-page main > section:nth-of-type(4) {
+  width: min(1180px, calc(100% - 48px));
+  padding: clamp(66px, 8vw, 94px) clamp(28px, 6vw, 68px) !important;
+  border-radius: 40px !important;
+  background: #202326 !important;
+  color: #f8faf8 !important;
+}
+
+.itjima-launch-page main > section:nth-of-type(4) > div {
+  position: relative;
+}
+
+.itjima-launch-page main > section:nth-of-type(4) span {
+  color: rgba(255, 255, 255, 0.52) !important;
+}
+
+.itjima-launch-page main > section:nth-of-type(4) h2 {
+  color: #fff !important;
+}
+
+.itjima-launch-page main > section:nth-of-type(4) article {
+  min-height: 230px;
+  padding: 28px !important;
+  border: 1px solid rgba(255, 255, 255, 0.08) !important;
+  border-radius: 24px !important;
+  background: #292d30 !important;
+  box-shadow: none !important;
+}
+
 .itjima-launch-page main > section:nth-of-type(4) article svg {
-  width: 40px; height: 40px; padding: 9px; border-radius: 12px;
-  color: #248ec3 !important; background: rgba(88, 185, 236, 0.12);
+  width: 42px !important;
+  height: 42px !important;
+  padding: 10px !important;
+  border-radius: 13px !important;
+  background: rgba(114, 199, 244, 0.14) !important;
+  color: #85d4fb !important;
 }
-.itjima-launch-page main > section:nth-of-type(4) article h3 { margin-top: 24px !important; font-weight: 700 !important; }
-.itjima-launch-page main > section:nth-of-type(4) span,
-.itjima-launch-page main > section:nth-of-type(4) p { color: rgba(17, 17, 15, 0.55) !important; }
 
-.itjima-launch-page main > section:nth-of-type(5) { background: rgba(255, 255, 252, 0.92) !important; }
-.itjima-launch-page .landing-motion-faq { border-top: 1px solid var(--sv-line-strong) !important; }
-.itjima-launch-page .landing-motion-faq details { border-color: var(--sv-line) !important; }
-.itjima-launch-page .landing-motion-faq summary { min-height: 76px !important; font-weight: 650 !important; letter-spacing: -0.018em !important; }
-.itjima-launch-page .landing-motion-faq details[open] { border-radius: 0; background: transparent !important; }
-.itjima-launch-page .landing-motion-faq details[open] summary { color: #177aa9; }
+.itjima-launch-page main > section:nth-of-type(4) article:nth-child(2) svg {
+  background: rgba(255, 216, 61, 0.13) !important;
+  color: #ffe36c !important;
+}
 
-.itjima-launch-page main > section:nth-of-type(6) { padding: 0 !important; border: 0 !important; background: transparent !important; box-shadow: none !important; }
+.itjima-launch-page main > section:nth-of-type(4) article:nth-child(3) svg {
+  background: rgba(191, 233, 213, 0.13) !important;
+  color: #bfe9d5 !important;
+}
+
+.itjima-launch-page main > section:nth-of-type(4) article h3 {
+  margin-top: 26px !important;
+  color: #fff !important;
+  font-weight: 650 !important;
+}
+
+.itjima-launch-page main > section:nth-of-type(4) article p {
+  color: rgba(255, 255, 255, 0.58) !important;
+}
+
+/* FAQ: editorial, calm, almost documentation-like. */
+.itjima-launch-page main > section:nth-of-type(5) {
+  padding-top: 96px !important;
+}
+
+.itjima-launch-page .landing-motion-faq {
+  border-top: 1px solid rgba(21, 22, 20, 0.16) !important;
+}
+
+.itjima-launch-page .landing-motion-faq details {
+  border-color: var(--st-line) !important;
+}
+
+.itjima-launch-page .landing-motion-faq summary {
+  min-height: 82px !important;
+  font-weight: 620 !important;
+  letter-spacing: -0.022em !important;
+}
+
+.itjima-launch-page .landing-motion-faq details[open] {
+  border-radius: 0 !important;
+  background: transparent !important;
+}
+
+.itjima-launch-page .landing-motion-faq details[open] summary {
+  color: #177eae;
+}
+
+/* Final CTA: one memorable brand-color moment. */
+.itjima-launch-page main > section:nth-of-type(6) {
+  padding-top: 46px !important;
+  padding-bottom: 90px !important;
+}
+
 .itjima-launch-page .landing-motion-final {
-  padding-block: clamp(64px, 8vw, 92px) !important;
-  border-color: rgba(18, 18, 15, 0.06) !important;
-  border-radius: 30px !important;
+  position: relative;
+  overflow: hidden;
+  padding: clamp(78px, 9vw, 116px) clamp(26px, 6vw, 76px) !important;
+  border: 1px solid rgba(21, 22, 20, 0.055) !important;
+  border-radius: 40px !important;
   background:
-    radial-gradient(circle at 18% 22%, rgba(88, 185, 236, 0.16), transparent 28%),
-    radial-gradient(circle at 82% 78%, rgba(255, 216, 61, 0.18), transparent 31%),
+    radial-gradient(circle at 12% 12%, rgba(114, 199, 244, 0.32), transparent 31%),
+    radial-gradient(circle at 88% 86%, rgba(255, 216, 61, 0.34), transparent 34%),
+    radial-gradient(circle at 78% 10%, rgba(191, 233, 213, 0.30), transparent 26%),
     #fffefa !important;
-  box-shadow: var(--sv-shadow-md) !important;
+  box-shadow: none !important;
 }
-.itjima-launch-page .landing-motion-final > svg { width: 42px; height: 42px; padding: 10px; border-radius: 13px; background: var(--sv-yellow); }
-.itjima-launch-page .landing-motion-final h2 { max-width: 720px !important; font-size: clamp(40px, 5.6vw, 62px) !important; line-height: 1.01 !important; }
+
+.itjima-launch-page .landing-motion-final > svg {
+  width: 48px !important;
+  height: 48px !important;
+  padding: 12px !important;
+  border-radius: 15px !important;
+  background: var(--st-yellow);
+}
+
+.itjima-launch-page .landing-motion-final h2 {
+  max-width: 760px !important;
+  font-size: clamp(46px, 6.4vw, 74px) !important;
+  line-height: 0.98 !important;
+}
+
+.itjima-launch-page .landing-motion-final p {
+  max-width: 600px !important;
+  color: var(--st-muted) !important;
+}
+
+/* -------------------------------------------------------------------------- */
+/* Footer                                                                     */
+/* -------------------------------------------------------------------------- */
 
 .itjima-launch-page footer {
-  margin-top: 14px;
-  border-color: rgba(18, 18, 15, 0.05) !important;
-  border-radius: 22px;
-  background: rgba(255, 255, 252, 0.76) !important;
+  width: min(1180px, calc(100% - 48px));
+  margin: 0 auto 30px !important;
+  padding-inline: 0 !important;
+  border: 0 !important;
+  border-top: 1px solid var(--st-line) !important;
+  border-radius: 0 !important;
+  background: transparent !important;
   box-shadow: none !important;
-  backdrop-filter: none;
+  backdrop-filter: none !important;
 }
-.itjima-launch-page footer nav > a:not([href*="instagram.com"]):not([href*="linkedin.com"]):not([href*="github.com"]) { color: rgba(17, 17, 15, 0.68); }
+
+.itjima-launch-page footer > div {
+  padding-inline: 0;
+  padding-top: 34px;
+}
+
+.itjima-launch-page footer nav > a:not([href*="instagram.com"]):not([href*="linkedin.com"]):not([href*="github.com"]) {
+  color: rgba(21, 22, 20, 0.64);
+}
+
 .itjima-launch-page footer nav a[href*="instagram.com"],
 .itjima-launch-page footer nav a[href*="linkedin.com"],
-.itjima-launch-page footer nav a[href*="github.com"] { border-color: rgba(18, 18, 15, 0.07); background: rgba(255, 255, 255, 0.68); box-shadow: none; }
+.itjima-launch-page footer nav a[href*="github.com"] {
+  border-color: var(--st-line) !important;
+  background: transparent !important;
+  box-shadow: none !important;
+}
+
+/* -------------------------------------------------------------------------- */
+/* Interaction craft                                                         */
+/* -------------------------------------------------------------------------- */
 
 @media (hover: hover) and (pointer: fine) {
-  .itjima-launch-page .landing-motion-primary-cta,
   .itjima-launch-page .landing-motion-header-cta,
+  .itjima-launch-page .landing-motion-primary-cta,
   .itjima-launch-page .landing-motion-secondary-cta,
-  .itjima-launch-page .landing-motion-lift {
-    transition: transform 180ms cubic-bezier(.2,.8,.2,1), box-shadow 180ms cubic-bezier(.2,.8,.2,1), border-color 180ms ease, background-color 180ms ease;
+  .itjima-launch-page #how article,
+  .itjima-launch-page main > section:nth-of-type(4) article {
+    transition:
+      transform 180ms cubic-bezier(.2,.8,.2,1),
+      border-color 180ms ease,
+      box-shadow 180ms ease,
+      background-color 180ms ease;
   }
-  .itjima-launch-page .landing-motion-primary-cta:hover,
-  .itjima-launch-page .landing-motion-header-cta:hover { transform: translateY(-1px); box-shadow: 0 12px 28px rgba(181, 149, 0, 0.15) !important; }
-  .itjima-launch-page .landing-motion-secondary-cta:hover { transform: translateY(-1px); border-color: rgba(18, 18, 15, 0.13) !important; background: #fff !important; }
-  .itjima-launch-page #how .landing-motion-lift:hover,
-  .itjima-launch-page main > section:nth-of-type(4) .landing-motion-lift:hover {
+
+  .itjima-launch-page .landing-motion-header-cta:hover,
+  .itjima-launch-page .landing-motion-primary-cta:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 10px 24px rgba(171, 143, 0, 0.13) !important;
+  }
+
+  .itjima-launch-page .landing-motion-secondary-cta:hover {
+    transform: translateY(-1px);
+    border-color: rgba(21, 22, 20, 0.16) !important;
+  }
+
+  .itjima-launch-page #how article:hover {
+    transform: translateY(-4px);
+    border-color: rgba(21, 22, 20, 0.10) !important;
+    box-shadow: var(--st-shadow-sm) !important;
+  }
+
+  .itjima-launch-page main > section:nth-of-type(4) article:hover {
     transform: translateY(-3px);
-    border-color: rgba(18, 18, 15, 0.12) !important;
-    box-shadow: 0 18px 40px rgba(30, 47, 54, 0.075) !important;
+    background: #2d3134 !important;
   }
 }
 
+/* -------------------------------------------------------------------------- */
+/* Responsive                                                                 */
+/* -------------------------------------------------------------------------- */
+
 @media (max-width: 1023px) {
-  .itjima-launch-page .landing-motion-hero > div { min-height: auto; }
-  .itjima-launch-page .landing-motion-demo-shell { transform: none; }
+  .itjima-launch-page .landing-motion-header > div {
+    width: min(100% - 32px, 960px) !important;
+  }
+
+  .itjima-launch-page .landing-motion-hero {
+    padding-top: 52px !important;
+  }
+
+  .itjima-launch-page .landing-motion-demo-wrap {
+    padding: 34px 28px;
+    border-radius: 34px;
+  }
+
+  .itjima-launch-page #how,
+  .itjima-launch-page main > section:nth-of-type(4),
+  .itjima-launch-page main > section:nth-of-type(5),
+  .itjima-launch-page main > section:nth-of-type(6) {
+    width: min(100% - 32px, 960px);
+  }
 }
 
 @media (max-width: 639px) {
-  .itjima-launch-page .landing-motion-header { width: calc(100% - 16px); top: 8px; border-radius: 17px; }
-  .itjima-launch-page .landing-motion-hero { padding-top: 16px !important; }
-  .itjima-launch-page .landing-motion-hero > div { padding: 30px 20px 24px !important; gap: 34px !important; border-radius: 26px !important; }
-  .itjima-launch-page .landing-motion-title { max-width: 100% !important; font-size: clamp(42px, 14vw, 58px) !important; line-height: 0.99 !important; }
-  .itjima-launch-page .landing-motion-description { margin-top: 21px !important; font-size: 16px !important; }
-  .itjima-launch-page .landing-motion-actions { margin-top: 25px !important; }
+  .itjima-launch-page .landing-motion {
+    background: #f8f9f7 !important;
+  }
+
+  .itjima-launch-page .landing-motion-header > div {
+    min-height: 64px !important;
+    width: calc(100% - 24px) !important;
+  }
+
+  .itjima-launch-page .landing-motion-wordmark > span:first-child {
+    display: none !important;
+  }
+
+  .itjima-launch-page .landing-motion-header-cta {
+    min-height: 40px !important;
+    padding-inline: 15px !important;
+  }
+
+  .itjima-launch-page .landing-motion-hero {
+    padding: 46px 12px 22px !important;
+  }
+
+  .itjima-launch-page .landing-motion-hero > div {
+    gap: 38px !important;
+  }
+
+  .itjima-launch-page .landing-motion-copy {
+    width: 100%;
+  }
+
+  .itjima-launch-page .landing-motion-eyebrow {
+    font-size: 10px !important;
+  }
+
+  .itjima-launch-page .landing-motion-title {
+    margin-top: 22px !important;
+    font-size: clamp(47px, 14.4vw, 62px) !important;
+    line-height: 0.95 !important;
+    letter-spacing: -0.06em !important;
+  }
+
+  .itjima-launch-page .landing-motion-description {
+    margin-top: 24px !important;
+    padding-inline: 8px;
+    font-size: 16px !important;
+    line-height: 1.62 !important;
+  }
+
+  .itjima-launch-page .landing-motion-actions {
+    width: 100%;
+    margin-top: 28px !important;
+  }
+
   .itjima-launch-page .landing-motion-primary-cta,
-  .itjima-launch-page .landing-motion-secondary-cta { width: 100%; }
-  .itjima-launch-page .landing-motion-demo-shell { border-radius: 22px !important; }
+  .itjima-launch-page .landing-motion-secondary-cta {
+    width: 100%;
+    min-height: 52px !important;
+  }
+
+  .itjima-launch-page .landing-motion-demo-wrap {
+    width: 100%;
+    padding: 18px 10px;
+    border-radius: 28px;
+  }
+
+  .itjima-launch-page .landing-motion-demo-wrap::before {
+    opacity: 0.18;
+    background-size: 16px 16px;
+  }
+
+  .itjima-launch-page .landing-motion-demo-shell {
+    border-radius: 22px !important;
+    box-shadow: 0 22px 58px rgba(28, 45, 53, 0.12) !important;
+  }
+
+  .itjima-launch-page .landing-motion-proof {
+    padding: 12px 20px 42px !important;
+  }
+
+  .itjima-launch-page .landing-motion-proof > div {
+    justify-content: flex-start;
+    gap: 9px 18px !important;
+  }
+
   .itjima-launch-page #how,
   .itjima-launch-page main > section:nth-of-type(4),
-  .itjima-launch-page main > section:nth-of-type(5) { width: calc(100% - 16px); padding: 48px 20px !important; border-radius: 26px !important; }
-  .itjima-launch-page #how article,
-  .itjima-launch-page main > section:nth-of-type(4) article { border-radius: 19px !important; }
-  .itjima-launch-page main > section:nth-of-type(6) { width: calc(100% - 16px); }
-  .itjima-launch-page .landing-motion-final { padding: 58px 22px !important; border-radius: 26px !important; }
-  .itjima-launch-page footer { width: calc(100% - 16px); border-radius: 20px; }
+  .itjima-launch-page main > section:nth-of-type(5),
+  .itjima-launch-page main > section:nth-of-type(6) {
+    width: calc(100% - 24px);
+    margin-top: 14px !important;
+    padding: 58px 18px !important;
+  }
+
+  .itjima-launch-page #how h2,
+  .itjima-launch-page main > section:nth-of-type(4) h2,
+  .itjima-launch-page main > section:nth-of-type(5) h2 {
+    font-size: clamp(38px, 11vw, 50px) !important;
+  }
+
+  .itjima-launch-page #how article {
+    min-height: 300px !important;
+    padding: 24px !important;
+    border-radius: 24px !important;
+  }
+
+  .itjima-launch-page main > section:nth-of-type(4) {
+    padding: 56px 20px !important;
+    border-radius: 30px !important;
+  }
+
+  .itjima-launch-page main > section:nth-of-type(4) article {
+    min-height: auto;
+    border-radius: 22px !important;
+  }
+
+  .itjima-launch-page main > section:nth-of-type(5) {
+    padding-top: 66px !important;
+  }
+
+  .itjima-launch-page .landing-motion-faq summary {
+    min-height: 72px !important;
+    font-size: 16px !important;
+  }
+
+  .itjima-launch-page main > section:nth-of-type(6) {
+    padding: 30px 0 64px !important;
+  }
+
+  .itjima-launch-page .landing-motion-final {
+    padding: 70px 20px !important;
+    border-radius: 30px !important;
+  }
+
+  .itjima-launch-page .landing-motion-final h2 {
+    font-size: clamp(42px, 12vw, 56px) !important;
+  }
+
+  .itjima-launch-page footer {
+    width: calc(100% - 24px);
+    margin-bottom: 16px !important;
+  }
+
+  .itjima-launch-page footer > div {
+    padding-top: 28px;
+  }
 }
