@@ -11,6 +11,7 @@ describe("PWA product metadata safety", () => {
   const manifest = JSON.parse(manifestSource) as {
     name: string;
     description: string;
+    start_url?: string;
     orientation?: string;
     lang?: string;
     shortcuts?: Array<{ url: string }>;
@@ -34,10 +35,11 @@ describe("PWA product metadata safety", () => {
     expect(manifest.lang).toBe("ko-KR");
   });
 
-  it("provides shortcuts for the three v1 destinations", () => {
+  it("launches the installed PWA into the product while keeping three v1 shortcuts", () => {
+    expect(manifest.start_url).toBe("/app");
     const urls = manifest.shortcuts?.map((shortcut) => shortcut.url) ?? [];
     expect(urls).toEqual(
-      expect.arrayContaining(["/", "/schedule", "/archive"]),
+      expect.arrayContaining(["/app", "/schedule", "/archive"]),
     );
   });
 
