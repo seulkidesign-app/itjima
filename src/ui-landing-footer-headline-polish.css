@@ -4,6 +4,24 @@
   font-weight: 700 !important;
 }
 
+.itjima-launch-page footer nav {
+  align-items: center;
+  gap: 12px;
+}
+
+.itjima-launch-page footer nav > a:not([href*="instagram.com"]):not([href*="linkedin.com"]):not([href*="github.com"]) {
+  display: inline-flex;
+  min-height: 40px;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.itjima-launch-page footer nav a[href*="instagram.com"] {
+  margin-left: 6px;
+}
+
 .itjima-launch-page footer nav a[href*="instagram.com"],
 .itjima-launch-page footer nav a[href*="linkedin.com"],
 .itjima-launch-page footer nav a[href*="github.com"] {
@@ -69,7 +87,15 @@
 
 @media (max-width: 639px) {
   .itjima-launch-page footer nav {
-    align-items: center;
+    gap: 10px;
+  }
+
+  .itjima-launch-page footer nav > a:not([href*="instagram.com"]):not([href*="linkedin.com"]):not([href*="github.com"]) {
+    min-height: 38px;
+  }
+
+  .itjima-launch-page footer nav a[href*="instagram.com"] {
+    margin-left: 0;
   }
 
   .itjima-launch-page footer nav a[href*="instagram.com"],
