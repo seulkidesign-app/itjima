@@ -1,0 +1,207 @@
+/* Itjima brand-system fidelity pass.
+ * Keeps the Stitch-level product hierarchy while restoring Itjima's own visual language:
+ * warm ivory, sky blue + lemon yellow, rounded modular canvases, and restrained ambient color.
+ */
+
+.itjima-launch-page .landing-motion {
+  --ij-brand-ivory: #f7f6f1;
+  --ij-brand-paper: #fffefa;
+  --ij-brand-blue: #65bff0;
+  --ij-brand-blue-soft: #dff3ff;
+  --ij-brand-yellow: #ffd83d;
+  --ij-brand-yellow-soft: #fff4bf;
+  --ij-brand-mint: #bfe9d5;
+  --ij-brand-ink: #151614;
+  background:
+    radial-gradient(circle at 88% 3%, rgba(101, 191, 240, 0.07), transparent 31rem),
+    radial-gradient(circle at 12% 8%, rgba(255, 216, 61, 0.055), transparent 28rem),
+    var(--ij-brand-ivory) !important;
+}
+
+/* Header stays quiet; brand appears in the mark and primary action. */
+.itjima-launch-page .landing-motion-header {
+  background: rgba(247, 246, 241, 0.9) !important;
+}
+
+.itjima-launch-page .landing-motion-wordmark > span:first-child,
+.itjima-launch-page .landing-motion-header-cta,
+.itjima-launch-page .landing-motion-primary-cta,
+.itjima-launch-page .landing-motion-confirm {
+  background: var(--ij-brand-yellow) !important;
+}
+
+/* Hero: keep the product-led composition, but make the demo canvas unmistakably Itjima. */
+.itjima-launch-page .landing-motion-demo-wrap {
+  border: 1px solid rgba(21, 22, 20, 0.055) !important;
+  border-radius: 42px !important;
+  background:
+    radial-gradient(circle at 11% 18%, rgba(101, 191, 240, 0.36), transparent 31%),
+    radial-gradient(circle at 88% 79%, rgba(255, 216, 61, 0.32), transparent 35%),
+    radial-gradient(circle at 78% 14%, rgba(191, 233, 213, 0.32), transparent 29%),
+    #f7f8f4 !important;
+}
+
+.itjima-launch-page .landing-motion-demo-wrap::before {
+  opacity: 0.14 !important;
+  background-image: radial-gradient(rgba(21, 22, 20, 0.14) 0.55px, transparent 0.55px) !important;
+  background-size: 20px 20px !important;
+}
+
+.itjima-launch-page .landing-motion-demo-shell {
+  border-radius: 28px !important;
+  border-color: rgba(21, 22, 20, 0.08) !important;
+  background: rgba(255, 255, 252, 0.98) !important;
+  box-shadow: 0 34px 92px rgba(31, 55, 67, 0.13) !important;
+}
+
+.itjima-launch-page .landing-motion-message {
+  background: #72c7f4 !important;
+}
+
+/* Supporting proof becomes a subtle set of product facts, not another visual block. */
+.itjima-launch-page .landing-motion-proof > div > div {
+  color: rgba(21, 22, 20, 0.58) !important;
+}
+
+/* Modular section canvases echo the brand board without turning the page into a poster. */
+.itjima-launch-page #how,
+.itjima-launch-page main > section:nth-of-type(4),
+.itjima-launch-page main > section:nth-of-type(5) {
+  width: min(1180px, calc(100% - 48px)) !important;
+  border-radius: 40px !important;
+}
+
+.itjima-launch-page #how {
+  padding: clamp(72px, 8vw, 104px) clamp(30px, 6vw, 72px) !important;
+  background: rgba(255, 254, 250, 0.86) !important;
+}
+
+.itjima-launch-page #how article {
+  border-radius: 28px !important;
+  border-color: rgba(21, 22, 20, 0.055) !important;
+  box-shadow: none !important;
+}
+
+.itjima-launch-page #how article:nth-child(1) {
+  background: linear-gradient(150deg, rgba(223, 243, 255, 0.9), rgba(255, 255, 255, 0.94)) !important;
+}
+
+.itjima-launch-page #how article:nth-child(2) {
+  background: linear-gradient(150deg, rgba(255, 244, 191, 0.82), rgba(255, 255, 255, 0.95)) !important;
+}
+
+.itjima-launch-page #how article:nth-child(3) {
+  background: linear-gradient(150deg, rgba(223, 243, 255, 0.62), rgba(191, 233, 213, 0.42), rgba(255, 255, 255, 0.94)) !important;
+}
+
+.itjima-launch-page #how article > div {
+  border: 1px solid rgba(255, 255, 255, 0.72) !important;
+  background: rgba(255, 255, 255, 0.72) !important;
+}
+
+/* Trust: remove the dark detour. Keep one calm, branded confidence canvas. */
+.itjima-launch-page main > section:nth-of-type(4) {
+  position: relative;
+  overflow: hidden;
+  padding: clamp(68px, 8vw, 96px) clamp(28px, 6vw, 70px) !important;
+  background:
+    radial-gradient(circle at 7% 10%, rgba(101, 191, 240, 0.18), transparent 31%),
+    radial-gradient(circle at 92% 88%, rgba(255, 216, 61, 0.18), transparent 32%),
+    rgba(255, 254, 250, 0.9) !important;
+  color: var(--ij-brand-ink) !important;
+}
+
+.itjima-launch-page main > section:nth-of-type(4) span {
+  color: rgba(21, 22, 20, 0.45) !important;
+}
+
+.itjima-launch-page main > section:nth-of-type(4) h2,
+.itjima-launch-page main > section:nth-of-type(4) article h3 {
+  color: var(--ij-brand-ink) !important;
+}
+
+.itjima-launch-page main > section:nth-of-type(4) article {
+  min-height: 230px !important;
+  padding: 28px !important;
+  border: 1px solid rgba(21, 22, 20, 0.06) !important;
+  border-radius: 26px !important;
+  background: rgba(255, 255, 255, 0.72) !important;
+  box-shadow: 0 10px 30px rgba(29, 44, 51, 0.04) !important;
+}
+
+.itjima-launch-page main > section:nth-of-type(4) article svg {
+  width: 42px !important;
+  height: 42px !important;
+  padding: 10px !important;
+  border-radius: 13px !important;
+  background: rgba(101, 191, 240, 0.14) !important;
+  color: #278fc5 !important;
+}
+
+.itjima-launch-page main > section:nth-of-type(4) article:nth-child(2) svg {
+  background: rgba(255, 216, 61, 0.22) !important;
+  color: #8a7100 !important;
+}
+
+.itjima-launch-page main > section:nth-of-type(4) article:nth-child(3) svg {
+  background: rgba(191, 233, 213, 0.34) !important;
+  color: #317b63 !important;
+}
+
+.itjima-launch-page main > section:nth-of-type(4) article p {
+  color: rgba(21, 22, 20, 0.56) !important;
+}
+
+/* FAQ remains editorial but sits on a soft paper module. */
+.itjima-launch-page main > section:nth-of-type(5) {
+  padding: clamp(72px, 8vw, 104px) clamp(30px, 6vw, 72px) !important;
+  background: rgba(255, 254, 250, 0.82) !important;
+}
+
+.itjima-launch-page .landing-motion-faq details[open] summary {
+  color: #1d84b5 !important;
+}
+
+/* Final brand moment: blue -> mint -> lemon, matching the core brand board. */
+.itjima-launch-page .landing-motion-final {
+  border-radius: 42px !important;
+  background:
+    radial-gradient(circle at 12% 18%, rgba(73, 169, 239, 0.34), transparent 34%),
+    radial-gradient(circle at 50% 58%, rgba(191, 233, 213, 0.40), transparent 38%),
+    radial-gradient(circle at 90% 76%, rgba(230, 247, 99, 0.40), transparent 36%),
+    #fffefa !important;
+}
+
+/* Hover stays understated. */
+@media (hover: hover) and (pointer: fine) {
+  .itjima-launch-page main > section:nth-of-type(4) article:hover {
+    transform: translateY(-3px);
+    background: rgba(255, 255, 255, 0.9) !important;
+    box-shadow: 0 16px 34px rgba(29, 44, 51, 0.065) !important;
+  }
+}
+
+@media (max-width: 639px) {
+  .itjima-launch-page .landing-motion {
+    background: var(--ij-brand-ivory) !important;
+  }
+
+  .itjima-launch-page .landing-motion-demo-wrap {
+    border-radius: 30px !important;
+    background:
+      radial-gradient(circle at 6% 10%, rgba(101, 191, 240, 0.30), transparent 37%),
+      radial-gradient(circle at 94% 92%, rgba(255, 216, 61, 0.27), transparent 40%),
+      #f7f8f4 !important;
+  }
+
+  .itjima-launch-page #how,
+  .itjima-launch-page main > section:nth-of-type(4),
+  .itjima-launch-page main > section:nth-of-type(5) {
+    width: calc(100% - 24px) !important;
+    border-radius: 30px !important;
+  }
+
+  .itjima-launch-page .landing-motion-final {
+    border-radius: 30px !important;
+  }
+}
