@@ -31,6 +31,7 @@ import "./ui-schedule-final-polish.css";
 import "./ui-landing-scroll-fix.css";
 import "./ui-landing-interactions.css";
 import "./ui-landing-brand-system.css";
+import "./ui-landing-footer-headline-polish.css";
 import "./ui-pwa-install-experience.css";
 import "./ui-interaction-craft.css";
 
