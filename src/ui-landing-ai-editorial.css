@@ -1,0 +1,401 @@
+/* Itjima landing — AI editorial refinement.
+ * Keeps the sky-blue / lemon / ivory system, but removes visual heaviness:
+ * lighter surfaces, playful type contrast, luminous color, and clearer hierarchy.
+ */
+
+.itjima-launch-page .landing-motion {
+  --ij-ai-ink: #151615;
+  --ij-ai-muted: rgba(21, 22, 21, 0.56);
+  --ij-ai-blue: #69c5f2;
+  --ij-ai-blue-deep: #339fd4;
+  --ij-ai-yellow: #ffd83d;
+  --ij-ai-mint: #c7efd8;
+  --ij-ai-paper: #fffefa;
+  --ij-ai-ivory: #f8f7f2;
+  --ij-ai-line: rgba(21, 22, 21, 0.07);
+  background:
+    radial-gradient(circle at 82% 5%, rgba(105, 197, 242, 0.075), transparent 29rem),
+    radial-gradient(circle at 18% 8%, rgba(255, 216, 61, 0.052), transparent 25rem),
+    var(--ij-ai-ivory) !important;
+}
+
+/* -------------------------------------------------------------------------- */
+/* Hero: editorial typography + intelligent ambient color                     */
+/* -------------------------------------------------------------------------- */
+
+.itjima-launch-page .landing-motion-hero {
+  position: relative;
+  isolation: isolate;
+  padding-top: clamp(70px, 7vw, 108px) !important;
+  padding-bottom: clamp(70px, 8vw, 118px) !important;
+  background:
+    radial-gradient(circle at 50% 22%, rgba(255,255,255,.74), transparent 34rem),
+    radial-gradient(circle at 78% 45%, rgba(105, 197, 242, .055), transparent 28rem),
+    radial-gradient(circle at 24% 50%, rgba(255, 216, 61, .045), transparent 25rem);
+}
+
+.itjima-launch-page .landing-motion-copy {
+  width: min(980px, 100%) !important;
+}
+
+.itjima-launch-page .landing-motion-eyebrow {
+  min-height: 36px !important;
+  padding: 8px 13px !important;
+  border: 1px solid rgba(52, 159, 212, 0.10) !important;
+  background:
+    linear-gradient(rgba(255,255,255,.72), rgba(255,255,255,.72)) padding-box,
+    linear-gradient(110deg, rgba(105,197,242,.28), rgba(199,239,216,.22), rgba(255,216,61,.22)) border-box !important;
+  color: rgba(21,22,21,.54) !important;
+  box-shadow: 0 7px 24px rgba(40, 87, 108, .045) !important;
+  backdrop-filter: blur(16px) saturate(1.12) !important;
+  -webkit-backdrop-filter: blur(16px) saturate(1.12) !important;
+  letter-spacing: .105em !important;
+}
+
+.itjima-launch-page .landing-motion-eyebrow svg {
+  color: var(--ij-ai-blue-deep) !important;
+  filter: drop-shadow(0 0 8px rgba(105,197,242,.32));
+}
+
+.itjima-launch-page .landing-motion-title {
+  position: relative;
+  max-width: 1020px !important;
+  margin-top: 32px !important;
+  font-size: clamp(58px, 8.6vw, 112px) !important;
+  font-weight: 690 !important;
+  line-height: .91 !important;
+  letter-spacing: -.072em !important;
+  color: var(--ij-ai-ink) !important;
+  text-wrap: balance;
+}
+
+/* First line is intentionally softer; the second line lands with more confidence. */
+.itjima-launch-page .landing-motion-title::first-line {
+  font-weight: 560;
+  letter-spacing: -.062em;
+  color: rgba(21,22,21,.82);
+}
+
+.itjima-launch-page .landing-motion-title > span {
+  margin-top: .08em;
+  transform: translateY(.02em);
+}
+
+.itjima-launch-page .landing-motion-title > span > span:first-child {
+  font-weight: 760 !important;
+  letter-spacing: -.078em;
+}
+
+.itjima-launch-page .landing-motion-title > span::after {
+  position: absolute;
+  top: -.08em;
+  right: -.42em;
+  content: "✦";
+  font-size: .26em;
+  font-weight: 700;
+  line-height: 1;
+  color: var(--ij-ai-blue-deep);
+  text-shadow:
+    0 0 18px rgba(105,197,242,.38),
+    18px 17px 0 rgba(255,216,61,.9);
+  animation: ij-ai-spark 5.6s ease-in-out infinite;
+}
+
+.itjima-launch-page .landing-motion-highlight {
+  bottom: .015em !important;
+  left: -.015em !important;
+  right: -.03em !important;
+  height: .125em !important;
+  border-radius: 999px !important;
+  background: linear-gradient(90deg, #75c9f3 0%, #bdebd8 48%, #ffdc45 100%) !important;
+  box-shadow:
+    0 6px 22px rgba(105,197,242,.12),
+    0 4px 18px rgba(255,216,61,.11) !important;
+  opacity: .88 !important;
+  filter: saturate(.92);
+}
+
+.itjima-launch-page .landing-motion-description {
+  max-width: 660px !important;
+  margin-top: 34px !important;
+  color: var(--ij-ai-muted) !important;
+  font-size: clamp(16px, 1.45vw, 19px) !important;
+  line-height: 1.72 !important;
+  letter-spacing: -.016em;
+}
+
+.itjima-launch-page .landing-motion-actions {
+  margin-top: 34px !important;
+  gap: 11px !important;
+}
+
+.itjima-launch-page .landing-motion-primary-cta {
+  border: 1px solid rgba(168, 135, 0, .10) !important;
+  background: linear-gradient(180deg, #ffe35b 0%, #ffd83d 100%) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.64),
+    0 12px 28px rgba(169,135,0,.10) !important;
+}
+
+.itjima-launch-page .landing-motion-secondary-cta {
+  border-color: rgba(21,22,21,.075) !important;
+  background: rgba(255,255,255,.72) !important;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.9) !important;
+  backdrop-filter: blur(14px) !important;
+  -webkit-backdrop-filter: blur(14px) !important;
+}
+
+/* -------------------------------------------------------------------------- */
+/* Product object: luminous, light, less "boxed"                              */
+/* -------------------------------------------------------------------------- */
+
+.itjima-launch-page .landing-motion-demo-wrap::before {
+  opacity: .42 !important;
+  filter: blur(58px) saturate(1.06) !important;
+  background:
+    radial-gradient(circle at 28% 30%, rgba(87, 185, 242, .46), transparent 47%),
+    radial-gradient(circle at 70% 35%, rgba(199, 239, 216, .44), transparent 45%),
+    radial-gradient(circle at 54% 74%, rgba(255, 216, 61, .38), transparent 48%) !important;
+}
+
+.itjima-launch-page .landing-motion-demo-shell {
+  border-color: rgba(21,22,21,.065) !important;
+  background:
+    linear-gradient(180deg, rgba(255,255,253,.96), rgba(255,255,251,.91)) !important;
+  box-shadow:
+    0 44px 100px rgba(42, 78, 96, .105),
+    0 12px 34px rgba(42, 78, 96, .045),
+    inset 0 1px 0 rgba(255,255,255,1) !important;
+  backdrop-filter: blur(20px) saturate(1.06);
+  -webkit-backdrop-filter: blur(20px) saturate(1.06);
+}
+
+.itjima-launch-page .landing-motion-demo-shell > div:first-child {
+  background: linear-gradient(180deg, rgba(255,255,253,.94), rgba(250,250,247,.75)) !important;
+}
+
+.itjima-launch-page .landing-motion-message {
+  background: linear-gradient(135deg, #73c7f3 0%, #86d3ef 100%) !important;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.34) !important;
+}
+
+.itjima-launch-page .landing-motion-result {
+  border-color: rgba(21,22,21,.065) !important;
+  background: rgba(255,255,252,.78) !important;
+  backdrop-filter: blur(14px) !important;
+  -webkit-backdrop-filter: blur(14px) !important;
+}
+
+.itjima-launch-page .landing-motion-confirm {
+  background: linear-gradient(180deg, #ffe35a, #ffd83d) !important;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.52) !important;
+}
+
+.itjima-launch-page .landing-motion-input,
+.itjima-launch-page .landing-motion-adjust {
+  border-color: rgba(21,22,21,.07) !important;
+  background: rgba(255,255,255,.68) !important;
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+
+/* -------------------------------------------------------------------------- */
+/* Supporting proof: quiet, airy product facts                                */
+/* -------------------------------------------------------------------------- */
+
+.itjima-launch-page .landing-motion-proof {
+  border: 0 !important;
+  background: transparent !important;
+}
+
+.itjima-launch-page .landing-motion-proof > div {
+  gap: 9px 28px !important;
+}
+
+.itjima-launch-page .landing-motion-proof > div > div {
+  min-height: 38px !important;
+  padding: 0 !important;
+  border: 0 !important;
+  background: transparent !important;
+  color: rgba(21,22,21,.52) !important;
+  font-weight: 650 !important;
+}
+
+.itjima-launch-page .landing-motion-proof svg {
+  width: 15px;
+  color: #299467 !important;
+}
+
+/* -------------------------------------------------------------------------- */
+/* Sections: reduce colored blocks, keep color as a signal                     */
+/* -------------------------------------------------------------------------- */
+
+.itjima-launch-page #how,
+.itjima-launch-page main > section:nth-of-type(4),
+.itjima-launch-page main > section:nth-of-type(5) {
+  background: rgba(255,255,252,.60) !important;
+  border: 1px solid rgba(21,22,21,.045) !important;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.82) !important;
+  backdrop-filter: blur(18px) saturate(1.04);
+  -webkit-backdrop-filter: blur(18px) saturate(1.04);
+}
+
+.itjima-launch-page #how h2,
+.itjima-launch-page main > section:nth-of-type(4) h2,
+.itjima-launch-page main > section:nth-of-type(5) h2,
+.itjima-launch-page .landing-motion-final h2 {
+  font-weight: 690 !important;
+  letter-spacing: -.055em !important;
+  line-height: .98 !important;
+}
+
+.itjima-launch-page #how article,
+.itjima-launch-page main > section:nth-of-type(4) article {
+  border-color: rgba(21,22,21,.055) !important;
+  background: rgba(255,255,255,.70) !important;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.92) !important;
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+
+.itjima-launch-page #how article:nth-child(1),
+.itjima-launch-page #how article:nth-child(2),
+.itjima-launch-page #how article:nth-child(3) {
+  background: rgba(255,255,255,.72) !important;
+}
+
+.itjima-launch-page #how article::before {
+  position: absolute;
+  top: 0;
+  left: 26px;
+  right: 26px;
+  height: 3px;
+  border-radius: 0 0 999px 999px;
+  content: "";
+  opacity: .72;
+  background: linear-gradient(90deg, var(--ij-ai-blue), var(--ij-ai-mint), var(--ij-ai-yellow));
+}
+
+.itjima-launch-page #how article:nth-child(2)::before {
+  background: linear-gradient(90deg, var(--ij-ai-yellow), var(--ij-ai-mint));
+}
+
+.itjima-launch-page #how article:nth-child(3)::before {
+  background: linear-gradient(90deg, var(--ij-ai-blue), var(--ij-ai-mint));
+}
+
+.itjima-launch-page #how article > div {
+  border-color: rgba(21,22,21,.05) !important;
+  background: rgba(247,248,246,.72) !important;
+}
+
+.itjima-launch-page main > section:nth-of-type(4) {
+  background:
+    radial-gradient(circle at 8% 12%, rgba(105,197,242,.10), transparent 30%),
+    radial-gradient(circle at 93% 84%, rgba(255,216,61,.095), transparent 31%),
+    rgba(255,255,252,.62) !important;
+}
+
+.itjima-launch-page main > section:nth-of-type(4) article svg {
+  background: rgba(105,197,242,.095) !important;
+  color: #248fc3 !important;
+}
+
+.itjima-launch-page main > section:nth-of-type(4) article:nth-child(2) svg {
+  background: rgba(255,216,61,.15) !important;
+  color: #806800 !important;
+}
+
+.itjima-launch-page main > section:nth-of-type(4) article:nth-child(3) svg {
+  background: rgba(199,239,216,.28) !important;
+  color: #33795f !important;
+}
+
+/* FAQ becomes almost documentation-like. */
+.itjima-launch-page .landing-motion-faq {
+  border-top-color: rgba(21,22,21,.10) !important;
+}
+
+.itjima-launch-page .landing-motion-faq details {
+  border-color: rgba(21,22,21,.07) !important;
+}
+
+.itjima-launch-page .landing-motion-faq details[open] {
+  background: linear-gradient(90deg, rgba(105,197,242,.045), rgba(255,216,61,.025), transparent 74%) !important;
+}
+
+.itjima-launch-page .landing-motion-faq details[open] summary {
+  color: #2388b7 !important;
+}
+
+/* Final CTA carries the richest color moment. */
+.itjima-launch-page .landing-motion-final {
+  border-color: rgba(21,22,21,.045) !important;
+  background:
+    radial-gradient(circle at 9% 18%, rgba(78,177,238,.29), transparent 34%),
+    radial-gradient(circle at 48% 62%, rgba(199,239,216,.36), transparent 40%),
+    radial-gradient(circle at 92% 78%, rgba(236,247,103,.36), transparent 36%),
+    rgba(255,255,252,.90) !important;
+}
+
+.itjima-launch-page .landing-motion-final > svg {
+  background: rgba(255,255,255,.66) !important;
+  color: var(--ij-ai-ink) !important;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.92) !important;
+  backdrop-filter: blur(12px);
+}
+
+@keyframes ij-ai-spark {
+  0%, 100% { opacity: .72; transform: translateY(0) rotate(0deg) scale(.94); }
+  48% { opacity: 1; transform: translateY(-4px) rotate(8deg) scale(1.06); }
+  62% { opacity: .88; transform: translateY(-1px) rotate(-4deg) scale(1); }
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .itjima-launch-page #how article:hover,
+  .itjima-launch-page main > section:nth-of-type(4) article:hover {
+    border-color: rgba(52,159,212,.10) !important;
+    background: rgba(255,255,255,.84) !important;
+    box-shadow:
+      0 18px 46px rgba(47,83,99,.055),
+      inset 0 1px 0 rgba(255,255,255,.96) !important;
+  }
+}
+
+@media (max-width: 639px) {
+  .itjima-launch-page .landing-motion-hero {
+    padding-top: 58px !important;
+    padding-bottom: 72px !important;
+  }
+
+  .itjima-launch-page .landing-motion-title {
+    margin-top: 26px !important;
+    font-size: clamp(47px, 14.2vw, 64px) !important;
+    line-height: .94 !important;
+    letter-spacing: -.065em !important;
+  }
+
+  .itjima-launch-page .landing-motion-title > span::after {
+    right: -.22em;
+    top: -.12em;
+    font-size: .22em;
+    text-shadow: 12px 12px 0 rgba(255,216,61,.86);
+  }
+
+  .itjima-launch-page .landing-motion-description {
+    margin-top: 26px !important;
+    font-size: 15.5px !important;
+  }
+
+  .itjima-launch-page #how,
+  .itjima-launch-page main > section:nth-of-type(4),
+  .itjima-launch-page main > section:nth-of-type(5) {
+    background: rgba(255,255,252,.66) !important;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .itjima-launch-page .landing-motion-title > span::after {
+    animation: none !important;
+  }
+}

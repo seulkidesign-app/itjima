@@ -38,6 +38,7 @@ import "./ui-landing-wow-motion.css";
 import "./ui-landing-fixed-glass-nav.css";
 import "./ui-pwa-install-experience.css";
 import "./ui-interaction-craft.css";
+import "./ui-landing-ai-editorial.css";
 import "./landingHeroMotion";
 
 import { registerServiceWorker } from "@/lib/swReminders";
