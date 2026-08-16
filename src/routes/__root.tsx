@@ -6,12 +6,14 @@ import { authDebug } from "@/lib/authDebug";
 import { SideNav } from "@/components/SideNav";
 import { TopNav } from "@/components/TopNav";
 import { DesktopAppNav } from "@/components/DesktopAppNav";
+import { UsLaunchLanding } from "@/components/UsLaunchLanding";
 import { PageTransition } from "@/components/PageTransition";
 import { GlobalInteractions } from "@/components/GlobalInteractions";
 import { ScheduleDeepLinkBridge } from "@/components/ScheduleDeepLinkBridge";
 import { PwaInstallExperience } from "@/components/PwaInstallExperience";
 import { PwaInstallHomeBar } from "@/components/PwaInstallHomeBar";
-import { LanguageProvider } from "@/lib/i18n";
+import { LanguageProvider, useLang } from "@/lib/i18n";
+import { applyLandingSeo } from "@/lib/seo";
 import { useArchiveMetaSync } from "@/hooks/useArchiveMetaSync";
 import { useTimezoneChangeSync } from "@/hooks/useTimezoneChangeSync";
 
@@ -39,6 +41,45 @@ function AppRuntimeServices() {
       <GlobalInteractions />
       <ScheduleDeepLinkBridge />
     </>
+  );
+}
+
+function RootLanding() {
+  const { lang } = useLang();
+
+  useEffect(() => {
+    applyLandingSeo({ canonicalPath: "/", locale: lang });
+
+    const routeAppLinks = (event: MouseEvent) => {
+      if (
+        event.defaultPrevented ||
+        event.button !== 0 ||
+        event.metaKey ||
+        event.ctrlKey ||
+        event.shiftKey ||
+        event.altKey
+      ) {
+        return;
+      }
+
+      const target = event.target;
+      if (!(target instanceof Element)) return;
+      const link = target.closest<HTMLAnchorElement>("a[href='/']");
+      if (!link || !link.closest(".itjima-launch-page")) return;
+
+      event.preventDefault();
+      event.stopPropagation();
+      window.location.assign("/app");
+    };
+
+    document.addEventListener("click", routeAppLinks, true);
+    return () => document.removeEventListener("click", routeAppLinks, true);
+  }, [lang]);
+
+  return (
+    <div className="itjima-launch-page">
+      <UsLaunchLanding />
+    </div>
   );
 }
 
@@ -134,7 +175,9 @@ function AdaptiveAppShell({ routeKey }: { routeKey: string }) {
 
 function RootLayout() {
   const pathname = useRouterState({ select: (state) => state.location.pathname });
-  const isFullPage = pathname.startsWith("/about");
+  const isRootLanding = pathname === "/";
+  const isAboutLanding = pathname.startsWith("/about");
+  const isFullPage = isRootLanding || isAboutLanding;
   const isAdmin = pathname.startsWith("/admin");
   const isAuth = pathname.startsWith("/auth");
   const mainRouteKey =
@@ -142,7 +185,7 @@ function RootLayout() {
       ? "schedule"
       : pathname.startsWith("/archive")
         ? "archive"
-        : pathname === "/"
+        : pathname === "/app"
           ? "home"
           : pathname;
 
@@ -175,7 +218,7 @@ function RootLayout() {
       <AppRuntimeServices />
       {isFullPage ? (
         <>
-          <Outlet />
+          {isRootLanding ? <RootLanding /> : <Outlet />}
           <PwaInstallExperience />
           <Toaster position="top-center" theme="system" richColors closeButton />
         </>
