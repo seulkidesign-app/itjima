@@ -35,6 +35,7 @@ import "./ui-landing-footer-headline-polish.css";
 import "./ui-landing-silicon-polish.css";
 import "./ui-landing-brand-fidelity.css";
 import "./ui-landing-wow-motion.css";
+import "./ui-landing-fixed-glass-nav.css";
 import "./ui-pwa-install-experience.css";
 import "./ui-interaction-craft.css";
 import "./landingHeroMotion";
