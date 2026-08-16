@@ -1,0 +1,436 @@
+/* ItJima landing visual system — 2026-08
+ * Visual-only layer. Keeps existing landing content, semantics and interactions.
+ * Reference language: warm ivory, sky blue + lemon yellow, soft glass, generous radius.
+ */
+
+.itjima-launch-page .landing-motion {
+  --ij-cream: #f8f7f1;
+  --ij-paper: rgba(255, 255, 252, 0.84);
+  --ij-paper-solid: #fffefa;
+  --ij-blue: #57b9ef;
+  --ij-blue-soft: #dff4ff;
+  --ij-yellow: #ffd83d;
+  --ij-yellow-soft: #fff4b7;
+  --ij-ink: #12120f;
+  --ij-muted: rgba(18, 18, 15, 0.56);
+  --ij-line: rgba(18, 18, 15, 0.07);
+  --ij-radius-xl: 38px;
+  --ij-radius-lg: 30px;
+  --ij-radius-md: 22px;
+  background:
+    radial-gradient(circle at 9% 9%, rgba(255, 216, 61, 0.16), transparent 24rem),
+    radial-gradient(circle at 91% 12%, rgba(87, 185, 239, 0.15), transparent 26rem),
+    var(--ij-cream);
+  color: var(--ij-ink);
+}
+
+.itjima-launch-page .landing-motion::before {
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  content: "";
+  pointer-events: none;
+  opacity: 0.22;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 180 180' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='.08'/%3E%3C/svg%3E");
+  mix-blend-mode: multiply;
+}
+
+/* Header */
+.itjima-launch-page .landing-motion-header {
+  top: 12px;
+  width: min(1180px, calc(100% - 24px));
+  margin-inline: auto;
+  border: 1px solid rgba(255, 255, 255, 0.72);
+  border-radius: 24px;
+  background: rgba(255, 254, 250, 0.72) !important;
+  box-shadow: 0 12px 36px rgba(27, 42, 48, 0.07);
+  backdrop-filter: blur(22px) saturate(1.15);
+  -webkit-backdrop-filter: blur(22px) saturate(1.15);
+}
+
+.itjima-launch-page .landing-motion-header > div {
+  min-height: 64px;
+  width: min(1120px, calc(100% - 30px));
+}
+
+.itjima-launch-page .landing-motion-wordmark > span:first-child {
+  border-radius: 13px;
+  background: var(--ij-yellow) !important;
+  box-shadow: 0 8px 18px rgba(255, 216, 61, 0.28);
+}
+
+.itjima-launch-page .landing-motion-header-cta {
+  color: var(--ij-ink) !important;
+  background: var(--ij-yellow) !important;
+  box-shadow: 0 9px 22px rgba(255, 216, 61, 0.25);
+}
+
+/* Hero: large rounded brand canvas */
+.itjima-launch-page .landing-motion-hero {
+  padding-top: 28px !important;
+  padding-bottom: 18px !important;
+}
+
+.itjima-launch-page .landing-motion-hero > div {
+  position: relative;
+  overflow: hidden;
+  max-width: 1180px !important;
+  min-height: 660px;
+  padding: clamp(34px, 5vw, 64px);
+  border: 1px solid rgba(255, 255, 255, 0.82);
+  border-radius: var(--ij-radius-xl);
+  background:
+    radial-gradient(circle at 79% 27%, rgba(87, 185, 239, 0.58), transparent 24%),
+    radial-gradient(circle at 66% 63%, rgba(255, 226, 82, 0.56), transparent 25%),
+    radial-gradient(circle at 93% 70%, rgba(193, 236, 223, 0.48), transparent 23%),
+    linear-gradient(135deg, rgba(255,255,252,.95), rgba(250,248,238,.85));
+  box-shadow: 0 30px 85px rgba(38, 55, 62, 0.08);
+}
+
+.itjima-launch-page .landing-motion-hero > div::before,
+.itjima-launch-page .landing-motion-hero > div::after {
+  position: absolute;
+  border-radius: 999px;
+  content: "";
+  pointer-events: none;
+  filter: blur(1px);
+}
+
+.itjima-launch-page .landing-motion-hero > div::before {
+  right: -100px;
+  top: -150px;
+  width: 520px;
+  height: 520px;
+  background: radial-gradient(circle at 35% 35%, rgba(95, 193, 244, .74), rgba(104, 192, 236, .2) 48%, transparent 72%);
+  opacity: .55;
+}
+
+.itjima-launch-page .landing-motion-hero > div::after {
+  right: 180px;
+  bottom: -230px;
+  width: 510px;
+  height: 510px;
+  background: radial-gradient(circle, rgba(255, 224, 68, .72), rgba(255, 229, 93, .18) 55%, transparent 72%);
+  opacity: .68;
+}
+
+.itjima-launch-page .landing-motion-copy,
+.itjima-launch-page .landing-motion-demo-wrap {
+  position: relative;
+  z-index: 2;
+}
+
+.itjima-launch-page .landing-motion-eyebrow {
+  border-color: rgba(87, 185, 239, 0.22) !important;
+  background: rgba(255,255,255,.64) !important;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.9), 0 8px 24px rgba(66, 144, 186, .08);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+
+.itjima-launch-page .landing-motion-eyebrow svg {
+  color: #329ed8;
+}
+
+.itjima-launch-page .landing-motion-title {
+  max-width: 680px !important;
+  font-size: clamp(46px, 7.2vw, 78px) !important;
+  line-height: .99 !important;
+  letter-spacing: -.064em !important;
+}
+
+.itjima-launch-page .landing-motion-highlight {
+  height: .18em !important;
+  background: linear-gradient(90deg, var(--ij-yellow), #ffe977) !important;
+  box-shadow: 0 6px 18px rgba(255, 216, 61, .28);
+}
+
+.itjima-launch-page .landing-motion-description {
+  color: var(--ij-muted) !important;
+}
+
+.itjima-launch-page .landing-motion-primary-cta {
+  color: var(--ij-ink) !important;
+  border: 1px solid rgba(255,255,255,.66);
+  border-radius: 999px !important;
+  background: linear-gradient(100deg, rgba(124, 204, 248, .92), rgba(255, 228, 86, .95)) !important;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.85), 0 14px 34px rgba(79, 161, 195, .17) !important;
+}
+
+.itjima-launch-page .landing-motion-secondary-cta {
+  border-color: rgba(255,255,255,.78) !important;
+  border-radius: 999px !important;
+  background: rgba(255,255,255,.6) !important;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.92), 0 10px 28px rgba(31, 48, 57, .06);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+}
+
+/* Product demo as a floating glass software object */
+.itjima-launch-page .landing-motion-demo-glow {
+  inset: 5% !important;
+  background: linear-gradient(145deg, rgba(88, 187, 239, .72), rgba(255, 223, 72, .66)) !important;
+  filter: blur(62px) !important;
+  opacity: .5;
+}
+
+.itjima-launch-page .landing-motion-demo-shell {
+  border-color: rgba(255,255,255,.78) !important;
+  border-radius: 34px !important;
+  background: rgba(255, 255, 252, .73) !important;
+  box-shadow: 0 34px 90px rgba(36, 68, 83, .16), inset 0 1px 0 rgba(255,255,255,.9) !important;
+  backdrop-filter: blur(22px) saturate(1.12);
+  -webkit-backdrop-filter: blur(22px) saturate(1.12);
+}
+
+.itjima-launch-page .landing-motion-message {
+  color: var(--ij-ink);
+  background: linear-gradient(105deg, #75cdf7, #64bdf0) !important;
+  box-shadow: 0 10px 24px rgba(75, 171, 223, .2);
+}
+
+.itjima-launch-page .landing-motion-result {
+  border-color: rgba(255,255,255,.9) !important;
+  background: rgba(255,255,255,.68) !important;
+  box-shadow: 0 12px 26px rgba(36, 55, 64, .06);
+  backdrop-filter: blur(12px);
+}
+
+.itjima-launch-page .landing-motion-confirm {
+  background: var(--ij-yellow) !important;
+  box-shadow: 0 8px 20px rgba(255, 216, 61, .24);
+}
+
+.itjima-launch-page .landing-motion-adjust,
+.itjima-launch-page .landing-motion-input {
+  border-color: rgba(18,18,15,.07) !important;
+  background: rgba(255,255,255,.54);
+}
+
+/* Proof chips — no full-width rule bar */
+.itjima-launch-page .landing-motion-proof {
+  margin: 0 auto;
+  max-width: 1180px;
+  padding: 14px 18px !important;
+  border: 0 !important;
+  background: transparent !important;
+}
+
+.itjima-launch-page .landing-motion-proof > div {
+  gap: 10px;
+}
+
+.itjima-launch-page .landing-motion-proof > div > div {
+  min-height: 58px !important;
+  border: 1px solid rgba(255,255,255,.8) !important;
+  border-radius: 18px;
+  background: rgba(255,255,252,.68);
+  box-shadow: 0 8px 24px rgba(25, 46, 56, .045), inset 0 1px 0 rgba(255,255,255,.9);
+  backdrop-filter: blur(12px);
+}
+
+.itjima-launch-page .landing-motion-proof svg {
+  color: #40a9dd !important;
+}
+
+/* Content sections become modular rounded canvases */
+.itjima-launch-page #how,
+.itjima-launch-page main > section:nth-of-type(4),
+.itjima-launch-page main > section:nth-of-type(5),
+.itjima-launch-page main > section:nth-of-type(6) {
+  width: min(1180px, calc(100% - 32px));
+  margin: 18px auto 0;
+  padding: clamp(42px, 6vw, 78px) clamp(24px, 5vw, 58px) !important;
+  border: 1px solid rgba(255,255,255,.78);
+  border-radius: var(--ij-radius-xl);
+  background: rgba(255,255,252,.69);
+  box-shadow: 0 22px 68px rgba(34, 54, 64, .055), inset 0 1px 0 rgba(255,255,255,.9);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+}
+
+.itjima-launch-page #how {
+  background:
+    radial-gradient(circle at 92% 9%, rgba(87,185,239,.16), transparent 28%),
+    rgba(255,255,252,.72);
+}
+
+.itjima-launch-page #how article {
+  overflow: hidden;
+  border-color: rgba(255,255,255,.85) !important;
+  border-radius: 28px !important;
+  background: rgba(255,255,255,.68) !important;
+  box-shadow: 0 14px 36px rgba(30, 55, 67, .065), inset 0 1px 0 rgba(255,255,255,.94);
+}
+
+.itjima-launch-page #how article:nth-child(1) {
+  background: linear-gradient(155deg, rgba(225,245,255,.94), rgba(255,255,255,.76)) !important;
+}
+
+.itjima-launch-page #how article:nth-child(2) {
+  background: linear-gradient(155deg, rgba(255,247,199,.91), rgba(255,255,255,.78)) !important;
+}
+
+.itjima-launch-page #how article:nth-child(3) {
+  background: linear-gradient(155deg, rgba(225,245,255,.8), rgba(255,245,187,.64)) !important;
+}
+
+.itjima-launch-page #how article > div {
+  border: 1px solid rgba(255,255,255,.74);
+  border-radius: 999px !important;
+  background: rgba(255,255,255,.62) !important;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.92);
+}
+
+/* Trust section: remove previous near-black block, retain contrast through cards. */
+.itjima-launch-page main > section:nth-of-type(4) {
+  color: var(--ij-ink) !important;
+  background:
+    radial-gradient(circle at 8% 8%, rgba(89,188,240,.24), transparent 28%),
+    radial-gradient(circle at 90% 88%, rgba(255,222,70,.27), transparent 30%),
+    rgba(255,255,252,.72) !important;
+}
+
+.itjima-launch-page main > section:nth-of-type(4) span,
+.itjima-launch-page main > section:nth-of-type(4) p {
+  color: rgba(18,18,15,.55) !important;
+}
+
+.itjima-launch-page main > section:nth-of-type(4) article {
+  border-color: rgba(255,255,255,.84) !important;
+  border-radius: 28px !important;
+  background: rgba(255,255,255,.58) !important;
+  box-shadow: 0 14px 36px rgba(30, 55, 67, .06), inset 0 1px 0 rgba(255,255,255,.9);
+}
+
+.itjima-launch-page main > section:nth-of-type(4) article svg {
+  color: #3faee4 !important;
+}
+
+/* FAQ */
+.itjima-launch-page .landing-motion-faq {
+  border-color: rgba(18,18,15,.08) !important;
+}
+
+.itjima-launch-page .landing-motion-faq details {
+  border-color: rgba(18,18,15,.07) !important;
+}
+
+.itjima-launch-page .landing-motion-faq details[open] {
+  border-radius: 18px;
+  background: linear-gradient(90deg, rgba(222,244,255,.72), rgba(255,246,190,.38), transparent 88%) !important;
+}
+
+/* Final card — airy yellow/blue orb instead of saturated blue banner */
+.itjima-launch-page .landing-motion-final {
+  position: relative;
+  overflow: hidden;
+  border-color: rgba(255,255,255,.9) !important;
+  border-radius: 34px !important;
+  background:
+    radial-gradient(circle at 17% 30%, rgba(93,190,241,.46), transparent 27%),
+    radial-gradient(circle at 83% 66%, rgba(255,223,68,.5), transparent 31%),
+    rgba(255,255,252,.78) !important;
+  box-shadow: 0 22px 62px rgba(39, 66, 78, .09), inset 0 1px 0 rgba(255,255,255,.94) !important;
+}
+
+/* Footer */
+.itjima-launch-page footer {
+  width: min(1180px, calc(100% - 32px));
+  margin: 18px auto 28px;
+  border: 1px solid rgba(255,255,255,.8) !important;
+  border-radius: 28px;
+  background: rgba(255,255,252,.66) !important;
+  box-shadow: 0 14px 40px rgba(33, 52, 61, .045);
+  backdrop-filter: blur(14px);
+}
+
+/* Hover craft aligned with the new surfaces */
+@media (hover: hover) and (pointer: fine) {
+  .itjima-launch-page .landing-motion-lift:hover {
+    border-color: rgba(85, 184, 236, .2) !important;
+    box-shadow: 0 28px 65px -28px rgba(62, 139, 178, .28) !important;
+  }
+
+  .itjima-launch-page .landing-motion-header-cta:hover,
+  .itjima-launch-page .landing-motion-primary-cta:hover {
+    box-shadow: 0 18px 38px -16px rgba(87, 174, 212, .38) !important;
+  }
+}
+
+@media (max-width: 1023px) {
+  .itjima-launch-page .landing-motion-header {
+    top: 8px;
+  }
+
+  .itjima-launch-page .landing-motion-hero > div {
+    min-height: auto;
+  }
+
+  .itjima-launch-page .landing-motion-demo-wrap {
+    max-width: 620px;
+    width: 100%;
+    margin-inline: auto;
+  }
+}
+
+@media (max-width: 639px) {
+  .itjima-launch-page .landing-motion {
+    background:
+      radial-gradient(circle at 92% 5%, rgba(87,185,239,.14), transparent 18rem),
+      radial-gradient(circle at 2% 16%, rgba(255,216,61,.12), transparent 17rem),
+      var(--ij-cream);
+  }
+
+  .itjima-launch-page .landing-motion-header {
+    width: calc(100% - 16px);
+    border-radius: 20px;
+  }
+
+  .itjima-launch-page .landing-motion-header > div {
+    width: calc(100% - 20px);
+  }
+
+  .itjima-launch-page .landing-motion-wordmark > span:first-child {
+    display: none;
+  }
+
+  .itjima-launch-page .landing-motion-hero {
+    padding-inline: 8px !important;
+    padding-top: 20px !important;
+  }
+
+  .itjima-launch-page .landing-motion-hero > div {
+    gap: 38px !important;
+    padding: 32px 20px 26px;
+    border-radius: 30px;
+  }
+
+  .itjima-launch-page .landing-motion-title {
+    font-size: clamp(44px, 15vw, 62px) !important;
+  }
+
+  .itjima-launch-page .landing-motion-demo-shell {
+    border-radius: 27px !important;
+  }
+
+  .itjima-launch-page .landing-motion-proof {
+    padding-inline: 8px !important;
+  }
+
+  .itjima-launch-page #how,
+  .itjima-launch-page main > section:nth-of-type(4),
+  .itjima-launch-page main > section:nth-of-type(5),
+  .itjima-launch-page main > section:nth-of-type(6) {
+    width: calc(100% - 16px);
+    margin-top: 10px;
+    border-radius: 30px;
+  }
+
+  .itjima-launch-page footer {
+    width: calc(100% - 16px);
+    margin-top: 10px;
+    margin-bottom: 8px;
+    border-radius: 24px;
+  }
+}
