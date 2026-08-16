@@ -14,7 +14,7 @@ export function TopNav() {
   const userId = useUserId();
   const tabs = [
     {
-      to: "/",
+      to: "/app",
       label: t("남기기", "Capture"),
       ariaLabel: t("남기기", "Capture"),
       Icon: MessageSquareText,
@@ -71,7 +71,7 @@ export function TopNav() {
 
   const renderBrand = (className: string) => (
     <Link
-      to="/about"
+      to="/"
       onClick={tap}
       aria-label={t("잊지마 소개로 이동", "Open Itjima introduction")}
       className={className}
