@@ -1,0 +1,65 @@
+/* Landing navigation: persistent frosted-glass header.
+ * Keeps navigation visible while preserving context from the content underneath.
+ */
+
+.itjima-launch-page .landing-motion-header {
+  position: fixed !important;
+  inset: 0 0 auto 0 !important;
+  top: 0 !important;
+  width: 100% !important;
+  margin: 0 !important;
+  z-index: 90 !important;
+  border: 0 !important;
+  border-bottom: 1px solid rgba(21, 22, 20, 0.055) !important;
+  border-radius: 0 !important;
+  background: rgba(247, 246, 241, 0.72) !important;
+  box-shadow: 0 8px 28px rgba(20, 20, 16, 0.035) !important;
+  -webkit-backdrop-filter: blur(24px) saturate(1.18) !important;
+  backdrop-filter: blur(24px) saturate(1.18) !important;
+  transform: translateZ(0);
+  will-change: backdrop-filter;
+}
+
+/* Keep the first section in the same visual position after taking the header
+   out of normal document flow. */
+.itjima-launch-page .landing-motion > main {
+  padding-top: 72px;
+}
+
+/* A faint inner highlight makes the glass edge read cleanly on bright sections. */
+.itjima-launch-page .landing-motion-header::after {
+  position: absolute;
+  inset: auto 0 0;
+  height: 1px;
+  content: "";
+  pointer-events: none;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(255, 255, 255, 0.72) 18%,
+    rgba(255, 255, 255, 0.9) 50%,
+    rgba(255, 255, 255, 0.72) 82%,
+    transparent
+  );
+  opacity: 0.72;
+}
+
+@media (max-width: 639px) {
+  .itjima-launch-page .landing-motion-header {
+    background: rgba(247, 246, 241, 0.78) !important;
+    -webkit-backdrop-filter: blur(20px) saturate(1.14) !important;
+    backdrop-filter: blur(20px) saturate(1.14) !important;
+  }
+
+  .itjima-launch-page .landing-motion > main {
+    padding-top: 64px;
+  }
+}
+
+@media (prefers-reduced-transparency: reduce) {
+  .itjima-launch-page .landing-motion-header {
+    background: rgba(247, 246, 241, 0.96) !important;
+    -webkit-backdrop-filter: none !important;
+    backdrop-filter: none !important;
+  }
+}
