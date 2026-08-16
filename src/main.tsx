@@ -34,8 +34,10 @@ import "./ui-landing-brand-system.css";
 import "./ui-landing-footer-headline-polish.css";
 import "./ui-landing-silicon-polish.css";
 import "./ui-landing-brand-fidelity.css";
+import "./ui-landing-wow-motion.css";
 import "./ui-pwa-install-experience.css";
 import "./ui-interaction-craft.css";
+import "./landingHeroMotion";
 
 import { registerServiceWorker } from "@/lib/swReminders";
 import { installPushSubscriptionAuthSync } from "@/lib/push/pushAuthSync";
