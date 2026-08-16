@@ -1,14 +1,7 @@
-import { createFileRoute } from "@tanstack/react-router";
-import { UsLaunchLanding } from "@/components/UsLaunchLanding";
+import { createFileRoute, redirect } from "@tanstack/react-router";
 
 export const Route = createFileRoute("/about")({
-  component: AboutRoute,
+  beforeLoad: () => {
+    throw redirect({ to: "/" });
+  },
 });
-
-function AboutRoute() {
-  return (
-    <div className="itjima-launch-page">
-      <UsLaunchLanding />
-    </div>
-  );
-}

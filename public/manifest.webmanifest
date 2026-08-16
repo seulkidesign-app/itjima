@@ -3,7 +3,7 @@
   "name": "잊지마 (Itjima) — 말하듯 남기는 일정 캡처",
   "short_name": "잊지마",
   "description": "자연어로 말하듯 남기면 확실한 일정 정보는 채우고, 애매한 부분만 확인하는 일정 캡처 도구",
-  "start_url": "/",
+  "start_url": "/app",
   "scope": "/",
   "display": "standalone",
   "orientation": "any",
@@ -37,7 +37,7 @@
       "name": "일정 말하기",
       "short_name": "일정 입력",
       "description": "자연어로 일정이나 할 일을 바로 남기기",
-      "url": "/",
+      "url": "/app",
       "icons": [{ "src": "/favicon.svg", "sizes": "any", "type": "image/svg+xml" }]
     },
     {
