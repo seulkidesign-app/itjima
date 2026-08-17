@@ -11,31 +11,33 @@ function metaContent(selector: string): string | null {
 }
 
 describe("launch SEO localization", () => {
-  it("publishes an English title, description, locale, and language", () => {
+  it("publishes an English title, description, locale, and homepage canonical", () => {
     applyLandingSeo({ locale: "en", canonicalPath: "/about" });
 
     expect(document.documentElement.lang).toBe("en");
-    expect(document.title).toContain("Schedule planner by voice or text");
+    expect(document.title).toContain("AI schedule planner by voice or text");
     expect(metaContent('meta[name="description"]')).toContain(
       "Type or say a plan naturally",
     );
     expect(metaContent('meta[property="og:locale"]')).toBe("en_US");
     expect(
       document.querySelector<HTMLLinkElement>('link[rel="canonical"]')?.href,
-    ).toBe("https://itjima.app/about");
+    ).toBe("https://itjima.app/");
   });
 
   it("publishes Korean metadata when Korean is selected", () => {
-    applyLandingSeo({ locale: "ko", canonicalPath: "/about" });
+    applyLandingSeo({ locale: "ko", canonicalPath: "/" });
 
     expect(document.documentElement.lang).toBe("ko");
-    expect(document.title).toContain("말로 쓰는 일정 관리 앱");
+    expect(document.title).toContain("잊지마");
+    expect(document.title).toContain("AI 일정관리 앱");
     expect(metaContent('meta[property="og:title"]')).toContain(
       "대충 말해도 일정이 돼요",
     );
     expect(metaContent('meta[property="og:description"]')).toContain(
-      "애매한 부분만 물어보는 일정 관리 앱",
+      "AI 일정관리 앱",
     );
+    expect(metaContent('meta[property="og:site_name"]')).toBe("잊지마");
     expect(metaContent('meta[property="og:locale"]')).toBe("ko_KR");
     expect(metaContent('meta[property="og:image"]')).toBe(
       "https://itjima.app/og-itjima-schedule-v2.png",
@@ -45,19 +47,19 @@ describe("launch SEO localization", () => {
     expect(metaContent('meta[property="og:image:height"]')).toBe("630");
   });
 
-  it("provides alternate-language links", () => {
-    applyLandingSeo({ locale: "en", canonicalPath: "/about" });
+  it("provides homepage alternate-language links", () => {
+    applyLandingSeo({ locale: "en", canonicalPath: "/" });
 
     expect(
       document.querySelector<HTMLLinkElement>(
         'link[rel="alternate"][hreflang="ko"]',
       )?.href,
-    ).toContain("/about?lang=ko");
+    ).toBe("https://itjima.app/?lang=ko");
     expect(
       document.querySelector<HTMLLinkElement>(
         'link[rel="alternate"][hreflang="en"]',
       )?.href,
-    ).toContain("/about?lang=en");
+    ).toBe("https://itjima.app/?lang=en");
   });
 
   it("describes the English product as a bilingual scheduling app", () => {
@@ -73,6 +75,20 @@ describe("launch SEO localization", () => {
     expect(software?.featureList).toContain(
       "Natural-language schedule capture",
     );
+  });
+
+  it("uses 잊지마 as the preferred homepage site name", () => {
+    const graph = landingStructuredDataGraph([], "ko") as {
+      "@graph": Array<Record<string, unknown>>;
+    };
+    const website = graph["@graph"].find(
+      (node) => node["@type"] === "WebSite",
+    );
+
+    expect(website?.name).toBe("잊지마");
+    expect(website?.url).toBe("https://itjima.app/");
+    expect(website?.alternateName).toContain("Itjima");
+    expect(website?.alternateName).toContain("itjima.app");
   });
 
   it("identifies LinkedIn as an official Itjima profile", () => {
