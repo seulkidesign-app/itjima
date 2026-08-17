@@ -4,7 +4,11 @@ import {
   type NlIntent,
   type ScheduleConfidence,
 } from "@/lib/nlSchedule";
-import { hasNaturalRepeatIntent } from "@/lib/naturalScheduleDraft";
+import {
+  hasNaturalRepeatIntent,
+  hasNaturalScheduleTime,
+  resolveNaturalScheduleStart,
+} from "@/lib/naturalScheduleDraft";
 import type { ThoughtCategory } from "@/lib/ruleEngine";
 
 export type PromisePrimaryAction =
@@ -115,6 +119,16 @@ export function shouldShowInlinePromise(
 ): boolean {
   const trimmed = text.trim();
   if (hasNaturalRepeatIntent(trimmed)) return false;
+
+  // Relative offsets such as “30분 뒤” or “in 2 hours” are legitimate timed
+  // commitments even though the older date detector does not classify them.
+  if (
+    hasNaturalScheduleTime(trimmed) &&
+    resolveNaturalScheduleStart(trimmed) !== null
+  ) {
+    return true;
+  }
+
   const nl = understandNaturalLanguage(trimmed, lang);
   return (
     nl.confidence !== "low" &&
