@@ -41,6 +41,7 @@ import "./ui-pwa-install-experience.css";
 import "./ui-interaction-craft.css";
 import "./ui-landing-ai-editorial.css";
 import "./ui-landing-swipe-motion.css";
+import "./ui-landing-mobile-trust-fix.css";
 import "./landingHeroMotion";
 
 import { registerServiceWorker } from "@/lib/swReminders";
