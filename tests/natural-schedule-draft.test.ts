@@ -111,6 +111,23 @@ describe("natural schedule commitment parsing", () => {
     expect(draft.options.reminderMinutes).toBeNull();
   });
 
+  it("understands conversational relative offsets without a model call", () => {
+    const korean = buildNaturalScheduleDraft(thought("두 시간 뒤 엄마한테 전화"));
+    expect(korean.start.getTime()).toBe(
+      new Date("2026-08-08T01:07:00+09:00").getTime(),
+    );
+    expect(korean.options.allDay).toBe(false);
+    expect(korean.options.reminderMinutes).toBe(0);
+    expect(korean.text).toBe("엄마한테 전화");
+
+    const english = buildNaturalScheduleDraft(thought("in 30 minutes leave for the station"));
+    expect(english.start.getTime()).toBe(
+      new Date("2026-08-07T23:37:00+09:00").getTime(),
+    );
+    expect(english.options.allDay).toBe(false);
+    expect(english.text).toBe("leave for the station");
+  });
+
   it("recognizes reminder offsets without pretending recurrence is a one-off", () => {
     expect(inferNaturalReminderMinutes("1시간 전 알려줘", true)).toEqual({
       minutes: 60,
