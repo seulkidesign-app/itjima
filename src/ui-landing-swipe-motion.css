@@ -1,0 +1,224 @@
+/* Swipe decision story — scroll reveal + collision-safe labels.
+ * Layered entrance lives on the stack children so the existing pointer/hover
+ * interaction on the front card remains available after the reveal finishes.
+ */
+
+.itjima-launch-page #swipe > div > div:last-child[data-landing-reveal] {
+  overflow: visible;
+}
+
+.itjima-launch-page
+  #swipe
+  > div
+  > div:last-child[data-landing-reveal]
+  > div:nth-child(2) {
+  height: 450px;
+}
+
+/* Give the front card enough breathing room for long Korean/English copy. */
+.itjima-launch-page
+  #swipe
+  > div
+  > div:last-child[data-landing-reveal]
+  > div:nth-child(2)
+  > article:nth-child(3) {
+  min-height: 300px;
+  padding-bottom: 2rem;
+}
+
+/* Action labels live below the card content instead of crossing the headline. */
+.itjima-launch-page
+  #swipe
+  > div
+  > div:last-child[data-landing-reveal]
+  > div:nth-child(2)
+  > div:nth-child(4),
+.itjima-launch-page
+  #swipe
+  > div
+  > div:last-child[data-landing-reveal]
+  > div:nth-child(2)
+  > div:nth-child(5) {
+  top: auto !important;
+  bottom: 74px;
+  z-index: 20;
+  white-space: nowrap;
+}
+
+.itjima-launch-page
+  #swipe
+  > div
+  > div:last-child[data-landing-reveal]
+  > div:nth-child(2)
+  > div:nth-child(6) {
+  bottom: 16px;
+  z-index: 20;
+  white-space: nowrap;
+}
+
+@keyframes itjima-swipe-card-back-in {
+  0% {
+    opacity: 0;
+    transform: translate3d(0, 52px, 0) scale(0.9) rotate(-13deg);
+  }
+  72% {
+    opacity: 1;
+    transform: translate3d(-3px, -3px, 0) scale(1.01) rotate(-6.5deg);
+  }
+  100% {
+    opacity: 1;
+    transform: translate3d(0, 0, 0) scale(1) rotate(-5deg);
+  }
+}
+
+@keyframes itjima-swipe-card-middle-in {
+  0% {
+    opacity: 0;
+    transform: translate3d(0, 46px, 0) scale(0.92) rotate(12deg);
+  }
+  72% {
+    opacity: 1;
+    transform: translate3d(3px, -4px, 0) scale(1.01) rotate(5.5deg);
+  }
+  100% {
+    opacity: 1;
+    transform: translate3d(0, 0, 0) scale(1) rotate(4deg);
+  }
+}
+
+@keyframes itjima-swipe-card-front-in {
+  0% {
+    opacity: 0;
+    transform: translate3d(0, 38px, 0) scale(0.94);
+  }
+  68% {
+    opacity: 1;
+    transform: translate3d(0, -5px, 0) scale(1.008);
+  }
+  100% {
+    opacity: 1;
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+}
+
+@keyframes itjima-swipe-action-in {
+  from {
+    opacity: 0;
+    filter: blur(5px);
+  }
+  to {
+    opacity: 1;
+    filter: blur(0);
+  }
+}
+
+/* "촤자작" — the three cards arrive one after another as this block enters. */
+.itjima-launch-page
+  #swipe
+  > div
+  > div:last-child[data-landing-reveal][data-landing-visible="true"]
+  > div:nth-child(2)
+  > div:nth-child(1) {
+  animation: itjima-swipe-card-back-in 560ms cubic-bezier(0.22, 1, 0.36, 1)
+    40ms backwards;
+}
+
+.itjima-launch-page
+  #swipe
+  > div
+  > div:last-child[data-landing-reveal][data-landing-visible="true"]
+  > div:nth-child(2)
+  > div:nth-child(2) {
+  animation: itjima-swipe-card-middle-in 560ms cubic-bezier(0.22, 1, 0.36, 1)
+    125ms backwards;
+}
+
+.itjima-launch-page
+  #swipe
+  > div
+  > div:last-child[data-landing-reveal][data-landing-visible="true"]
+  > div:nth-child(2)
+  > article:nth-child(3) {
+  animation: itjima-swipe-card-front-in 580ms cubic-bezier(0.22, 1, 0.36, 1)
+    215ms backwards;
+}
+
+.itjima-launch-page
+  #swipe
+  > div
+  > div:last-child[data-landing-reveal][data-landing-visible="true"]
+  > div:nth-child(2)
+  > div:nth-child(4) {
+  animation: itjima-swipe-action-in 300ms ease-out 430ms backwards;
+}
+
+.itjima-launch-page
+  #swipe
+  > div
+  > div:last-child[data-landing-reveal][data-landing-visible="true"]
+  > div:nth-child(2)
+  > div:nth-child(5) {
+  animation: itjima-swipe-action-in 300ms ease-out 485ms backwards;
+}
+
+.itjima-launch-page
+  #swipe
+  > div
+  > div:last-child[data-landing-reveal][data-landing-visible="true"]
+  > div:nth-child(2)
+  > div:nth-child(6) {
+  animation: itjima-swipe-action-in 300ms ease-out 540ms backwards;
+}
+
+@media (max-width: 520px) {
+  .itjima-launch-page
+    #swipe
+    > div
+    > div:last-child[data-landing-reveal]
+    > div:nth-child(2) {
+    height: 430px;
+  }
+
+  .itjima-launch-page
+    #swipe
+    > div
+    > div:last-child[data-landing-reveal]
+    > div:nth-child(2)
+    > article:nth-child(3) {
+    min-height: 290px;
+  }
+
+  .itjima-launch-page
+    #swipe
+    > div
+    > div:last-child[data-landing-reveal]
+    > div:nth-child(2)
+    > div:nth-child(4),
+  .itjima-launch-page
+    #swipe
+    > div
+    > div:last-child[data-landing-reveal]
+    > div:nth-child(2)
+    > div:nth-child(5) {
+    bottom: 66px;
+    font-size: 10px;
+    padding-left: 10px;
+    padding-right: 10px;
+  }
+
+  .itjima-launch-page
+    #swipe
+    > div
+    > div:last-child[data-landing-reveal]
+    > div:nth-child(2)
+    > div:nth-child(6) {
+    bottom: 12px;
+    font-size: 10px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .itjima-launch-page #swipe [data-landing-visible="true"] > div:nth-child(2) > * {
+    animation: none !important;
+  }
+}
