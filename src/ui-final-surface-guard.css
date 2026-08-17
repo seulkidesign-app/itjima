@@ -1,0 +1,96 @@
+/* Final visual guard: imported after every other stylesheet.
+ * Keeps the light-only app surfaces readable on iOS and prevents legacy
+ * landing rules from cross-theming neighboring sections.
+ */
+
+/* Decision Deck ------------------------------------------------------------ */
+.phone-frame [role="dialog"][aria-label="하나씩"],
+.phone-frame [role="dialog"][aria-label="One by one"] {
+  color-scheme: light !important;
+  background:
+    radial-gradient(circle at 50% 8%, rgba(255, 219, 77, 0.14), transparent 34%),
+    #fafaf8 !important;
+  color: #111113 !important;
+}
+
+.phone-frame [data-testid="decision-deck-active-card"] {
+  background: #ffffff !important;
+  color: #111113 !important;
+  border-color: rgba(17, 17, 19, 0.08) !important;
+  -webkit-text-fill-color: initial;
+}
+
+.phone-frame [data-testid="decision-deck-active-card"] p,
+.phone-frame [data-testid="decision-deck-active-card"] h1,
+.phone-frame [data-testid="decision-deck-active-card"] h2,
+.phone-frame [data-testid="decision-deck-active-card"] h3,
+.phone-frame [data-testid="decision-deck-active-card"] strong {
+  color: #111113 !important;
+}
+
+.phone-frame .focus-sort-card-stack {
+  background: rgba(255, 255, 255, 0.86) !important;
+  border-color: rgba(17, 17, 19, 0.06) !important;
+  color: #111113 !important;
+}
+
+.phone-frame [data-testid="decision-deck-active-card"],
+.phone-frame .focus-sort-card-stack {
+  forced-color-adjust: none;
+}
+
+/* Launch landing ----------------------------------------------------------- */
+.landing-motion #swipe {
+  background: #ffffff !important;
+  color: #141410 !important;
+  border-color: rgba(20, 20, 16, 0.07) !important;
+}
+
+.landing-motion #swipe > div > div:first-child > span {
+  color: rgba(20, 20, 16, 0.46) !important;
+}
+
+.landing-motion #swipe > div > div:first-child > p {
+  color: rgba(20, 20, 16, 0.58) !important;
+}
+
+.landing-motion #swipe h2,
+.landing-motion #swipe article,
+.landing-motion #swipe article p:first-of-type,
+.landing-motion #swipe > div > div:first-child > div:last-child > div {
+  color: #141410 !important;
+}
+
+.landing-motion #swipe article,
+.landing-motion #swipe > div > div:first-child > div:last-child > div {
+  background: #ffffff !important;
+}
+
+/* BUILT FOR TRUST is the section immediately following the stable #swipe id. */
+.landing-motion #swipe + section {
+  background: #171712 !important;
+  color: #ffffff !important;
+}
+
+.landing-motion #swipe + section h2,
+.landing-motion #swipe + section h3 {
+  color: #ffffff !important;
+}
+
+.landing-motion #swipe + section > div > div:first-child > span {
+  color: rgba(255, 255, 255, 0.46) !important;
+}
+
+.landing-motion #swipe + section article {
+  background: rgba(255, 255, 255, 0.055) !important;
+  border-color: rgba(255, 255, 255, 0.12) !important;
+  color: #ffffff !important;
+}
+
+.landing-motion #swipe + section article p {
+  color: rgba(255, 255, 255, 0.62) !important;
+}
+
+.landing-motion #swipe + section article svg {
+  color: #ffd43b !important;
+}
