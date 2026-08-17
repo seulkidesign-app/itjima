@@ -13,6 +13,7 @@ import "./ui-pages.css";
 import "./ui-desktop-fix.css";
 import "./ui-apple-system.css";
 import "./ui-decision-deck.css";
+import "./ui-decision-deck-touch-fix.css";
 import "./ui-interactions.css";
 import "./ui-layout-system.css";
 import "./ui-design-qa.css";
