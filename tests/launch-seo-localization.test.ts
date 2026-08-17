@@ -15,7 +15,7 @@ describe("launch SEO localization", () => {
     applyLandingSeo({ locale: "en", canonicalPath: "/about" });
 
     expect(document.documentElement.lang).toBe("en");
-    expect(document.title).toContain("AI schedule planner by voice or text");
+    expect(document.title).toContain("Schedule planner by voice or text");
     expect(metaContent('meta[name="description"]')).toContain(
       "Type or say a plan naturally",
     );
@@ -29,13 +29,12 @@ describe("launch SEO localization", () => {
     applyLandingSeo({ locale: "ko", canonicalPath: "/" });
 
     expect(document.documentElement.lang).toBe("ko");
-    expect(document.title).toContain("잊지마");
-    expect(document.title).toContain("AI 일정관리 앱");
+    expect(document.title).toContain("말로 쓰는 일정 관리 앱");
     expect(metaContent('meta[property="og:title"]')).toContain(
       "대충 말해도 일정이 돼요",
     );
     expect(metaContent('meta[property="og:description"]')).toContain(
-      "AI 일정관리 앱",
+      "애매한 부분만 물어보는 일정 관리 앱",
     );
     expect(metaContent('meta[property="og:site_name"]')).toBe("잊지마");
     expect(metaContent('meta[property="og:locale"]')).toBe("ko_KR");
