@@ -16,6 +16,8 @@ import {
   scheduleConfirmationReason,
   type ScheduleConfirmationReason,
 } from "@/lib/nlScheduleSafety";
+import { withInboxScheduleDraft } from "@/lib/inboxScheduleDefaults";
+import { buildNaturalScheduleDraft } from "@/lib/naturalScheduleDraft";
 import { useLang, useT } from "@/lib/i18n";
 import { track } from "@/lib/analytics";
 
@@ -76,8 +78,16 @@ function schedulePreview(text: string, lang: "ko" | "en"): SchedulePreview {
         ];
   const timePatterns =
     lang === "ko"
-      ? [/(?:오전|오후)\s*\d{1,2}\s*시(?:\s*\d{1,2}\s*분)?/, /\d{1,2}\s*시(?:\s*\d{1,2}\s*분)?/, /퇴근\s*후/]
-      : [/\b\d{1,2}(?::\d{2})?\s*(?:am|pm)\b/i, /\bat\s+\d{1,2}(?::\d{2})?\b/i, /\bafter\s+work\b/i];
+      ? [
+          /(?:오전|오후)\s*\d{1,2}\s*시(?:\s*\d{1,2}\s*분)?/,
+          /\d{1,2}\s*시(?:\s*\d{1,2}\s*분)?/,
+          /퇴근\s*(?:후|하고|하고서|뒤)/,
+        ]
+      : [
+          /\b\d{1,2}(?::\d{2})?\s*(?:am|pm)\b/i,
+          /\bat\s+\d{1,2}(?::\d{2})?\b/i,
+          /\bafter\s+work\b/i,
+        ];
 
   const date = datePatterns.map((pattern) => text.match(pattern)?.[0]).find(Boolean) ?? null;
   const time = timePatterns.map((pattern) => text.match(pattern)?.[0]).find(Boolean) ?? null;
@@ -96,6 +106,11 @@ function schedulePreview(text: string, lang: "ko" | "en"): SchedulePreview {
     date,
     time,
   };
+}
+
+function resolvedChoiceItem(item: InboxItem, resolvedText: string): InboxItem {
+  const resolved = buildNaturalScheduleDraft({ ...item, text: resolvedText });
+  return withInboxScheduleDraft(item, resolved);
 }
 
 /** Focused v1 interpretation card for schedules and tasks only. */
@@ -301,10 +316,9 @@ export function InlinePromise({
                       choice: choice.id,
                     });
                     finish(
-                      onConfirmScheduleQuick({
-                        ...item,
-                        text: choice.resolvedText,
-                      }),
+                      onConfirmScheduleQuick(
+                        resolvedChoiceItem(item, choice.resolvedText),
+                      ),
                     );
                   }}
                   className={`touch-press min-h-[42px] rounded-full px-3 py-2 text-[12px] font-bold text-ink ${
