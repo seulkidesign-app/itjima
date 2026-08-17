@@ -119,6 +119,7 @@ describe("natural schedule commitment parsing", () => {
     expect(korean.options.allDay).toBe(false);
     expect(korean.options.reminderMinutes).toBe(0);
     expect(korean.text).toBe("엄마한테 전화");
+    expect(shouldShowInlinePromise("두 시간 뒤 엄마한테 전화", "ko")).toBe(true);
 
     const english = buildNaturalScheduleDraft(thought("in 30 minutes leave for the station"));
     expect(english.start.getTime()).toBe(
@@ -126,6 +127,7 @@ describe("natural schedule commitment parsing", () => {
     );
     expect(english.options.allDay).toBe(false);
     expect(english.text).toBe("leave for the station");
+    expect(shouldShowInlinePromise("in 30 minutes leave for the station", "en")).toBe(true);
   });
 
   it("recognizes reminder offsets without pretending recurrence is a one-off", () => {
