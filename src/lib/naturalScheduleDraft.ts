@@ -9,7 +9,7 @@ import type { InboxItem } from "@/lib/store";
 import { thoughtFirstLine } from "@/lib/brainMirror";
 
 const EXPLICIT_TIME_RE =
-  /(?:오전|오후|아침|점심|저녁|밤|새벽|퇴근\s*(?:후|하고|하고서|뒤)|\d{1,2}\s*시(?:\s*\d{1,2}\s*분)?|\b(?:morning|afternoon|evening|tonight|noon|midnight|after\s+work)\b|\b\d{1,2}(?::\d{2})?\s*(?:am|pm)\b|\b(?:[01]?\d|2[0-3]):[0-5]\d\b)/i;
+  /(?:오전|오후|아침|점심|저녁|밤|새벽|퇴근\s*(?:후|하고|하고서|뒤)|(?:\d+|한|두|세|네)\s*(?:분|시간)\s*(?:뒤|후)|반\s*시간\s*(?:뒤|후)|\d{1,2}\s*시(?:\s*\d{1,2}\s*분)?|\b(?:morning|afternoon|evening|tonight|noon|midnight|after\s+work)\b|\bin\s+(?:\d+|an?|one|two|three|four|half(?:\s+an?)?)\s*(?:minutes?|mins?|hours?|hrs?)\b|\b(?:[01]?\d|2[0-3]):[0-5]\d\b|\b\d{1,2}(?::\d{2})?\s*(?:am|pm)\b)/i;
 
 const REPEAT_INTENT_RE =
   /(?:매일|매일마다|매주|매주마다|매월|매달|매년|해마다|every\s+(?:day|week|month|year)|daily|weekly|monthly|yearly|annually)/i;
@@ -32,6 +32,22 @@ const EN_WEEKDAY: Record<string, number> = {
   thursday: 4,
   friday: 5,
   saturday: 6,
+};
+
+const KO_SMALL_NUMBER: Record<string, number> = {
+  한: 1,
+  두: 2,
+  세: 3,
+  네: 4,
+};
+
+const EN_SMALL_NUMBER: Record<string, number> = {
+  a: 1,
+  an: 1,
+  one: 1,
+  two: 2,
+  three: 3,
+  four: 4,
 };
 
 export type NaturalScheduleDraft = {
@@ -82,6 +98,52 @@ function nextWeekWeekday(text: string, now: Date): Date | null {
   return monday;
 }
 
+function numericValue(raw: string, words: Record<string, number>): number | null {
+  const numeric = Number(raw);
+  if (Number.isFinite(numeric) && numeric > 0) return numeric;
+  return words[raw.toLowerCase()] ?? null;
+}
+
+/**
+ * Common conversational offsets are cheap and deterministic enough to resolve
+ * locally. This keeps phrases such as “30분 뒤 출발” and “in 2 hours call mom”
+ * on the reliable path without introducing a model/API dependency.
+ */
+function relativeOffsetStart(text: string, now: Date): Date | null {
+  const koHalf = text.match(/반\s*시간\s*(?:뒤|후)/);
+  if (koHalf) return new Date(now.getTime() + 30 * 60_000);
+
+  const ko = text.match(/(\d+|한|두|세|네)\s*(분|시간|일)\s*(?:뒤|후)/);
+  if (ko) {
+    const amount = numericValue(ko[1], KO_SMALL_NUMBER);
+    if (!amount) return null;
+    const unitMs =
+      ko[2] === "분"
+        ? 60_000
+        : ko[2] === "시간"
+          ? 60 * 60_000
+          : 24 * 60 * 60_000;
+    return new Date(now.getTime() + amount * unitMs);
+  }
+
+  const enHalf = text.match(/\bin\s+half(?:\s+an?)?\s+hour\b/i);
+  if (enHalf) return new Date(now.getTime() + 30 * 60_000);
+
+  const en = text.match(
+    /\bin\s+(\d+|an?|one|two|three|four)\s*(minutes?|mins?|hours?|hrs?|days?)\b/i,
+  );
+  if (!en) return null;
+  const amount = numericValue(en[1], EN_SMALL_NUMBER);
+  if (!amount) return null;
+  const unit = en[2].toLowerCase();
+  const unitMs = unit.startsWith("min")
+    ? 60_000
+    : unit.startsWith("h")
+      ? 60 * 60_000
+      : 24 * 60 * 60_000;
+  return new Date(now.getTime() + amount * unitMs);
+}
+
 function applyNaturalTime(target: Date, text: string, detected: Date | null): Date {
   const d = new Date(target);
 
@@ -105,6 +167,9 @@ function applyNaturalTime(target: Date, text: string, detected: Date | null): Da
 }
 
 export function resolveNaturalScheduleStart(text: string, now = new Date()): Date | null {
+  const relative = relativeOffsetStart(text, now);
+  if (relative) return relative;
+
   const detected = detectDate(text);
   const anchored = nextWeekWeekday(text, now);
 
@@ -159,6 +224,10 @@ function cleanScheduleTitle(text: string): string {
   title = title
     .replace(/(?:그리고\s*)?(?:전날|하루\s*전|1\s*일\s*전|1\s*시간\s*전|한\s*시간\s*전|30\s*분\s*전|10\s*분\s*전|5\s*분\s*전|그때|시작할\s*때)?\s*(?:에도?\s*)?(?:알려\s*줘|알려줘|알림\s*(?:해|줘)|리마인드(?:\s*해줘)?)/gi, " ")
     .replace(/\b(?:remind|notify)\s+me(?:\s+(?:the\s+day\s+before|(?:1\s*hour|30\s*minutes?|10\s*minutes?|5\s*minutes?)\s+before|then))?\b/gi, " ")
+    .replace(/(?:\d+|한|두|세|네)\s*(?:분|시간|일)\s*(?:뒤|후)/g, " ")
+    .replace(/반\s*시간\s*(?:뒤|후)/g, " ")
+    .replace(/\bin\s+(?:\d+|an?|one|two|three|four)\s*(?:minutes?|mins?|hours?|hrs?|days?)\b/gi, " ")
+    .replace(/\bin\s+half(?:\s+an?)?\s+hour\b/gi, " ")
     .replace(/(?:다음\s*주|이번\s*주)\s*/g, " ")
     .replace(/\b(?:next|this)\s+week\b/gi, " ")
     .replace(/(일|월|화|수|목|금|토)요일/g, " ")
