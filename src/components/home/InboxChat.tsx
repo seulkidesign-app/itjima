@@ -10,6 +10,10 @@ import {
   type ClarifyPick,
 } from "@/lib/nlSchedule";
 import { scheduleConfirmationReason } from "@/lib/nlScheduleSafety";
+import {
+  hasNaturalScheduleTime,
+  resolveNaturalScheduleStart,
+} from "@/lib/naturalScheduleDraft";
 import { shouldShowInlinePromise } from "@/lib/promiseCard";
 import type { InboxItem } from "@/lib/store";
 import type { RevivalHint } from "@/lib/memoryRevival";
@@ -81,8 +85,13 @@ export function InboxChat({
             understanding?.intent === "schedule_exact"
               ? scheduleConfirmationReason(it.text)
               : null;
+          const naturalTimedCommitment =
+            showPromise &&
+            hasNaturalScheduleTime(it.text) &&
+            resolveNaturalScheduleStart(it.text) !== null;
           const showCommitment =
-            understanding?.intent === "schedule_exact" && !confirmationReason;
+            !confirmationReason &&
+            (understanding?.intent === "schedule_exact" || naturalTimedCommitment);
 
           return (
             <div
