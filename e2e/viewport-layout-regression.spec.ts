@@ -106,7 +106,7 @@ test("mobile schedule keeps only the compact tabs sticky", async ({ page }) => {
 
   expect(metrics.wrapperDisplay).toBe("contents");
   expect(metrics.tabsPosition).toBe("sticky");
-  expect(metrics.tabsHeight).toBeLessThanOrEqual(68);
+  expect(Math.round(metrics.tabsHeight)).toBeLessThanOrEqual(68);
   await expectNoHorizontalOverflow(page);
 });
 

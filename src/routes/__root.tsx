@@ -16,6 +16,7 @@ import { LanguageProvider, useLang } from "@/lib/i18n";
 import { applyLandingSeo } from "@/lib/seo";
 import { useArchiveMetaSync } from "@/hooks/useArchiveMetaSync";
 import { useTimezoneChangeSync } from "@/hooks/useTimezoneChangeSync";
+import { useScheduleReminderSync } from "@/hooks/useScheduleReminderSync";
 
 const calmToastOptions = {
   style: {
@@ -36,6 +37,7 @@ export const Route = createRootRoute({
 
 function AppRuntimeServices() {
   useTimezoneChangeSync();
+  useScheduleReminderSync();
   return (
     <>
       <GlobalInteractions />

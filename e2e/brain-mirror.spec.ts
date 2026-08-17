@@ -24,12 +24,13 @@ test.describe("Brain Mirror API failures", () => {
     await frame.locator('form.composer-hero button[type="submit"]').click();
     await frame.getByText(text, { exact: true }).first().waitFor({ state: "visible" });
     await expect(frame.getByTestId("inline-promise")).toHaveCount(0);
+    await expect(frame.getByTestId("schedule-commitment-card")).toHaveCount(0);
     await expect(
       page.getByText("Couldn't load a reflection right now"),
     ).toHaveCount(0);
   });
 
-  test("still offers schedule routing when API fails but date is detected", async ({
+  test("still offers a real schedule commitment when API fails but date is detected", async ({
     page,
   }) => {
     const text =
@@ -39,11 +40,10 @@ test.describe("Brain Mirror API failures", () => {
     await input.fill(text);
     await frame.locator('form.composer-hero button[type="submit"]').click();
     await frame.getByText(text, { exact: true }).first().waitFor({ state: "visible" });
-    await expect(frame.getByTestId("inline-promise")).toHaveCount(1);
-    await expect(frame.getByTestId("inline-promise").last()).toHaveAttribute(
-      "data-intent",
-      "schedule_exact",
-    );
+
+    const commitment = frame.getByTestId("schedule-commitment-card");
+    await expect(commitment).toHaveCount(1);
+    await expect(commitment.getByTestId("commitment-date")).toContainText(/Tomorrow|Aug/i);
     await expect(
       page.getByText("Couldn't load a reflection right now"),
     ).toHaveCount(0);
