@@ -69,6 +69,9 @@
     />
 
     <link rel="canonical" href="https://itjima.app/" />
+    <link rel="alternate" hreflang="ko" href="https://itjima.app/?lang=ko" />
+    <link rel="alternate" hreflang="en" href="https://itjima.app/?lang=en" />
+    <link rel="alternate" hreflang="x-default" href="https://itjima.app/" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <link rel="apple-touch-icon" href="/favicon.svg" />
     <link rel="manifest" href="/manifest.webmanifest" />
@@ -76,7 +79,7 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin />
     <link
-      href="https://fonts.googleapis.com/css2?family=Archivo+Black&family=Bebas+Neue&family=Archivo:wght@400;600;700&display=swap"
+      href="https://fonts.googleapis.com/css2?family=Archivo+Black&family=Archivo:wght@400;600;700&family=Bebas+Neue&family=Fugaz+One&display=swap"
       rel="stylesheet"
     />
     <link
@@ -125,7 +128,7 @@
             "@type": "WebSite",
             "@id": "https://itjima.app/#website",
             "name": "잊지마",
-            "alternateName": ["Itjima", "잊지마 Itjima", "잊지마 앱"],
+            "alternateName": ["Itjima", "ItJima", "itjima.app"],
             "url": "https://itjima.app/",
             "inLanguage": "ko-KR",
             "publisher": { "@id": "https://itjima.app/#organization" },
@@ -135,10 +138,12 @@
             "@type": "SoftwareApplication",
             "@id": "https://itjima.app/#software",
             "name": "잊지마",
-            "alternateName": ["Itjima", "잊지마 Itjima", "잊지마 앱"],
+            "alternateName": ["Itjima", "ItJima", "잊지마 앱"],
             "applicationCategory": "ProductivityApplication",
-            "operatingSystem": "Web, iOS, Android",
+            "applicationSubCategory": "CalendarApplication",
+            "operatingSystem": "Web, iOS PWA, Android PWA",
             "url": "https://itjima.app/",
+            "downloadUrl": "https://itjima.app/",
             "softwareVersion": "Beta",
             "description": "잊지마는 자연어·음성 입력을 일정과 할 일로 정리하고, 애매한 날짜와 시간만 확인하는 일정 관리 웹앱입니다.",
             "featureList": [
@@ -146,7 +151,7 @@
               "한국어와 영어 일정 표현 해석하기",
               "날짜와 시간 자동 정리",
               "애매한 일정 정보만 확인하기",
-              "확인한 일정을 한 번에 추가하기"
+              "스와이프로 일정·유지·보관 결정하기"
             ],
             "isAccessibleForFree": true,
             "brand": { "@id": "https://itjima.app/#brand" },
@@ -178,7 +183,7 @@
         <p>
           잊지마 앱 · 일정 관리 · 할 일 관리 · 자연어 일정 · 음성 일정 · 캘린더
         </p>
-        <p><a href="/about">잊지마 소개</a> · <a href="/">앱 시작</a></p>
+        <p><a href="/">잊지마 시작하기</a></p>
       </main>
     </noscript>
     <div id="root"></div>

@@ -1,12 +1,18 @@
 import { Link } from "@tanstack/react-router";
 import {
+  Archive,
   ArrowRight,
   CalendarCheck2,
+  CalendarClock,
   Check,
   Clock3,
   Download,
   Globe2,
+  Hand,
   MessageSquareText,
+  MoveDown,
+  MoveLeft,
+  MoveRight,
   ShieldCheck,
   Sparkles,
 } from "lucide-react";
@@ -30,8 +36,14 @@ const proofItems = [
   { ko: "설치 없이 무료", en: "Free, no install required" },
   { ko: "로그인 없이 체험", en: "Try before signing in" },
   { ko: "텍스트·음성 입력", en: "Type or speak" },
-  { ko: "한국어 일정 표현 지원", en: "Korean & English" },
+  { ko: "스와이프로 빠른 정리", en: "Sort by swiping" },
 ];
+
+const brandWordmarkStyle: CSSProperties = {
+  fontFamily: '"Fugaz One", sans-serif',
+  fontWeight: 400,
+  letterSpacing: "-0.035em",
+};
 
 export function UsLaunchLanding() {
   const t = useT();
@@ -76,7 +88,7 @@ export function UsLaunchLanding() {
           "What kind of scheduling app is Itjima?",
         ),
         a: t(
-          "잊지마는 일정과 할 일을 말하거나 적으면 날짜와 시간을 정리해 주는 일정 관리 앱입니다. 확실한 내용은 바로 채우고, 애매한 부분만 짧게 확인합니다.",
+          "잊지마는 일정과 할 일을 말하거나 적으면 날짜와 시간을 정리해 주는 AI 일정관리 앱입니다. 확실한 내용은 바로 채우고, 애매한 부분만 짧게 확인합니다.",
           "Itjima turns schedules and tasks you type or say into structured plans. It fills clear details and asks only about anything ambiguous.",
         ),
       },
@@ -88,6 +100,16 @@ export function UsLaunchLanding() {
         a: t(
           "캘린더는 보통 날짜와 시간을 먼저 골라야 합니다. 잊지마는 ‘내일 3시 치과’처럼 말하듯 남기면 일정 형식으로 정리하고, 필요한 경우에만 추가로 묻습니다.",
           "Calendars ask you to fill fields first. Itjima lets you say the plan naturally, fills what is clear, and asks only about the uncertain part.",
+        ),
+      },
+      {
+        q: t(
+          "스와이프 정리는 어떻게 쓰나요?",
+          "How does swipe sorting work?",
+        ),
+        a: t(
+          "쌓인 내용을 한 장씩 보면서 오른쪽으로 밀면 일정으로, 아래로 내리면 그대로 두고, 왼쪽으로 밀면 보관함으로 정리할 수 있습니다.",
+          "Review one item at a time: swipe right to schedule it, down to keep it where it is, or left to save it to the vault.",
         ),
       },
       {
@@ -169,7 +191,7 @@ export function UsLaunchLanding() {
 
   useEffect(() => {
     applyLandingSeo({
-      canonicalPath: "/about",
+      canonicalPath: "/",
       locale: lang,
     });
     injectJsonLd(
@@ -183,10 +205,7 @@ export function UsLaunchLanding() {
   }, [faq, lang]);
 
   return (
-    <div
-      ref={landingRef}
-      className="landing-motion min-h-dvh bg-[#fbfbf7] text-[#141410]"
-    >
+    <div ref={landingRef} className="landing-motion min-h-dvh bg-white text-[#141410]">
       <a
         href="#main-content"
         className="fixed left-3 top-3 z-[100] -translate-y-24 rounded-full bg-[#141410] px-4 py-2 text-sm font-bold text-white focus:translate-y-0"
@@ -194,17 +213,17 @@ export function UsLaunchLanding() {
         {t("본문으로 이동", "Skip to content")}
       </a>
 
-      <header className="landing-motion-header sticky top-0 z-50 border-b border-black/[0.07] bg-[#fbfbf7]/90 backdrop-blur-xl">
+      <header className="landing-motion-header sticky top-0 z-50 border-b border-black/[0.07] bg-white/90 backdrop-blur-xl">
         <div className="mx-auto flex min-h-[68px] w-[min(1120px,calc(100%-32px))] items-center justify-between gap-4">
           <Link
             to="/about"
-            className="landing-motion-wordmark flex min-h-11 items-center gap-2.5 no-underline"
+            className="landing-motion-wordmark flex min-h-11 items-center no-underline"
             aria-label={t("잊지마 소개", "Itjima home")}
           >
-            <span className="grid h-9 w-9 place-items-center rounded-[12px] bg-primary text-sm font-black">
-              IJ
-            </span>
-            <span className="font-display text-[18px] uppercase tracking-wide">
+            <span
+              className="text-[26px] leading-none text-[#141410]"
+              style={brandWordmarkStyle}
+            >
               ITJIMA
             </span>
           </Link>
@@ -222,7 +241,7 @@ export function UsLaunchLanding() {
       </header>
 
       <main id="main-content">
-        <section className="landing-motion-hero px-4 pb-20 pt-16 sm:pt-24">
+        <section className="landing-motion-hero bg-white px-4 pb-20 pt-16 sm:pt-24">
           <div className="mx-auto grid w-full max-w-[1120px] items-center gap-14 lg:grid-cols-[1.04fr_.96fr]">
             <div className="landing-motion-copy">
               <div className="landing-motion-eyebrow inline-flex items-center gap-2 rounded-full border border-black/[0.08] bg-white px-3 py-2 text-[11px] font-extrabold uppercase tracking-[0.13em]">
@@ -276,10 +295,13 @@ export function UsLaunchLanding() {
               <div className="landing-motion-demo-shell relative rounded-[28px] border border-black/[0.08] bg-white p-3 shadow-[0_28px_80px_rgba(20,20,16,.14)]">
                 <div className="flex items-center justify-between border-b border-black/[0.06] px-3 py-3">
                   <div>
-                    <div className="text-[10px] font-black tracking-[.16em] text-black/38">
+                    <div
+                      className="text-[12px] leading-none text-black/45"
+                      style={brandWordmarkStyle}
+                    >
                       ITJIMA
                     </div>
-                    <div className="mt-1 text-[17px] font-black">
+                    <div className="mt-2 text-[17px] font-black">
                       {t("일정 등록", "Schedule")}
                     </div>
                   </div>
@@ -344,7 +366,7 @@ export function UsLaunchLanding() {
           </div>
         </section>
 
-        <section id="how" className="px-4 py-24">
+        <section id="how" className="bg-white px-4 py-24">
           <div className="mx-auto max-w-[1120px]">
             <div data-landing-reveal>
               <span className="text-[11px] font-black uppercase tracking-[.16em] text-black/42">
@@ -386,6 +408,96 @@ export function UsLaunchLanding() {
           </div>
         </section>
 
+        <section id="swipe" className="border-y border-black/[0.07] bg-white px-4 py-24">
+          <div className="mx-auto grid max-w-[1120px] items-center gap-14 lg:grid-cols-[.86fr_1.14fr]">
+            <div data-landing-reveal>
+              <span className="text-[11px] font-black uppercase tracking-[.16em] text-black/42">
+                {t("빠른 정리 · SWIPE TO DECIDE", "SWIPE TO DECIDE")}
+              </span>
+              <h2 className="mt-4 max-w-[620px] text-[clamp(38px,7vw,64px)] font-black leading-[1.04] tracking-[-.055em]">
+                {t(
+                  "쌓인 생각은, 스와이프로 가볍게 정리해요.",
+                  "When thoughts pile up, swipe through them.",
+                )}
+              </h2>
+              <p className="mt-6 max-w-[590px] text-[16px] leading-[1.75] text-black/55">
+                {t(
+                  "하나씩 읽고 결정만 하세요. 오른쪽은 일정으로, 아래는 그대로, 왼쪽은 보관함으로. 다시 폼을 채우지 않아도 됩니다.",
+                  "Review one item and make one decision. Right schedules it, down keeps it here, and left saves it to the vault — no forms to refill.",
+                )}
+              </p>
+              <div className="mt-8 grid gap-2 sm:grid-cols-3 lg:grid-cols-1 xl:grid-cols-3">
+                {[
+                  {
+                    icon: MoveLeft,
+                    ko: "왼쪽 · 보관함",
+                    en: "Left · Vault",
+                  },
+                  {
+                    icon: MoveDown,
+                    ko: "아래 · 그대로",
+                    en: "Down · Keep",
+                  },
+                  {
+                    icon: MoveRight,
+                    ko: "오른쪽 · 일정",
+                    en: "Right · Schedule",
+                  },
+                ].map(({ icon: Icon, ko, en }) => (
+                  <div
+                    key={en}
+                    className="flex items-center gap-2 rounded-[14px] border border-black/[0.08] bg-white px-3 py-3 text-[12px] font-bold"
+                  >
+                    <Icon size={16} aria-hidden />
+                    {t(ko, en)}
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="relative mx-auto w-full max-w-[560px] py-12" data-landing-reveal>
+              <div className="absolute left-1/2 top-1/2 h-[310px] w-[310px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-primary/25 blur-3xl" aria-hidden />
+              <div className="relative mx-auto h-[390px] max-w-[430px]">
+                <div className="absolute inset-x-10 top-12 h-[260px] rotate-[-5deg] rounded-[28px] border border-black/[0.06] bg-[#f7f7f3]" aria-hidden />
+                <div className="absolute inset-x-8 top-8 h-[270px] rotate-[4deg] rounded-[28px] border border-black/[0.07] bg-white shadow-[0_16px_50px_rgba(20,20,16,.08)]" aria-hidden />
+                <article className="absolute inset-x-6 top-4 min-h-[280px] rounded-[28px] border border-black/[0.1] bg-white p-7 shadow-[0_28px_80px_rgba(20,20,16,.14)] sm:inset-x-10">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[11px] font-black tracking-[.14em] text-black/35">
+                      {t("정리할 생각 1/5", "THOUGHT 1/5")}
+                    </span>
+                    <Hand size={20} className="text-black/30" aria-hidden />
+                  </div>
+                  <p className="mt-14 text-[27px] font-black leading-[1.2] tracking-[-.045em] sm:text-[31px]">
+                    {t(
+                      "다음 주에 여권 갱신 알아보기",
+                      "Look into renewing my passport next week",
+                    )}
+                  </p>
+                  <p className="mt-4 text-[13px] leading-relaxed text-black/45">
+                    {t(
+                      "지금 결정할 방향으로 카드를 밀어보세요.",
+                      "Move the card in the direction of your decision.",
+                    )}
+                  </p>
+                </article>
+
+                <div className="absolute left-0 top-[154px] flex items-center gap-2 rounded-full border border-black/[0.08] bg-white px-3 py-2 text-[11px] font-black shadow-card">
+                  <Archive size={15} aria-hidden />
+                  {t("보관함으로", "Vault")}
+                </div>
+                <div className="absolute right-0 top-[154px] flex items-center gap-2 rounded-full bg-primary px-3 py-2 text-[11px] font-black shadow-card">
+                  {t("일정으로", "Schedule")}
+                  <CalendarClock size={15} aria-hidden />
+                </div>
+                <div className="absolute bottom-0 left-1/2 flex -translate-x-1/2 items-center gap-2 rounded-full border border-black/[0.08] bg-white px-3 py-2 text-[11px] font-black shadow-card">
+                  <Hand size={15} aria-hidden />
+                  {t("그대로 둘게요", "Keep here")}
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
         <section className="bg-[#171712] px-4 py-24 text-white">
           <div className="mx-auto max-w-[1120px]">
             <div data-landing-reveal>
@@ -416,7 +528,7 @@ export function UsLaunchLanding() {
                   en: "Your local time zone",
                   bodyKo: "기기 시간대를 기준으로 일정을 저장하고 보여줘요.",
                   bodyEn:
-                    "It stores the device's IANA time zone and safely falls back to UTC, never another user's region.",
+                    "It stores the device's time zone and keeps your plans aligned with local time.",
                 },
                 {
                   icon: Download,
@@ -458,7 +570,7 @@ export function UsLaunchLanding() {
           </div>
         </section>
 
-        <section className="px-4 py-24">
+        <section className="bg-white px-4 py-24">
           <div className="mx-auto grid max-w-[1120px] gap-12 lg:grid-cols-[.75fr_1.25fr]">
             <div data-landing-reveal>
               <span className="text-[11px] font-black uppercase tracking-[.16em] text-black/42">
@@ -498,7 +610,7 @@ export function UsLaunchLanding() {
           </div>
         </section>
 
-        <section className="px-4 pb-24">
+        <section className="bg-white px-4 pb-24">
           <div
             data-landing-reveal
             className="landing-motion-final mx-auto max-w-[1120px] rounded-[30px] border border-black/[0.08] bg-white px-6 py-16 text-center shadow-[0_22px_70px_rgba(20,20,16,.08)] sm:px-10"
@@ -530,8 +642,10 @@ export function UsLaunchLanding() {
       <footer className="border-t border-black/[0.08] bg-white px-4 py-10">
         <div className="mx-auto flex max-w-[1120px] flex-col justify-between gap-8 sm:flex-row sm:items-end">
           <div>
-            <div className="font-display text-[18px] tracking-wide">ITJIMA</div>
-            <p className="mt-2 text-[13px] text-black/45">
+            <div className="text-[21px] leading-none" style={brandWordmarkStyle}>
+              ITJIMA
+            </div>
+            <p className="mt-3 text-[13px] text-black/45">
               {t(BRAND.taglineKo, BRAND.taglineEn)}
             </p>
           </div>

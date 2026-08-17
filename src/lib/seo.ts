@@ -4,6 +4,9 @@ import type { Lang } from "@/lib/i18n";
 /** Public site URL — used for canonical, Open Graph, and sitemap. */
 export const SITE_URL = BRAND.siteUrl;
 
+const PRIMARY_SITE_NAME = "잊지마";
+const EN_SITE_NAME = "Itjima";
+
 const SEO_BY_LOCALE = {
   ko: {
     landingTitle: "잊지마 | 말로 쓰는 일정 관리 앱",
@@ -44,19 +47,38 @@ const ORG_ID = `${SITE_URL}/#organization`;
 const BRAND_ID = `${SITE_URL}/#brand`;
 const WEBSITE_ID = `${SITE_URL}/#website`;
 const APP_ID = `${SITE_URL}/#software`;
-const ABOUT_PAGE_ID = `${SITE_URL}/about#webpage`;
-const BREADCRUMB_ID = `${SITE_URL}/about#breadcrumb`;
+const HOME_PAGE_ID = `${SITE_URL}/#webpage`;
+const BREADCRUMB_ID = `${SITE_URL}/#breadcrumb`;
 
 function localizedSeo(locale: Lang) {
   return SEO_BY_LOCALE[locale];
+}
+
+function siteName(locale: Lang) {
+  return locale === "en" ? EN_SITE_NAME : PRIMARY_SITE_NAME;
+}
+
+function brandAlternateNames() {
+  return Array.from(
+    new Set([
+      BRAND.name,
+      ...BRAND.alternateNames,
+    ].filter((name) => name !== PRIMARY_SITE_NAME)),
+  );
+}
+
+function normalizeCanonicalPath(path?: string) {
+  if (!path || path === "/about") return "/";
+  return path.startsWith("/") ? path : `/${path}`;
 }
 
 function brandEntity() {
   return {
     "@type": "Brand" as const,
     "@id": BRAND_ID,
-    name: BRAND.name,
-    alternateName: [...BRAND.alternateNames],
+    name: PRIMARY_SITE_NAME,
+    alternateName: brandAlternateNames(),
+    url: `${SITE_URL}/`,
     logo: {
       "@type": "ImageObject" as const,
       url: BRAND.logoUrl,
@@ -127,12 +149,13 @@ export function applyLandingSeo(options: LandingSeoOptions = {}) {
   if (typeof document === "undefined") return;
   const locale = options.locale ?? "ko";
   const seo = localizedSeo(locale);
-  const canonicalPath = options.canonicalPath ?? "/about";
+  const canonicalPath = normalizeCanonicalPath(options.canonicalPath);
   const title = options.title ?? seo.landingTitle;
   const description = options.description ?? seo.landingDescription;
   const ogTitle = options.ogTitle ?? seo.ogTitle;
   const ogDescription = options.ogDescription ?? seo.ogDescription;
   const canonical = `${SITE_URL}${canonicalPath}`;
+  const localeBase = canonicalPath === "/" ? `${SITE_URL}/` : canonical;
 
   document.title = title;
   document.documentElement.lang = locale;
@@ -140,12 +163,12 @@ export function applyLandingSeo(options: LandingSeoOptions = {}) {
   upsertMeta("description", description);
   upsertMeta("keywords", seo.keywords);
   upsertMeta("author", BRAND.displayEn);
-  upsertMeta("application-name", BRAND.displayEn);
-  upsertMeta("apple-mobile-web-app-title", BRAND.name);
+  upsertMeta("application-name", siteName(locale));
+  upsertMeta("apple-mobile-web-app-title", PRIMARY_SITE_NAME);
   upsertLink("canonical", canonical);
-  upsertLink("alternate", `${SITE_URL}/about?lang=ko`, "ko");
-  upsertLink("alternate", `${SITE_URL}/about?lang=en`, "en");
-  upsertLink("alternate", `${SITE_URL}/about`, "x-default");
+  upsertLink("alternate", `${localeBase}?lang=ko`, "ko");
+  upsertLink("alternate", `${localeBase}?lang=en`, "en");
+  upsertLink("alternate", localeBase, "x-default");
 
   upsertMeta("og:title", ogTitle, "property");
   upsertMeta("og:description", ogDescription, "property");
@@ -157,7 +180,7 @@ export function applyLandingSeo(options: LandingSeoOptions = {}) {
     locale === "en" ? "ko_KR" : "en_US",
     "property",
   );
-  upsertMeta("og:site_name", BRAND.displayEn, "property");
+  upsertMeta("og:site_name", siteName(locale), "property");
   upsertMeta("og:image", BRAND.ogImageUrl, "property");
   upsertMeta("og:image:secure_url", BRAND.ogImageUrl, "property");
   upsertMeta("og:image:type", "image/png", "property");
@@ -177,9 +200,9 @@ export function landingOrganizationLd(locale: Lang = "ko") {
   return {
     "@type": "Organization",
     "@id": ORG_ID,
-    name: BRAND.name,
-    alternateName: [...BRAND.alternateNames],
-    url: SITE_URL,
+    name: PRIMARY_SITE_NAME,
+    alternateName: brandAlternateNames(),
+    url: `${SITE_URL}/`,
     foundingDate: BRAND.foundingDate,
     sameAs: [...BRAND.sameAs],
     brand: { "@id": BRAND_ID },
@@ -212,9 +235,9 @@ export function landingWebSiteLd(locale: Lang = "ko") {
   return {
     "@type": "WebSite",
     "@id": WEBSITE_ID,
-    name: BRAND.name,
-    alternateName: [...BRAND.alternateNames],
-    url: SITE_URL,
+    name: PRIMARY_SITE_NAME,
+    alternateName: [EN_SITE_NAME, "ItJima", "itjima.app"],
+    url: `${SITE_URL}/`,
     inLanguage: seo.language,
     publisher: { "@id": ORG_ID },
     about: { "@id": APP_ID },
@@ -225,8 +248,8 @@ export function landingWebPageLd(locale: Lang = "ko") {
   const seo = localizedSeo(locale);
   return {
     "@type": "WebPage",
-    "@id": ABOUT_PAGE_ID,
-    url: `${SITE_URL}/about`,
+    "@id": HOME_PAGE_ID,
+    url: `${SITE_URL}/`,
     name: seo.landingTitle,
     description: seo.landingDescription,
     inLanguage: seo.language,
@@ -242,7 +265,6 @@ export function landingWebPageLd(locale: Lang = "ko") {
 }
 
 export function landingBreadcrumbLd(locale: Lang = "ko") {
-  const isEnglish = locale === "en";
   return {
     "@type": "BreadcrumbList",
     "@id": BREADCRUMB_ID,
@@ -250,14 +272,8 @@ export function landingBreadcrumbLd(locale: Lang = "ko") {
       {
         "@type": "ListItem",
         position: 1,
-        name: BRAND.displayEn,
-        item: SITE_URL,
-      },
-      {
-        "@type": "ListItem",
-        position: 2,
-        name: isEnglish ? "About" : "소개",
-        item: `${SITE_URL}/about`,
+        name: siteName(locale),
+        item: `${SITE_URL}/`,
       },
     ],
   };
@@ -269,13 +285,13 @@ export function landingSoftwareApplicationLd(locale: Lang = "ko") {
   return {
     "@type": "SoftwareApplication",
     "@id": APP_ID,
-    name: BRAND.name,
-    alternateName: [...BRAND.alternateNames],
+    name: PRIMARY_SITE_NAME,
+    alternateName: brandAlternateNames(),
     applicationCategory: "ProductivityApplication",
     applicationSubCategory: "CalendarApplication",
     operatingSystem: "Web, iOS PWA, Android PWA",
-    url: SITE_URL,
-    downloadUrl: SITE_URL,
+    url: `${SITE_URL}/`,
+    downloadUrl: `${SITE_URL}/`,
     softwareVersion: BRAND.softwareVersion,
     inLanguage: ["en-US", "ko-KR"],
     description: seo.appDescription,
@@ -290,6 +306,7 @@ export function landingSoftwareApplicationLd(locale: Lang = "ko") {
           "Ambiguity confirmation",
           "Cross-device sync",
           "Push reminders",
+          "Swipe decisions for schedule, keep, or archive",
           "Data export and account deletion",
         ]
       : [
@@ -297,6 +314,7 @@ export function landingSoftwareApplicationLd(locale: Lang = "ko") {
           "날짜와 시간 자동 정리",
           "애매한 일정 정보만 확인",
           "일정과 할 일 관리",
+          "스와이프로 일정·유지·보관 결정",
           "기기 간 동기화",
           "푸시 알림",
           "데이터 내려받기와 계정 삭제",
@@ -312,7 +330,7 @@ export function landingSoftwareApplicationLd(locale: Lang = "ko") {
 export function landingFaqLd(items: { question: string; answer: string }[]) {
   return {
     "@type": "FAQPage",
-    "@id": `${SITE_URL}/about#faq`,
+    "@id": `${SITE_URL}/#faq`,
     mainEntity: items.map(({ question, answer }) => ({
       "@type": "Question",
       name: question,
