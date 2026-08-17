@@ -60,7 +60,10 @@ function siteName(locale: Lang) {
 
 function brandAlternateNames() {
   return Array.from(
-    new Set([BRAND.name, ...BRAND.alternateNames].filter((name) => name !== PRIMARY_SITE_NAME)),
+    new Set([
+      BRAND.name,
+      ...BRAND.alternateNames,
+    ].filter((name) => name !== PRIMARY_SITE_NAME)),
   );
 }
 
@@ -155,7 +158,7 @@ export function applyLandingSeo(options: LandingSeoOptions = {}) {
   const localeBase = canonicalPath === "/" ? `${SITE_URL}/` : canonical;
 
   document.title = title;
-  document.documentElement.lang = seo.language;
+  document.documentElement.lang = locale;
 
   upsertMeta("description", description);
   upsertMeta("keywords", seo.keywords);
@@ -234,7 +237,7 @@ export function landingWebSiteLd(locale: Lang = "ko") {
     "@type": "WebSite",
     "@id": WEBSITE_ID,
     name: PRIMARY_SITE_NAME,
-    alternateName: [EN_SITE_NAME, "ItJima"],
+    alternateName: [EN_SITE_NAME, "ItJima", "itjima.app"],
     url: `${SITE_URL}/`,
     inLanguage: seo.language,
     publisher: { "@id": ORG_ID },
@@ -304,6 +307,7 @@ export function landingSoftwareApplicationLd(locale: Lang = "ko") {
           "Ambiguity confirmation",
           "Cross-device sync",
           "Push reminders",
+          "Swipe decisions for schedule, keep, or archive",
           "Data export and account deletion",
         ]
       : [
@@ -311,6 +315,7 @@ export function landingSoftwareApplicationLd(locale: Lang = "ko") {
           "날짜와 시간 자동 정리",
           "애매한 일정 정보만 확인",
           "일정과 할 일 관리",
+          "스와이프로 일정·유지·보관 결정",
           "기기 간 동기화",
           "푸시 알림",
           "데이터 내려받기와 계정 삭제",
