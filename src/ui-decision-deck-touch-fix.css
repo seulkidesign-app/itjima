@@ -1,0 +1,22 @@
+/* Mobile decision deck touch contract.
+ * The deck intentionally owns horizontal + downward gestures while open.
+ * Page scrolling is already locked by DecisionDeck, so allowing browser pan-y
+ * here only gives iOS/Android a chance to steal the gesture and fire
+ * pointercancel before the app can resolve the swipe.
+ */
+
+[data-testid="decision-deck-active-card"] {
+  touch-action: none !important;
+  -webkit-user-select: none;
+  user-select: none;
+  overscroll-behavior: none;
+}
+
+/* Buttons and controls inside a card remain normal tap targets. */
+[data-testid="decision-deck-active-card"] button,
+[data-testid="decision-deck-active-card"] a,
+[data-testid="decision-deck-active-card"] input,
+[data-testid="decision-deck-active-card"] textarea,
+[data-testid="decision-deck-active-card"] [data-no-drag] {
+  touch-action: manipulation;
+}
