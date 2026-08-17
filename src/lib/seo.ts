@@ -9,31 +9,31 @@ const EN_SITE_NAME = "Itjima";
 
 const SEO_BY_LOCALE = {
   ko: {
-    landingTitle: "잊지마 | AI 일정관리 앱",
+    landingTitle: "잊지마 | 말로 쓰는 일정 관리 앱",
     landingDescription:
-      "잊지마는 ‘내일 3시 치과’처럼 말하거나 적으면 날짜와 시간을 정리하고, 애매한 부분만 확인해 일정과 할 일로 만들어 주는 AI 일정관리 앱입니다. 설치 없이 무료로 시작하세요.",
+      "‘내일 3시 치과’처럼 말하거나 적어보세요. 잊지마가 날짜와 시간을 정리하고, 애매한 부분만 확인해 일정과 할 일로 만들어 줍니다. 설치 없이 무료로 시작하세요.",
     ogTitle: "대충 말해도 일정이 돼요 | 잊지마",
     ogDescription:
-      "말하거나 적으면 날짜와 시간을 정리하고, 애매한 부분만 물어보는 AI 일정관리 앱.",
+      "말하거나 적으면 날짜와 시간을 정리하고, 애매한 부분만 물어보는 일정 관리 앱.",
     appDescription:
-      "잊지마는 자연어·음성 입력을 일정과 할 일로 정리하고, 애매한 날짜와 시간만 확인하는 AI 일정관리 웹앱입니다.",
+      "잊지마는 자연어·음성 입력을 일정과 할 일로 정리하고, 애매한 날짜와 시간만 확인하는 일정 관리 웹앱입니다.",
     keywords:
-      "잊지마, 잊지마 앱, Itjima, AI 일정관리, 일정 관리, 일정 관리 앱, 음성 일정, 자연어 일정, 할 일 관리, 캘린더, 리마인더",
+      "잊지마, 잊지마 앱, Itjima, 일정 관리, 일정 관리 앱, 음성 일정, 자연어 일정, 할 일 관리, 캘린더, 리마인더",
     locale: "ko_KR",
     language: "ko-KR",
     currency: "KRW",
   },
   en: {
-    landingTitle: "Itjima | AI schedule planner by voice or text",
+    landingTitle: "Itjima | Schedule planner by voice or text",
     landingDescription:
       "Type or say a plan naturally. Itjima organizes the date and time, asks only about ambiguous details, and turns it into a usable schedule.",
     ogTitle: "Say it roughly. It becomes a schedule. | Itjima",
     ogDescription:
-      "An AI schedule planner that organizes natural voice or text input and asks only about ambiguous details.",
+      "A schedule planner that organizes natural voice or text input and asks only about ambiguous details.",
     appDescription:
-      "Itjima is an English and Korean AI scheduling web app that turns natural voice or text input into schedules and tasks.",
+      "Itjima is an English and Korean scheduling web app that turns natural voice or text input into schedules and tasks.",
     keywords:
-      "Itjima, AI schedule planner, natural language scheduling, schedule capture, voice schedule, task capture, calendar, reminder",
+      "Itjima, natural language scheduling, schedule capture, voice schedule, task capture, calendar, reminder",
     locale: "en_US",
     language: "en-US",
     currency: "USD",
@@ -217,7 +217,6 @@ export function landingOrganizationLd(locale: Lang = "ko") {
       "task capture",
       "reminders",
       "productivity software",
-      "AI 일정관리",
       "자연어 일정",
       "잊지마",
       "Itjima",
