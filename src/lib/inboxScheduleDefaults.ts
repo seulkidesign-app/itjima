@@ -7,13 +7,11 @@ import {
 } from "@/lib/scheduleChoices";
 import type { ScheduleConfirmOptions } from "@/components/ScheduleChoiceFlow";
 import type { InboxItem } from "@/lib/store";
-
-const EXPLICIT_TIME_RE =
-  /(?:오전|오후|아침|점심|저녁|밤|새벽|퇴근\s*후|\d{1,2}\s*시(?:\s*\d{1,2}\s*분)?|\b(?:morning|afternoon|evening|tonight|noon|midnight)\b|\b\d{1,2}(?::\d{2})?\s*(?:am|pm)\b|\b(?:[01]?\d|2[0-3]):[0-5]\d\b)/i;
+import { hasNaturalScheduleTime } from "@/lib/naturalScheduleDraft";
 
 const DECK_SCHEDULE_DRAFT = "__itjimaDeckScheduleDraft" as const;
 
-type InboxScheduleDraft = {
+export type InboxScheduleDraft = {
   text: string;
   startIso: string;
   endIso: string;
@@ -25,7 +23,31 @@ type InboxItemWithDraft = InboxItem & {
 };
 
 export function hasExplicitScheduleTime(text: string): boolean {
-  return EXPLICIT_TIME_RE.test(text.trim());
+  return hasNaturalScheduleTime(text.trim());
+}
+
+export function readInboxScheduleDraft(
+  item: InboxItem | null | undefined,
+): {
+  text: string;
+  start: Date;
+  end: Date;
+  options: ScheduleConfirmOptions;
+} | null {
+  if (!item) return null;
+  const draft = (item as InboxItemWithDraft)[DECK_SCHEDULE_DRAFT];
+  if (!draft) return null;
+  const start = new Date(draft.startIso);
+  const end = new Date(draft.endIso);
+  if (!Number.isFinite(start.getTime()) || !Number.isFinite(end.getTime())) {
+    return null;
+  }
+  return {
+    text: draft.text,
+    start,
+    end,
+    options: draft.options,
+  };
 }
 
 /**
@@ -71,15 +93,8 @@ export function defaultScheduleStart(item: InboxItem): Date {
 }
 
 export function inboxScheduleDefaults(item: InboxItem) {
-  const draft = (item as InboxItemWithDraft)[DECK_SCHEDULE_DRAFT];
-  if (draft) {
-    return {
-      start: new Date(draft.startIso),
-      end: new Date(draft.endIso),
-      text: draft.text,
-      options: draft.options,
-    };
-  }
+  const draft = readInboxScheduleDraft(item);
+  if (draft) return draft;
 
   const detected = detectDate(item.text);
   const dateOnly = Boolean(detected) && !hasExplicitScheduleTime(item.text);

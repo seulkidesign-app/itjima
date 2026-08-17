@@ -88,7 +88,11 @@ function replaceWeekend(
 function replaceAfterWork(text: string, hour: 18 | 19): string {
   const koTime = hour === 18 ? "오후 6시" : "오후 7시";
   const enTime = hour === 18 ? "at 6pm" : "at 7pm";
-  if (/퇴근\s*후/.test(text)) return text.replace(/퇴근\s*후/, koTime);
+  const koResolved = text.replace(
+    /퇴근\s*(?:후|하고|하고서|뒤)/,
+    koTime,
+  );
+  if (koResolved !== text) return koResolved;
   return text.replace(/\bafter\s+work\b/i, enTime);
 }
 
@@ -141,7 +145,7 @@ export function scheduleConfirmationReasons(
   }
 
   if (/(주말|\bweekend\b)/i.test(trimmed)) reasons.push("weekend_day");
-  if (/(퇴근\s*후|\bafter\s+work\b)/i.test(trimmed)) {
+  if (/(퇴근\s*(?:후|하고|하고서|뒤)|\bafter\s+work\b)/i.test(trimmed)) {
     reasons.push("after_work_time");
   }
 
