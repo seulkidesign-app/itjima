@@ -1,15 +1,16 @@
-const CACHE = "itjima-shell-v3";
+const CACHE = "itjima-shell-v4";
 const SHELL = [
   "/index.html",
   "/manifest.webmanifest",
   "/favicon.svg",
-  "/icons/icon-192.png",
+  "/icons/icon-192.png?v=4",
+  "/icons/icon-512.png?v=4",
   "/icons/badge-72.png",
 ];
 const PUSH_LOG = "[itjima:sw:push]";
 const DEFAULT_TITLE = "잊지마";
 const DEFAULT_BODY = "예정된 일정이 있어요.";
-const NOTIFICATION_ICON = "/icons/icon-192.png";
+const NOTIFICATION_ICON = "/icons/icon-192.png?v=4";
 const NOTIFICATION_BADGE = "/icons/badge-72.png";
 
 self.addEventListener("install", (event) => {
@@ -206,7 +207,6 @@ self.addEventListener("fetch", (event) => {
 /** Server-triggered Web Push — no in-memory scheduling. */
 self.addEventListener("push", (event) => {
   const { payload, parseMode } = parsePushPayload(event);
-
   event.waitUntil(showPushNotification(payload, parseMode));
 });
 
