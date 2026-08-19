@@ -61,6 +61,15 @@ declare module "@tanstack/react-router" {
 }
 
 if (typeof window !== "undefined") {
+  // iOS can aggressively reuse Add-to-Home-Screen metadata. Use a fresh
+  // manifest identity and let the manifest own the install icon instead of
+  // an apple-touch-icon override.
+  document
+    .querySelectorAll('link[rel="apple-touch-icon"], link[rel="apple-touch-icon-precomposed"]')
+    .forEach((node) => node.remove());
+  const manifestLink = document.querySelector<HTMLLinkElement>('link[rel="manifest"]');
+  if (manifestLink) manifestLink.href = "/manifest-v3.webmanifest";
+
   if (import.meta.env.DEV && import.meta.env.VITE_E2E !== "true") {
     installAuthDebugInstrumentation(router);
   }

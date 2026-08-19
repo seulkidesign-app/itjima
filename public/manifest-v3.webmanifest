@@ -1,0 +1,28 @@
+{
+  "id": "/itjima-app",
+  "name": "잊지마",
+  "short_name": "잊지마",
+  "description": "말하듯 남기면 날짜와 시간을 정리하고, 애매한 부분만 확인하는 일정 관리 앱",
+  "start_url": "/app",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "any",
+  "lang": "ko-KR",
+  "background_color": "#FFFFFF",
+  "theme_color": "#FFD43B",
+  "categories": ["productivity", "utilities"],
+  "prefer_related_applications": false,
+  "icons": [
+    {
+      "src": "/icons/itjima-512-v3.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "shortcuts": [
+    {"name":"일정 말하기","short_name":"일정 입력","url":"/app"},
+    {"name":"일정 보기","short_name":"일정","url":"/schedule"},
+    {"name":"보관함 보기","short_name":"보관함","url":"/archive"}
+  ]
+}
