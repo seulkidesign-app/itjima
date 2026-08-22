@@ -9,7 +9,7 @@ import {
   trackNlPrimaryActionClicked,
 } from "@/lib/nlAnalytics";
 import { buildMirrorDisplay } from "@/lib/nlMirrorCopy";
-import { warmMirrorLine, warmResultHint, mirrorSemanticRole } from "@/lib/warmMirrorCopy";
+import { warmResultHint, mirrorSemanticRole } from "@/lib/warmMirrorCopy";
 import { isNlDebugEnabled } from "@/lib/nlDebug";
 import {
   buildPromiseCard,
@@ -220,13 +220,8 @@ export function NlSchedulePrompt({
       data-sensitive={card.isSensitive ? "true" : "false"}
     >
       <div className="mb-1.5 flex w-full items-center gap-2 px-0.5">
-        <span className="text-[11px] font-semibold text-ink-soft/90">
-          {t("🧠", "🧠")}
-        </span>
-        <span className="min-w-0 flex-1 truncate text-[12px] font-medium text-ink-soft">
-          {t("AI가 이해했어요", "AI understood")}
-          {" · "}
-          {warmMirrorLine(item.text, nl, uiLang)}
+        <span className="min-w-0 flex-1 truncate text-[12px] font-semibold text-ink-soft">
+          {t("이렇게 기억할게요", "I'll remember it like this")}
         </span>
         <span
           className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] font-semibold status-chip status-chip--${semanticRole}`}
@@ -244,7 +239,7 @@ export function NlSchedulePrompt({
             }}
             className="ml-auto text-[10px] font-medium text-ink-soft underline decoration-ink/20 underline-offset-2"
           >
-            {t("다르게 이해했나요?", "Not quite?")}
+            {t("해석 수정", "Adjust")}
           </button>
         )}
       </div>
