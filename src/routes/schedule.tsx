@@ -23,11 +23,20 @@ import {
   Archive,
 } from "lucide-react";
 import { animate, motion, AnimatePresence, LayoutGroup } from "framer-motion";
-import { useSchedules, useArchive, useInbox, useUserId, type ScheduleItem } from "@/lib/store";
+import {
+  useSchedules,
+  useArchive,
+  useInbox,
+  useUserId,
+  type InboxItem,
+  type ScheduleItem,
+} from "@/lib/store";
 import {
   ScheduleCompactRow,
   LaterInboxRow,
 } from "@/components/ScheduleCompactRow";
+import { FocusScheduleSheet } from "@/components/FocusScheduleSheet";
+import type { ScheduleConfirmOptions } from "@/components/ScheduleChoiceFlow";
 import { ScheduleSheet } from "@/components/ScheduleSheet";
 import { ReminderSheet } from "@/components/ReminderSheet";
 import { ScheduleAlarmSheet } from "@/components/ScheduleAlarmSheet";
@@ -74,7 +83,11 @@ import {
   isMissed,
   classifySchedule,
 } from "@/lib/scheduleGroups";
-import { scheduleDisplayTitle, rawPreview } from "@/lib/thoughtProvenance";
+import {
+  scheduleDisplayTitle,
+  rawPreview,
+} from "@/lib/thoughtProvenance";
+import { convertLaterInboxToSchedule } from "@/lib/convertLaterInboxToSchedule";
 import { SPRING_SNAP_BACK, SHEET_BACKDROP_CLASS, SHEET_BACKDROP_FADE } from "@/lib/motion";
 import { useListStagger } from "@/lib/listStagger";
 import { toast } from "sonner";
@@ -188,6 +201,10 @@ function Schedule() {
   }>({
     open: false,
   });
+  const [focusScheduleSheet, setFocusScheduleSheet] = useState<{
+    open: boolean;
+    item?: InboxItem;
+  }>({ open: false });
   const [reminderSheet, setReminderSheet] = useState<ScheduleItem | null>(null);
   const [alarmSheet, setAlarmSheet] = useState<ScheduleItem | null>(null);
   const [timerSheet, setTimerSheet] = useState<ScheduleItem | null>(null);
@@ -583,6 +600,90 @@ function Schedule() {
     setSheet({ open: true, draftStart: date });
   };
 
+  const openLaterInboxSchedule = (it: InboxItem) => {
+    setFocusScheduleSheet({ open: true, item: it });
+  };
+
+  const saveLaterInboxSchedule = async (
+    text: string,
+    start: Date,
+    end: Date,
+    options: ScheduleConfirmOptions,
+  ) => {
+    const it = focusScheduleSheet.item;
+    if (!it) return;
+
+    const result = await convertLaterInboxToSchedule(
+      it,
+      {
+        text,
+        start_time: start.toISOString(),
+        end_time: end.toISOString(),
+        alarm: options.reminderMinutes !== null,
+        all_day: options.allDay,
+        start_all_day: options.startAllDay,
+        end_all_day: options.endAllDay,
+        repeat: options.repeat,
+        ...(options.reminderMinutes !== null
+          ? {
+              alarm_at: new Date(
+                start.getTime() - options.reminderMinutes * 60 * 1000,
+              ).toISOString(),
+            }
+          : {}),
+      },
+      {
+        addSchedule: (payload) => add(payload, { confirmCloud: true }),
+        removeSchedule: (id) => remove(id),
+        removeInbox: (id) => inbox.remove(id),
+        restoreInbox: async (item) => {
+          await inbox.add({
+            id: item.id,
+            text: item.text,
+            images: item.images ?? [],
+            created_at: item.created_at,
+            brain_mirror: item.brain_mirror ?? null,
+            decision: item.decision,
+            decided_at: item.decided_at,
+            decision_source: item.decision_source,
+            status: item.status ?? "active",
+          });
+        },
+      },
+    );
+
+    if (result.status === "busy") return;
+
+    if (result.status === "create_failed") {
+      toast.error(
+        t("일정으로 옮기지 못했어요", "Couldn't move this to the schedule"),
+      );
+      return;
+    }
+
+    if (result.status === "remove_failed_rolled_back") {
+      toast.error(
+        t(
+          "저장을 끝까지 마치지 못했어요. 원래 기록으로 돌려뒀어요.",
+          "Couldn't finish saving — restored the original record.",
+        ),
+      );
+      return;
+    }
+
+    setFocusScheduleSheet({ open: false });
+    const whenLabel =
+      lang === "en"
+        ? start.toLocaleDateString("en-US", {
+            month: "long",
+            day: "numeric",
+          })
+        : `${start.getMonth() + 1}월 ${start.getDate()}일`;
+    toast.success(
+      t(`${whenLabel}에 추가했어요`, `Added to schedule for ${whenLabel}`),
+    );
+  };
+
   const markDone = async (s: ScheduleItem) => {
     try {
       const done = await update(s.id, { status: "done" });
@@ -748,14 +849,7 @@ function Schedule() {
                       <LaterInboxRow
                         key={it.id}
                         text={it.text}
-                        onOpen={() =>
-                          toast.message(
-                            t(
-                              "던지기에서 다시 정리할 수 있어요",
-                              "You can sort this again from Throw",
-                            ),
-                          )
-                        }
+                        onOpen={() => openLaterInboxSchedule(it)}
                       />
                     ))}
                   </ul>
@@ -865,6 +959,15 @@ function Schedule() {
         }}
         onClear={() => {
           if (timerSheet) stopTimer(timerSheet);
+        }}
+      />
+
+      <FocusScheduleSheet
+        item={focusScheduleSheet.item ?? null}
+        open={focusScheduleSheet.open}
+        onClose={() => setFocusScheduleSheet({ open: false })}
+        onConfirm={(text, start, end, options) => {
+          void saveLaterInboxSchedule(text, start, end, options);
         }}
       />
 

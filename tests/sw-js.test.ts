@@ -42,7 +42,7 @@ describe("service worker (public/sw.js)", () => {
     expect(publicSw).toContain("event.waitUntil(showPushNotification");
     expect(publicSw).toContain("self.registration.showNotification");
     expect(publicSw).toContain('icon: NOTIFICATION_ICON');
-    expect(publicSw).toContain('"/icons/icon-192.png"');
+    expect(publicSw).toContain('"/icons/itjima-512-v3.png"');
     expect(publicSw).toContain('"/icons/badge-72.png"');
     expect(publicSw).toContain("showNotification:fallback_ok");
     expect(publicSw).toContain("sanitizePushLogMessage");

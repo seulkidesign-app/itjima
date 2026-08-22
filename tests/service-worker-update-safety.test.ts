@@ -18,7 +18,7 @@ describe("service worker update safety", () => {
   };
 
   it("uses a new shell cache and removes previous cache versions", () => {
-    expect(worker).toContain('const CACHE = "itjima-shell-v3"');
+    expect(worker).toContain('const CACHE = "itjima-shell-v5"');
     expect(worker).toContain("keys.filter((key) => key !== CACHE)");
   });
 
