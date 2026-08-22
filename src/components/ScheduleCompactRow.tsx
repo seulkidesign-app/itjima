@@ -14,7 +14,7 @@ import {
   effectiveAlarmAt,
   formatAlarmLabel,
 } from "@/lib/scheduleReminders";
-import { Check, BellRing } from "lucide-react";
+import { Check, BellRing, Pencil } from "lucide-react";
 
 export type ScheduleCompactRowProps = {
   s: ScheduleItem;
@@ -98,6 +98,7 @@ function ReminderStatus({
   return (
     <button
       type="button"
+      onPointerDown={(event) => event.stopPropagation()}
       onClick={(event) => {
         event.stopPropagation();
         onOpen();
@@ -147,6 +148,7 @@ export function ScheduleCompactRow({
 
   const onDown = (e: ReactPointerEvent<HTMLLIElement>) => {
     if (acting || done) return;
+    if ((e.target as HTMLElement).closest("button")) return;
     dragging.current = true;
     startX.current = e.clientX;
     (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
@@ -180,7 +182,6 @@ export function ScheduleCompactRow({
       });
       return;
     }
-    if (dxRef.current < 8) onEdit();
     animate(dxRef.current, 0, {
       ...SPRING_SNAP_BACK,
       onUpdate: (v) => {
@@ -192,16 +193,9 @@ export function ScheduleCompactRow({
 
   return (
     <li
-      className={`relative flex min-h-[44px] touch-none select-none items-center gap-3 border-b border-ink/[0.05] px-1 py-2.5 last:border-b-0 active:bg-ink/[0.02] ${
+      className={`relative flex min-h-[52px] touch-none select-none items-center gap-3 border-b border-ink/[0.05] px-1 py-2.5 last:border-b-0 ${
         done ? "opacity-50" : ""
       }`}
-      role="button"
-      tabIndex={0}
-      aria-label={`${title}. ${displayTime}. ${
-        s.alarm
-          ? `${t("알림 켜짐", "Reminder on")} ${alarmLabel}. `
-          : ""
-      }${t("탭하면 다듬기", "Tap to refine")}`}
       data-gesture={dragging.current || acting ? "true" : undefined}
       data-reminder={s.alarm ? "on" : "off"}
       style={{
@@ -213,15 +207,6 @@ export function ScheduleCompactRow({
       onPointerMove={onMove}
       onPointerUp={onUp}
       onPointerCancel={onUp}
-      onKeyDown={(e) => {
-        if (e.key === "Enter") {
-          e.preventDefault();
-          onEdit();
-        } else if (e.key === " " && !done) {
-          e.preventDefault();
-          onComplete();
-        }
-      }}
     >
       {dx > 20 && !done && (
         <div
@@ -231,24 +216,26 @@ export function ScheduleCompactRow({
           <Check size={12} strokeWidth={3} />
         </div>
       )}
+
       <button
         type="button"
-        onClick={(e) => {
-          e.stopPropagation();
+        onPointerDown={(event) => event.stopPropagation()}
+        onClick={(event) => {
+          event.stopPropagation();
           if (!done) onComplete();
         }}
         disabled={done}
-        className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full border-[1.5px] touch-press ${
+        className={`touch-press flex min-h-9 shrink-0 items-center gap-1 rounded-full border px-2.5 text-[11px] font-semibold ${
           done
             ? "border-primary bg-primary text-ink"
-            : pinned
-              ? "border-primary/70 bg-primary/15"
-              : "border-ink/18 bg-white"
+            : "border-ink/12 bg-white text-ink"
         }`}
-        aria-label={done ? t("완료됨", "Done") : t("다녀옴", "Mark done")}
+        aria-label={done ? t("완료됨", "Completed") : t("완료", "Complete")}
       >
-        {done && <Check size={12} strokeWidth={3} />}
+        <Check size={12} strokeWidth={2.8} aria-hidden />
+        <span>{done ? t("완료됨", "Done") : t("완료", "Done")}</span>
       </button>
+
       <span className="min-w-0 flex-1">
         <span
           className={`block text-[13px] font-semibold tabular-nums leading-snug ${
@@ -282,6 +269,23 @@ export function ScheduleCompactRow({
           </span>
         )}
       </span>
+
+      {!done && (
+        <button
+          type="button"
+          onPointerDown={(event) => event.stopPropagation()}
+          onClick={(event) => {
+            event.stopPropagation();
+            haptic(6);
+            onEdit();
+          }}
+          className="touch-press inline-flex min-h-9 shrink-0 items-center gap-1 rounded-full px-2 text-[11px] font-semibold text-ink-soft active:bg-ink/[0.04]"
+          aria-label={t(`${title} 수정`, `Edit ${title}`)}
+        >
+          <Pencil size={12} strokeWidth={2.2} aria-hidden />
+          <span>{t("수정", "Edit")}</span>
+        </button>
+      )}
     </li>
   );
 }
@@ -296,18 +300,7 @@ export function LaterInboxRow({ text, onOpen }: LaterInboxRowProps) {
   const preview = text.split("\n")[0]?.trim() ?? text;
 
   return (
-    <li
-      className="flex min-h-[44px] items-center gap-3 rounded-[var(--radius-sm)] border-b border-ink/[0.05] px-1 py-2.5 last:border-b-0 active:bg-ink/[0.03]"
-      role="button"
-      tabIndex={0}
-      onClick={onOpen}
-      onKeyDown={(e) => {
-        if (e.key === "Enter" || e.key === " ") {
-          e.preventDefault();
-          onOpen();
-        }
-      }}
-    >
+    <li className="flex min-h-[52px] items-center gap-3 rounded-[var(--radius-sm)] border-b border-ink/[0.05] px-1 py-2.5 last:border-b-0">
       <span
         className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full border-2 border-ink/15 bg-white"
         aria-hidden
@@ -317,9 +310,16 @@ export function LaterInboxRow({ text, onOpen }: LaterInboxRowProps) {
           {preview}
         </span>
         <span className="mt-0.5 block text-caption text-ink-soft/80">
-          {t("날짜 없음", "No date")}
+          {t("시간을 정하지 않은 기록", "No time set")}
         </span>
       </span>
+      <button
+        type="button"
+        onClick={onOpen}
+        className="touch-press min-h-9 shrink-0 rounded-full px-2.5 text-[11px] font-semibold text-ink-soft active:bg-ink/[0.04]"
+      >
+        {t("정리", "Organize")}
+      </button>
     </li>
   );
 }
