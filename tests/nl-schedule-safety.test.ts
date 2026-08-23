@@ -143,9 +143,14 @@ describe("inline ambiguity resolution", () => {
 });
 
 describe("focused inline understanding", () => {
-  it("shows schedules and tasks", () => {
+  it("shows schedules that still need a question", () => {
     expect(shouldShowInlinePromise("내일 오후 3시에 치과", "ko")).toBe(true);
-    expect(shouldShowInlinePromise("엄마한테 전화하기", "ko")).toBe(true);
+    expect(shouldShowInlinePromise("내일 3시 반 치과", "ko")).toBe(true);
+  });
+
+  it("keeps undated notes quiet (no task taxonomy card)", () => {
+    expect(shouldShowInlinePromise("엄마한테 전화하기", "ko")).toBe(false);
+    expect(shouldShowInlinePromise("에어팟 소독", "ko")).toBe(false);
   });
 
   it("keeps archive and plain-note interpretations quiet", () => {

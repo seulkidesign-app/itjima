@@ -363,10 +363,10 @@ export function CaptureComposer({
           ? ""
           : "border-t border-ink/8 bg-white/98 shadow-[0_-2px_16px_-6px_rgba(0,0,0,0.06)] backdrop-blur-xl"
       }`}
-      aria-label={t("일정과 할 일 입력", "Schedule and task capture")}
+      aria-label={t("일정 입력", "Schedule capture")}
     >
       {exampleChips && exampleChips.length > 0 && (
-        <div className={`flex flex-wrap gap-1.5 px-4 ${composer ? "pb-1.5 pt-2" : "pt-3"}`}>
+        <div className={`flex flex-wrap gap-1.5 px-5 ${composer ? "pb-1.5 pt-2" : "pt-3"}`}>
           {exampleChips.map((chip) => {
             const label = lang === "en" ? chip.en : chip.ko;
             return (
@@ -390,7 +390,7 @@ export function CaptureComposer({
       {images.length > 0 && (
         <motion.div
           layout
-          className="flex gap-2 overflow-x-auto px-4 pt-2"
+          className="flex gap-2 overflow-x-auto px-5 pt-2"
           initial={{ opacity: 0, height: 0 }}
           animate={{ opacity: 1, height: "auto" }}
         >
@@ -425,12 +425,12 @@ export function CaptureComposer({
         </motion.div>
       )}
 
-      <div className={`px-4 ${composer ? "pb-0.5 pt-0.5" : hero ? "mt-3" : "mt-2"}`}>
+      <div className={`px-5 ${composer ? "pb-1 pt-1" : hero ? "mt-3" : "mt-2"}`}>
         <motion.div
           layout
           transition={SPRING_MICRO}
           className={`input-shell input-focus-ring px-3 ${focused ? "input-shell-focused" : ""} ${
-            composer ? "py-1.5" : hero ? "py-4 ring-1 ring-ink/5" : "py-3"
+            composer ? "py-2.5" : hero ? "py-4 ring-1 ring-ink/5" : "py-3"
           }`}
         >
           <textarea
@@ -454,14 +454,14 @@ export function CaptureComposer({
               event.preventDefault();
               submit(event.currentTarget.value);
             }}
-            rows={composer ? 1 : hero ? 4 : 3}
+            rows={composer ? 2 : hero ? 4 : 3}
             placeholder={t(
-              "일정이나 할 일을 말하듯 남겨보세요",
-              "Say a plan or task naturally",
+              "일정을 말하듯 남겨보세요",
+              "Say a plan naturally",
             )}
             className={`block w-full resize-none bg-transparent leading-relaxed text-ink placeholder:text-ink-soft/55 focus:outline-none ${
               composer
-                ? "min-h-[26px] max-h-28 text-[16px]"
+                ? "min-h-[44px] max-h-28 text-[16px]"
                 : hero
                   ? "min-h-[96px] max-h-40 text-[17px]"
                   : "min-h-[72px] max-h-40 text-[16px]"
@@ -470,7 +470,7 @@ export function CaptureComposer({
         </motion.div>
       </div>
 
-      <div className={`flex min-h-[50px] items-center gap-1 ${composer ? "px-3 pb-1.5" : "px-5 pb-2 pt-2"}`}>
+      <div className={`flex min-h-[52px] items-center gap-1 ${composer ? "px-5 pb-2" : "px-5 pb-2 pt-2"}`}>
         <div ref={toolsRef} className="relative">
           <motion.button
             type="button"

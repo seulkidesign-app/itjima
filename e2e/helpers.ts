@@ -316,6 +316,19 @@ export async function openContextMenuRaw(page: Page, thoughtText: string) {
   const frame = phone(page);
   await dismissInlinePromise(page);
   await closeDecisionDeckIfOpen(page);
+  const row = frame
+    .getByTestId("left-item-row")
+    .filter({ hasText: thoughtText })
+    .first();
+  if ((await row.count()) > 0) {
+    await row.scrollIntoViewIfNeeded();
+    await row.getByTestId("left-item-more").click();
+    await contextMenuDialog(page).waitFor({
+      state: "visible",
+      timeout: 10_000,
+    });
+    return;
+  }
   const bubble = frame
     .getByRole("paragraph")
     .filter({ hasText: thoughtText })
@@ -333,6 +346,27 @@ export async function openContextMenuRaw(page: Page, thoughtText: string) {
     state: "visible",
     timeout: 10_000,
   });
+}
+
+/** Open DecisionDeck via ··· menu (sticky launcher removed in V02-08D). */
+export async function openDecisionDeckFromMenu(
+  page: Page,
+  thoughtText?: string,
+) {
+  const frame = phone(page);
+  await dismissInlinePromise(page);
+  await closeDecisionDeckIfOpen(page);
+  if (thoughtText) {
+    await openContextMenuRaw(page, thoughtText);
+  } else {
+    const more = frame.getByTestId("left-item-more").last();
+    await more.click();
+    await contextMenuDialog(page).waitFor({ state: "visible", timeout: 10_000 });
+  }
+  await clickContextMenuItem(page, "Sort one by one");
+  const dialog = frame.getByRole("dialog", { name: /One by one|하나씩/ });
+  await dialog.waitFor({ state: "visible" });
+  return dialog;
 }
 
 export async function getTabCount(
@@ -356,12 +390,12 @@ export async function openCalendarQuickAdd(
 ) {
   const frame = phone(page);
   const scheduleLink = frame
-    .getByRole("link", { name: /^Schedule|할 일·일정|Schedule —/ })
+    .getByRole("link", { name: /^Schedule|일정|Schedule —|할 일·일정/ })
     .first();
   if (await scheduleLink.isVisible().catch(() => false)) {
     await scheduleLink.click();
   } else {
-    await page.getByRole("link", { name: /^Schedule|할 일·일정|Schedule —/ }).first().click();
+    await page.getByRole("link", { name: /^Schedule|일정|Schedule —|할 일·일정/ }).first().click();
   }
 
   const calTab = frame.getByRole("tab", { name: /Calendar|달력/ });

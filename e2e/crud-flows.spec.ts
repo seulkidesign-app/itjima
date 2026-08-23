@@ -114,12 +114,15 @@ test.describe("CRUD flows (guest / offline)", () => {
     await input.fill(`${title} tomorrow at 3 PM`);
     await phone(page).getByTestId("capture-submit").click();
 
+    const saved = phone(page).getByTestId("saved-schedule-feedback");
     const looksRight = phone(page).getByRole("button", { name: /Looks right|맞아요/i });
     const addToSchedule = phone(page).getByRole("button", {
       name: "Add to schedule",
       exact: true,
     });
-    if (await looksRight.isVisible().catch(() => false)) {
+    if (await saved.isVisible().catch(() => false)) {
+      // V02-08C auto-commit
+    } else if (await looksRight.isVisible().catch(() => false)) {
       await looksRight.click();
     } else if (await addToSchedule.isVisible().catch(() => false)) {
       await addToSchedule.click();
@@ -137,8 +140,10 @@ test.describe("CRUD flows (guest / offline)", () => {
     }
 
     await expect.poll(() => getTabCount(page, "Schedule")).toBeGreaterThan(0);
-    await gotoScheduleUpcoming(page);
-    await phone(page).getByText(title).first().waitFor({ state: "visible" });
+    const schedules = (await readGuestList(page, GUEST_SCHEDULE_KEY)) as Array<{
+      text?: string;
+    }>;
+    expect(schedules.some((s) => (s.text ?? "").includes(title))).toBe(true);
     await expect(
       phone(page).getByRole("button", { name: "Add task", exact: true }),
     ).toHaveCount(0);

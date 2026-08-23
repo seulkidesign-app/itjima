@@ -325,3 +325,25 @@ export function formatCommitmentReminder(
   if (minutes === 24 * 60) return lang === "en" ? "1 day before" : "전날";
   return lang === "en" ? `${minutes} min before` : `${minutes}분 전`;
 }
+
+/** Compact when-label for saved-result feedback: `내일 · 오후 3:30`. */
+export function formatCaptureWhenLabel(
+  start: Date,
+  allDay: boolean,
+  lang: "ko" | "en",
+  now = new Date(),
+): string {
+  const startDay = startOfDay(start).getTime();
+  const today = startOfDay(now).getTime();
+  const dayMs = 24 * 60 * 60 * 1000;
+  let dayLabel: string;
+  if (startDay === today) {
+    dayLabel = lang === "en" ? "Today" : "오늘";
+  } else if (startDay === today + dayMs) {
+    dayLabel = lang === "en" ? "Tomorrow" : "내일";
+  } else {
+    dayLabel = formatCommitmentDate(start, lang);
+  }
+  const timeLabel = formatCommitmentTime(start, allDay, lang);
+  return `${dayLabel} · ${timeLabel}`;
+}

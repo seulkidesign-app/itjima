@@ -10,7 +10,7 @@ import { InputBar } from "@/components/InputBar";
 import { SyncIndicator } from "@/components/SyncIndicator";
 import { runUserOrganize } from "@/components/BrainMirrorSummary";
 import { InboxChat } from "@/components/home/InboxChat";
-import { DecisionLauncher, DecisionLauncherCard } from "@/components/home/DecisionLauncher";
+import { DecisionLauncher } from "@/components/home/DecisionLauncher";
 import { ContextMenu } from "@/components/home/ContextMenu";
 import { PasteSheet } from "@/components/home/PasteSheet";
 import { archiveFromInbox, scheduleFromInbox } from "@/lib/thoughtProvenance";
@@ -22,6 +22,17 @@ import {
   understandNaturalLanguage,
   type ClarifyPick,
 } from "@/lib/nlSchedule";
+import { evaluateTimedAutoCommit } from "@/lib/nlAutoCommit";
+import {
+  commitInboxToSchedule,
+  undoScheduleToInbox,
+  type LaterInboxScheduleFields,
+} from "@/lib/convertLaterInboxToSchedule";
+import {
+  buildNaturalScheduleDraft,
+  formatCaptureWhenLabel,
+} from "@/lib/naturalScheduleDraft";
+import type { SavedScheduleFeedbackModel } from "@/components/home/SavedScheduleFeedback";
 import {
   trackNlArchiveCreated,
   trackNlParseFailed,
@@ -114,6 +125,18 @@ function Inbox() {
   const [acknowledgedIds, setAcknowledgedIds] = useState<Set<string>>(
     () => new Set(),
   );
+  const [autoCommitInFlightIds, setAutoCommitInFlightIds] = useState<
+    Set<string>
+  >(() => new Set());
+  const [savedFeedback, setSavedFeedback] =
+    useState<SavedScheduleFeedbackModel | null>(null);
+  const savedUndoRef = useRef<{
+    scheduleId: string;
+    inboxItem: InboxItem;
+    fields: LaterInboxScheduleFields;
+  } | null>(null);
+  /** When set, next capture replaces this raw inbox row (multi-clock 입력 수정). */
+  const captureReplaceInboxIdRef = useRef<string | null>(null);
 
   useEffect(() => {
     setAcknowledgedIds(loadAcknowledgedIds(userId));
@@ -208,7 +231,7 @@ function Inbox() {
 
   const revisitArchiveMemory = (memoryId: string) => {
     setRevivalJumpTarget(memoryId);
-    haptic(4);
+    lightHaptic(4);
     void navigate({ to: "/archive" });
   };
 
@@ -323,6 +346,123 @@ function Inbox() {
     setFocusScheduleSheet({ open: true, item: it });
   };
 
+  const scheduleCommitOps = useCallback(
+    () => ({
+      addSchedule: (
+        payload: Parameters<typeof schedules.add>[0] & {
+          alarm_at?: string | null;
+        },
+      ) => schedules.add(payload, { confirmCloud: true }),
+      removeSchedule: (id: string) => schedules.remove(id),
+      removeInbox: (id: string) => inbox.remove(id),
+      restoreInbox: async (item: InboxItem) => {
+        await inbox.add({
+          id: item.id,
+          text: item.text,
+          images: item.images ?? [],
+          created_at: item.created_at,
+          brain_mirror: item.brain_mirror ?? null,
+          decision: item.decision,
+          decided_at: item.decided_at,
+          decision_source: item.decision_source,
+          status: item.status ?? "active",
+        });
+      },
+    }),
+    [inbox, schedules],
+  );
+
+  const presentSavedScheduleFeedback = useCallback(
+    (
+      scheduleId: string,
+      inboxItem: InboxItem,
+      fields: LaterInboxScheduleFields,
+      source: string,
+    ) => {
+      const start = new Date(fields.start_time);
+      const uiLang = lang === "en" ? "en" : "ko";
+      const whenLabel = formatCaptureWhenLabel(
+        start,
+        Boolean(fields.all_day),
+        uiLang,
+      );
+      const feedback: SavedScheduleFeedbackModel = {
+        id: `fb-${scheduleId}`,
+        scheduleId,
+        title: fields.text,
+        whenLabel,
+      };
+      savedUndoRef.current = { scheduleId, inboxItem, fields };
+      setSavedFeedback(feedback);
+      track("schedule_created", {
+        source,
+        text_length: inboxItem.text.length,
+      });
+      track("thought_scheduled", {
+        source,
+        text_length: inboxItem.text.length,
+      });
+      showUndoToastBase(
+        t("일정으로 남겼어요", "Saved to your schedule"),
+        async () => {
+          const snap = savedUndoRef.current;
+          if (!snap || snap.scheduleId !== scheduleId) return;
+          const result = await undoScheduleToInbox(
+            snap.scheduleId,
+            snap.inboxItem,
+            snap.fields,
+            scheduleCommitOps(),
+          );
+          if (result.status === "ok") {
+            savedUndoRef.current = null;
+            setSavedFeedback(null);
+            toast.message(t("남겨 둔 걸로 되돌렸어요", "Restored as left here"));
+            return;
+          }
+          if (result.status === "restore_failed_schedule_recreated") {
+            // Keep feedback/undo pointed at the recreated schedule — never a deleted id.
+            savedUndoRef.current = {
+              scheduleId: result.scheduleId,
+              inboxItem: snap.inboxItem,
+              fields: snap.fields,
+            };
+            setSavedFeedback((prev) =>
+              prev
+                ? {
+                    ...prev,
+                    id: `fb-${result.scheduleId}`,
+                    scheduleId: result.scheduleId,
+                  }
+                : prev,
+            );
+            toast.message(
+              t(
+                "되돌리기에 실패해 일정을 다시 남겨 두었어요",
+                "Couldn't restore the note — kept the schedule",
+              ),
+            );
+            return;
+          }
+          if (result.status === "remove_failed") {
+            toast.error(
+              t(
+                "일정을 지우지 못했어요. 그대로 두었어요.",
+                "Couldn't remove the schedule — left it as is.",
+              ),
+            );
+            return;
+          }
+          toast.error(t("되돌리지 못했어요", "Couldn't undo"));
+        },
+        {
+          durationMs: 6000,
+          undoLabel: t("되돌리기", "Undo"),
+        },
+      );
+    },
+    [lang, scheduleCommitOps, t],
+  );
+
   const commitInboxSchedule = async (
     it: InboxItem,
     text: string,
@@ -330,8 +470,9 @@ function Inbox() {
     end: Date,
     options: ScheduleConfirmOptions,
     source: string,
+    opts?: { silentToast?: boolean; showSavedFeedback?: boolean },
   ) => {
-    const payload = scheduleFromInbox(it, {
+    const fields: LaterInboxScheduleFields = {
       text,
       start_time: start.toISOString(),
       end_time: end.toISOString(),
@@ -340,9 +481,6 @@ function Inbox() {
       start_all_day: options.startAllDay,
       end_all_day: options.endAllDay,
       repeat: options.repeat,
-    });
-    const { cloudSynced: scheduleSynced } = await schedules.add({
-      ...payload,
       ...(options.reminderMinutes !== null
         ? {
             alarm_at: new Date(
@@ -350,10 +488,18 @@ function Inbox() {
             ).toISOString(),
           }
         : {}),
-    });
-    const inboxSynced = await inbox.remove(it.id);
-    track("schedule_created", { source, text_length: text.length });
-    if (allCloudSynced(scheduleSynced, inboxSynced)) {
+    };
+
+    const result = await commitInboxToSchedule(it, fields, scheduleCommitOps());
+    if (result.status === "busy") return null;
+    if (result.status !== "ok") {
+      throw new Error(result.status);
+    }
+
+    if (opts?.showSavedFeedback) {
+      presentSavedScheduleFeedback(result.scheduleId, it, fields, source);
+    } else if (!opts?.silentToast) {
+      track("schedule_created", { source, text_length: text.length });
       track("thought_scheduled", { source, text_length: text.length });
       const whenLabel =
         lang === "en"
@@ -368,7 +514,11 @@ function Inbox() {
         () => void navigate({ to: "/schedule" }),
         { actionAriaLabel: t("일정 열기", "Open schedule") },
       );
+    } else {
+      track("schedule_created", { source, text_length: text.length });
+      track("thought_scheduled", { source, text_length: text.length });
     }
+    return result.scheduleId;
   };
 
   const saveHomeSchedule = async (
@@ -415,7 +565,6 @@ function Inbox() {
         return;
       }
       try {
-        // Same defaults as Decision Deck — date-only → all-day, timed → parsed hour
         const { start, end, text, options } = inboxScheduleDefaults(it);
         await commitInboxSchedule(
           it,
@@ -424,6 +573,7 @@ function Inbox() {
           end,
           options,
           "promise_card",
+          { showSavedFeedback: true },
         );
         trackNlScheduleCreated();
         setFocusScheduleSheet({ open: false });
@@ -483,7 +633,7 @@ function Inbox() {
         trackNlTaskCreated();
         acknowledgeItem(it.id);
         showActionToast(
-          t("할 일로 넣었어요", "Added as a task"),
+          t("남겨 두었어요", "Left it here"),
           t("보러 가기", "Take a look"),
           () => void navigate({ to: "/schedule" }),
           { actionAriaLabel: t("일정 열기", "Open schedule") },
@@ -574,13 +724,27 @@ function Inbox() {
     source: "text" | "voice" = "text",
   ) => {
     if (!text && !images.length) return;
+    const replaceId = captureReplaceInboxIdRef.current;
+    captureReplaceInboxIdRef.current = null;
+
     const isFirst = items.length === 0 && isFirstCapturePending();
+    const uiLang = lang === "en" ? "en" : "ko";
     lightHaptic();
     try {
-      const { item: created } = await inbox.add({
-        text,
-        images,
-      });
+      let created: InboxItem;
+      if (replaceId && items.some((it) => it.id === replaceId)) {
+        await inbox.update(replaceId, { text, images });
+        created = {
+          ...(items.find((it) => it.id === replaceId) as InboxItem),
+          text,
+          images,
+        };
+      } else {
+        ({ item: created } = await inbox.add({
+          text,
+          images,
+        }));
+      }
       track("thought_created", {
         text_length: text.length,
         has_images: images.length > 0,
@@ -588,21 +752,63 @@ function Inbox() {
       });
       trackNlThoughtSubmitted({
         textLength: text.length,
-        language: lang === "en" ? "en" : "ko",
+        language: uiLang,
         source,
       });
-
-      if (isFirst) {
-        markFirstCaptureDone();
-        toast.message(t("여기에 잘 두었어요.", "Saved here."), {
-          duration: 2200,
-        });
-      }
 
       if (FEATURES.REDISCOVERY) {
         const revival = buildRevivalHint(created, archive.items, "inbox");
         if (revival) setInboxRevival(revival);
       }
+
+      const decision = evaluateTimedAutoCommit(created.text, uiLang);
+      if (decision.ok) {
+        if (isFirst) markFirstCaptureDone();
+        setAutoCommitInFlightIds((prev) => new Set(prev).add(created.id));
+        try {
+          const committed = await withNlConfirmGuard(created.id, async () => {
+            const draft = decision.draft;
+            await commitInboxSchedule(
+              created,
+              draft.text,
+              draft.start,
+              draft.end,
+              draft.options,
+              "capture_auto",
+              { showSavedFeedback: true },
+            );
+            trackNlScheduleCreated();
+            acknowledgeItem(created.id);
+          });
+          if (!committed) {
+            // In-flight guard — leave durable raw; no duplicate schedule.
+          }
+        } catch {
+          trackNlParseFailed("commit_error");
+          toast.error(
+            t("그때로 못 옮겼어요", "Couldn't set that moment — try again?"),
+          );
+        } finally {
+          setAutoCommitInFlightIds((prev) => {
+            const next = new Set(prev);
+            next.delete(created.id);
+            return next;
+          });
+        }
+      } else {
+        if (isFirst) markFirstCaptureDone();
+        // Undated / non-timed: durable raw only — no taxonomy confirmation.
+        // Ambiguous timed stays in inbox for InlinePromise (AM/PM, multi-clock, …).
+        if (
+          decision.reason === "no_clock" ||
+          decision.reason === "date_only" ||
+          decision.reason === "quiet" ||
+          decision.reason === "empty_title"
+        ) {
+          toast.message(t("남겨뒀어요", "Left it here"), { duration: 2000 });
+        }
+      }
+
       notifyThoughtSubmitted();
     } catch {
       track("thought_create_failed", {
@@ -696,6 +902,8 @@ function Inbox() {
         onInboxRevivalDismiss={() => setInboxRevival(null)}
         onRevisitArchiveMemory={revisitArchiveMemory}
         acknowledgedIds={acknowledgedIds}
+        autoCommitInFlightIds={autoCommitInFlightIds}
+        savedFeedback={savedFeedback}
         listEndRef={listEndRef}
         onMoveToArchive={moveToArchive}
         onOpenContextMenu={setMenuFor}
@@ -708,6 +916,19 @@ function Inbox() {
         onMaybeNudgeLogin={maybeNudgeLogin}
         onOpenDetail={setDetailItem}
         onRetryCapture={retryCapture}
+        onEditCaptureText={(raw, itemId) => {
+          captureReplaceInboxIdRef.current = itemId;
+          setRestorePasteText(raw);
+        }}
+        onEditSavedSchedule={() => {
+          if (savedFeedback?.scheduleId) {
+            sessionStorage.setItem(
+              "itjima.openScheduleEdit",
+              savedFeedback.scheduleId,
+            );
+          }
+          void navigate({ to: "/schedule" });
+        }}
       />
 
       <div className="composer-hero relative sticky bottom-0 z-20 shrink-0">
@@ -721,11 +942,6 @@ function Inbox() {
             {t(`새로 ${unreadBelow}개`, `${unreadBelow} new below`)}
           </button>
         )}
-        <DecisionLauncherCard
-          itemCount={pendingItems.length}
-          newestItemId={newestId}
-          onOpen={(startId) => openDecisionDeck(startId ?? undefined)}
-        />
         <InputBar
           composer
           onAdd={handleAdd}
@@ -754,7 +970,7 @@ function Inbox() {
           menuItem={menuItem}
           onClose={() => setMenuFor(null)}
           onOpenCleanup={() => setCleanupReviewOpen(true)}
-          onOpenDecisionDeck={() => openDecisionDeck()}
+          onOpenDecisionDeck={() => openDecisionDeck(menuItem.id)}
           onUnderstandAgain={handleUnderstandAgain}
           onOpenHomeSchedule={openHomeSchedule}
           onMoveToArchive={moveToArchive}

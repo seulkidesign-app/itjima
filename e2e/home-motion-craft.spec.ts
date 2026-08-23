@@ -11,7 +11,11 @@ async function openDeck(page: import("@playwright/test").Page) {
   await dismissInlinePromise(page);
   await closeDecisionDeckIfOpen(page);
   const deck = phone(page);
-  await deck.getByTestId("decision-launcher").click();
+  await deck.getByTestId("left-item-more").last().click();
+  await page
+    .getByTestId("inbox-context-menu")
+    .getByRole("menuitem", { name: /Sort one by one|하나씩 정리하기/, exact: true })
+    .click({ force: true });
   const dialog = deck.getByRole("dialog", { name: /One by one|하나씩/ });
   await expect(dialog).toBeVisible();
   await expect(deck.getByTestId("decision-deck-active-card")).toBeVisible();
@@ -36,17 +40,15 @@ test("home keeps the quiet background and stages the newest thought", async ({ p
   expect(backgroundImage).toBe("none");
 
   const newestTurn = phone(page).locator(
-    '[data-testid="chat-turn"][data-newest="true"]',
+    '[data-testid="left-item-row"][data-newest="true"]',
   );
   await expect(newestTurn).toHaveCount(1);
-  const newestBubble = newestTurn.locator(
-    '.home-chat-bubble-row[data-newest="true"]',
-  );
-  await expect(newestBubble).toBeVisible();
-  const animationName = await newestBubble.evaluate(
+  await expect(newestTurn).toBeVisible();
+  // List rows stay calm — no chat-bubble entrance animation.
+  const animationName = await newestTurn.evaluate(
     (element) => getComputedStyle(element).animationName,
   );
-  expect(animationName).toContain("ij-thought-land");
+  expect(animationName === "none" || animationName === "").toBeTruthy();
 });
 
 test("card drag activates a directional environment before commit", async ({ page }) => {
@@ -84,14 +86,14 @@ test("reduced motion removes the interaction animations", async ({ browser }) =>
   await resetAppState(page);
   await addThought(page, `Reduced motion ${Date.now()}`);
 
-  const bubble = phone(page).locator(
-    '.home-chat-bubble-row[data-newest="true"]',
+  const row = phone(page).locator(
+    '[data-testid="left-item-row"][data-newest="true"]',
   );
-  await expect(bubble).toBeVisible();
-  const animationName = await bubble.evaluate(
+  await expect(row).toBeVisible();
+  const animationName = await row.evaluate(
     (element) => getComputedStyle(element).animationName,
   );
-  expect(animationName).toBe("none");
+  expect(animationName === "none" || animationName === "").toBeTruthy();
 
   await context.close();
 });

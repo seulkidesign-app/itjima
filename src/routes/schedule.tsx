@@ -1,4 +1,4 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import {
   useEffect,
   useMemo,
@@ -50,7 +50,6 @@ import {
   scheduleRangeInMonth,
   useCalendarScrollParent,
 } from "@/components/CalendarDragLayer";
-import { EmptyState } from "@/components/EmptyState";
 import { ScheduleListSkeleton } from "@/components/Skeleton";
 import { SyncIndicator } from "@/components/SyncIndicator";
 import { partitionTodaySchedules } from "@/lib/todaySuggestions";
@@ -217,6 +216,17 @@ function Schedule() {
   const [iosInstallHintOpen, setIosInstallHintOpen] = useState(false);
   useTimerTick();
   const { pins, toggle: togglePin } = usePins();
+
+  // Capture saved-feedback 「수정」 → open existing schedule editor (no create).
+  useEffect(() => {
+    const id = sessionStorage.getItem("itjima.openScheduleEdit");
+    if (!id) return;
+    const target = items.find((s) => s.id === id);
+    if (!target) return;
+    sessionStorage.removeItem("itjima.openScheduleEdit");
+    setTab("list");
+    setSheet({ open: true, edit: target });
+  }, [items]);
 
   const activeItems = useMemo(
     () => items.filter((s) => s.status !== "done"),
@@ -728,8 +738,8 @@ function Schedule() {
           <h1 className="page-title">{t("일정", "Schedule")}</h1>
           <p className="page-eyebrow mt-2.5 max-w-[22rem] leading-relaxed text-ink-soft">
             {t(
-              "오늘과 다가올 일을 한곳에서 볼 수 있어요.",
-              "Today and what's coming — in one place.",
+              "오늘과 다가올 일정을 한곳에서 볼 수 있어요.",
+              "See today and what’s next in one place.",
             )}
           </p>
         </div>
@@ -837,11 +847,8 @@ function Schedule() {
                 </section>
               ))}
               {laterInboxItems.length > 0 && (
-                <section
-                  data-testid="upcoming-section-noDate"
-                  className="rounded-[var(--radius-md)] bg-ink/[0.025] px-1 py-0.5"
-                >
-                  <h2 className="section-title mb-1.5 px-1.5 pt-1">
+                <section data-testid="upcoming-section-noDate">
+                  <h2 className="section-title mb-1.5 px-0.5">
                     {upcomingSectionLabel("noDate", lang)}
                   </h2>
                   <ul className="flex flex-col">
@@ -1212,8 +1219,8 @@ function ScheduleTodayPanel({
         flowedItems.length === 0 && (
           <p className="px-1 py-5 text-center text-secondary leading-relaxed">
             {t(
-              "오늘 할 일이 생기면 여기에 모여요.",
-              "When something needs your day, it gathers here.",
+              "오늘 일정이 없어요",
+              "Nothing on today yet.",
             )}
           </p>
         )
@@ -1955,12 +1962,29 @@ function DayEventChip({
 }
 
 function Empty() {
+  const t = useT();
   return (
-    <EmptyState
-      titleKo="아직 일정이 없어요"
-      titleEn="No schedules yet"
-      hintKo="아래 남기기에서 말하듯 남기면, 잊지마가 정리해드려요."
-      hintEn="Capture from the Capture tab below — Itjima will organize it for you."
-    />
+    <div
+      className="flex min-h-[36dvh] flex-col items-center justify-center px-8 text-center"
+      role="status"
+      data-testid="schedule-empty"
+    >
+      <p className="text-[19px] font-semibold tracking-[-0.025em] text-ink">
+        {t("아직 일정이 없어요", "No schedules yet")}
+      </p>
+      <p className="mt-2 max-w-[280px] text-[14px] leading-relaxed text-ink-soft">
+        {t(
+          "말하듯 남기면 잊지마가 시간을 정리해드려요.",
+          "Say it like you mean it — Itjima will sort the time.",
+        )}
+      </p>
+      <Link
+        to="/app"
+        data-testid="schedule-empty-capture"
+        className="touch-press mt-5 inline-flex min-h-11 items-center justify-center rounded-full bg-primary px-5 text-[14px] font-bold text-ink shadow-card"
+      >
+        {t("남기러 가기", "Go capture")}
+      </Link>
+    </div>
   );
 }

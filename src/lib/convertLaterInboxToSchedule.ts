@@ -32,6 +32,13 @@ export type ConvertLaterInboxResult =
   | { status: "create_failed" }
   | { status: "remove_failed_rolled_back" };
 
+export type UndoScheduleToInboxResult =
+  | { status: "ok" }
+  | { status: "busy" }
+  | { status: "remove_failed" }
+  | { status: "restore_failed_schedule_recreated"; scheduleId: string }
+  | { status: "restore_failed" };
+
 const inFlightIds = new Set<string>();
 
 /** Title shown in the schedule sheet when opening a no-time later inbox row. */
@@ -50,7 +57,8 @@ async function rollbackCreatedSchedule(
 }
 
 /**
- * Convert a no-time (“later”) inbox item into a schedule as one user-facing action.
+ * Shared inbox → schedule commit for capture auto-commit, AM/PM resolve,
+ * and later-inbox conversion.
  *
  * Order is create-schedule → remove-inbox. Never deletes the inbox first.
  * On create failure the inbox is untouched. On remove failure the new schedule
@@ -102,6 +110,68 @@ export async function convertLaterInboxToSchedule(
     return { status: "ok", scheduleId: created.id };
   } finally {
     inFlightIds.delete(item.id);
+  }
+}
+
+/** Alias used by capture auto-commit / clarify paths. */
+export const commitInboxToSchedule = convertLaterInboxToSchedule;
+
+/**
+ * Undo an auto-committed schedule back to a durable left item (raw inbox).
+ * Never leaves both schedule and inbox present.
+ */
+export async function undoScheduleToInbox(
+  scheduleId: string,
+  inboxItem: InboxItem,
+  fields: LaterInboxScheduleFields,
+  ops: ConvertLaterInboxOps,
+): Promise<UndoScheduleToInboxResult> {
+  const lockId = `undo:${scheduleId}`;
+  if (inFlightIds.has(lockId) || inFlightIds.has(inboxItem.id)) {
+    return { status: "busy" };
+  }
+  inFlightIds.add(lockId);
+  inFlightIds.add(inboxItem.id);
+
+  try {
+    try {
+      const removed = await ops.removeSchedule(scheduleId);
+      if (removed === false) {
+        return { status: "remove_failed" };
+      }
+    } catch {
+      return { status: "remove_failed" };
+    }
+
+    clearInboxTombstones(inboxItem.id);
+    try {
+      await ops.restoreInbox(inboxItem);
+    } catch {
+      // Restore failed after schedule delete — recreate schedule so text is not lost.
+      try {
+        const { alarm_at, ...scheduleFields } = fields;
+        const payload = {
+          ...scheduleFromInbox(inboxItem, scheduleFields),
+          ...(alarm_at !== undefined ? { alarm_at } : {}),
+        };
+        const { item: created, cloudSynced } = await ops.addSchedule(payload);
+        if (!cloudSynced) {
+          await ops.removeSchedule(created.id);
+          return { status: "restore_failed" };
+        }
+        return {
+          status: "restore_failed_schedule_recreated",
+          scheduleId: created.id,
+        };
+      } catch {
+        return { status: "restore_failed" };
+      }
+    }
+
+    return { status: "ok" };
+  } finally {
+    inFlightIds.delete(lockId);
+    inFlightIds.delete(inboxItem.id);
   }
 }
 

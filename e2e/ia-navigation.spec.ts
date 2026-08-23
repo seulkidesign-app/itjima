@@ -9,8 +9,8 @@ import {
   CAPTURE_LINK_NAME_KO,
 } from "./helpers";
 
-const TASKS_SCHEDULE_LINK_NAME = /^Schedule — tasks and undated to-dos$/;
-const TASKS_SCHEDULE_LINK_NAME_KO = /^할 일·일정$/;
+const TASKS_SCHEDULE_LINK_NAME = /^Schedule$/;
+const TASKS_SCHEDULE_LINK_NAME_KO = /^일정$/;
 
 async function resetForIa(page: Page) {
   await page.setViewportSize({ width: 390, height: 844 });
@@ -91,7 +91,7 @@ test.describe("IA navigation (Capture / Tasks & schedule / Archive)", () => {
       page.getByRole("heading", { name: "Schedule", exact: true }),
     ).toBeVisible();
     await expect(
-      page.getByText("Today and what's coming — in one place."),
+      page.getByText("See today and what’s next in one place."),
     ).toBeVisible();
     await expect(page.getByRole("tab", { name: "Today" })).toBeVisible();
     await expect(page.getByRole("tab", { name: "Upcoming" })).toBeVisible();
@@ -134,7 +134,7 @@ test.describe("IA visual QA viewports", () => {
   for (const width of [320, 375, 390, 430]) {
     test(`Korean nav and home fit at ${width}px`, async ({ page }) => {
       await page.setViewportSize({ width, height: 844 });
-      await page.goto("/");
+      await page.goto("/app");
       await page.evaluate(() => {
         for (const k of Object.keys(localStorage)) {
           if (k.startsWith("itjima.")) localStorage.removeItem(k);
@@ -164,7 +164,7 @@ test.describe("IA visual QA viewports", () => {
 
     test(`decision deck controls fit at ${width}px`, async ({ page }) => {
       await page.setViewportSize({ width, height: 844 });
-      await page.goto("/");
+      await page.goto("/app");
       await page.evaluate(() => {
         for (const k of Object.keys(localStorage)) {
           if (k.startsWith("itjima.")) localStorage.removeItem(k);
@@ -174,7 +174,11 @@ test.describe("IA visual QA viewports", () => {
       });
       await page.reload();
       await addThought(page, `Deck layout ${width}`);
-      await phone(page).getByTestId("decision-launcher").click();
+      await phone(page).getByTestId("left-item-more").last().click();
+      await page
+        .getByTestId("inbox-context-menu")
+        .getByRole("menuitem", { name: "Sort one by one", exact: true })
+        .click({ force: true });
       await phone(page)
         .getByRole("dialog", { name: "One by one" })
         .waitFor({ state: "visible" });

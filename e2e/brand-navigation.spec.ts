@@ -34,7 +34,8 @@ for (const viewport of [
     await expect(page).toHaveURL(/\/$/);
 
     await page.getByRole("link", {
-      name: "Schedule — tasks and undated to-dos",
+      name: "Schedule",
+      exact: true,
     }).click();
     await expect(page).toHaveURL(/\/schedule$/);
 

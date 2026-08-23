@@ -109,9 +109,9 @@ function confidenceScore(level: ScheduleConfidence): number {
 }
 
 /**
- * v1 exposes only the focused schedule/task interpretation surface. Archive,
- * memory, low-confidence notes, and recurrence stay quiet until their full
- * persistence semantics are validated end to end.
+ * v1 exposes schedule interpretation when the user still needs to resolve
+ * ambiguity (AM/PM, weekend, clarify chips, multi-clock). Clear timed captures
+ * auto-commit on 남기기; undated notes stay quiet — no task/taxonomy card.
  */
 export function shouldShowInlinePromise(
   text: string,
@@ -132,9 +132,7 @@ export function shouldShowInlinePromise(
   const nl = understandNaturalLanguage(trimmed, lang);
   return (
     nl.confidence !== "low" &&
-    (nl.intent === "schedule_exact" ||
-      nl.intent === "schedule_clarify" ||
-      nl.intent === "task")
+    (nl.intent === "schedule_exact" || nl.intent === "schedule_clarify")
   );
 }
 

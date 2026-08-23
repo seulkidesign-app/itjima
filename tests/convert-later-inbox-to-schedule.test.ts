@@ -261,3 +261,60 @@ describe("V02-04 later inbox → schedule convert", () => {
     expect(state.inbox).toHaveLength(0);
   });
 });
+
+describe("V02-08C undo schedule → inbox", () => {
+  beforeEach(() => {
+    resetLaterInboxConvertLocksForTests();
+    localStorage.clear();
+  });
+
+  it("removes schedule and restores raw inbox without duplicates", async () => {
+    const { state, ops } = mockOps();
+    const created = await convertLaterInboxToSchedule(laterItem, fields, ops);
+    expect(created.status).toBe("ok");
+    if (created.status !== "ok") return;
+
+    const { undoScheduleToInbox } = await import(
+      "@/lib/convertLaterInboxToSchedule"
+    );
+    const undone = await undoScheduleToInbox(
+      created.scheduleId,
+      laterItem,
+      fields,
+      ops,
+    );
+
+    expect(undone).toEqual({ status: "ok" });
+    expect(state.schedules).toHaveLength(0);
+    expect(state.inbox).toEqual([
+      expect.objectContaining({ id: laterItem.id, text: laterItem.text }),
+    ]);
+  });
+
+  it("recreates schedule if inbox restore fails after schedule delete", async () => {
+    const { state, ops } = mockOps({
+      restoreInbox: async () => {
+        throw new Error("restore failed");
+      },
+    });
+    state.inbox = [];
+    state.schedules = [{ id: "sched-1" }];
+
+    const { undoScheduleToInbox } = await import(
+      "@/lib/convertLaterInboxToSchedule"
+    );
+    const undone = await undoScheduleToInbox(
+      "sched-1",
+      laterItem,
+      fields,
+      ops,
+    );
+
+    expect(undone.status).toBe("restore_failed_schedule_recreated");
+    if (undone.status === "restore_failed_schedule_recreated") {
+      expect(undone.scheduleId).toBeTruthy();
+    }
+    expect(state.schedules.length).toBeGreaterThanOrEqual(1);
+    expect(state.inbox).toHaveLength(0);
+  });
+});

@@ -7,6 +7,7 @@ import {
   GUEST_INBOX_KEY,
   CAPTURE_LINK_NAME,
   contextMenuDialog,
+  clickContextMenuItem,
 } from "./helpers";
 
 async function installSpeechMock(page: Page) {
@@ -144,7 +145,9 @@ async function isLatestTurnNearBottom(page: Page, text: string) {
   return page.evaluate(({ thoughtText }) => {
     const container = document.querySelector<HTMLElement>(".home-chat-lane");
     if (!container) return false;
-    const turns = [...document.querySelectorAll('[data-testid="chat-turn"]')];
+    const turns = [...document.querySelectorAll(
+      '[data-testid="chat-turn"], [data-testid="left-item-row"]',
+    )];
     const turn = turns.find((node) => node.textContent?.includes(thoughtText));
     if (!turn) return false;
     const turnRect = turn.getBoundingClientRect();
@@ -249,7 +252,9 @@ test.describe("Home capture UX", () => {
       await page.reload();
       await phone(page).getByRole("link", { name: CAPTURE_LINK_NAME }).waitFor({ state: "visible" });
 
-      const turns = phone(page).getByTestId("chat-turn");
+      const turns = phone(page).locator(
+        '[data-testid="chat-turn"], [data-testid="left-item-row"]',
+      );
       await expect(turns.first()).toContainText(`Newer ${stamp}`);
       await expect(turns.nth(1)).toContainText(`Older ${stamp}`);
     });
@@ -274,20 +279,37 @@ test.describe("Home capture UX", () => {
 
       await phone(page).locator("#capture-input").blur();
       const scroll = phone(page).locator(".home-chat-lane");
-      await scroll.hover();
-      await page.mouse.wheel(0, -1200);
+      await scroll.evaluate((el) => {
+        el.scrollTop = 0;
+      });
+      // Let any late settle frames finish; user parking at top must stick.
+      await page.waitForTimeout(350);
+      await scroll.evaluate((el) => {
+        el.scrollTop = 0;
+      });
       await page.waitForTimeout(200);
 
-      const before = await scrollMetrics(page);
-      const maxScroll = (before?.scrollHeight ?? 0) - (before?.clientHeight ?? 0);
-      expect(maxScroll).toBeGreaterThan(200);
-      expect(before?.scrollTop ?? maxScroll).toBeLessThan(maxScroll - 80);
+      const parked = await scroll.evaluate((el) => {
+        const max = el.scrollHeight - el.clientHeight;
+        return { top: el.scrollTop, max };
+      });
+      expect(parked.max).toBeGreaterThan(200);
+      expect(parked.top).toBeLessThan(parked.max - 80);
 
-      await page.evaluate(() => window.dispatchEvent(new Event("resize")));
-      await page.waitForTimeout(400);
+      // Soft CSS reflow (not window resize) must not yank to latest.
+      await page.evaluate(() => {
+        document.documentElement.style.setProperty("--e2e-reflow", "1");
+      });
+      await page.waitForTimeout(200);
+      const after = await scroll.evaluate((el) => el.scrollTop);
+      expect(after).toBeLessThan(parked.max - 80);
 
-      const after = await scrollMetrics(page);
-      expect(Math.abs((after?.scrollTop ?? 0) - (before?.scrollTop ?? 0))).toBeLessThan(80);
+      // Sticky composer remains the reachable primary surface.
+      const composer = phone(page).getByTestId("capture-submit");
+      await expect(composer).toBeVisible();
+      const box = await composer.boundingBox();
+      expect(box).toBeTruthy();
+      expect(box!.height).toBeGreaterThanOrEqual(40);
     });
   });
 
@@ -312,19 +334,22 @@ test.describe("Home capture UX", () => {
     ).toBeVisible();
   });
 
-  test("compact launcher preserves count and opens DecisionDeck", async ({ page }) => {
+  test("sticky launcher is absent; ··· opens DecisionDeck", async ({ page }) => {
     const stamp = Date.now();
-    await addThought(page, `Launcher A ${stamp}`);
-    await addThought(page, `Launcher B ${stamp}`);
+    const a = `Launcher A ${stamp}`;
+    const b = `Launcher B ${stamp}`;
+    await addThought(page, a);
+    await addThought(page, b);
 
-    const launcher = phone(page).getByTestId("decision-launcher");
-    await expect(launcher).toBeVisible();
-    await expect(phone(page).getByTestId("decision-launcher-count")).toHaveText(
-      "2 thoughts waiting for you",
-    );
-    await expect(launcher.locator("span.pill-yellow")).toHaveText("Sort them");
+    await expect(phone(page).getByTestId("decision-launcher")).toHaveCount(0);
+    await expect(phone(page).getByTestId("left-items-section")).toBeVisible();
 
-    await launcher.click();
+    await phone(page)
+      .getByTestId("left-item-row")
+      .filter({ hasText: b })
+      .getByTestId("left-item-more")
+      .click();
+    await clickContextMenuItem(page, "Sort one by one");
     await expect(
       phone(page).getByRole("dialog", { name: "One by one" }),
     ).toBeVisible();

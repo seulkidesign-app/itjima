@@ -21,11 +21,8 @@ export function TopNav() {
     },
     {
       to: "/schedule",
-      label: t("할 일·일정", "Tasks & schedule"),
-      ariaLabel: t(
-        "할 일·일정",
-        "Schedule — tasks and undated to-dos",
-      ),
+      label: t("일정", "Schedule"),
+      ariaLabel: t("일정", "Schedule"),
       Icon: CalendarDays,
     },
     {

@@ -18,8 +18,7 @@ function isNearBottom(container: HTMLElement) {
 
 /**
  * Scroll after React paint, motion layout and late content sizing.
- * A single requestAnimationFrame was not sufficient when chat rows, images or
- * the composer changed height after a capture.
+ * Aborts if the user scrolls away mid-settle so we don't steal their place.
  */
 function settleAtBottom(
   container: HTMLElement,
@@ -27,17 +26,39 @@ function settleAtBottom(
   onSettled: () => void,
 ) {
   let frame = 0;
+  let cancelled = false;
+  let programmatic = false;
+
+  const onScroll = () => {
+    if (programmatic) return;
+    if (frame > 0 && !isNearBottom(container)) cancelled = true;
+  };
+  container.addEventListener("scroll", onScroll, { passive: true });
+
+  const finish = () => {
+    container.removeEventListener("scroll", onScroll);
+    onSettled();
+  };
+
   const run = () => {
+    if (cancelled) {
+      finish();
+      return;
+    }
     const top = Math.max(0, container.scrollHeight - container.clientHeight);
+    programmatic = true;
     if (behavior === "instant") container.scrollTop = top;
     else container.scrollTo({ top, behavior: frame === 0 ? behavior : "auto" });
+    requestAnimationFrame(() => {
+      programmatic = false;
+    });
 
     frame += 1;
     if (frame < 3) {
       requestAnimationFrame(run);
       return;
     }
-    onSettled();
+    finish();
   };
   requestAnimationFrame(run);
 }

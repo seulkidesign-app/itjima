@@ -2,7 +2,7 @@ import { useRef, useState, type PointerEvent as ReactPointerEvent } from "react"
 import { animate } from "framer-motion";
 import type { ScheduleItem } from "@/lib/store";
 import {
-  formatUpcomingScheduleTime,
+  formatScheduleRangeLabel,
   resolveScheduleAllDayFlags,
 } from "@/lib/scheduleTime";
 import { scheduleDisplayTitle } from "@/lib/thoughtProvenance";
@@ -14,7 +14,7 @@ import {
   effectiveAlarmAt,
   formatAlarmLabel,
 } from "@/lib/scheduleReminders";
-import { Check, BellRing, Pencil } from "lucide-react";
+import { Check, Bell } from "lucide-react";
 
 export type ScheduleCompactRowProps = {
   s: ScheduleItem;
@@ -27,50 +27,7 @@ export type ScheduleCompactRowProps = {
   onAlarm?: () => void;
 };
 
-function sameCalendarDay(a: Date, b: Date): boolean {
-  return (
-    a.getFullYear() === b.getFullYear() &&
-    a.getMonth() === b.getMonth() &&
-    a.getDate() === b.getDate()
-  );
-}
-
-function formatDay(date: Date, lang: "ko" | "en"): string {
-  return date.toLocaleDateString(lang === "ko" ? "ko-KR" : "en-US", {
-    month: "short",
-    day: "numeric",
-  });
-}
-
-function formatRangeLabel(
-  start: Date,
-  end: Date,
-  startAllDay: boolean,
-  endAllDay: boolean,
-  lang: "ko" | "en",
-): string {
-  const sameDay = sameCalendarDay(start, end);
-
-  if (startAllDay && endAllDay) {
-    if (sameDay) return lang === "ko" ? "종일" : "All day";
-    return lang === "ko"
-      ? `${formatDay(start, lang)} → ${formatDay(end, lang)} · 종일`
-      : `${formatDay(start, lang)} → ${formatDay(end, lang)} · All day`;
-  }
-
-  const startTime = formatUpcomingScheduleTime(start, lang);
-  const endTime = formatUpcomingScheduleTime(end, lang);
-
-  if (sameDay) {
-    return end.getTime() > start.getTime() + 30 * 60 * 1000
-      ? `${startTime}–${endTime}`
-      : startTime;
-  }
-
-  return `${formatDay(start, lang)} ${startTime} → ${formatDay(end, lang)} ${endTime}`;
-}
-
-function ReminderStatus({
+function ReminderMeta({
   label,
   onOpen,
   t,
@@ -81,15 +38,14 @@ function ReminderStatus({
 }) {
   const content = (
     <>
-      <BellRing size={13} strokeWidth={2.4} />
-      <span>{t("알림 켜짐", "Reminder on")}</span>
-      <span className="text-ink-soft/70">· {label}</span>
+      <Bell size={13} strokeWidth={2.2} aria-hidden />
+      <span>{label}</span>
     </>
   );
 
   if (!onOpen) {
     return (
-      <span className="mt-1 inline-flex max-w-full items-center gap-1 rounded-full bg-primary/18 px-2 py-1 text-[11px] font-bold text-ink">
+      <span className="mt-0.5 inline-flex max-w-full items-center gap-1 text-[12px] font-medium text-ink-soft">
         {content}
       </span>
     );
@@ -103,8 +59,8 @@ function ReminderStatus({
         event.stopPropagation();
         onOpen();
       }}
-      className="mt-1 inline-flex max-w-full items-center gap-1 rounded-full bg-primary/22 px-2 py-1 text-[11px] font-bold text-ink ring-1 ring-primary/30 touch-press active:bg-primary/32"
-      aria-label={`${t("알림 켜짐", "Reminder on")} · ${label}`}
+      className="touch-press mt-0.5 inline-flex min-h-11 max-w-full items-center gap-1 -ml-1 px-1 text-left text-[12px] font-medium text-ink-soft underline-offset-2 hover:underline"
+      aria-label={`${t("알림", "Reminder")} · ${label}`}
     >
       {content}
     </button>
@@ -127,7 +83,7 @@ export function ScheduleCompactRow({
   const flags = resolveScheduleAllDayFlags(s);
   const start = new Date(s.start_time);
   const end = new Date(s.end_time);
-  const displayTime = formatRangeLabel(
+  const displayTime = formatScheduleRangeLabel(
     start,
     end,
     flags.startAllDay,
@@ -193,11 +149,12 @@ export function ScheduleCompactRow({
 
   return (
     <li
-      className={`relative flex min-h-[52px] touch-none select-none items-center gap-3 border-b border-ink/[0.05] px-1 py-2.5 last:border-b-0 ${
+      className={`relative flex min-h-[52px] touch-none select-none items-start gap-1 border-b border-ink/[0.06] px-0.5 py-2.5 last:border-b-0 ${
         done ? "opacity-50" : ""
       }`}
       data-gesture={dragging.current || acting ? "true" : undefined}
       data-reminder={s.alarm ? "on" : "off"}
+      data-testid="schedule-compact-row"
       style={{
         transform: `translate3d(${dx}px, 0, 0)`,
         transition: dragging.current || acting ? "none" : undefined,
@@ -210,10 +167,10 @@ export function ScheduleCompactRow({
     >
       {dx > 20 && !done && (
         <div
-          className="pointer-events-none absolute left-0 top-1/2 z-0 -translate-y-1/2 rounded-full bg-primary/90 px-2.5 py-1 text-[11px] font-bold text-ink"
+          className="pointer-events-none absolute left-0 top-1/2 z-0 -translate-y-1/2 text-[12px] font-semibold text-ink-soft"
           style={{ opacity: Math.min(1, dx / 64) }}
         >
-          <Check size={12} strokeWidth={3} />
+          <Check size={14} strokeWidth={2.8} />
         </div>
       )}
 
@@ -225,47 +182,44 @@ export function ScheduleCompactRow({
           if (!done) onComplete();
         }}
         disabled={done}
-        className={`touch-press flex min-h-9 shrink-0 items-center gap-1 rounded-full border px-2.5 text-[11px] font-semibold ${
-          done
-            ? "border-primary bg-primary text-ink"
-            : "border-ink/12 bg-white text-ink"
-        }`}
+        className="touch-press grid h-11 w-11 shrink-0 place-items-center rounded-full"
         aria-label={done ? t("완료됨", "Completed") : t("완료", "Complete")}
+        data-testid="schedule-row-complete"
       >
-        <Check size={12} strokeWidth={2.8} aria-hidden />
-        <span>{done ? t("완료됨", "Done") : t("완료", "Done")}</span>
+        <span
+          className={`grid h-[18px] w-[18px] place-items-center rounded-full border-2 ${
+            done
+              ? "border-ink bg-ink text-white"
+              : "border-ink/25 bg-white"
+          }`}
+          aria-hidden
+        >
+          {done && <Check size={11} strokeWidth={3} />}
+        </span>
       </button>
 
-      <span className="min-w-0 flex-1">
+      <span className="min-w-0 flex-1 pt-2.5">
         <span
-          className={`block text-[13px] font-semibold tabular-nums leading-snug ${
-            flags.startAllDay && flags.endAllDay
-              ? "text-ink-soft/80"
-              : "text-semantic-schedule"
-          }`}
-        >
-          {displayTime}
-        </span>
-        <span
-          className={`mt-0.5 block text-[16px] font-semibold leading-snug tracking-[-0.01em] text-ink ${
+          className={`block text-[16px] font-semibold leading-snug tracking-[-0.01em] text-ink ${
             done ? "line-through decoration-ink/20" : ""
           }`}
         >
           {title}
         </span>
+        <span className="mt-0.5 block text-[13px] font-medium tabular-nums leading-snug text-ink-soft">
+          {displayTime}
+        </span>
         {s.alarm && !done && (
-          <ReminderStatus label={alarmLabel} onOpen={onAlarm} t={t} />
+          <ReminderMeta label={alarmLabel} onOpen={onAlarm} t={t} />
         )}
-        {(missed || pinned) && (
-          <span className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[12px] text-ink-soft/75">
-            {missed && (
-              <span className="status-chip status-chip--overdue">
-                {t("지남", "Past")}
-              </span>
-            )}
-            {pinned && !done && (
-              <span className="text-ink-soft/70">{t("고정", "Pinned")}</span>
-            )}
+        {missed && (
+          <span className="mt-0.5 block text-[12px] font-medium text-ink-soft/80">
+            {t("지남", "Past")}
+          </span>
+        )}
+        {pinned && !done && (
+          <span className="mt-0.5 block text-[12px] font-medium text-ink-soft/70">
+            {t("고정", "Pinned")}
           </span>
         )}
       </span>
@@ -279,11 +233,11 @@ export function ScheduleCompactRow({
             haptic(6);
             onEdit();
           }}
-          className="touch-press inline-flex min-h-9 shrink-0 items-center gap-1 rounded-full px-2 text-[11px] font-semibold text-ink-soft active:bg-ink/[0.04]"
+          className="touch-press mt-0.5 inline-flex h-11 min-w-11 shrink-0 items-center justify-center px-2 text-[13px] font-medium text-ink-soft"
           aria-label={t(`${title} 수정`, `Edit ${title}`)}
+          data-testid="schedule-row-edit"
         >
-          <Pencil size={12} strokeWidth={2.2} aria-hidden />
-          <span>{t("수정", "Edit")}</span>
+          {t("수정", "Edit")}
         </button>
       )}
     </li>
@@ -295,31 +249,28 @@ export type LaterInboxRowProps = {
   onOpen: () => void;
 };
 
+/** Undated inbox row — same grammar as Capture “남긴 것”. */
 export function LaterInboxRow({ text, onOpen }: LaterInboxRowProps) {
   const t = useT();
   const preview = text.split("\n")[0]?.trim() ?? text;
 
   return (
-    <li className="flex min-h-[52px] items-center gap-3 rounded-[var(--radius-sm)] border-b border-ink/[0.05] px-1 py-2.5 last:border-b-0">
-      <span
-        className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full border-2 border-ink/15 bg-white"
-        aria-hidden
-      />
+    <li
+      className="flex min-h-[52px] items-start gap-2 border-b border-ink/[0.06] px-0.5 py-3 last:border-b-0"
+      data-testid="later-inbox-row"
+    >
       <span className="min-w-0 flex-1">
-        <span className="block text-[15px] font-semibold leading-snug text-ink">
+        <span className="block text-[16px] font-semibold leading-snug text-ink">
           {preview}
         </span>
-        <span className="mt-0.5 block text-caption text-ink-soft/80">
-          {t("시간을 정하지 않은 기록", "No time set")}
-        </span>
+        <button
+          type="button"
+          onClick={onOpen}
+          className="touch-press mt-1 min-h-11 -ml-1 px-1 text-left text-[13px] font-medium text-ink-soft underline-offset-2 hover:underline"
+        >
+          {t("시간 정하기", "Set a time")}
+        </button>
       </span>
-      <button
-        type="button"
-        onClick={onOpen}
-        className="touch-press min-h-9 shrink-0 rounded-full px-2.5 text-[11px] font-semibold text-ink-soft active:bg-ink/[0.04]"
-      >
-        {t("정리", "Organize")}
-      </button>
     </li>
   );
 }

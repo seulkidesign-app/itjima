@@ -5,21 +5,18 @@ import {
   readGuestList,
   GUEST_INBOX_KEY,
   GUEST_SCHEDULE_KEY,
-  gotoScheduleUpcoming,
 } from "./helpers";
 
 async function submit(page: Page, text: string) {
   const frame = phone(page);
   await frame.locator("textarea").first().fill(text);
   await frame.locator('form.composer-hero button[type="submit"]').click();
-  await frame.getByText(text, { exact: true }).first().waitFor({ state: "visible" });
 }
 
 async function submitKo(page: Page, text: string) {
   const frame = phone(page);
   await frame.locator("textarea").first().fill(text);
   await frame.getByRole("button", { name: "남기기", exact: true }).click();
-  await frame.getByText(text, { exact: true }).first().waitFor({ state: "visible" });
 }
 
 test.describe("Natural-language scheduling", () => {
@@ -27,22 +24,26 @@ test.describe("Natural-language scheduling", () => {
     await resetAppState(page);
   });
 
-  test("clear English schedule confirms in one tap", async ({ page }) => {
+  test("clear English schedule auto-commits on capture", async ({ page }) => {
     await submit(page, "Dentist tomorrow at 3pm");
-    const promise = phone(page).getByTestId("inline-promise").last();
-    await expect(promise).toHaveAttribute("data-intent", "schedule_exact");
-    await expect(promise).toHaveAttribute("data-confidence", "high");
-    await expect(promise.getByTestId("promise-primary")).toHaveText("Add to schedule");
-    await promise.getByTestId("promise-primary").click();
+    await expect(
+      phone(page).getByTestId("saved-schedule-feedback"),
+    ).toBeVisible();
+    await expect(phone(page).getByTestId("commitment-confirm")).toHaveCount(0);
+    await expect(phone(page).getByTestId("promise-primary")).toHaveCount(0);
     expect((await readGuestList(page, GUEST_INBOX_KEY)).length).toBe(0);
     expect((await readGuestList(page, GUEST_SCHEDULE_KEY)).length).toBe(1);
-    await gotoScheduleUpcoming(page);
-    await expect(phone(page).getByText(/Dentist/i).first()).toBeVisible();
+    const schedules = (await readGuestList(page, GUEST_SCHEDULE_KEY)) as Array<{
+      text?: string;
+    }>;
+    expect(schedules[0]?.text ?? "").toMatch(/Dentist/i);
   });
 
   test("ambiguous English schedule resolves with inline choices", async ({ page }) => {
     await submit(page, "Watch it next week or so");
     const promise = phone(page).getByTestId("inline-promise").last();
+    await expect(promise).toBeVisible();
+    await expect(promise).toContainText("Watch it next week or so");
     await expect(promise).toHaveAttribute("data-intent", "schedule_clarify");
     await expect(promise).toHaveAttribute("data-confidence", "medium");
     const choices = promise.getByTestId("promise-clarify-chips");
@@ -52,31 +53,29 @@ test.describe("Natural-language scheduling", () => {
     expect((await readGuestList(page, GUEST_SCHEDULE_KEY)).length).toBe(1);
   });
 
-  test("task remains a later task without forcing a date", async ({ page }) => {
+  test("undated note saves without task taxonomy confirmation", async ({ page }) => {
     await submit(page, "Call mom");
-    const promise = phone(page).getByTestId("inline-promise").last();
-    await expect(promise).toHaveAttribute("data-intent", "task");
-    await expect(promise.getByTestId("promise-primary")).toHaveText("Keep as later task");
-    await expect(promise.getByTestId("promise-add-date")).toBeVisible();
-    await promise.getByTestId("promise-primary").click();
-    const inbox = (await readGuestList(page, GUEST_INBOX_KEY)) as Array<{ decision?: string }>;
+    await expect(
+      phone(page).getByText("Call mom", { exact: true }).first(),
+    ).toBeVisible();
+    await expect(phone(page).getByTestId("inline-promise")).toHaveCount(0);
+    const inbox = (await readGuestList(page, GUEST_INBOX_KEY)) as Array<{
+      decision?: string;
+      text?: string;
+    }>;
     expect(inbox).toHaveLength(1);
-    expect(inbox[0]?.decision).toBe("later");
+    expect(inbox[0]?.text).toBe("Call mom");
+    expect(inbox[0]?.decision).toBeUndefined();
+    expect((await readGuestList(page, GUEST_SCHEDULE_KEY)).length).toBe(0);
   });
 
   test("sensitive reference notes are not auto-routed", async ({ page }) => {
     await submit(page, "Passport number");
+    await expect(
+      phone(page).getByText("Passport number", { exact: true }).first(),
+    ).toBeVisible();
     await expect(phone(page).getByTestId("inline-promise")).toHaveCount(0);
     expect((await readGuestList(page, GUEST_INBOX_KEY)).length).toBe(1);
-  });
-
-  test("Adjust opens manual scheduling and Escape returns to the card", async ({ page }) => {
-    await submit(page, "Dentist tomorrow at 3pm");
-    const promise = phone(page).getByTestId("inline-promise").last();
-    await promise.getByTestId("promise-manual").click();
-    await expect(page.getByRole("dialog").last()).toBeVisible();
-    await page.keyboard.press("Escape");
-    await expect(promise).toBeVisible();
   });
 });
 
@@ -87,14 +86,53 @@ test.describe("Natural-language scheduling in Korean", () => {
     await page.reload();
   });
 
-  test("명확한 일정은 한 번에 추가된다", async ({ page }) => {
-    await submitKo(page, "내일 오후 3시에 치과");
-    const promise = phone(page).getByTestId("inline-promise").last();
-    await expect(promise).toHaveAttribute("data-intent", "schedule_exact");
-    await expect(promise).toHaveAttribute("data-needs-confirmation", "false");
-    await expect(promise.getByTestId("promise-primary")).toHaveText("일정에 추가");
-    await promise.getByTestId("promise-primary").click();
+  test("명확한 일정은 남기기 한 번에 저장된다", async ({ page }) => {
+    await submitKo(page, "내일 오후 3시 반 치과");
+    await expect(
+      phone(page).getByTestId("saved-schedule-feedback"),
+    ).toBeVisible();
+    await expect(phone(page).getByTestId("commitment-confirm")).toHaveCount(0);
+    await expect(phone(page).getByTestId("promise-primary")).toHaveCount(0);
     expect((await readGuestList(page, GUEST_SCHEDULE_KEY)).length).toBe(1);
+    expect((await readGuestList(page, GUEST_INBOX_KEY)).length).toBe(0);
+  });
+
+  test("오전/오후가 애매하면 선택 후 바로 일정 생성", async ({ page }) => {
+    await submitKo(page, "내일 3시 반 치과");
+    expect((await readGuestList(page, GUEST_SCHEDULE_KEY)).length).toBe(0);
+    const inbox = await readGuestList(page, GUEST_INBOX_KEY);
+    expect(inbox.length).toBe(1);
+
+    const promise = phone(page).getByTestId("inline-promise").last();
+    await expect(promise).toHaveAttribute(
+      "data-confirmation-reason",
+      "assumed_meridiem",
+    );
+    await promise.getByTestId("promise-confirm-afternoon").click();
+    expect((await readGuestList(page, GUEST_SCHEDULE_KEY)).length).toBe(1);
+    expect((await readGuestList(page, GUEST_INBOX_KEY)).length).toBe(0);
+    await expect(
+      phone(page).getByTestId("saved-schedule-feedback"),
+    ).toBeVisible();
+  });
+
+  test("시간이 두 개면 일정 생성 없이 입력 수정으로 복원한다", async ({ page }) => {
+    await submitKo(page, "오늘 3시 A, 6시 B");
+    expect((await readGuestList(page, GUEST_SCHEDULE_KEY)).length).toBe(0);
+    expect((await readGuestList(page, GUEST_INBOX_KEY)).length).toBe(1);
+
+    const promise = phone(page).getByTestId("inline-promise").last();
+    await expect(promise).toHaveAttribute(
+      "data-confirmation-reason",
+      "multiple_clocks",
+    );
+    await expect(promise.getByTestId("promise-edit-input")).toBeVisible();
+    await promise.getByTestId("promise-edit-input").click();
+    await expect(phone(page).locator("#capture-input")).toHaveValue(
+      "오늘 3시 A, 6시 B",
+    );
+    // Raw must still be durable until the user replaces it.
+    expect((await readGuestList(page, GUEST_INBOX_KEY)).length).toBe(1);
   });
 
   test("주말 표현은 토요일과 일요일 중 선택하게 한다", async ({ page }) => {
@@ -110,6 +148,8 @@ test.describe("Natural-language scheduling in Korean", () => {
   test("애매한 날짜는 카드 안에서 해결한다", async ({ page }) => {
     await submitKo(page, "다음주쯤 보기");
     const promise = phone(page).getByTestId("inline-promise").last();
+    await expect(promise).toBeVisible();
+    await expect(promise).toContainText("다음주쯤 보기");
     await expect(promise).toHaveAttribute("data-intent", "schedule_clarify");
     await promise
       .getByTestId("promise-clarify-chips")
@@ -119,23 +159,19 @@ test.describe("Natural-language scheduling in Korean", () => {
     expect((await readGuestList(page, GUEST_SCHEDULE_KEY)).length).toBe(1);
   });
 
-  test("날짜 없는 할 일은 나중 할 일로 둔다", async ({ page }) => {
-    await submitKo(page, "엄마한테 전화하기");
-    const promise = phone(page).getByTestId("inline-promise").last();
-    await expect(promise).toHaveAttribute("data-intent", "task");
-    await expect(promise.getByTestId("promise-primary")).toHaveText("나중 할 일로 두기");
-    await promise.getByTestId("promise-primary").click();
-    const inbox = (await readGuestList(page, GUEST_INBOX_KEY)) as Array<{ decision?: string }>;
-    expect(inbox[0]?.decision).toBe("later");
-  });
-
-  test("할 일에서 날짜 추가를 누르면 수동 일정 화면이 열린다", async ({ page }) => {
-    await submitKo(page, "엄마한테 전화하기");
-    const promise = phone(page).getByTestId("inline-promise").last();
-    await promise.getByTestId("promise-add-date").click();
-    await expect(page.getByRole("dialog").last()).toBeVisible();
-    await page.keyboard.press("Escape");
-    await expect(promise).toBeVisible();
+  test("날짜 없는 메모는 분류 없이 남겨둔다", async ({ page }) => {
+    await submitKo(page, "에어팟 소독");
+    await expect(
+      phone(page).getByText("에어팟 소독", { exact: true }).first(),
+    ).toBeVisible();
+    await expect(phone(page).getByTestId("inline-promise")).toHaveCount(0);
+    const inbox = (await readGuestList(page, GUEST_INBOX_KEY)) as Array<{
+      text?: string;
+      decision?: string;
+    }>;
+    expect(inbox[0]?.text).toBe("에어팟 소독");
+    expect(inbox[0]?.decision).toBeUndefined();
+    expect((await readGuestList(page, GUEST_SCHEDULE_KEY)).length).toBe(0);
   });
 
   test("민감한 참고 정보는 자동 분류하지 않는다", async ({ page }) => {

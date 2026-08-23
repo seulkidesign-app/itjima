@@ -78,7 +78,7 @@ function hasBareMeridiemGuess(text: string): boolean {
   return extractBareClock(text) !== null;
 }
 
-function countDistinctClockMentions(text: string): number {
+export function countDistinctClockMentions(text: string): number {
   const ko = [
     ...text.matchAll(
       /(오전|오후)?\s*(\d{1,2})\s*시(?:\s*(반)|(?:\s*(\d{1,2})\s*분))?/g,
@@ -89,6 +89,28 @@ function countDistinctClockMentions(text: string): number {
   ];
   // Prefer Korean tokens when present; English am/pm is a separate count.
   return Math.max(ko.length, enAmPm.length);
+}
+
+/** Rough per-clock lines for multi-clock honesty UI (display only). */
+export function extractClockPlanLines(text: string): string[] {
+  const trimmed = text.trim();
+  const ko = [
+    ...trimmed.matchAll(
+      /(?:(?:오늘|내일|모레)\s*)?(?:오전|오후)?\s*\d{1,2}\s*시(?:\s*반|(?:\s*\d{1,2}\s*분))?\s*[^,，/]*/g,
+    ),
+  ]
+    .map((m) => m[0].replace(/[,，/]+$/, "").trim())
+    .filter(Boolean);
+  if (ko.length >= 2) return ko;
+
+  const en = [
+    ...trimmed.matchAll(
+      /\b(?:today|tomorrow)?\s*(?:at\s+)?\d{1,2}(?::\d{2})?\s*(?:am|pm)?\b[^,;]*/gi,
+    ),
+  ]
+    .map((m) => m[0].trim())
+    .filter(Boolean);
+  return en.length >= 2 ? en : ko.length > 0 ? ko : [trimmed];
 }
 
 function replaceTodayWithTomorrow(text: string): string {
