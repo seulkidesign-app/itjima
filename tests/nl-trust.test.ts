@@ -73,12 +73,28 @@ describe("AI trust floor", () => {
     const decision = evaluateTimedAutoCommit(input, "ko", now);
     expect(decision.ok).toBe(false);
     if (!decision.ok) expect(decision.reason).toBe("broad_daypart");
+
+    const draft = buildNaturalScheduleDraft(thought(input));
+    expect(draft.options.allDay).toBe(true);
+    expect(draft.options.reminderMinutes).toBeNull();
   });
 
   it("never asks for the clock again when an exact clock is already explicit", () => {
     expect(scheduleConfirmationReason("내일 오후 3시 치과", now)).toBeNull();
     expect(scheduleConfirmationReason("내일 오전 11시 회의", now)).toBeNull();
     expect(scheduleConfirmationReason("내일 저녁 7시 영화", now)).toBeNull();
+  });
+
+  it("keeps schedule creation separate from reminder creation", () => {
+    const scheduleOnly = buildNaturalScheduleDraft(thought("내일 오후 3시 치과"));
+    expect(scheduleOnly.options.reminderMinutes).toBeNull();
+    expect(scheduleOnly.reminderExplicit).toBe(false);
+
+    const withReminder = buildNaturalScheduleDraft(
+      thought("내일 오후 3시 치과 30분 전에 알려줘"),
+    );
+    expect(withReminder.options.reminderMinutes).toBe(30);
+    expect(withReminder.reminderExplicit).toBe(true);
   });
 
   it("treats a daypart without a concrete clock as ambiguous", () => {
