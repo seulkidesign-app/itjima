@@ -894,21 +894,6 @@ function Schedule() {
         </AnimatePresence>
       </div>
 
-      {tab !== "cal" && (
-        <motion.button type="button"
-          onClick={() => setSheet({ open: true })}
-          whileTap={{ scale: 0.94 }}
-          initial={{ scale: 0, opacity: 0 }}
-          animate={{ scale: 1, opacity: 1 }}
-          transition={{ ...SPRING_SNAP_BACK, delay: 0.15 }}
-          className="absolute right-5 z-30 flex h-11 w-11 items-center justify-center rounded-full bg-primary/95 text-ink shadow-card touch-press"
-          style={{ bottom: "calc(env(safe-area-inset-bottom) + 1.5rem)" }}
-          aria-label={t("할 일 추가", "Add task")}
-        >
-          <Plus size={20} strokeWidth={2.25} />
-        </motion.button>
-      )}
-
       {reminderSheet && (
         <ReminderSheet
           open
@@ -1972,11 +1957,10 @@ function DayEventChip({
 function Empty() {
   return (
     <EmptyState
-      emoji="🌙"
-      titleKo="아직 그때가 없어요"
-      titleEn="Nothing to bring back yet"
-      hintKo="그때가 되면, 여기에 모여요."
-      hintEn="When the moment comes, it'll gather here."
+      titleKo="아직 일정이 없어요"
+      titleEn="No schedules yet"
+      hintKo="아래 남기기에서 말하듯 남기면, 잊지마가 정리해드려요."
+      hintEn="Capture from the Capture tab below — Itjima will organize it for you."
     />
   );
 }

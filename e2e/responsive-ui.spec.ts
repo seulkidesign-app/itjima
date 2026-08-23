@@ -117,7 +117,10 @@ test.describe("responsive UI safeguards", () => {
   test("desktop dialog remains inside the viewport", async ({ page }) => {
     await page.setViewportSize({ width: 1024, height: 900 });
     await page.goto("/schedule?lang=en");
-    await page.getByRole("button", { name: /Add task/i }).click();
+    await page.getByRole("tab", { name: /Calendar|달력/ }).click();
+    const today = await page.evaluate(() => new Date().getDate());
+    await page.locator(`[data-cal-day="${today}"]`).first().click();
+    await page.getByRole("button", { name: /Remember for then|그때 남기기/ }).click();
     const root = page.locator(".bottom-sheet-root");
     const panel = page.locator('.bottom-sheet-panel[role="dialog"]');
     await expect(panel).toBeVisible();

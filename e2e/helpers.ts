@@ -92,7 +92,7 @@ export async function readAnalytics(page: Page) {
 }
 
 export async function resetAppState(page: Page) {
-  await page.goto("/");
+  await page.goto("/app");
   await page.evaluate(async () => {
     for (const k of Object.keys(localStorage)) {
       if (k.startsWith("itjima.")) localStorage.removeItem(k);
@@ -112,8 +112,8 @@ export async function resetAppState(page: Page) {
 }
 
 export async function gotoInbox(page: Page) {
-  if (!page.url().includes("127.0.0.1")) {
-    await page.goto("/");
+  if (!page.url().includes("/app")) {
+    await page.goto("/app");
   }
   await phone(page).getByRole("link", { name: CAPTURE_LINK_NAME }).waitFor({
     state: "visible",
@@ -348,6 +348,58 @@ export async function getTabCount(
   const list = await readGuestList(page, key);
   return list.length;
 }
+
+/** Open ScheduleSheet via Calendar date → “Remember for then” (V02-05 contextual add). */
+export async function openCalendarQuickAdd(
+  page: Page,
+  opts?: { day?: number; nextMonth?: boolean },
+) {
+  const frame = phone(page);
+  const scheduleLink = frame
+    .getByRole("link", { name: /^Schedule|할 일·일정|Schedule —/ })
+    .first();
+  if (await scheduleLink.isVisible().catch(() => false)) {
+    await scheduleLink.click();
+  } else {
+    await page.getByRole("link", { name: /^Schedule|할 일·일정|Schedule —/ }).first().click();
+  }
+
+  const calTab = frame.getByRole("tab", { name: /Calendar|달력/ });
+  const calTabPage = page.getByRole("tab", { name: /Calendar|달력/ });
+  if (await calTab.isVisible().catch(() => false)) {
+    await calTab.click();
+  } else {
+    await calTabPage.click();
+  }
+
+  if (opts?.nextMonth) {
+    const next = frame.getByRole("button", { name: /Next month|다음 달/ });
+    if (await next.isVisible().catch(() => false)) {
+      await next.click();
+    } else {
+      await page.getByRole("button", { name: /Next month|다음 달/ }).click();
+    }
+  }
+
+  const day =
+    opts?.day ??
+    (await page.evaluate(() => new Date().getDate()));
+  await page.locator(`[data-cal-day="${day}"]`).first().click();
+
+  const remember = frame.getByRole("button", {
+    name: /Remember for then|그때 남기기/,
+  });
+  if (await remember.isVisible().catch(() => false)) {
+    await remember.click();
+  } else {
+    await page
+      .getByRole("button", { name: /Remember for then|그때 남기기/ })
+      .click();
+  }
+
+  await page.getByRole("dialog").last().waitFor({ state: "visible" });
+}
+
 
 export async function readGuestList(page: Page, key: string): Promise<unknown[]> {
   return page.evaluate((k) => {

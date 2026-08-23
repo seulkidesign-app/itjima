@@ -10,6 +10,7 @@ import {
   gotoScheduleUpcoming,
   completeScheduleDialog,
   clickContextMenuItem,
+  CAPTURE_LINK_NAME,
   GUEST_INBOX_KEY,
   GUEST_ARCHIVE_KEY,
   GUEST_SCHEDULE_KEY,
@@ -104,16 +105,29 @@ test.describe("CRUD flows (guest / offline)", () => {
     expect(schedules.length).toBeGreaterThan(0);
   });
 
-  test("create schedule from Today FAB", async ({ page }) => {
-    await phone(page).getByRole("link", { name: /^Schedule/ }).click();
-    await phone(page).getByRole("button", { name: "Add task", exact: true }).click();
+  test("create schedule from home natural-language capture", async ({ page }) => {
+    await phone(page).getByRole("link", { name: CAPTURE_LINK_NAME }).click();
 
-    const text = `FAB schedule ${Date.now()}`;
-    const sheet = page.getByRole("dialog");
-    await sheet.getByRole("button", { name: "Today" }).click();
-    await sheet.getByRole("button", { name: /Pick a time|Add time/i }).click();
-    await sheet.getByLabel("Schedule title").fill(text);
-    await completeScheduleDialog(page);
+    const stamp = Date.now();
+    const title = `Home capture schedule ${stamp}`;
+    const input = phone(page).locator("#capture-input");
+    await input.fill(`${title} tomorrow at 3 PM`);
+    await phone(page).getByTestId("capture-submit").click();
+
+    const looksRight = phone(page).getByRole("button", { name: /Looks right|맞아요/i });
+    const addToSchedule = phone(page).getByRole("button", {
+      name: "Add to schedule",
+      exact: true,
+    });
+    if (await looksRight.isVisible().catch(() => false)) {
+      await looksRight.click();
+    } else if (await addToSchedule.isVisible().catch(() => false)) {
+      await addToSchedule.click();
+    } else {
+      await openContextMenu(page, title);
+      await clickContextMenuItem(page, "Bring it back then");
+      await completeScheduleDialog(page);
+    }
 
     const notification = page.getByRole("dialog", { name: "Notification" });
     if (await notification.isVisible().catch(() => false)) {
@@ -122,7 +136,11 @@ test.describe("CRUD flows (guest / offline)", () => {
         .click();
     }
 
-    await expect.poll(() => getTabCount(page, "Schedule")).toBe(1);
-    await phone(page).getByText(text).first().waitFor({ state: "visible" });
+    await expect.poll(() => getTabCount(page, "Schedule")).toBeGreaterThan(0);
+    await gotoScheduleUpcoming(page);
+    await phone(page).getByText(title).first().waitFor({ state: "visible" });
+    await expect(
+      phone(page).getByRole("button", { name: "Add task", exact: true }),
+    ).toHaveCount(0);
   });
 });

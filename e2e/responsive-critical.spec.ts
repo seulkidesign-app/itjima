@@ -69,7 +69,34 @@ async function captureText(page: Page, text: string) {
   await expect(input).toBeVisible();
   await input.fill(text);
   await page.getByTestId("capture-submit").click();
-  await expect(page.getByTestId("inline-promise")).toBeVisible();
+  // V0.2 review card: confirm interpreted schedule without retyping
+  const looksRight = page.getByRole("button", { name: /Looks right|맞아요/i });
+  const addToSchedule = page.getByRole("button", {
+    name: /Add to schedule|일정에 넣기/i,
+  });
+  if (await looksRight.isVisible().catch(() => false)) {
+    await expect(looksRight).toBeVisible();
+  } else {
+    await expect(page.getByTestId("inline-promise")).toBeVisible();
+    await expect(addToSchedule.or(page.getByTestId("promise-primary"))).toBeVisible();
+  }
+}
+
+async function confirmCapturedSchedule(page: Page) {
+  const looksRight = page.getByRole("button", { name: /Looks right|맞아요/i });
+  if (await looksRight.isVisible().catch(() => false)) {
+    await looksRight.click();
+    return;
+  }
+  const addToSchedule = page.getByRole("button", {
+    name: "Add to schedule",
+    exact: true,
+  });
+  if (await addToSchedule.isVisible().catch(() => false)) {
+    await addToSchedule.click();
+    return;
+  }
+  await page.getByTestId("promise-primary").click();
 }
 
 test.beforeEach(async ({ page }) => {
@@ -134,8 +161,9 @@ test("[critical] clear natural-language schedule becomes a saved schedule", asyn
   await page.goto("/?lang=en");
 
   await captureText(page, "Dentist tomorrow at 3 PM");
-  await page.getByRole("button", { name: "Add to schedule", exact: true }).click();
-  await expect(page.getByTestId("inline-promise")).toBeHidden();
+  await confirmCapturedSchedule(page);
+  await expect(page.getByRole("button", { name: /Looks right|맞아요/i })).toHaveCount(0);
+  await expect(page.getByTestId("inline-promise")).toHaveCount(0);
 
   await page.getByRole("link", { name: TASKS_SCHEDULE_LINK_NAME }).click();
   await page.getByRole("tab", { name: "Upcoming", exact: true }).click();
@@ -163,28 +191,25 @@ test("[critical] an ambiguous weekend plan is resolved inline without a dead end
   expect(errors).toEqual([]);
 });
 
-test("[critical] manual schedule creation completes every step and can be marked done", async ({
+test("[critical] home capture creates a schedule that can be marked done", async ({
   page,
 }) => {
   const errors = collectPageErrors(page);
-  await page.goto("/schedule?lang=en");
+  await page.goto("/app?lang=en");
 
-  await page.getByRole("button", { name: "Add task", exact: true }).click();
-  await expect(page.getByRole("dialog", { name: "Add schedule" })).toBeVisible();
-  await page.getByRole("button", { name: "Tomorrow", exact: true }).click();
-  await page.getByRole("button", { name: "Add time and end", exact: true }).click();
-  await page.getByLabel("Schedule title").fill("Product review");
-  await page.getByRole("button", { name: "Set a reminder", exact: true }).click();
-  await page.getByRole("button", { name: "No reminder", exact: true }).click();
-  await page.getByRole("button", { name: /Add to schedule/i }).click();
+  await captureText(page, "Product review tomorrow at 3 PM");
+  await confirmCapturedSchedule(page);
+  await expect(page.getByRole("button", { name: /Looks right|맞아요/i })).toHaveCount(0);
 
-  await expect(page.getByRole("dialog", { name: "Add schedule" })).toBeHidden();
+  await page.getByRole("link", { name: TASKS_SCHEDULE_LINK_NAME }).click();
+  await expect(page.getByRole("button", { name: "Add task", exact: true })).toHaveCount(
+    0,
+  );
   await page.getByRole("tab", { name: "Upcoming", exact: true }).click();
-  const row = page.getByRole("button", { name: /Product review.*Tap to refine/i });
-  await expect(row).toBeVisible();
-  await row.press(" ");
+  await expect(page.getByText("Product review").first()).toBeVisible();
+  await page.getByRole("button", { name: "Complete", exact: true }).first().click();
   await expect(page.getByText("You can let this go", { exact: true })).toBeVisible();
-  await expect(row).toBeHidden();
+  await expect(page.getByText("Product review").first()).toBeHidden();
 
   expect(errors).toEqual([]);
 });
