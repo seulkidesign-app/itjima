@@ -95,11 +95,15 @@ export function InlinePromise({
   const uiLang = lang === "en" ? "en" : "ko";
   const card = buildPromiseCard(item.text, uiLang);
   const draftedTitle = scheduleTitlePreview(item.text, uiLang);
-  // Clarify keeps the spoken phrase; timed asks prefer the cleaned event title.
-  const title =
-    card.nlIntent === "schedule_clarify" ? item.text.trim() || draftedTitle : draftedTitle;
   // Safety vetoes apply even when the parser already assumed PM for bare hours.
   const activeConfirmation = scheduleConfirmationReason(item.text);
+  // When we ask a question, preserve the exact sentence the user typed.
+  // Cleaning date/time tokens here made the prompt look as if their time vanished.
+  const rawTitle = item.text.trim();
+  const title =
+    activeConfirmation || card.nlIntent === "schedule_clarify"
+      ? rawTitle || draftedTitle
+      : draftedTitle;
   const confirmationChoices = activeConfirmation
     ? scheduleConfirmationChoices(item.text, activeConfirmation, uiLang)
     : [];
