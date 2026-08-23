@@ -349,7 +349,7 @@ export async function getTabCount(
   return list.length;
 }
 
-/** Open ScheduleSheet via Calendar date → “Remember for then” (V02-05 contextual add). */
+/** Open ScheduleSheet via Calendar date → “Add on this day” (V02-05 contextual add). */
 export async function openCalendarQuickAdd(
   page: Page,
   opts?: { day?: number; nextMonth?: boolean },
@@ -387,13 +387,13 @@ export async function openCalendarQuickAdd(
   await page.locator(`[data-cal-day="${day}"]`).first().click();
 
   const remember = frame.getByRole("button", {
-    name: /Remember for then|그때 남기기/,
+    name: /Add on this day|이 날짜에 추가/,
   });
   if (await remember.isVisible().catch(() => false)) {
     await remember.click();
   } else {
     await page
-      .getByRole("button", { name: /Remember for then|그때 남기기/ })
+      .getByRole("button", { name: /Add on this day|이 날짜에 추가/ })
       .click();
   }
 

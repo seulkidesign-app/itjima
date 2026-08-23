@@ -50,6 +50,8 @@ type Props = {
   suggestionReason?: string | null;
   editMode?: boolean;
   initialReminderKey?: ReminderKey;
+  /** Primary confirm CTA; defaults by editMode. */
+  confirmLabel?: string;
   onConfirm: (start: Date, end: Date, options: ConfirmOptions) => void;
 };
 
@@ -416,6 +418,7 @@ export function ScheduleManagerFlow({
   suggestionReason,
   editMode,
   initialReminderKey,
+  confirmLabel,
   onConfirm,
 }: Props) {
   const t = useT();
@@ -881,7 +884,10 @@ export function ScheduleManagerFlow({
             className="touch-press flex w-full flex-col items-center justify-center gap-1 rounded-full bg-ink py-3.5 text-white shadow-[0_5px_22px_-5px_rgba(0,0,0,0.38)] disabled:opacity-40"
           >
             <span className="text-[16px] font-bold tracking-[-0.01em]">
-              {t("일정에 추가", "Add to schedule")}
+              {confirmLabel ??
+                (editMode
+                  ? t("저장", "Save")
+                  : t("일정에 추가", "Add to schedule"))}
             </span>
             <span className="max-w-full truncate px-2 text-[11px] font-semibold text-white/70">
               {reminder === "off" || !alarmAt

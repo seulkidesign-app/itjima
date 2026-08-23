@@ -120,7 +120,7 @@ test.describe("responsive UI safeguards", () => {
     await page.getByRole("tab", { name: /Calendar|달력/ }).click();
     const today = await page.evaluate(() => new Date().getDate());
     await page.locator(`[data-cal-day="${today}"]`).first().click();
-    await page.getByRole("button", { name: /Remember for then|그때 남기기/ }).click();
+    await page.getByRole("button", { name: /Add on this day|이 날짜에 추가/ }).click();
     const root = page.locator(".bottom-sheet-root");
     const panel = page.locator('.bottom-sheet-panel[role="dialog"]');
     await expect(panel).toBeVisible();

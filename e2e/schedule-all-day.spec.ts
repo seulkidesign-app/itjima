@@ -115,7 +115,7 @@ async function openCreateTimeStep(
     await ui.getByRole("button", { name: "Next month" }).click();
   }
   await page.locator(`[data-cal-day="${target.day}"]`).first().click();
-  await ui.getByRole("button", { name: "Remember for then" }).click();
+  await ui.getByRole("button", { name: "Add on this day" }).click();
 
   const sheet = page.getByRole("dialog");
   await sheet.waitFor({ state: "visible" });
@@ -153,8 +153,14 @@ async function saveEditSheet(page: Page) {
   const sheet = page.getByRole("dialog").first();
   await sheet.getByRole("button", { name: "Set a reminder" }).click();
 
-  const addToSchedule = sheet.getByRole("button", { name: "Add to schedule" });
-  if (await addToSchedule.isVisible().catch(() => false)) {
+  // Accessible name includes subtitle (e.g. "Save No reminder").
+  const save = sheet.getByRole("button", { name: /^(Save|저장)\b/ });
+  const addToSchedule = sheet.getByRole("button", {
+    name: /Add to schedule|일정에 추가/,
+  });
+  if (await save.isVisible().catch(() => false)) {
+    await save.click();
+  } else if (await addToSchedule.isVisible().catch(() => false)) {
     await addToSchedule.click();
   }
 

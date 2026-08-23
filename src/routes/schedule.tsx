@@ -336,8 +336,8 @@ function Schedule() {
     } else {
       toast.success(
         isEdit
-          ? t("다듬었어요", "Refined")
-          : t("그때 다시 떠올릴게요", "I'll remember this for then"),
+          ? t("수정했어요", "Updated")
+          : t("일정에 추가했어요", "Added to schedule"),
         scheduleToast,
       );
     }
@@ -980,7 +980,7 @@ function Schedule() {
         initialReminderKey={
           sheet.edit ? inferReminderKeyFromSchedule(sheet.edit) : undefined
         }
-        saveLabel={sheet.edit ? t("다듬기", "Refine") : undefined}
+        saveLabel={sheet.edit ? t("저장", "Save") : undefined}
         onClose={() => setSheet({ open: false })}
         onSave={async (text, start, end, opts) => {
           const reminderMin =
@@ -1615,7 +1615,7 @@ function CalendarGrid({
                 className="flex w-full items-center justify-center gap-2 rounded-[16px] bg-primary/20 py-3 text-[14px] font-bold text-ink touch-press"
               >
                 <Plus size={16} strokeWidth={2.5} />
-                {t("그때 남기기", "Remember for then")}
+                {t("이 날짜에 추가", "Add on this day")}
               </motion.button>
 
               <div className="rounded-[var(--radius-md)] border border-ink/[0.05] bg-ink/[0.015] px-1 py-1">
@@ -1764,7 +1764,7 @@ function ScheduleEventMenu({
   if (!item) return null;
 
   const actions = [
-    { key: "edit", label: t("다듬기", "Refine"), icon: Pencil, onClick: onEdit },
+    { key: "edit", label: t("수정", "Edit"), icon: Pencil, onClick: onEdit },
     {
       key: "alarm",
       label: t("빠른 알림", "Quick alarm"),
