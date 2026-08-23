@@ -6,6 +6,11 @@ import {
 import { buildNaturalScheduleDraft } from "@/lib/naturalScheduleDraft";
 import { evaluateTimedAutoCommit } from "@/lib/nlAutoCommit";
 import { scheduleConfirmationReason } from "@/lib/nlScheduleSafety";
+import {
+  clarifyPicksForText,
+  dateFromClarifyPick,
+  understandNaturalLanguage,
+} from "@/lib/nlSchedule";
 import type { InboxItem } from "@/lib/store";
 
 function thought(text: string): InboxItem {
@@ -95,6 +100,22 @@ describe("AI trust floor", () => {
     );
     expect(withReminder.options.reminderMinutes).toBe(30);
     expect(withReminder.reminderExplicit).toBe(true);
+  });
+
+  it("asks tomorrow vs day-after-tomorrow for colloquial near-day wording", () => {
+    for (const input of ["내일 모레 청소하기", "내일모레 청소하기", "낼모레 청소하기"]) {
+      const understanding = understandNaturalLanguage(input, "ko");
+      expect(understanding.intent).toBe("schedule_clarify");
+      expect(understanding.clarifyMissing).toBe("day");
+      expect(clarifyPicksForText(input, "ko")).toEqual([
+        { pick: "tomorrow", label: "내일" },
+        { pick: "day_after_tomorrow", label: "모레" },
+      ]);
+    }
+
+    const picked = dateFromClarifyPick("day_after_tomorrow", now);
+    expect(picked.label).toBe("모레");
+    expect(picked.start.getDate()).toBe(25);
   });
 
   it("treats a daypart without a concrete clock as ambiguous", () => {
