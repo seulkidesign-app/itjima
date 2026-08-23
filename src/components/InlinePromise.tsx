@@ -40,6 +40,8 @@ function confirmationCopy(
   const ko: Record<ScheduleConfirmationReason, string> = {
     invalid_datetime: "시간이나 날짜를 정확히 이해하지 못했어요.",
     broad_daypart: "정확한 시간이 없어요. 시간을 조금 더 구체적으로 적어 주세요.",
+    daypart_conflict: "시간 표현이 서로 맞지 않아요. 시간을 조금 더 정확히 적어 주세요.",
+    day_boundary: "밤 12시~새벽 시간은 날짜가 헷갈릴 수 있어요. 날짜와 시간을 조금 더 정확히 적어 주세요.",
     past_today: "오늘 시간은 이미 지났어요. 내일 같은 시간으로 바로 옮길 수 있어요.",
     weekend_day: "토요일인지 일요일인지 고르면 바로 일정에 넣어요.",
     after_work_time: "퇴근 시간을 골라 주세요. 선택한 시간으로 바로 추가해요.",
@@ -49,6 +51,8 @@ function confirmationCopy(
   const en: Record<ScheduleConfirmationReason, string> = {
     invalid_datetime: "I couldn't safely understand that date or time.",
     broad_daypart: "There isn't an exact time yet. Add a more specific time.",
+    daypart_conflict: "The daypart and clock don't line up safely. Please make the time more specific.",
+    day_boundary: "That night-time phrase crosses a date boundary. Please make the date and time more specific.",
     past_today: "That time has passed today. Move it to the same time tomorrow in one tap.",
     weekend_day: "Choose Saturday or Sunday and add it right away.",
     after_work_time: "Choose your after-work time and add it right away.",
