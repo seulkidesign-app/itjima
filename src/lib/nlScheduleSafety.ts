@@ -8,6 +8,7 @@ export type ScheduleConfirmationReason =
   | "broad_daypart"
   | "daypart_conflict"
   | "day_boundary"
+  | "unresolved_date_language"
   | "past_today"
   | "weekend_day"
   | "after_work_time"
@@ -258,12 +259,13 @@ export function scheduleConfirmationChoices(
   const reasons = scheduleConfirmationReasons(text, now);
   if (reasons.length !== 1 || reasons[0] !== reason) return [];
 
-  // Invalid/vague values must be edited rather than silently invented.
+  // Invalid/vague/unresolved values must be edited or normalized, never guessed.
   if (
     reason === "invalid_datetime" ||
     reason === "broad_daypart" ||
     reason === "daypart_conflict" ||
     reason === "day_boundary" ||
+    reason === "unresolved_date_language" ||
     reason === "multiple_clocks"
   ) {
     return [];
