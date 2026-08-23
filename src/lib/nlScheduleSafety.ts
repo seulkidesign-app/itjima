@@ -6,6 +6,8 @@ import {
 export type ScheduleConfirmationReason =
   | "invalid_datetime"
   | "broad_daypart"
+  | "daypart_conflict"
+  | "day_boundary"
   | "past_today"
   | "weekend_day"
   | "after_work_time"
@@ -198,10 +200,12 @@ export function scheduleConfirmationReasons(
 ): ScheduleConfirmationReason[] {
   const raw = text.trim();
   const trimmed = normalizeScheduleInputForTrust(raw);
-  const reasons: ScheduleConfirmationReason[] = [];
   const trustIssue = scheduleTrustIssue(raw, now);
-  if (trustIssue) reasons.push(trustIssue);
+  // Trust failures are dominant. Do not stack a guessed AM/PM or another
+  // suggestion on top of an already unsafe date/time expression.
+  if (trustIssue) return [trustIssue];
 
+  const reasons: ScheduleConfirmationReason[] = [];
   const bareMeridiem = hasBareMeridiemGuess(trimmed);
 
   // Two+ distinct clocks cannot become one silent event without a multi-event model.
@@ -258,6 +262,8 @@ export function scheduleConfirmationChoices(
   if (
     reason === "invalid_datetime" ||
     reason === "broad_daypart" ||
+    reason === "daypart_conflict" ||
+    reason === "day_boundary" ||
     reason === "multiple_clocks"
   ) {
     return [];
