@@ -11,10 +11,25 @@ const KO_NUMBER: Record<string, number> = {
   네: 4,
 };
 
-function numberValue(raw: string): number | null {
+const KO_CLOCK_NUMBER: Record<string, number> = {
+  한: 1,
+  두: 2,
+  세: 3,
+  네: 4,
+  다섯: 5,
+  여섯: 6,
+  일곱: 7,
+  여덟: 8,
+  아홉: 9,
+  열: 10,
+  열한: 11,
+  열두: 12,
+};
+
+function numberValue(raw: string, words = KO_NUMBER): number | null {
   const n = Number(raw);
   if (Number.isFinite(n)) return n;
-  return KO_NUMBER[raw] ?? null;
+  return words[raw] ?? null;
 }
 
 function normalizeKoreanCompoundOffset(text: string): string {
@@ -65,19 +80,29 @@ function periodForKoreanDaypart(
   return null;
 }
 
+const KO_CLOCK_TOKEN =
+  "(?:\\d{1,2}|열두|열한|열|아홉|여덟|일곱|여섯|다섯|네|세|두|한)";
+
 function normalizeKoreanDaypartClock(text: string): string {
+  const re = new RegExp(
+    `(오전|오후|아침|점심|저녁|밤|새벽)\\s*(${KO_CLOCK_TOKEN})\\s*시(?:\\s*(반)|(?:\\s*(\\d{1,2})\\s*분))?`,
+    "g",
+  );
+
   return text.replace(
-    /(오전|오후|아침|점심|저녁|밤|새벽)\s*(\d{1,2})\s*시(?:\s*(반)|(?:\s*(\d{1,2})\s*분))?/g,
+    re,
     (match, part: string, rawHour: string, half?: string, rawMinute?: string) => {
-      const hour = Number(rawHour);
+      const hour = numberValue(rawHour, KO_CLOCK_NUMBER);
       const minute = half === "반" ? 30 : rawMinute ? Number(rawMinute) : 0;
-      if (hour < 1 || hour > 12 || minute < 0 || minute > 59) return match;
+      if (hour === null || hour < 1 || hour > 12 || minute < 0 || minute > 59) {
+        return match;
+      }
 
       const period = periodForKoreanDaypart(part, hour);
       if (!period) return match;
 
       const minuteLabel = half === "반" ? " 반" : rawMinute ? ` ${rawMinute}분` : "";
-      return `${period} ${rawHour}시${minuteLabel}`;
+      return `${period} ${hour}시${minuteLabel}`;
     },
   );
 }
@@ -181,7 +206,7 @@ function contextualDaypartIssue(text: string): ScheduleTrustIssue | null {
 
 function hasBroadDaypartWithoutClock(text: string): boolean {
   const hasDaypart =
-    /(?:아침|점심|저녁|밤|새벽|\bmorning\b|\bafternoon\b|\bevening\b|\btonight\b|\bnoon\b|\bmidnight\b)/i.test(
+    /(?:오전|오후|아침|점심|저녁|밤|새벽|\bmorning\b|\bafternoon\b|\bevening\b|\btonight\b|\bnoon\b|\bmidnight\b)/i.test(
       text,
     );
   if (!hasDaypart) return false;
@@ -199,13 +224,14 @@ export function scheduleTrustIssue(
   now = new Date(),
 ): ScheduleTrustIssue | null {
   const trimmed = text.trim();
+  const normalized = normalizeScheduleInputForTrust(trimmed);
   if (hasInvalidDate(trimmed, now) || hasInvalidClock(trimmed)) {
     return "invalid_datetime";
   }
 
-  const contextualIssue = contextualDaypartIssue(trimmed);
+  const contextualIssue = contextualDaypartIssue(normalized);
   if (contextualIssue) return contextualIssue;
 
-  if (hasBroadDaypartWithoutClock(trimmed)) return "broad_daypart";
+  if (hasBroadDaypartWithoutClock(normalized)) return "broad_daypart";
   return null;
 }
