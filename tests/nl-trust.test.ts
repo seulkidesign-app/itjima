@@ -29,7 +29,7 @@ describe("AI trust floor", () => {
     vi.useRealTimers();
   });
 
-  it("normalizes Korean dayparts before parsing the clock", () => {
+  it("normalizes clear Korean dayparts before parsing the clock", () => {
     expect(normalizeScheduleInputForTrust("내일 저녁 7시 치과")).toBe(
       "내일 오후 7시 치과",
     );
@@ -39,15 +39,41 @@ describe("AI trust floor", () => {
     expect(normalizeScheduleInputForTrust("내일 새벽 2시 공항")).toBe(
       "내일 오전 2시 공항",
     );
-    expect(normalizeScheduleInputForTrust("내일 밤 1시 귀가")).toBe(
-      "내일 오전 1시 귀가",
+    expect(normalizeScheduleInputForTrust("내일 점심 11시 약속")).toBe(
+      "내일 오전 11시 약속",
+    );
+    expect(normalizeScheduleInputForTrust("내일 점심 1시 약속")).toBe(
+      "내일 오후 1시 약속",
     );
   });
 
-  it("parses contextual daypart clocks to the intended hour", () => {
+  it("parses clear contextual daypart clocks to the intended hour", () => {
     expect(buildNaturalScheduleDraft(thought("내일 저녁 7시 치과")).start.getHours()).toBe(19);
     expect(buildNaturalScheduleDraft(thought("내일 밤 10시 약 먹기")).start.getHours()).toBe(22);
     expect(buildNaturalScheduleDraft(thought("내일 새벽 2시 공항")).start.getHours()).toBe(2);
+    expect(buildNaturalScheduleDraft(thought("내일 점심 11시 약속")).start.getHours()).toBe(11);
+    expect(buildNaturalScheduleDraft(thought("내일 점심 1시 약속")).start.getHours()).toBe(13);
+  });
+
+  it("does not guess Korean night phrases that cross a date boundary", () => {
+    expect(normalizeScheduleInputForTrust("내일 밤 1시 귀가")).toBe(
+      "내일 밤 1시 귀가",
+    );
+    expect(scheduleTrustIssue("내일 밤 1시 귀가", now)).toBe("day_boundary");
+    expect(scheduleTrustIssue("내일 밤 12시 귀가", now)).toBe("day_boundary");
+
+    const one = evaluateTimedAutoCommit("내일 밤 1시 귀가", "ko", now);
+    expect(one.ok).toBe(false);
+    if (!one.ok) expect(one.reason).toBe("day_boundary");
+  });
+
+  it("blocks conflicting daypart + clock phrases instead of forcing a period", () => {
+    expect(scheduleTrustIssue("내일 새벽 8시 공항", now)).toBe(
+      "daypart_conflict",
+    );
+    expect(scheduleTrustIssue("내일 저녁 3시 치과", now)).toBe(
+      "daypart_conflict",
+    );
   });
 
   it("removes normalized daypart/time words from the saved title", () => {
