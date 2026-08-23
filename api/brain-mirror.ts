@@ -4,11 +4,12 @@ import type { VercelRequest, VercelResponse } from "@vercel/node";
 const ANTHROPIC_MODEL = "claude-haiku-4-5-20251001";
 
 /**
- * AI is not part of the v1 product surface. The endpoint remains available for
- * later private evaluation, but production calls are blocked unless the
- * deployment explicitly opts in with ENABLE_AI_BETA=true.
+ * General AI surfaces stay beta-gated. Schedule normalization has its own
+ * opt-in so the trust fallback can be evaluated independently.
  */
 const AI_BETA_ENABLED = process.env.ENABLE_AI_BETA === "true";
+const AI_SCHEDULE_ENABLED =
+  process.env.ENABLE_AI_SCHEDULE === "true" || AI_BETA_ENABLED;
 
 /** Layer 2 — minimal classify prompt (<150 tokens). JSON only. */
 const CLASSIFY_PROMPT = `JSON only: {"category":"","title":"","suggestedDate":"","suggestedStart":"","reason":"","confidence":""}
@@ -23,6 +24,30 @@ confidence: high if reason uses only input facts; low if reason needs invented d
 const ORGANIZE_PROMPT = `User tapped Organize. JSON only:
 {"title":"","items":[],"suggestedDateText":"","suggestedAction":"","confidence":0.0}
 items: max 5 from input only. confidence 0-1. Korean unless English input.`;
+
+/**
+ * V0.3 trust fallback. The model may normalize language, never fill missing
+ * facts. The client feeds normalizedText back through deterministic safety
+ * validation before anything can be saved.
+ */
+const SCHEDULE_PROMPT = `You normalize ONE Korean or English schedule sentence for a strict deterministic parser.
+JSON only: {"decision":"normalized|ambiguous|not_schedule|unsupported","normalizedText":"","confidence":"high|medium|low","ambiguity":""}
+Rules:
+- NEVER invent a date, weekday, time, AM/PM, duration, place, title, or reminder.
+- NEVER calculate relative dates into calendar dates. Keep relative meaning as words.
+- Only expand colloquial spelling/shorthand into equivalent explicit wording.
+- Preserve the user's event/title words; do not rewrite their meaning.
+- If AM/PM is missing for a 1-12 clock and no explicit daypart proves it, decision=ambiguous, ambiguity=meridiem.
+- If a daypart has no exact clock, decision=ambiguous, ambiguity=time.
+- If a night phrase could cross midnight, decision=ambiguous, ambiguity=day_boundary.
+- If there are 2+ events/times, decision=unsupported, ambiguity=multiple_events.
+- If recurrence is requested, decision=unsupported, ambiguity=recurrence.
+- If it is not a schedule-like statement, decision=not_schedule.
+- decision=normalized only when the rewrite contains exactly the same scheduling facts as the input.
+Examples:
+"담주 금욜 저녁 7시 치과" -> {"decision":"normalized","normalizedText":"다음 주 금요일 오후 7시 치과","confidence":"high","ambiguity":""}
+"낼 3시 치과" -> {"decision":"ambiguous","normalizedText":"내일 3시 치과","confidence":"high","ambiguity":"meridiem"}
+"내일 저녁에 치과" -> {"decision":"ambiguous","normalizedText":"내일 저녁에 치과","confidence":"high","ambiguity":"time"}`;
 
 type ClassifyPayload = {
   category: string;
@@ -39,6 +64,13 @@ type OrganizePayload = {
   suggestedDateText: string;
   suggestedAction: string;
   confidence: number;
+};
+
+type SchedulePayload = {
+  decision: "normalized" | "ambiguous" | "not_schedule" | "unsupported";
+  normalizedText: string;
+  confidence: "high" | "medium" | "low";
+  ambiguity: string;
 };
 
 function extractJson(text: string): unknown {
@@ -129,6 +161,48 @@ function normalizeOrganizePayload(raw: unknown): OrganizePayload | null {
   };
 }
 
+function normalizeSchedulePayload(raw: unknown): SchedulePayload | null {
+  if (!raw || typeof raw !== "object") return null;
+  const o = raw as Record<string, unknown>;
+  const decision =
+    typeof o.decision === "string" ? o.decision.trim().toLowerCase() : "";
+  if (
+    decision !== "normalized" &&
+    decision !== "ambiguous" &&
+    decision !== "not_schedule" &&
+    decision !== "unsupported"
+  ) {
+    return null;
+  }
+
+  const confidenceRaw =
+    typeof o.confidence === "string" ? o.confidence.trim().toLowerCase() : "";
+  const confidence: SchedulePayload["confidence"] =
+    confidenceRaw === "high" ||
+    confidenceRaw === "medium" ||
+    confidenceRaw === "low"
+      ? confidenceRaw
+      : "low";
+
+  const normalizedText =
+    typeof o.normalizedText === "string"
+      ? o.normalizedText.trim().slice(0, 240)
+      : "";
+  const ambiguity =
+    typeof o.ambiguity === "string" ? o.ambiguity.trim().slice(0, 40) : "";
+
+  if (decision === "normalized" && (!normalizedText || confidence !== "high")) {
+    return null;
+  }
+
+  return {
+    decision,
+    normalizedText,
+    confidence,
+    ambiguity,
+  };
+}
+
 async function callAnthropicJson(
   apiKey: string,
   system: string,
@@ -167,9 +241,16 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return res.status(405).json({ error: "Method not allowed" });
   }
 
-  if (!AI_BETA_ENABLED) {
+  const mode =
+    req.body?.mode === "organize"
+      ? "organize"
+      : req.body?.mode === "schedule"
+        ? "schedule"
+        : ("classify" as const);
+
+  if (mode === "schedule" ? !AI_SCHEDULE_ENABLED : !AI_BETA_ENABLED) {
     res.setHeader("Cache-Control", "no-store");
-    return res.status(404).json({ error: "AI beta disabled" });
+    return res.status(404).json({ error: "AI mode disabled" });
   }
 
   const text = typeof req.body?.text === "string" ? req.body.text.trim() : "";
@@ -180,16 +261,16 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return res.status(400).json({ error: "text too long" });
   }
 
-  const mode =
-    req.body?.mode === "organize" ? "organize" : ("classify" as const);
-
   const apiKey = process.env.ANTHROPIC_API_KEY;
   if (!apiKey) {
     console.error("[brain-mirror] Missing ANTHROPIC_API_KEY");
     return res.status(503).json({ error: "API not configured" });
   }
 
-  const input = text.slice(0, mode === "classify" ? 120 : 1200);
+  const input = text.slice(
+    0,
+    mode === "organize" ? 1200 : mode === "schedule" ? 240 : 120,
+  );
 
   try {
     if (mode === "organize") {
@@ -203,6 +284,16 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       if (!payload) {
         return res.status(502).json({ error: "invalid model response" });
       }
+      return res.status(200).json(payload);
+    }
+
+    if (mode === "schedule") {
+      const raw = await callAnthropicJson(apiKey, SCHEDULE_PROMPT, input, 180);
+      const payload = normalizeSchedulePayload(raw);
+      if (!payload) {
+        return res.status(502).json({ error: "invalid model response" });
+      }
+      res.setHeader("Cache-Control", "no-store");
       return res.status(200).json(payload);
     }
 
