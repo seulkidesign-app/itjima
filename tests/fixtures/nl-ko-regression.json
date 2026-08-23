@@ -13,9 +13,9 @@
     "expected_intent": "schedule_exact",
     "expected_confidence_tier": "high",
     "expected_date_presence": true,
-    "expected_time_presence": true,
+    "expected_time_presence": false,
     "sensitive": false,
-    "notes": "Weekday + evening time word"
+    "notes": "Weekday + broad evening daypart, not an exact clock"
   },
   {
     "input": "8월 2일 오전 10시 회의",
@@ -31,18 +31,18 @@
     "expected_intent": "schedule_exact",
     "expected_confidence_tier": "high",
     "expected_date_presence": true,
-    "expected_time_presence": true,
+    "expected_time_presence": false,
     "sensitive": false,
-    "notes": "Today with evening activity (퇴근 후 → 18:00)"
+    "notes": "After-work context needs a user-selected clock"
   },
   {
     "input": "모레 점심에 민지 만나기",
     "expected_intent": "schedule_exact",
     "expected_confidence_tier": "high",
     "expected_date_presence": true,
-    "expected_time_presence": true,
+    "expected_time_presence": false,
     "sensitive": false,
-    "notes": "Relative date + meal time"
+    "notes": "Relative date + broad meal-time context"
   },
   {
     "input": "다음주쯤 보기",
@@ -382,9 +382,9 @@
     "expected_intent": "schedule_exact",
     "expected_confidence_tier": "high",
     "expected_date_presence": true,
-    "expected_time_presence": true,
+    "expected_time_presence": false,
     "sensitive": false,
-    "notes": "Weekday + afternoon explicit"
+    "notes": "Weekday + broad afternoon daypart, not an exact clock"
   },
   {
     "input": "12월 25일 생일 파티",
@@ -472,9 +472,9 @@
     "expected_intent": "schedule_exact",
     "expected_confidence_tier": "high",
     "expected_date_presence": true,
-    "expected_time_presence": true,
+    "expected_time_presence": false,
     "sensitive": false,
-    "notes": "Today evening — not journal"
+    "notes": "Today + broad evening daypart — not an exact clock"
   },
   {
     "input": "   ",
