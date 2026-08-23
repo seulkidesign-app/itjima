@@ -3,9 +3,11 @@ import { useCallback, useEffect, useRef, useState } from "react";
 const BOTTOM_THRESHOLD_PX = 120;
 
 function getScrollContainer(): HTMLElement | null {
+  // The app shell owns scrolling. `.home-chat-lane` is only a flex layout lane,
+  // so targeting it makes scrollToBottom a no-op on real devices.
   return (
-    document.querySelector<HTMLElement>(".home-chat-lane") ??
-    document.getElementById("phone-scroll")
+    document.getElementById("phone-scroll") ??
+    document.querySelector<HTMLElement>(".home-chat-lane")
   );
 }
 
@@ -54,7 +56,9 @@ function settleAtBottom(
     });
 
     frame += 1;
-    if (frame < 3) {
+    // A new capture can immediately expand into an ambiguity card or saved
+    // feedback. Give those late layout changes a few frames to settle.
+    if (frame < 6) {
       requestAnimationFrame(run);
       return;
     }
