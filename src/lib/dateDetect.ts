@@ -223,13 +223,13 @@ export function detectDate(
     }
   }
 
-  // Korean time: 오후 N시 / bare N시 (1–6 → afternoon when meridiem omitted)
+  // Korean time: 오후 N시 / N시 반 / bare N시 (1–6 → afternoon when meridiem omitted)
   const hmKo = text.match(
-    /(오전|오후)?\s*(\d{1,2})\s*시(?:\s*(\d{1,2})\s*분)?/,
+    /(오전|오후)?\s*(\d{1,2})\s*시(?:\s*(반)|(?:\s*(\d{1,2})\s*분))?/,
   );
   if (hmKo) {
     let h = parseInt(hmKo[2], 10);
-    const mn = hmKo[3] ? parseInt(hmKo[3], 10) : 0;
+    const mn = hmKo[3] === "반" ? 30 : hmKo[4] ? parseInt(hmKo[4], 10) : 0;
     const meridiem = hmKo[1] as "오전" | "오후" | undefined;
     if (meridiem === "오후" && h < 12) h += 12;
     else if (meridiem === "오전" && h === 12) h = 0;
@@ -243,8 +243,10 @@ export function detectDate(
     timeSet = true;
     const hour12 = h % 12 || 12;
     const meridiemLabel = meridiem ?? (h < 12 ? "오전" : "오후");
+    const minuteLabel =
+      hmKo[3] === "반" ? " 반" : mn ? ` ${mn}분` : "";
     label =
-      `${label ? `${label} ` : ""}${meridiemLabel} ${hour12}시${mn ? ` ${mn}분` : ""}`.trim();
+      `${label ? `${label} ` : ""}${meridiemLabel} ${hour12}시${minuteLabel}`.trim();
   }
 
   // English time: 3pm, 3:30 pm, 15:00

@@ -125,6 +125,21 @@ describe("inline ambiguity resolution", () => {
       scheduleConfirmationChoices(text, "weekend_day", "ko", now),
     ).toEqual([]);
   });
+
+  // V02-07: multi-clock inputs must not silently become one merged event
+  it("flags multiple distinct clock times instead of merging them", () => {
+    const text = "오늘 3시 A, 6시 B";
+    expect(scheduleConfirmationReasons(text, now)).toContain("multiple_clocks");
+    expect(
+      scheduleConfirmationChoices(text, "multiple_clocks", "ko", now),
+    ).toEqual([]);
+  });
+
+  it("does not flag a single 시 반 phrase as multiple clocks", () => {
+    expect(
+      scheduleConfirmationReasons("내일 3시 반 치과", now),
+    ).not.toContain("multiple_clocks");
+  });
 });
 
 describe("focused inline understanding", () => {

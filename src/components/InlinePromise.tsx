@@ -51,12 +51,16 @@ function confirmationCopy(
     weekend_day: "토요일인지 일요일인지 고르면 바로 일정에 넣어요.",
     after_work_time: "퇴근 시간을 골라 주세요. 선택한 시간으로 바로 추가해요.",
     assumed_meridiem: "오전인지 오후인지 고르면 바로 일정에 넣어요.",
+    multiple_clocks:
+      "시간이 여러 개라서 한 일정으로 합치지 않았어요. 확인하고 추가해 주세요.",
   };
   const en: Record<ScheduleConfirmationReason, string> = {
     past_today: "That time has passed today. Move it to the same time tomorrow in one tap.",
     weekend_day: "Choose Saturday or Sunday and add it right away.",
     after_work_time: "Choose your after-work time and add it right away.",
     assumed_meridiem: "Choose AM or PM and add it right away.",
+    multiple_clocks:
+      "There are several times, so we didn’t merge them into one event. Review and add.",
   };
   return lang === "en" ? en[reason] : ko[reason];
 }
@@ -79,8 +83,8 @@ function schedulePreview(text: string, lang: "ko" | "en"): SchedulePreview {
   const timePatterns =
     lang === "ko"
       ? [
-          /(?:오전|오후)\s*\d{1,2}\s*시(?:\s*\d{1,2}\s*분)?/,
-          /\d{1,2}\s*시(?:\s*\d{1,2}\s*분)?/,
+          /(?:오전|오후)\s*\d{1,2}\s*시(?:\s*반|(?:\s*\d{1,2}\s*분))?/,
+          /\d{1,2}\s*시(?:\s*반|(?:\s*\d{1,2}\s*분))?/,
           /퇴근\s*(?:후|하고|하고서|뒤)/,
         ]
       : [
