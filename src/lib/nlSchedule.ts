@@ -57,6 +57,9 @@ const WATCH_READ_RE =
 
 const NEXT_MONTH_EARLY_RE = /다음\s*달\s*초|early\s+next\s+month/i;
 
+/** Spoken Korean can use 내일 모레 / 내일모레 / 낼모레 loosely. Do not pick a day silently. */
+const NEAR_DAY_RE = /(?:내일\s*모레|내일모레|낼모레)/i;
+
 const WEEKDAY_IN_TEXT_RE =
   /(일|월|화|수|목|금|토)요일|\b(?:monday|tuesday|wednesday|thursday|friday|saturday|sunday)\b/i;
 
@@ -147,6 +150,7 @@ function isTimeOnlyPhrase(text: string): boolean {
 }
 
 function isClarifySchedule(text: string): boolean {
+  if (NEAR_DAY_RE.test(text)) return true;
   if (NEXT_MONTH_EARLY_RE.test(text)) return true;
   if (/이번\s*주\s*안/i.test(text)) return true;
   // Vague timing always asks; resolved weekend (e.g. 주말에 만나기) can be exact all-day
@@ -267,7 +271,7 @@ export function understandNaturalLanguage(
   }
 
   if (isClarifySchedule(trimmed)) {
-    const missing = TIME_RE.test(trimmed) ? "day" : "time";
+    const missing = NEAR_DAY_RE.test(trimmed) || TIME_RE.test(trimmed) ? "day" : "time";
     return {
       intent: "schedule_clarify",
       confidence: "medium",
@@ -352,6 +356,7 @@ export function understandNaturalLanguage(
 export type ClarifyPick =
   | "today"
   | "tomorrow"
+  | "day_after_tomorrow"
   | "weekend"
   | "next_week"
   | "early_next_month"
@@ -363,6 +368,7 @@ const CLARIFY_LABELS: Record<
 > = {
   today: { ko: "오늘", en: "Today" },
   tomorrow: { ko: "내일", en: "Tomorrow" },
+  day_after_tomorrow: { ko: "모레", en: "Day after tomorrow" },
   weekend: { ko: "이번 주말", en: "This weekend" },
   next_week: { ko: "다음 주", en: "Next week" },
   early_next_month: { ko: "다음 달 1일", en: "1st next month" },
@@ -376,7 +382,9 @@ export function clarifyPicksForText(
 ): { pick: ClarifyPick; label: string }[] {
   let picks: ClarifyPick[];
 
-  if (NEXT_MONTH_EARLY_RE.test(text)) {
+  if (NEAR_DAY_RE.test(text)) {
+    picks = ["tomorrow", "day_after_tomorrow"];
+  } else if (NEXT_MONTH_EARLY_RE.test(text)) {
     picks = ["early_next_month", "next_month_seventh", "weekend"];
   } else if (/다음\s*주|next\s+week/i.test(text)) {
     picks = ["next_week", "weekend", "tomorrow"];
@@ -406,6 +414,13 @@ export function dateFromClarifyPick(
     const end = new Date(start);
     end.setHours(start.getHours() + 1);
     return { start, end, label: "내일" };
+  }
+
+  if (pick === "day_after_tomorrow") {
+    start.setDate(start.getDate() + 2);
+    const end = new Date(start);
+    end.setHours(start.getHours() + 1);
+    return { start, end, label: "모레" };
   }
 
   if (pick === "next_week") {

@@ -1,4 +1,14 @@
+import {
+  normalizeScheduleInputForTrust,
+  scheduleTrustIssue,
+} from "@/lib/nlTrust";
+
 export type ScheduleConfirmationReason =
+  | "invalid_datetime"
+  | "broad_daypart"
+  | "daypart_conflict"
+  | "day_boundary"
+  | "unresolved_date_language"
   | "past_today"
   | "weekend_day"
   | "after_work_time"
@@ -79,13 +89,14 @@ function hasBareMeridiemGuess(text: string): boolean {
 }
 
 export function countDistinctClockMentions(text: string): number {
+  const normalized = normalizeScheduleInputForTrust(text);
   const ko = [
-    ...text.matchAll(
+    ...normalized.matchAll(
       /(오전|오후)?\s*(\d{1,2})\s*시(?:\s*(반)|(?:\s*(\d{1,2})\s*분))?/g,
     ),
   ];
   const enAmPm = [
-    ...text.matchAll(/\b(\d{1,2})(?::(\d{2}))?\s*(am|pm)\b/gi),
+    ...normalized.matchAll(/\b(\d{1,2})(?::(\d{2}))?\s*(am|pm)\b/gi),
   ];
   // Prefer Korean tokens when present; English am/pm is a separate count.
   return Math.max(ko.length, enAmPm.length);
@@ -96,7 +107,7 @@ export function extractClockPlanLines(text: string): string[] {
   const trimmed = text.trim();
   const ko = [
     ...trimmed.matchAll(
-      /(?:(?:오늘|내일|모레)\s*)?(?:오전|오후)?\s*\d{1,2}\s*시(?:\s*반|(?:\s*\d{1,2}\s*분))?\s*[^,，/]*/g,
+      /(?:(?:오늘|내일|모레)\s*)?(?:오전|오후|아침|점심|저녁|밤|새벽)?\s*\d{1,2}\s*시(?:\s*반|(?:\s*\d{1,2}\s*분))?\s*[^,，/]*/g,
     ),
   ]
     .map((m) => m[0].replace(/[,，/]+$/, "").trim())
@@ -188,7 +199,13 @@ export function scheduleConfirmationReasons(
   text: string,
   now = new Date(),
 ): ScheduleConfirmationReason[] {
-  const trimmed = text.trim();
+  const raw = text.trim();
+  const trimmed = normalizeScheduleInputForTrust(raw);
+  const trustIssue = scheduleTrustIssue(raw, now);
+  // Trust failures are dominant. Do not stack a guessed AM/PM or another
+  // suggestion on top of an already unsafe date/time expression.
+  if (trustIssue) return [trustIssue];
+
   const reasons: ScheduleConfirmationReason[] = [];
   const bareMeridiem = hasBareMeridiemGuess(trimmed);
 
@@ -214,7 +231,7 @@ export function scheduleConfirmationReasons(
     reasons.push("after_work_time");
   }
 
-  return reasons;
+  return [...new Set(reasons)];
 }
 
 /**
@@ -242,8 +259,17 @@ export function scheduleConfirmationChoices(
   const reasons = scheduleConfirmationReasons(text, now);
   if (reasons.length !== 1 || reasons[0] !== reason) return [];
 
-  // No one-tap merge of multiple timed plans — open the manual sheet instead.
-  if (reason === "multiple_clocks") return [];
+  // Invalid/vague/unresolved values must be edited or normalized, never guessed.
+  if (
+    reason === "invalid_datetime" ||
+    reason === "broad_daypart" ||
+    reason === "daypart_conflict" ||
+    reason === "day_boundary" ||
+    reason === "unresolved_date_language" ||
+    reason === "multiple_clocks"
+  ) {
+    return [];
+  }
 
   if (reason === "past_today") {
     const resolvedText = replaceTodayWithTomorrow(text);
@@ -288,7 +314,7 @@ export function scheduleConfirmationChoices(
     ];
   }
 
-  const clock = extractBareClock(text);
+  const clock = extractBareClock(normalizeScheduleInputForTrust(text));
   if (!clock) return [];
   return [
     {

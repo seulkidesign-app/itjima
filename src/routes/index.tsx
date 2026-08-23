@@ -24,6 +24,10 @@ import {
 } from "@/lib/nlSchedule";
 import { evaluateTimedAutoCommit } from "@/lib/nlAutoCommit";
 import {
+  shouldTryAiScheduleFallback,
+  tryAiScheduleFallback,
+} from "@/lib/aiScheduleFallback";
+import {
   commitInboxToSchedule,
   undoScheduleToInbox,
   type LaterInboxScheduleFields,
@@ -234,7 +238,6 @@ function Inbox() {
     lightHaptic(4);
     void navigate({ to: "/archive" });
   };
-
 
   const openDecisionDeck = (fromId?: string) => {
     setDecisionDeckStartId(fromId ?? null);
@@ -658,37 +661,37 @@ function Inbox() {
         FEATURES.REDISCOVERY
           ? buildRevivalHint(created, existing, "archive")
           : null;
-      if (related) {
-        setRevivalHint(related);
-      }
-      if (FEATURES.REDISCOVERY && inboxRevival?.sourceId === it.id) {
-        setInboxRevival(null);
-      }
+        if (related) {
+          setRevivalHint(related);
+        }
+        if (FEATURES.REDISCOVERY && inboxRevival?.sourceId === it.id) {
+          setInboxRevival(null);
+        }
 
-      if (allCloudSynced(archiveSynced, inboxSynced)) {
-        track("thought_archived", { text_length: it.text.length });
-        showUndoActionToast(
-          t("보관함에 넣었어요", "Saved to vault"),
-          async () => {
-            track("undo_used");
-            await archive.remove(created.id);
-            await inbox.add({
-              text: payload.text,
-              images: payload.images,
-              brain_mirror: payload.brain_mirror,
-            });
-          },
-          t("보러 가기", "Take a look"),
-          () => void navigate({ to: "/archive" }),
-          {
-            undoLabel: t("되돌리기", "Undo"),
-            actionAriaLabel: t("보관함 열기", "Open vault"),
-          },
-        );
+        if (allCloudSynced(archiveSynced, inboxSynced)) {
+          track("thought_archived", { text_length: it.text.length });
+          showUndoActionToast(
+            t("보관함에 넣었어요", "Saved to vault"),
+            async () => {
+              track("undo_used");
+              await archive.remove(created.id);
+              await inbox.add({
+                text: payload.text,
+                images: payload.images,
+                brain_mirror: payload.brain_mirror,
+              });
+            },
+            t("보러 가기", "Take a look"),
+            () => void navigate({ to: "/archive" }),
+            {
+              undoLabel: t("되돌리기", "Undo"),
+              actionAriaLabel: t("보관함 열기", "Open vault"),
+            },
+          );
+        }
+      } catch {
+        toast.error(t("잠깐, 못 옮겼어요. 그대로 있어요", "Didn't move — still here"));
       }
-    } catch {
-      toast.error(t("잠깐, 못 옮겼어요. 그대로 있어요", "Didn't move — still here"));
-    }
     });
   };
 
@@ -761,20 +764,48 @@ function Inbox() {
         if (revival) setInboxRevival(revival);
       }
 
-      const decision = evaluateTimedAutoCommit(created.text, uiLang);
-      if (decision.ok) {
-        if (isFirst) markFirstCaptureDone();
+      const localDecision = evaluateTimedAutoCommit(created.text, uiLang);
+      let draft = localDecision.ok ? localDecision.draft : null;
+      let commitSource = "capture_auto";
+      const shouldTryAi =
+        !localDecision.ok &&
+        shouldTryAiScheduleFallback(created.text, localDecision.reason);
+
+      if (shouldTryAi) {
         setAutoCommitInFlightIds((prev) => new Set(prev).add(created.id));
+        const fallback = await tryAiScheduleFallback(created.text, uiLang);
+        if (fallback.status === "safe") {
+          draft = fallback.draft;
+          commitSource = "capture_ai_normalized";
+          track("nl_ai_schedule_accepted", {
+            text_length: created.text.length,
+          });
+        } else if (fallback.status === "not_safe") {
+          track("nl_ai_schedule_rejected", {
+            reason: fallback.reason,
+            text_length: created.text.length,
+          });
+        } else if (fallback.status === "unavailable") {
+          track("nl_ai_schedule_unavailable", {
+            text_length: created.text.length,
+          });
+        }
+      }
+
+      if (draft) {
+        if (isFirst) markFirstCaptureDone();
+        if (!shouldTryAi) {
+          setAutoCommitInFlightIds((prev) => new Set(prev).add(created.id));
+        }
         try {
           const committed = await withNlConfirmGuard(created.id, async () => {
-            const draft = decision.draft;
             await commitInboxSchedule(
               created,
               draft.text,
               draft.start,
               draft.end,
               draft.options,
-              "capture_auto",
+              commitSource,
               { showSavedFeedback: true },
             );
             trackNlScheduleCreated();
@@ -796,14 +827,22 @@ function Inbox() {
           });
         }
       } else {
+        if (shouldTryAi) {
+          setAutoCommitInFlightIds((prev) => {
+            const next = new Set(prev);
+            next.delete(created.id);
+            return next;
+          });
+        }
         if (isFirst) markFirstCaptureDone();
         // Undated / non-timed: durable raw only — no taxonomy confirmation.
         // Ambiguous timed stays in inbox for InlinePromise (AM/PM, multi-clock, …).
         if (
-          decision.reason === "no_clock" ||
-          decision.reason === "date_only" ||
-          decision.reason === "quiet" ||
-          decision.reason === "empty_title"
+          !localDecision.ok &&
+          (localDecision.reason === "no_clock" ||
+            localDecision.reason === "date_only" ||
+            localDecision.reason === "quiet" ||
+            localDecision.reason === "empty_title")
         ) {
           toast.message(t("남겨뒀어요", "Left it here"), { duration: 2000 });
         }
