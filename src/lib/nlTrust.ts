@@ -2,7 +2,8 @@ export type ScheduleTrustIssue =
   | "invalid_datetime"
   | "broad_daypart"
   | "daypart_conflict"
-  | "day_boundary";
+  | "day_boundary"
+  | "unresolved_date_language";
 
 const KO_NUMBER: Record<string, number> = {
   한: 1,
@@ -218,6 +219,17 @@ function hasBroadDaypartWithoutClock(text: string): boolean {
   return !hasNumericClock;
 }
 
+/**
+ * Common date shorthand that the legacy date parser must never silently ignore.
+ * If one appears, a clock alone is not permission to reinterpret the sentence
+ * as a schedule for today.
+ */
+function hasUnresolvedDateLanguage(text: string): boolean {
+  return /(?:담\s*주|다담\s*주|다다음\s*주|차주|금주|낼(?:모레)?|내일모래|[월화수목금토일]욜|이달|담달|월말|월초|주초|주중|주후반)/i.test(
+    text,
+  );
+}
+
 /** Safety issue that must prevent silent schedule creation. */
 export function scheduleTrustIssue(
   text: string,
@@ -233,5 +245,6 @@ export function scheduleTrustIssue(
   if (contextualIssue) return contextualIssue;
 
   if (hasBroadDaypartWithoutClock(normalized)) return "broad_daypart";
+  if (hasUnresolvedDateLanguage(trimmed)) return "unresolved_date_language";
   return null;
 }
