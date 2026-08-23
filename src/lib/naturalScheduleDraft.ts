@@ -9,7 +9,7 @@ import type { InboxItem } from "@/lib/store";
 import { thoughtFirstLine } from "@/lib/brainMirror";
 
 const EXPLICIT_TIME_RE =
-  /(?:오전|오후|아침|점심|저녁|밤|새벽|퇴근\s*(?:후|하고|하고서|뒤)|(?:\d+|한|두|세|네)\s*(?:분|시간)\s*(?:뒤|후)|반\s*시간\s*(?:뒤|후)|\d{1,2}\s*시(?:\s*\d{1,2}\s*분)?|\b(?:morning|afternoon|evening|tonight|noon|midnight|after\s+work)\b|\bin\s+(?:\d+|an?|one|two|three|four|half(?:\s+an?)?)\s*(?:minutes?|mins?|hours?|hrs?)\b|\b(?:[01]?\d|2[0-3]):[0-5]\d\b|\b\d{1,2}(?::\d{2})?\s*(?:am|pm)\b)/i;
+  /(?:오전|오후|아침|점심|저녁|밤|새벽|퇴근\s*(?:후|하고|하고서|뒤)|(?:\d+|한|두|세|네)\s*(?:분|시간)\s*(?:뒤|후)|반\s*시간\s*(?:뒤|후)|\d{1,2}\s*시(?:\s*반|(?:\s*\d{1,2}\s*분))?|\b(?:morning|afternoon|evening|tonight|noon|midnight|after\s+work)\b|\bin\s+(?:\d+|an?|one|two|three|four|half(?:\s+an?)?)\s*(?:minutes?|mins?|hours?|hrs?)\b|\b(?:[01]?\d|2[0-3]):[0-5]\d\b|\b\d{1,2}(?::\d{2})?\s*(?:am|pm)\b)/i;
 
 const REPEAT_INTENT_RE =
   /(?:매일|매일마다|매주|매주마다|매월|매달|매년|해마다|every\s+(?:day|week|month|year)|daily|weekly|monthly|yearly|annually)/i;
@@ -235,7 +235,7 @@ function cleanScheduleTitle(text: string): string {
     .replace(/(?:오늘|내일|모레|글피|주말)/g, " ")
     .replace(/\b(?:today|tomorrow|weekend)\b/gi, " ")
     .replace(/\d{1,2}\s*월\s*\d{1,2}\s*일/g, " ")
-    .replace(/(?:오전|오후)?\s*\d{1,2}\s*시(?:\s*\d{1,2}\s*분)?/g, " ")
+    .replace(/(?:오전|오후)?\s*\d{1,2}\s*시(?:\s*반|(?:\s*\d{1,2}\s*분))?/g, " ")
     .replace(/\b\d{1,2}(?::\d{2})?\s*(?:am|pm)\b/gi, " ")
     .replace(/퇴근\s*(?:후|하고|하고서|뒤)/g, " ")
     .replace(/\bafter\s+work\b/gi, " ")
@@ -243,6 +243,8 @@ function cleanScheduleTitle(text: string): string {
     // ("Dentist tomorrow at 3pm" -> "Dentist at"). Only strip a dangling
     // terminal connector so semantic phrases such as "Meet at the clinic" stay.
     .replace(/\b(?:at|on|by)\b(?=\s*(?:[,.!?]|$))/gi, " ")
+    .replace(/^(?:에|에서|까지|부터)\s+/g, "")
+    .replace(/\s+(?:에|에서|까지|부터)$/g, "")
     .replace(/[,.!?]\s*$/g, "")
     .replace(/\s+/g, " ")
     .trim();
@@ -322,4 +324,26 @@ export function formatCommitmentReminder(
   if (minutes === 60) return lang === "en" ? "1 hour before" : "1시간 전";
   if (minutes === 24 * 60) return lang === "en" ? "1 day before" : "전날";
   return lang === "en" ? `${minutes} min before` : `${minutes}분 전`;
+}
+
+/** Compact when-label for saved-result feedback: `내일 · 오후 3:30`. */
+export function formatCaptureWhenLabel(
+  start: Date,
+  allDay: boolean,
+  lang: "ko" | "en",
+  now = new Date(),
+): string {
+  const startDay = startOfDay(start).getTime();
+  const today = startOfDay(now).getTime();
+  const dayMs = 24 * 60 * 60 * 1000;
+  let dayLabel: string;
+  if (startDay === today) {
+    dayLabel = lang === "en" ? "Today" : "오늘";
+  } else if (startDay === today + dayMs) {
+    dayLabel = lang === "en" ? "Tomorrow" : "내일";
+  } else {
+    dayLabel = formatCommitmentDate(start, lang);
+  }
+  const timeLabel = formatCommitmentTime(start, allDay, lang);
+  return `${dayLabel} · ${timeLabel}`;
 }

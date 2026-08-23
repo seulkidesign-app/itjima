@@ -1,4 +1,4 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import {
   useEffect,
   useMemo,
@@ -23,11 +23,20 @@ import {
   Archive,
 } from "lucide-react";
 import { animate, motion, AnimatePresence, LayoutGroup } from "framer-motion";
-import { useSchedules, useArchive, useInbox, useUserId, type ScheduleItem } from "@/lib/store";
+import {
+  useSchedules,
+  useArchive,
+  useInbox,
+  useUserId,
+  type InboxItem,
+  type ScheduleItem,
+} from "@/lib/store";
 import {
   ScheduleCompactRow,
   LaterInboxRow,
 } from "@/components/ScheduleCompactRow";
+import { FocusScheduleSheet } from "@/components/FocusScheduleSheet";
+import type { ScheduleConfirmOptions } from "@/components/ScheduleChoiceFlow";
 import { ScheduleSheet } from "@/components/ScheduleSheet";
 import { ReminderSheet } from "@/components/ReminderSheet";
 import { ScheduleAlarmSheet } from "@/components/ScheduleAlarmSheet";
@@ -41,7 +50,6 @@ import {
   scheduleRangeInMonth,
   useCalendarScrollParent,
 } from "@/components/CalendarDragLayer";
-import { EmptyState } from "@/components/EmptyState";
 import { ScheduleListSkeleton } from "@/components/Skeleton";
 import { SyncIndicator } from "@/components/SyncIndicator";
 import { partitionTodaySchedules } from "@/lib/todaySuggestions";
@@ -74,7 +82,11 @@ import {
   isMissed,
   classifySchedule,
 } from "@/lib/scheduleGroups";
-import { scheduleDisplayTitle, rawPreview } from "@/lib/thoughtProvenance";
+import {
+  scheduleDisplayTitle,
+  rawPreview,
+} from "@/lib/thoughtProvenance";
+import { convertLaterInboxToSchedule } from "@/lib/convertLaterInboxToSchedule";
 import { SPRING_SNAP_BACK, SHEET_BACKDROP_CLASS, SHEET_BACKDROP_FADE } from "@/lib/motion";
 import { useListStagger } from "@/lib/listStagger";
 import { toast } from "sonner";
@@ -188,6 +200,10 @@ function Schedule() {
   }>({
     open: false,
   });
+  const [focusScheduleSheet, setFocusScheduleSheet] = useState<{
+    open: boolean;
+    item?: InboxItem;
+  }>({ open: false });
   const [reminderSheet, setReminderSheet] = useState<ScheduleItem | null>(null);
   const [alarmSheet, setAlarmSheet] = useState<ScheduleItem | null>(null);
   const [timerSheet, setTimerSheet] = useState<ScheduleItem | null>(null);
@@ -200,6 +216,17 @@ function Schedule() {
   const [iosInstallHintOpen, setIosInstallHintOpen] = useState(false);
   useTimerTick();
   const { pins, toggle: togglePin } = usePins();
+
+  // Capture saved-feedback 「수정」 → open existing schedule editor (no create).
+  useEffect(() => {
+    const id = sessionStorage.getItem("itjima.openScheduleEdit");
+    if (!id) return;
+    const target = items.find((s) => s.id === id);
+    if (!target) return;
+    sessionStorage.removeItem("itjima.openScheduleEdit");
+    setTab("list");
+    setSheet({ open: true, edit: target });
+  }, [items]);
 
   const activeItems = useMemo(
     () => items.filter((s) => s.status !== "done"),
@@ -319,8 +346,8 @@ function Schedule() {
     } else {
       toast.success(
         isEdit
-          ? t("다듬었어요", "Refined")
-          : t("그때 다시 떠올릴게요", "I'll remember this for then"),
+          ? t("수정했어요", "Updated")
+          : t("일정에 추가했어요", "Added to schedule"),
         scheduleToast,
       );
     }
@@ -583,6 +610,90 @@ function Schedule() {
     setSheet({ open: true, draftStart: date });
   };
 
+  const openLaterInboxSchedule = (it: InboxItem) => {
+    setFocusScheduleSheet({ open: true, item: it });
+  };
+
+  const saveLaterInboxSchedule = async (
+    text: string,
+    start: Date,
+    end: Date,
+    options: ScheduleConfirmOptions,
+  ) => {
+    const it = focusScheduleSheet.item;
+    if (!it) return;
+
+    const result = await convertLaterInboxToSchedule(
+      it,
+      {
+        text,
+        start_time: start.toISOString(),
+        end_time: end.toISOString(),
+        alarm: options.reminderMinutes !== null,
+        all_day: options.allDay,
+        start_all_day: options.startAllDay,
+        end_all_day: options.endAllDay,
+        repeat: options.repeat,
+        ...(options.reminderMinutes !== null
+          ? {
+              alarm_at: new Date(
+                start.getTime() - options.reminderMinutes * 60 * 1000,
+              ).toISOString(),
+            }
+          : {}),
+      },
+      {
+        addSchedule: (payload) => add(payload, { confirmCloud: true }),
+        removeSchedule: (id) => remove(id),
+        removeInbox: (id) => inbox.remove(id),
+        restoreInbox: async (item) => {
+          await inbox.add({
+            id: item.id,
+            text: item.text,
+            images: item.images ?? [],
+            created_at: item.created_at,
+            brain_mirror: item.brain_mirror ?? null,
+            decision: item.decision,
+            decided_at: item.decided_at,
+            decision_source: item.decision_source,
+            status: item.status ?? "active",
+          });
+        },
+      },
+    );
+
+    if (result.status === "busy") return;
+
+    if (result.status === "create_failed") {
+      toast.error(
+        t("일정으로 옮기지 못했어요", "Couldn't move this to the schedule"),
+      );
+      return;
+    }
+
+    if (result.status === "remove_failed_rolled_back") {
+      toast.error(
+        t(
+          "저장을 끝까지 마치지 못했어요. 원래 기록으로 돌려뒀어요.",
+          "Couldn't finish saving — restored the original record.",
+        ),
+      );
+      return;
+    }
+
+    setFocusScheduleSheet({ open: false });
+    const whenLabel =
+      lang === "en"
+        ? start.toLocaleDateString("en-US", {
+            month: "long",
+            day: "numeric",
+          })
+        : `${start.getMonth() + 1}월 ${start.getDate()}일`;
+    toast.success(
+      t(`${whenLabel}에 추가했어요`, `Added to schedule for ${whenLabel}`),
+    );
+  };
+
   const markDone = async (s: ScheduleItem) => {
     try {
       const done = await update(s.id, { status: "done" });
@@ -627,8 +738,8 @@ function Schedule() {
           <h1 className="page-title">{t("일정", "Schedule")}</h1>
           <p className="page-eyebrow mt-2.5 max-w-[22rem] leading-relaxed text-ink-soft">
             {t(
-              "오늘과 다가올 일을 한곳에서 볼 수 있어요.",
-              "Today and what's coming — in one place.",
+              "오늘과 다가올 일정을 한곳에서 볼 수 있어요.",
+              "See today and what’s next in one place.",
             )}
           </p>
         </div>
@@ -736,11 +847,8 @@ function Schedule() {
                 </section>
               ))}
               {laterInboxItems.length > 0 && (
-                <section
-                  data-testid="upcoming-section-noDate"
-                  className="rounded-[var(--radius-md)] bg-ink/[0.025] px-1 py-0.5"
-                >
-                  <h2 className="section-title mb-1.5 px-1.5 pt-1">
+                <section data-testid="upcoming-section-noDate">
+                  <h2 className="section-title mb-1.5 px-0.5">
                     {upcomingSectionLabel("noDate", lang)}
                   </h2>
                   <ul className="flex flex-col">
@@ -748,14 +856,7 @@ function Schedule() {
                       <LaterInboxRow
                         key={it.id}
                         text={it.text}
-                        onOpen={() =>
-                          toast.message(
-                            t(
-                              "던지기에서 다시 정리할 수 있어요",
-                              "You can sort this again from Throw",
-                            ),
-                          )
-                        }
+                        onOpen={() => openLaterInboxSchedule(it)}
                       />
                     ))}
                   </ul>
@@ -799,21 +900,6 @@ function Schedule() {
           </motion.div>
         </AnimatePresence>
       </div>
-
-      {tab !== "cal" && (
-        <motion.button type="button"
-          onClick={() => setSheet({ open: true })}
-          whileTap={{ scale: 0.94 }}
-          initial={{ scale: 0, opacity: 0 }}
-          animate={{ scale: 1, opacity: 1 }}
-          transition={{ ...SPRING_SNAP_BACK, delay: 0.15 }}
-          className="absolute right-5 z-30 flex h-11 w-11 items-center justify-center rounded-full bg-primary/95 text-ink shadow-card touch-press"
-          style={{ bottom: "calc(env(safe-area-inset-bottom) + 1.5rem)" }}
-          aria-label={t("할 일 추가", "Add task")}
-        >
-          <Plus size={20} strokeWidth={2.25} />
-        </motion.button>
-      )}
 
       {reminderSheet && (
         <ReminderSheet
@@ -868,6 +954,15 @@ function Schedule() {
         }}
       />
 
+      <FocusScheduleSheet
+        item={focusScheduleSheet.item ?? null}
+        open={focusScheduleSheet.open}
+        onClose={() => setFocusScheduleSheet({ open: false })}
+        onConfirm={(text, start, end, options) => {
+          void saveLaterInboxSchedule(text, start, end, options);
+        }}
+      />
+
       <ScheduleSheet
         open={sheet.open}
         initialText={sheet.edit?.text}
@@ -892,7 +987,7 @@ function Schedule() {
         initialReminderKey={
           sheet.edit ? inferReminderKeyFromSchedule(sheet.edit) : undefined
         }
-        saveLabel={sheet.edit ? t("다듬기", "Refine") : undefined}
+        saveLabel={sheet.edit ? t("저장", "Save") : undefined}
         onClose={() => setSheet({ open: false })}
         onSave={async (text, start, end, opts) => {
           const reminderMin =
@@ -1124,8 +1219,8 @@ function ScheduleTodayPanel({
         flowedItems.length === 0 && (
           <p className="px-1 py-5 text-center text-secondary leading-relaxed">
             {t(
-              "오늘 할 일이 생기면 여기에 모여요.",
-              "When something needs your day, it gathers here.",
+              "오늘 일정이 없어요",
+              "Nothing on today yet.",
             )}
           </p>
         )
@@ -1527,7 +1622,7 @@ function CalendarGrid({
                 className="flex w-full items-center justify-center gap-2 rounded-[16px] bg-primary/20 py-3 text-[14px] font-bold text-ink touch-press"
               >
                 <Plus size={16} strokeWidth={2.5} />
-                {t("그때 남기기", "Remember for then")}
+                {t("이 날짜에 추가", "Add on this day")}
               </motion.button>
 
               <div className="rounded-[var(--radius-md)] border border-ink/[0.05] bg-ink/[0.015] px-1 py-1">
@@ -1676,7 +1771,7 @@ function ScheduleEventMenu({
   if (!item) return null;
 
   const actions = [
-    { key: "edit", label: t("다듬기", "Refine"), icon: Pencil, onClick: onEdit },
+    { key: "edit", label: t("수정", "Edit"), icon: Pencil, onClick: onEdit },
     {
       key: "alarm",
       label: t("빠른 알림", "Quick alarm"),
@@ -1867,13 +1962,29 @@ function DayEventChip({
 }
 
 function Empty() {
+  const t = useT();
   return (
-    <EmptyState
-      emoji="🌙"
-      titleKo="아직 그때가 없어요"
-      titleEn="Nothing to bring back yet"
-      hintKo="그때가 되면, 여기에 모여요."
-      hintEn="When the moment comes, it'll gather here."
-    />
+    <div
+      className="flex min-h-[36dvh] flex-col items-center justify-center px-8 text-center"
+      role="status"
+      data-testid="schedule-empty"
+    >
+      <p className="text-[19px] font-semibold tracking-[-0.025em] text-ink">
+        {t("아직 일정이 없어요", "No schedules yet")}
+      </p>
+      <p className="mt-2 max-w-[280px] text-[14px] leading-relaxed text-ink-soft">
+        {t(
+          "말하듯 남기면 잊지마가 시간을 정리해드려요.",
+          "Say it like you mean it — Itjima will sort the time.",
+        )}
+      </p>
+      <Link
+        to="/app"
+        data-testid="schedule-empty-capture"
+        className="touch-press mt-5 inline-flex min-h-11 items-center justify-center rounded-full bg-primary px-5 text-[14px] font-bold text-ink shadow-card"
+      >
+        {t("남기러 가기", "Go capture")}
+      </Link>
+    </div>
   );
 }

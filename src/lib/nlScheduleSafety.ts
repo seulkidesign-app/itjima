@@ -2,7 +2,8 @@ export type ScheduleConfirmationReason =
   | "past_today"
   | "weekend_day"
   | "after_work_time"
-  | "assumed_meridiem";
+  | "assumed_meridiem"
+  | "multiple_clocks";
 
 export type ScheduleConfirmationChoiceId =
   | "tomorrow_same_time"
@@ -23,10 +24,12 @@ type MentionedTime = { hour: number; minute: number };
 type BareClock = { hour: number; minute: number | null };
 
 function parseMentionedTime(text: string): MentionedTime | null {
-  const ko = text.match(/(오전|오후)?\s*(\d{1,2})\s*시(?:\s*(\d{1,2})\s*분)?/);
+  const ko = text.match(
+    /(오전|오후)?\s*(\d{1,2})\s*시(?:\s*(반)|(?:\s*(\d{1,2})\s*분))?/,
+  );
   if (ko) {
     let hour = Number(ko[2]);
-    const minute = ko[3] ? Number(ko[3]) : 0;
+    const minute = ko[3] === "반" ? 30 : ko[4] ? Number(ko[4]) : 0;
     if (ko[1] === "오후" && hour < 12) hour += 12;
     else if (ko[1] === "오전" && hour === 12) hour = 0;
     if (hour >= 0 && hour <= 23 && minute >= 0 && minute <= 59) {
@@ -50,12 +53,17 @@ function parseMentionedTime(text: string): MentionedTime | null {
 }
 
 function extractBareClock(text: string): BareClock | null {
-  for (const match of text.matchAll(/(\d{1,2})\s*시(?:\s*(\d{1,2})\s*분)?/g)) {
+  for (const match of text.matchAll(
+    /(\d{1,2})\s*시(?:\s*(반)|(?:\s*(\d{1,2})\s*분))?/g,
+  )) {
     const hour = Number(match[1]);
     if (hour < 1 || hour > 6) continue;
     const prefix = text.slice(Math.max(0, (match.index ?? 0) - 4), match.index);
     if (/(오전|오후)\s*$/.test(prefix)) continue;
-    return { hour, minute: match[2] ? Number(match[2]) : null };
+    return {
+      hour,
+      minute: match[2] === "반" ? 30 : match[3] ? Number(match[3]) : null,
+    };
   }
 
   const en = text.match(
@@ -68,6 +76,41 @@ function extractBareClock(text: string): BareClock | null {
 
 function hasBareMeridiemGuess(text: string): boolean {
   return extractBareClock(text) !== null;
+}
+
+export function countDistinctClockMentions(text: string): number {
+  const ko = [
+    ...text.matchAll(
+      /(오전|오후)?\s*(\d{1,2})\s*시(?:\s*(반)|(?:\s*(\d{1,2})\s*분))?/g,
+    ),
+  ];
+  const enAmPm = [
+    ...text.matchAll(/\b(\d{1,2})(?::(\d{2}))?\s*(am|pm)\b/gi),
+  ];
+  // Prefer Korean tokens when present; English am/pm is a separate count.
+  return Math.max(ko.length, enAmPm.length);
+}
+
+/** Rough per-clock lines for multi-clock honesty UI (display only). */
+export function extractClockPlanLines(text: string): string[] {
+  const trimmed = text.trim();
+  const ko = [
+    ...trimmed.matchAll(
+      /(?:(?:오늘|내일|모레)\s*)?(?:오전|오후)?\s*\d{1,2}\s*시(?:\s*반|(?:\s*\d{1,2}\s*분))?\s*[^,，/]*/g,
+    ),
+  ]
+    .map((m) => m[0].replace(/[,，/]+$/, "").trim())
+    .filter(Boolean);
+  if (ko.length >= 2) return ko;
+
+  const en = [
+    ...trimmed.matchAll(
+      /\b(?:today|tomorrow)?\s*(?:at\s+)?\d{1,2}(?::\d{2})?\s*(?:am|pm)?\b[^,;]*/gi,
+    ),
+  ]
+    .map((m) => m[0].trim())
+    .filter(Boolean);
+  return en.length >= 2 ? en : ko.length > 0 ? ko : [trimmed];
 }
 
 function replaceTodayWithTomorrow(text: string): string {
@@ -99,9 +142,18 @@ function replaceAfterWork(text: string, hour: 18 | 19): string {
 function replaceBareMeridiem(text: string, period: "am" | "pm"): string {
   const koPeriod = period === "am" ? "오전" : "오후";
   const koResolved = text.replace(
-    /(^|[\s(])(\d{1,2})\s*시(?:\s*(\d{1,2})\s*분)?/,
-    (_match, prefix: string, hour: string, minute?: string) =>
-      `${prefix}${koPeriod} ${hour}시${minute ? ` ${minute}분` : ""}`,
+    /(^|[\s(])(\d{1,2})\s*시(?:\s*(반)|(?:\s*(\d{1,2})\s*분))?/,
+    (
+      _match,
+      prefix: string,
+      hour: string,
+      half?: string,
+      minute?: string,
+    ) => {
+      const minuteLabel =
+        half === "반" ? " 반" : minute ? ` ${minute}분` : "";
+      return `${prefix}${koPeriod} ${hour}시${minuteLabel}`;
+    },
   );
   if (koResolved !== text) return koResolved;
 
@@ -117,10 +169,18 @@ function clockChoiceLabel(
   period: "am" | "pm",
   lang: "ko" | "en",
 ): string {
-  const minute = clock.minute === null ? "" : `:${String(clock.minute).padStart(2, "0")}`;
+  const minute =
+    clock.minute === null
+      ? ""
+      : `:${String(clock.minute).padStart(2, "0")}`;
   if (lang === "en") return `${clock.hour}${minute} ${period.toUpperCase()}`;
   const koPeriod = period === "am" ? "오전" : "오후";
-  const koMinute = clock.minute === null ? "" : ` ${clock.minute}분`;
+  const koMinute =
+    clock.minute === null
+      ? ""
+      : clock.minute === 30
+        ? " 반"
+        : ` ${clock.minute}분`;
   return `${koPeriod} ${clock.hour}시${koMinute}`;
 }
 
@@ -131,6 +191,11 @@ export function scheduleConfirmationReasons(
   const trimmed = text.trim();
   const reasons: ScheduleConfirmationReason[] = [];
   const bareMeridiem = hasBareMeridiemGuess(trimmed);
+
+  // Two+ distinct clocks cannot become one silent event without a multi-event model.
+  if (countDistinctClockMentions(trimmed) >= 2) {
+    reasons.push("multiple_clocks");
+  }
 
   // Resolve AM/PM before evaluating whether a time has already passed.
   if (bareMeridiem) reasons.push("assumed_meridiem");
@@ -176,6 +241,9 @@ export function scheduleConfirmationChoices(
 ): ScheduleConfirmationChoice[] {
   const reasons = scheduleConfirmationReasons(text, now);
   if (reasons.length !== 1 || reasons[0] !== reason) return [];
+
+  // No one-tap merge of multiple timed plans — open the manual sheet instead.
+  if (reason === "multiple_clocks") return [];
 
   if (reason === "past_today") {
     const resolvedText = replaceTodayWithTomorrow(text);

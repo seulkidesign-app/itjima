@@ -1,9 +1,16 @@
 import { toast } from "sonner";
 
-const toastBtn =
-  "touch-target shrink-0 rounded-full bg-primary px-4 text-xs font-bold text-ink";
+const toastSurface =
+  "flex items-center gap-3 rounded-[20px] border border-ink/10 bg-white/96 px-4 py-3.5 text-ink shadow-float backdrop-blur-sm";
 
-/** Shared 5s undo snackbar — reversible actions only. */
+/** Soft recovery control — never brand-yellow primary. */
+const undoBtn =
+  "touch-press shrink-0 inline-flex min-h-11 items-center justify-center rounded-full border border-ink/12 bg-ink/[0.04] px-3.5 text-[13px] font-semibold text-ink";
+
+const secondaryBtn =
+  "touch-press shrink-0 inline-flex min-h-11 items-center justify-center rounded-full px-3 text-[13px] font-semibold text-ink-soft underline-offset-2 hover:underline";
+
+/** Shared undo snackbar — reversible recovery, not a primary CTA. */
 export function showUndoToast(
   message: string,
   onUndo: () => void | Promise<void>,
@@ -13,12 +20,10 @@ export function showUndoToast(
 
   toast.custom(
     (id) => (
-      <div
-        role="status"
-        aria-live="polite"
-        className="flex items-center gap-3 rounded-[22px] bg-ink/95 px-4 py-3.5 text-white shadow-float backdrop-blur-sm"
-      >
-        <div className="min-w-0 flex-1 text-sm">{message}</div>
+      <div role="status" aria-live="polite" className={toastSurface}>
+        <div className="min-w-0 flex-1 text-[14px] font-medium leading-snug">
+          {message}
+        </div>
         <button
           type="button"
           aria-label={undoLabel}
@@ -26,7 +31,7 @@ export function showUndoToast(
             void onUndo();
             toast.dismiss(id);
           }}
-          className={toastBtn}
+          className={undoBtn}
         >
           {undoLabel}
         </button>
@@ -45,12 +50,10 @@ export function showActionToast(
   const { durationMs = 5000, actionAriaLabel } = options;
   toast.custom(
     (id) => (
-      <div
-        role="status"
-        aria-live="polite"
-        className="flex items-center gap-3 rounded-[22px] bg-ink/95 px-4 py-3.5 text-white shadow-float backdrop-blur-sm"
-      >
-        <div className="min-w-0 flex-1 text-sm">{message}</div>
+      <div role="status" aria-live="polite" className={toastSurface}>
+        <div className="min-w-0 flex-1 text-[14px] font-medium leading-snug">
+          {message}
+        </div>
         <button
           type="button"
           aria-label={actionAriaLabel ?? actionLabel}
@@ -58,7 +61,7 @@ export function showActionToast(
             onAction();
             toast.dismiss(id);
           }}
-          className={toastBtn}
+          className={undoBtn}
         >
           {actionLabel}
         </button>
@@ -91,9 +94,11 @@ export function showUndoActionToast(
       <div
         role="status"
         aria-live="polite"
-        className="flex items-center gap-2 rounded-[24px] bg-ink px-4 py-3 text-white shadow-float"
+        className={`${toastSurface} gap-2`}
       >
-        <div className="min-w-0 flex-1 text-sm">{message}</div>
+        <div className="min-w-0 flex-1 text-[14px] font-medium leading-snug">
+          {message}
+        </div>
         <button
           type="button"
           aria-label={actionAriaLabel ?? actionLabel}
@@ -101,7 +106,7 @@ export function showUndoActionToast(
             onAction();
             toast.dismiss(id);
           }}
-          className={toastBtn}
+          className={secondaryBtn}
         >
           {actionLabel}
         </button>
@@ -112,7 +117,7 @@ export function showUndoActionToast(
             void onUndo();
             toast.dismiss(id);
           }}
-          className={`${toastBtn} bg-white/15 text-white`}
+          className={undoBtn}
         >
           {undoLabel}
         </button>

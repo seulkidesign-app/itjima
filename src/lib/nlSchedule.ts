@@ -141,7 +141,7 @@ function isTimeOnlyPhrase(text: string): boolean {
   const trimmed = text.trim();
   if (!TIME_RE.test(trimmed) || hasDateAnchor(trimmed)) return false;
   const stripped = trimmed
-    .replace(/(?:오전|오후)?\s*\d{1,2}\s*시(?:\s*\d{1,2}\s*분)?/g, "")
+    .replace(/(?:오전|오후)?\s*\d{1,2}\s*시(?:\s*반|(?:\s*\d{1,2}\s*분))?/g, "")
     .trim();
   return stripped.length <= 1;
 }

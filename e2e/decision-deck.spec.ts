@@ -37,7 +37,11 @@ async function openDeck(page: Page) {
   await dismissInlinePromise(page);
   await closeDecisionDeckIfOpen(page);
   const dialog = deck.getByRole("dialog", { name: "One by one" });
-  await deck.getByTestId("decision-launcher").click();
+  const more = deck.getByTestId("left-item-more").last();
+  await more.click();
+  await page.getByTestId("inbox-context-menu")
+    .getByRole("menuitem", { name: "Sort one by one", exact: true })
+    .click({ force: true });
   await dialog.waitFor({ state: "visible" });
   await waitForDeckReady(page);
 }

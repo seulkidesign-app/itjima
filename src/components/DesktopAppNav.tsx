@@ -24,21 +24,18 @@ export function DesktopAppNav() {
       label: t("남기기", "Capture"),
       ariaLabel: t("남기기", "Capture"),
       description: t(
-        "말하듯 일정과 할 일을 입력",
+        "말하듯 일정을 입력",
         "Capture plans in natural language",
       ),
       Icon: MessageSquareText,
     },
     {
       to: "/schedule" as const,
-      label: t("할 일·일정", "Tasks & schedule"),
-      ariaLabel: t(
-        "할 일·일정",
-        "Schedule — tasks and undated to-dos",
-      ),
+      label: t("일정", "Schedule"),
+      ariaLabel: t("일정", "Schedule"),
       description: t(
-        "날짜 없는 할 일과 예정된 일정",
-        "Review tasks and scheduled plans",
+        "오늘과 다가올 일정",
+        "Review today’s and upcoming plans",
       ),
       Icon: CalendarDays,
     },

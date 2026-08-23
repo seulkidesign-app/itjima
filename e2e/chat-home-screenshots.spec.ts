@@ -34,7 +34,12 @@ test.describe("Chat home mobile screenshots", () => {
       await frame
         .getByRole("button", { name: /^(남기기|던지기)$/, exact: false })
         .click();
-      await frame.getByTestId("chat-turn").last().waitFor({
+      await frame
+        .locator(
+          '[data-testid="chat-turn"], [data-testid="left-item-row"], [data-testid="saved-schedule-feedback"], [data-testid="inline-promise"]',
+        )
+        .last()
+        .waitFor({
         state: "visible",
       });
       await page.waitForTimeout(350);

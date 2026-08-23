@@ -84,9 +84,10 @@ describe("process-reminders timezone formatting", () => {
       resolve(process.cwd(), "supabase/functions/process-reminders/index.ts"),
       "utf8",
     );
-    expect(cron).toContain("formatTimeInZone");
+    expect(cron).toContain("buildReminderPayload");
     expect(cron).toContain("reminder.timezone");
-    expect(cron).toContain("Asia/Seoul");
+    expect(cron).toContain("timeZone");
+    expect(cron).toContain("reminderBody");
     expect(cron).not.toContain("date.getHours()");
   });
 });
@@ -194,8 +195,8 @@ describe("buildSaveSuccessCopy", () => {
       "ko",
       { notificationReady: true },
     );
-    expect(copy.headline).toBe("알림 준비 완료");
-    expect(copy.detail).toMatch(/알려드릴게요\./);
+    expect(copy.headline.startsWith("🔔 알림 켜짐 · ")).toBe(true);
+    expect(copy.detail).toBe("“회의” 일정 전에 알려드릴게요.");
   });
 });
 

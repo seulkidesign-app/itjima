@@ -107,12 +107,12 @@ export function upcomingSectionLabel(
   const ko: Record<UpcomingSectionKey, string> = {
     today: "오늘",
     after: "이후",
-    noDate: "날짜 없음",
+    noDate: "남긴 것",
   };
   const en: Record<UpcomingSectionKey, string> = {
     today: "Today",
     after: "Later",
-    noDate: "No date",
+    noDate: "Left behind",
   };
   return lang === "en" ? en[key] : ko[key];
 }

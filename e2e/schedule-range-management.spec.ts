@@ -1,6 +1,7 @@
 import { expect, test, type Page } from "@playwright/test";
 import {
   GUEST_SCHEDULE_KEY,
+  openCalendarQuickAdd,
   phone,
   resetAppState,
 } from "./helpers";
@@ -52,10 +53,7 @@ test("schedule editor supports exact minutes, quick ends, and a real date range"
   await page.setViewportSize({ width: 390, height: 844 });
   await resetAppState(page);
 
-  await phone(page).getByRole("link", { name: /^Schedule/ }).click();
-  await phone(page)
-    .getByRole("button", { name: "Add task", exact: true })
-    .click();
+  await openCalendarQuickAdd(page);
 
   const sheet = page.getByRole("dialog").last();
   await sheet.getByRole("button", { name: "Today" }).click();
@@ -165,10 +163,7 @@ test("all-day ranges include both the start and end date", async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await resetAppState(page);
 
-  await phone(page).getByRole("link", { name: /^Schedule/ }).click();
-  await phone(page)
-    .getByRole("button", { name: "Add task", exact: true })
-    .click();
+  await openCalendarQuickAdd(page);
 
   const sheet = page.getByRole("dialog").last();
   await sheet.getByRole("button", { name: "Today" }).click();

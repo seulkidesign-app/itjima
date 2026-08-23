@@ -238,6 +238,84 @@ export function formatUpcomingScheduleTime(
   });
 }
 
+function sameCalendarDay(a: Date, b: Date): boolean {
+  return (
+    a.getFullYear() === b.getFullYear() &&
+    a.getMonth() === b.getMonth() &&
+    a.getDate() === b.getDate()
+  );
+}
+
+function formatClock(target: Date, lang: "ko" | "en"): string {
+  const locale = lang === "en" ? "en-US" : "ko-KR";
+  return target.toLocaleTimeString(locale, {
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+  });
+}
+
+function formatDayQualifier(
+  target: Date,
+  lang: "ko" | "en",
+  now: Date,
+): string {
+  const locale = lang === "en" ? "en-US" : "ko-KR";
+  if (target.toDateString() === now.toDateString()) {
+    return lang === "en" ? "Today" : "오늘";
+  }
+  const tomorrow = new Date(now);
+  tomorrow.setDate(tomorrow.getDate() + 1);
+  if (target.toDateString() === tomorrow.toDateString()) {
+    return lang === "en" ? "Tomorrow" : "내일";
+  }
+  return target.toLocaleDateString(locale, {
+    month: "short",
+    day: "numeric",
+  });
+}
+
+/**
+ * Compact schedule row range label.
+ * Same calendar day never repeats the day token (no "내일–내일").
+ */
+export function formatScheduleRangeLabel(
+  start: Date,
+  end: Date,
+  startAllDay: boolean,
+  endAllDay: boolean,
+  lang: "ko" | "en",
+  now = new Date(),
+): string {
+  const sameDay = sameCalendarDay(start, end);
+
+  if (startAllDay && endAllDay) {
+    if (sameDay) {
+      const day = formatDayQualifier(start, lang, now);
+      const allDay = lang === "ko" ? "종일" : "All day";
+      if (start.toDateString() === now.toDateString()) return allDay;
+      return `${day} · ${allDay}`;
+    }
+    return lang === "ko"
+      ? `${formatDayQualifier(start, lang, now)} → ${formatDayQualifier(end, lang, now)} · 종일`
+      : `${formatDayQualifier(start, lang, now)} → ${formatDayQualifier(end, lang, now)} · All day`;
+  }
+
+  const startClock = formatClock(start, lang);
+  const endClock = formatClock(end, lang);
+  const spanned =
+    end.getTime() > start.getTime() + 30 * 60 * 1000
+      ? `${startClock}–${endClock}`
+      : startClock;
+
+  if (sameDay) {
+    if (start.toDateString() === now.toDateString()) return spanned;
+    return `${formatDayQualifier(start, lang, now)} · ${spanned}`;
+  }
+
+  return `${formatDayQualifier(start, lang, now)} ${startClock} → ${formatDayQualifier(end, lang, now)} ${endClock}`;
+}
+
 /** Loose schedule time — no second/minute countdown strings. */
 export function formatScheduleTimeLoose(
   target: Date,

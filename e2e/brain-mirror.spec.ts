@@ -29,7 +29,7 @@ test.describe("Brain Mirror API failures", () => {
     ).toHaveCount(0);
   });
 
-  test("still offers schedule routing when API fails but date is detected", async ({
+  test("still saves dated text when API fails without forcing a second confirm", async ({
     page,
   }) => {
     const text =
@@ -39,11 +39,8 @@ test.describe("Brain Mirror API failures", () => {
     await input.fill(text);
     await frame.locator('form.composer-hero button[type="submit"]').click();
     await frame.getByText(text, { exact: true }).first().waitFor({ state: "visible" });
-    await expect(frame.getByTestId("inline-promise")).toHaveCount(1);
-    await expect(frame.getByTestId("inline-promise").last()).toHaveAttribute(
-      "data-intent",
-      "schedule_exact",
-    );
+    // Date-only / no explicit clock → left item; no permission card.
+    await expect(frame.getByTestId("commitment-confirm")).toHaveCount(0);
     await expect(
       page.getByText("Couldn't load a reflection right now"),
     ).toHaveCount(0);

@@ -137,7 +137,7 @@ for (const viewport of viewports) {
     await expect(dialog).toBeHidden();
 
     await page
-      .getByRole("link", { name: /^(Tasks & schedule|Schedule)/ })
+      .getByRole("link", { name: /^(Schedule|일정)$/ })
       .click();
     await expect(
       page.getByRole("heading", { name: "Schedule", exact: true }),

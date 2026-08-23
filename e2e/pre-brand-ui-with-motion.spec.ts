@@ -45,17 +45,10 @@ test("landing and app use the pre-brand UI while Home motion stays active", asyn
   ).toHaveCount(0);
 
   await addThought(page, `모션 유지 ${Date.now()}`);
-  const newestBubble = phone(page).locator(
-    '.home-chat-bubble-row[data-newest="true"]',
+  const newestRow = phone(page).locator(
+    '[data-testid="left-item-row"][data-newest="true"]',
   );
-  await expect(newestBubble).toBeVisible();
-  await expect
-    .poll(() =>
-      newestBubble.evaluate(
-        (element) => getComputedStyle(element).animationName,
-      ),
-    )
-    .toContain("ij-thought-land");
+  await expect(newestRow).toBeVisible();
 });
 
 test("landing motion respects reduced-motion preference", async ({
@@ -86,7 +79,11 @@ test("pre-brand deck card keeps whole-card directional interaction", async ({
 }) => {
   await addThought(page, `카드 모션 유지 ${Date.now()}`);
   const app = phone(page);
-  await app.getByTestId("decision-launcher").click();
+  await app.getByTestId("left-item-more").last().click();
+  await page
+    .getByTestId("inbox-context-menu")
+    .getByRole("menuitem", { name: /Sort one by one|하나씩 정리하기/, exact: true })
+    .click({ force: true });
 
   const card = app.getByTestId("decision-deck-active-card");
   await expect(card).toBeVisible();

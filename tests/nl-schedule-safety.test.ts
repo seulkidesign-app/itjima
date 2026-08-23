@@ -125,12 +125,32 @@ describe("inline ambiguity resolution", () => {
       scheduleConfirmationChoices(text, "weekend_day", "ko", now),
     ).toEqual([]);
   });
+
+  // V02-07: multi-clock inputs must not silently become one merged event
+  it("flags multiple distinct clock times instead of merging them", () => {
+    const text = "오늘 3시 A, 6시 B";
+    expect(scheduleConfirmationReasons(text, now)).toContain("multiple_clocks");
+    expect(
+      scheduleConfirmationChoices(text, "multiple_clocks", "ko", now),
+    ).toEqual([]);
+  });
+
+  it("does not flag a single 시 반 phrase as multiple clocks", () => {
+    expect(
+      scheduleConfirmationReasons("내일 3시 반 치과", now),
+    ).not.toContain("multiple_clocks");
+  });
 });
 
 describe("focused inline understanding", () => {
-  it("shows schedules and tasks", () => {
+  it("shows schedules that still need a question", () => {
     expect(shouldShowInlinePromise("내일 오후 3시에 치과", "ko")).toBe(true);
-    expect(shouldShowInlinePromise("엄마한테 전화하기", "ko")).toBe(true);
+    expect(shouldShowInlinePromise("내일 3시 반 치과", "ko")).toBe(true);
+  });
+
+  it("keeps undated notes quiet (no task taxonomy card)", () => {
+    expect(shouldShowInlinePromise("엄마한테 전화하기", "ko")).toBe(false);
+    expect(shouldShowInlinePromise("에어팟 소독", "ko")).toBe(false);
   });
 
   it("keeps archive and plain-note interpretations quiet", () => {

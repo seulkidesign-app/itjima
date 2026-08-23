@@ -141,4 +141,20 @@ describe("natural schedule commitment parsing", () => {
     expect(shouldShowInlinePromise("매주 월요일 오전 9시 팀 회의", "ko")).toBe(false);
     expect(shouldShowInlinePromise("every month review bills", "en")).toBe(false);
   });
+
+  // V02-07 beta regressions
+  it("parses 내일 3시 반 as 15:30 and strips time from the title", () => {
+    const draft = buildNaturalScheduleDraft(thought("내일 3시 반 치과"));
+    expect(draft.start.getHours()).toBe(15);
+    expect(draft.start.getMinutes()).toBe(30);
+    expect(draft.text).toBe("치과");
+    expect(draft.options.allDay).toBe(false);
+  });
+
+  it("parses 3시 30분 without inventing a wrong hour", () => {
+    const draft = buildNaturalScheduleDraft(thought("내일 3시 30분 치과"));
+    expect(draft.start.getHours()).toBe(15);
+    expect(draft.start.getMinutes()).toBe(30);
+    expect(draft.text).toBe("치과");
+  });
 });

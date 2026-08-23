@@ -103,6 +103,7 @@ export function ScheduleSheet({
           initialRepeat={initialRepeat}
           editMode={!!saveLabel}
           initialReminderKey={initialReminderKey}
+          confirmLabel={saveLabel}
           onConfirm={(start, end, opts) => {
             const validation = validateScheduleRange(start, end, {
               editMode: Boolean(saveLabel),

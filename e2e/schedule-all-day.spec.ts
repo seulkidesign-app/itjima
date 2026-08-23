@@ -39,7 +39,7 @@ function tomorrowParts() {
 }
 
 async function resetForScheduleAllDay(page: Page) {
-  await page.goto("/");
+  await page.goto("/app");
   await page.evaluate(() => {
     for (const k of Object.keys(localStorage)) {
       if (k.startsWith("itjima.")) localStorage.removeItem(k);
@@ -83,13 +83,7 @@ async function openEditTimeStep(
   if (opts?.upcoming) {
     await ui.getByRole("tab", { name: "Upcoming" }).click();
   }
-  await ui
-    .getByRole("button", {
-      name: new RegExp(
-        `^${title.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\.`,
-      ),
-    })
-    .click();
+  await ui.getByRole("button", { name: `Edit ${title}` }).click();
   await page.getByRole("dialog").getByRole("button", { name: /Pick a time|Add time/i }).click();
   await page
     .getByRole("dialog")
@@ -103,12 +97,28 @@ async function openCreateTimeStep(
   opts?: { tomorrow?: boolean; title?: string },
 ) {
   const ui = await app(page);
+  const target = await page.evaluate((wantTomorrow) => {
+    const base = new Date();
+    if (wantTomorrow) base.setDate(base.getDate() + 1);
+    const now = new Date();
+    return {
+      day: base.getDate(),
+      nextMonth:
+        base.getMonth() !== now.getMonth() ||
+        base.getFullYear() !== now.getFullYear(),
+    };
+  }, Boolean(opts?.tomorrow));
+
   await ui.getByRole("link", { name: /^Schedule/ }).click();
-  await ui.getByRole("button", { name: "Add task" }).click();
-  const sheet = page.getByRole("dialog");
-  if (opts?.tomorrow) {
-    await sheet.getByRole("button", { name: "Tomorrow" }).click();
+  await ui.getByRole("tab", { name: "Calendar" }).click();
+  if (target.nextMonth) {
+    await ui.getByRole("button", { name: "Next month" }).click();
   }
+  await page.locator(`[data-cal-day="${target.day}"]`).first().click();
+  await ui.getByRole("button", { name: "Add on this day" }).click();
+
+  const sheet = page.getByRole("dialog");
+  await sheet.waitFor({ state: "visible" });
   await sheet.getByRole("button", { name: /Pick a time|Add time/i }).click();
   if (opts?.title) {
     await sheet.getByPlaceholder("What was this again?").fill(opts.title);
@@ -143,8 +153,14 @@ async function saveEditSheet(page: Page) {
   const sheet = page.getByRole("dialog").first();
   await sheet.getByRole("button", { name: "Set a reminder" }).click();
 
-  const addToSchedule = sheet.getByRole("button", { name: "Add to schedule" });
-  if (await addToSchedule.isVisible().catch(() => false)) {
+  // Accessible name includes subtitle (e.g. "Save No reminder").
+  const save = sheet.getByRole("button", { name: /^(Save|저장)\b/ });
+  const addToSchedule = sheet.getByRole("button", {
+    name: /Add to schedule|일정에 추가/,
+  });
+  if (await save.isVisible().catch(() => false)) {
+    await save.click();
+  } else if (await addToSchedule.isVisible().catch(() => false)) {
     await addToSchedule.click();
   }
 

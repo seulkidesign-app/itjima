@@ -112,10 +112,10 @@ test("mobile calendar gives a clear month overview and selected-day agenda", asy
   await expect(agenda.getByText("Lunch with Mina", { exact: true })).toBeVisible();
   await expect(agenda.getByText("Send portfolio", { exact: true })).toBeVisible();
   await expect(
-    page.getByRole("button", { name: "Remember for then" }),
+    page.getByRole("button", { name: "Add on this day" }),
   ).toBeVisible();
   await expect(
-    page.locator(".calendar-span-bar").filter({ hasText: "Design sprint" }),
+    page.locator(".calendar-span-bar").filter({ hasText: "Design sprint" }).first(),
   ).toBeVisible();
   await expectNoHorizontalOverflow(page);
 });

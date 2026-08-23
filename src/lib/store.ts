@@ -661,7 +661,10 @@ function useLocalList<T extends { id: string; created_at: string }>(
   }, [key, table]);
 
   const add = useCallback(
-    async (partial: Partial<T> & { text: string }) => {
+    async (
+      partial: Partial<T> & { text: string },
+      options?: { confirmCloud?: boolean },
+    ) => {
       const item = {
         id: uid(),
         created_at: new Date().toISOString(),
@@ -683,16 +686,34 @@ function useLocalList<T extends { id: string; created_at: string }>(
         cloudSynced = false;
         const row = { ...(item as Record<string, unknown>) };
         delete row.capture_state;
-        void cloudMutate("insert", table, userId, row).then((ok) => {
-          if (table !== "inbox") return;
-          if (ok) {
-            patchLocal(item.id, { capture_state: "saved" } as Partial<T>);
-            clearWriteError();
-          } else {
-            patchLocal(item.id, { capture_state: "failed" } as Partial<T>);
+
+        // Inbox capture never waits on the network — ignore confirmCloud.
+        if (table === "inbox") {
+          void cloudMutate("insert", table, userId, row).then((ok) => {
+            if (ok) {
+              patchLocal(item.id, { capture_state: "saved" } as Partial<T>);
+              clearWriteError();
+            } else {
+              patchLocal(item.id, { capture_state: "failed" } as Partial<T>);
+              markWriteError();
+            }
+          });
+        } else if (options?.confirmCloud) {
+          // Opt-in only (V02-04 later→schedule). Default add stays local-first.
+          const ok = await cloudMutate("insert", table, userId, row);
+          if (!ok) {
+            writeLS(
+              key,
+              readLS<T>(key, table).filter((row) => row.id !== item.id),
+            );
             markWriteError();
+            return { item, cloudSynced: false };
           }
-        });
+          clearWriteError();
+          cloudSynced = true;
+        } else {
+          void cloudMutate("insert", table, userId, row);
+        }
       }
 
       if (table === "inbox") {

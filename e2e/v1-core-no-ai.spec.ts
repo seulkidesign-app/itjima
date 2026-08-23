@@ -21,7 +21,7 @@ test.describe("v1 release boundary", () => {
       );
     });
 
-    await page.goto("/");
+    await page.goto("/app");
 
     const input = page.locator("#capture-input");
     await expect(input).toBeVisible();
@@ -31,22 +31,13 @@ test.describe("v1 release boundary", () => {
     await expect(submit).toBeEnabled();
     await submit.click();
 
-    const capturedTurn = page.getByTestId("chat-turn").last();
-    await expect(
-      capturedTurn
-        .getByRole("paragraph")
-        .filter({ hasText: /^내일 오후 3시 치과$/ })
-        .first(),
-    ).toBeVisible();
     await page.waitForTimeout(500);
 
     expect(aiRequestCount).toBe(0);
-    const localInterpretation = page.locator('[data-testid="inline-promise"]');
-    await expect(localInterpretation).toHaveCount(1);
-    await expect(localInterpretation).toHaveAttribute(
-      "data-intent",
-      "schedule_exact",
-    );
+    // V02-08C: clear timed capture auto-commits — no AI, no second save CTA.
+    await expect(page.getByTestId("saved-schedule-feedback")).toBeVisible();
+    await expect(page.getByTestId("commitment-confirm")).toHaveCount(0);
+    await expect(page.getByTestId("promise-primary")).toHaveCount(0);
     await expect(page.getByText(/AI가 이해했어요|AI understood/i)).toHaveCount(0);
   });
 });

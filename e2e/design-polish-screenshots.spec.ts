@@ -116,7 +116,11 @@ test.describe("Design polish visual regression", () => {
 
     await phone(page).screenshot({ path: join(OUT_DIR, "01-home.png") });
 
-    await phone(page).getByTestId("decision-launcher").click();
+    await phone(page).getByTestId("left-item-more").last().click();
+    await page
+      .getByTestId("inbox-context-menu")
+      .getByRole("menuitem", { name: "Sort one by one", exact: true })
+      .click({ force: true });
     await phone(page).getByTestId("decision-deck-active-card").waitFor();
     await page.waitForTimeout(300);
     await phone(page).screenshot({ path: join(OUT_DIR, "02-decision-deck.png") });
