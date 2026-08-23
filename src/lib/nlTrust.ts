@@ -1,4 +1,8 @@
-export type ScheduleTrustIssue = "invalid_datetime" | "broad_daypart";
+export type ScheduleTrustIssue =
+  | "invalid_datetime"
+  | "broad_daypart"
+  | "daypart_conflict"
+  | "day_boundary";
 
 const KO_NUMBER: Record<string, number> = {
   한: 1,
@@ -27,6 +31,40 @@ function normalizeKoreanCompoundOffset(text: string): string {
   );
 }
 
+function periodForKoreanDaypart(
+  part: string,
+  hour: number,
+): "오전" | "오후" | null {
+  if (part === "오전") return "오전";
+  if (part === "오후") return "오후";
+
+  if (part === "아침") {
+    return hour >= 1 && hour <= 11 ? "오전" : null;
+  }
+
+  if (part === "새벽") {
+    return hour === 12 || (hour >= 1 && hour <= 5) ? "오전" : null;
+  }
+
+  if (part === "점심") {
+    if (hour === 11) return "오전";
+    if (hour === 12 || (hour >= 1 && hour <= 3)) return "오후";
+    return null;
+  }
+
+  if (part === "저녁") {
+    return hour >= 5 && hour <= 11 ? "오후" : null;
+  }
+
+  if (part === "밤") {
+    // 밤 6~11시는 같은 날짜의 저녁으로 안전하게 해석 가능하다.
+    // 밤 12시/1~5시는 날짜 경계가 섞이므로 자동 변환하지 않는다.
+    return hour >= 6 && hour <= 11 ? "오후" : null;
+  }
+
+  return null;
+}
+
 function normalizeKoreanDaypartClock(text: string): string {
   return text.replace(
     /(오전|오후|아침|점심|저녁|밤|새벽)\s*(\d{1,2})\s*시(?:\s*(반)|(?:\s*(\d{1,2})\s*분))?/g,
@@ -35,15 +73,8 @@ function normalizeKoreanDaypartClock(text: string): string {
       const minute = half === "반" ? 30 : rawMinute ? Number(rawMinute) : 0;
       if (hour < 1 || hour > 12 || minute < 0 || minute > 59) return match;
 
-      let period: "오전" | "오후";
-      if (part === "오전" || part === "아침" || part === "새벽") {
-        period = "오전";
-      } else if (part === "밤") {
-        // 밤 10시/11시는 PM, 밤 12시/1~5시는 자정 이후로 해석한다.
-        period = hour >= 6 && hour <= 11 ? "오후" : "오전";
-      } else {
-        period = "오후";
-      }
+      const period = periodForKoreanDaypart(part, hour);
+      if (!period) return match;
 
       const minuteLabel = half === "반" ? " 반" : rawMinute ? ` ${rawMinute}분` : "";
       return `${period} ${rawHour}시${minuteLabel}`;
@@ -53,8 +84,8 @@ function normalizeKoreanDaypartClock(text: string): string {
 
 /**
  * Normalize phrases that are semantically clear before they enter the older
- * deterministic parser. This keeps the hot path cheap while preventing common
- * Korean daypart/relative-time phrases from being interpreted as the wrong clock.
+ * deterministic parser. Ambiguous day-boundary phrases are deliberately left
+ * untouched so the safety layer can ask instead of guessing.
  */
 export function normalizeScheduleInputForTrust(text: string): string {
   return normalizeKoreanDaypartClock(normalizeKoreanCompoundOffset(text.trim()));
@@ -131,6 +162,23 @@ function hasInvalidClock(text: string): boolean {
   return false;
 }
 
+function contextualDaypartIssue(text: string): ScheduleTrustIssue | null {
+  const match = text.match(
+    /(아침|점심|저녁|밤|새벽)\s*(\d{1,2})\s*시(?:\s*(?:반|\d{1,2}\s*분))?/,
+  );
+  if (!match) return null;
+
+  const part = match[1];
+  const hour = Number(match[2]);
+  if (hour < 1 || hour > 12) return null;
+
+  if (part === "밤" && (hour === 12 || (hour >= 1 && hour <= 5))) {
+    return "day_boundary";
+  }
+
+  return periodForKoreanDaypart(part, hour) ? null : "daypart_conflict";
+}
+
 function hasBroadDaypartWithoutClock(text: string): boolean {
   const hasDaypart =
     /(?:아침|점심|저녁|밤|새벽|\bmorning\b|\bafternoon\b|\bevening\b|\btonight\b|\bnoon\b|\bmidnight\b)/i.test(
@@ -154,6 +202,10 @@ export function scheduleTrustIssue(
   if (hasInvalidDate(trimmed, now) || hasInvalidClock(trimmed)) {
     return "invalid_datetime";
   }
+
+  const contextualIssue = contextualDaypartIssue(trimmed);
+  if (contextualIssue) return contextualIssue;
+
   if (hasBroadDaypartWithoutClock(trimmed)) return "broad_daypart";
   return null;
 }
