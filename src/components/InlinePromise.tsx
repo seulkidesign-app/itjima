@@ -38,6 +38,8 @@ function confirmationCopy(
   lang: "ko" | "en",
 ): string {
   const ko: Record<ScheduleConfirmationReason, string> = {
+    invalid_datetime: "시간이나 날짜를 정확히 이해하지 못했어요.",
+    broad_daypart: "정확한 시간이 없어요. 시간을 조금 더 구체적으로 적어 주세요.",
     past_today: "오늘 시간은 이미 지났어요. 내일 같은 시간으로 바로 옮길 수 있어요.",
     weekend_day: "토요일인지 일요일인지 고르면 바로 일정에 넣어요.",
     after_work_time: "퇴근 시간을 골라 주세요. 선택한 시간으로 바로 추가해요.",
@@ -45,6 +47,8 @@ function confirmationCopy(
     multiple_clocks: "시간이 두 개 있어요",
   };
   const en: Record<ScheduleConfirmationReason, string> = {
+    invalid_datetime: "I couldn't safely understand that date or time.",
+    broad_daypart: "There isn't an exact time yet. Add a more specific time.",
     past_today: "That time has passed today. Move it to the same time tomorrow in one tap.",
     weekend_day: "Choose Saturday or Sunday and add it right away.",
     after_work_time: "Choose your after-work time and add it right away.",
