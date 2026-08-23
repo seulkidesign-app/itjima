@@ -9,8 +9,12 @@ import type { InboxItem } from "@/lib/store";
 import { thoughtFirstLine } from "@/lib/brainMirror";
 import { normalizeScheduleInputForTrust } from "@/lib/nlTrust";
 
+// Exact time means the user supplied a concrete clock or relative offset.
+// Broad dayparts such as "아침/저녁" and contextual phrases such as "퇴근 후"
+// are deliberately excluded: they may guide a later choice, but must never be
+// treated as a precise clock for silent scheduling or reminder creation.
 const EXPLICIT_TIME_RE =
-  /(?:오전|오후|아침|점심|저녁|밤|새벽|퇴근\s*(?:후|하고|하고서|뒤)|(?:\d+|한|두|세|네)\s*(?:분|시간)\s*(?:뒤|후)|반\s*시간\s*(?:뒤|후)|\d{1,2}\s*시(?:\s*반|(?:\s*\d{1,2}\s*분))?|\b(?:morning|afternoon|evening|tonight|noon|midnight|after\s+work)\b|\bin\s+(?:\d+|an?|one|two|three|four|half(?:\s+an?)?)\s*(?:minutes?|mins?|hours?|hrs?)\b|\b(?:[01]?\d|2[0-3]):[0-5]\d\b|\b\d{1,2}(?::\d{2})?\s*(?:am|pm)\b)/i;
+  /(?:(?:\d+|한|두|세|네)\s*(?:분|시간)\s*(?:뒤|후)|반\s*시간\s*(?:뒤|후)|(?:오전|오후)\s*\d{1,2}\s*시(?:\s*반|(?:\s*\d{1,2}\s*분))?|\d{1,2}\s*시(?:\s*반|(?:\s*\d{1,2}\s*분))?|\bin\s+(?:\d+|an?|one|two|three|four|half(?:\s+an?)?)\s*(?:minutes?|mins?|hours?|hrs?)\b|\b(?:[01]?\d|2[0-3]):[0-5]\d\b|\b\d{1,2}(?::\d{2})?\s*(?:am|pm)\b)/i;
 
 const REPEAT_INTENT_RE =
   /(?:매일|매일마다|매주|매주마다|매월|매달|매년|해마다|every\s+(?:day|week|month|year)|daily|weekly|monthly|yearly|annually)/i;
@@ -214,10 +218,10 @@ export function inferNaturalReminderMinutes(
     return { minutes: 0, explicit: true };
   }
 
-  // Itjima is a memory service: a genuinely understood timed commitment gets
-  // an at-start reminder. A fallback schedule with no parsed date must not
-  // silently invent an alarm merely because the UI supplied a default hour.
-  return { minutes: hasSpecificTime ? 0 : null, explicit: false };
+  // A schedule and an alert are separate user intents. Exact time alone must
+  // not silently create a notification; reminders are opt-in from language or UI.
+  void hasSpecificTime;
+  return { minutes: null, explicit: false };
 }
 
 function cleanScheduleTitle(text: string): string {
