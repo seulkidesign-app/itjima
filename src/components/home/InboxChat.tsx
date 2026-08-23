@@ -132,6 +132,31 @@ export function InboxChat({
         <HomeEmptyHero />
       ) : (
         <>
+          {quietItems.length > 0 && (
+            <section
+              className="flex flex-col"
+              data-testid="left-items-section"
+              aria-label={t("남긴 것", "Left behind")}
+            >
+              <h2 className="mb-1 text-[13px] font-semibold tracking-[-0.01em] text-ink-soft">
+                {t("남긴 것", "Left behind")}
+              </h2>
+              <ul className="flex flex-col">
+                {quietItems.map(({ item: it, isNewest }) => (
+                  <LeftItemRow
+                    key={it.id}
+                    item={it}
+                    isNewest={isNewest}
+                    onSetTime={() => onOpenPromiseSchedule(it)}
+                    onOpenMenu={() => onOpenContextMenu(it.id)}
+                  />
+                ))}
+              </ul>
+            </section>
+          )}
+
+          {/* Clarification/recovery belongs after the existing list so a new
+              capture never appears above older content. */}
           {questionSurfaces.map(({ item: it, isNewest, recovery }) => (
             <div
               key={it.id}
@@ -197,29 +222,6 @@ export function InboxChat({
                 )}
             </div>
           ))}
-
-          {quietItems.length > 0 && (
-            <section
-              className="flex flex-col"
-              data-testid="left-items-section"
-              aria-label={t("남긴 것", "Left behind")}
-            >
-              <h2 className="mb-1 text-[13px] font-semibold tracking-[-0.01em] text-ink-soft">
-                {t("남긴 것", "Left behind")}
-              </h2>
-              <ul className="flex flex-col">
-                {quietItems.map(({ item: it, isNewest }) => (
-                  <LeftItemRow
-                    key={it.id}
-                    item={it}
-                    isNewest={isNewest}
-                    onSetTime={() => onOpenPromiseSchedule(it)}
-                    onOpenMenu={() => onOpenContextMenu(it.id)}
-                  />
-                ))}
-              </ul>
-            </section>
-          )}
         </>
       )}
 
