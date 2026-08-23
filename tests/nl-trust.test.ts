@@ -47,6 +47,30 @@ describe("AI trust floor", () => {
     );
   });
 
+  it("understands explicit Korean word-form clocks without guessing", () => {
+    expect(normalizeScheduleInputForTrust("내일 오후 세시 치과")).toBe(
+      "내일 오후 3시 치과",
+    );
+    expect(normalizeScheduleInputForTrust("내일 저녁 일곱 시 영화")).toBe(
+      "내일 오후 7시 영화",
+    );
+    expect(normalizeScheduleInputForTrust("내일 오전 열한시 회의")).toBe(
+      "내일 오전 11시 회의",
+    );
+
+    const decision = evaluateTimedAutoCommit("내일 오후 세시 치과", "ko", now);
+    expect(decision.ok).toBe(true);
+    if (decision.ok) {
+      expect(decision.draft.start.getHours()).toBe(15);
+      expect(decision.draft.text).toBe("치과");
+    }
+  });
+
+  it("treats a daypart without a concrete clock as ambiguous", () => {
+    expect(scheduleTrustIssue("내일 오후에 치과", now)).toBe("broad_daypart");
+    expect(scheduleTrustIssue("내일 저녁에 치과", now)).toBe("broad_daypart");
+  });
+
   it("parses clear contextual daypart clocks to the intended hour", () => {
     expect(buildNaturalScheduleDraft(thought("내일 저녁 7시 치과")).start.getHours()).toBe(19);
     expect(buildNaturalScheduleDraft(thought("내일 밤 10시 약 먹기")).start.getHours()).toBe(22);
