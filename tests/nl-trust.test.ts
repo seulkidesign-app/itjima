@@ -5,6 +5,7 @@ import {
 } from "@/lib/nlTrust";
 import { buildNaturalScheduleDraft } from "@/lib/naturalScheduleDraft";
 import { evaluateTimedAutoCommit } from "@/lib/nlAutoCommit";
+import { scheduleConfirmationReason } from "@/lib/nlScheduleSafety";
 import type { InboxItem } from "@/lib/store";
 
 function thought(text: string): InboxItem {
@@ -64,6 +65,20 @@ describe("AI trust floor", () => {
       expect(decision.draft.start.getHours()).toBe(15);
       expect(decision.draft.text).toBe("치과");
     }
+  });
+
+  it("never invents a clock for a broad morning phrase from real QA", () => {
+    const input = "내일 아침 챙겨먹기";
+    expect(scheduleTrustIssue(input, now)).toBe("broad_daypart");
+    const decision = evaluateTimedAutoCommit(input, "ko", now);
+    expect(decision.ok).toBe(false);
+    if (!decision.ok) expect(decision.reason).toBe("broad_daypart");
+  });
+
+  it("never asks for the clock again when an exact clock is already explicit", () => {
+    expect(scheduleConfirmationReason("내일 오후 3시 치과", now)).toBeNull();
+    expect(scheduleConfirmationReason("내일 오전 11시 회의", now)).toBeNull();
+    expect(scheduleConfirmationReason("내일 저녁 7시 영화", now)).toBeNull();
   });
 
   it("treats a daypart without a concrete clock as ambiguous", () => {
