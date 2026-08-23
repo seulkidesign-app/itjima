@@ -42,13 +42,18 @@ const EXPLICIT_24H_AFTER_NOON_RE =
 
 /**
  * The model is only useful when the deterministic parser saw a real time but
- * could not resolve the date language. Existing ambiguity UI remains local.
+ * could not safely resolve the date language. Existing ambiguity UI remains local.
  */
 export function shouldTryAiScheduleFallback(
   text: string,
   reason: AutoCommitBlockReason,
 ): boolean {
-  if (reason !== "unresolved_date") return false;
+  if (
+    reason !== "unresolved_date" &&
+    reason !== "unresolved_date_language"
+  ) {
+    return false;
+  }
   if (!hasNaturalScheduleTime(text)) return false;
 
   // A bare 1–12 clock still lacks AM/PM. Do not ask a model to infer it from
