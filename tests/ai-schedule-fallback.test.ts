@@ -5,6 +5,7 @@ import {
   shouldTryAiScheduleFallback,
   tryAiScheduleFallback,
 } from "@/lib/aiScheduleFallback";
+import { evaluateTimedAutoCommit } from "@/lib/nlAutoCommit";
 
 describe("AI schedule normalization fallback", () => {
   const now = new Date("2026-08-23T10:00:00+09:00");
@@ -17,11 +18,23 @@ describe("AI schedule normalization fallback", () => {
     vi.unstubAllGlobals();
   });
 
+  it("blocks unknown date shorthand before a recognized clock can become today", () => {
+    const decision = evaluateTimedAutoCommit(
+      "담주 금욜 저녁 7시 치과",
+      "ko",
+      now,
+    );
+    expect(decision.ok).toBe(false);
+    if (!decision.ok) {
+      expect(decision.reason).toBe("unresolved_date_language");
+    }
+  });
+
   it("only escalates a timed input whose date language the local parser could not resolve", () => {
     expect(
       shouldTryAiScheduleFallback(
         "담주 금욜 저녁 7시 치과",
-        "unresolved_date",
+        "unresolved_date_language",
       ),
     ).toBe(true);
     expect(
@@ -32,10 +45,16 @@ describe("AI schedule normalization fallback", () => {
 
   it("never asks the model to infer AM/PM for a bare 1-12 clock", () => {
     expect(
-      shouldTryAiScheduleFallback("담주 금욜 7시 치과", "unresolved_date"),
+      shouldTryAiScheduleFallback(
+        "담주 금욜 7시 치과",
+        "unresolved_date_language",
+      ),
     ).toBe(false);
     expect(
-      shouldTryAiScheduleFallback("담주 금욜 저녁 7시 치과", "unresolved_date"),
+      shouldTryAiScheduleFallback(
+        "담주 금욜 저녁 7시 치과",
+        "unresolved_date_language",
+      ),
     ).toBe(true);
   });
 
