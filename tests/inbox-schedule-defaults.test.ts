@@ -55,14 +55,16 @@ describe("inbox schedule defaults", () => {
     expect(result.start.getHours()).toBe(15);
   });
 
-  it("treats 퇴근 후 as an evening timed schedule", () => {
+  it("does not turn 퇴근 후 into an exact clock without a user choice", () => {
     const result = inboxScheduleDefaults(thought("오늘 퇴근 후 장보기"));
-    expect(result.options.allDay).toBe(false);
-    expect(result.start.getHours()).toBe(18);
+    expect(result.options.allDay).toBe(true);
+    expect(result.options.reminderMinutes).toBeNull();
   });
 
-  it("recognizes common Korean and English time phrases", () => {
-    expect(hasExplicitScheduleTime("내일 저녁 치과")).toBe(true);
+  it("distinguishes broad dayparts from explicit clocks", () => {
+    expect(hasExplicitScheduleTime("내일 저녁 치과")).toBe(false);
+    expect(hasExplicitScheduleTime("내일 저녁 7시 치과")).toBe(true);
+    expect(hasExplicitScheduleTime("내일 아침 챙겨먹기")).toBe(false);
     expect(hasExplicitScheduleTime("tomorrow at 3pm dentist")).toBe(true);
     expect(hasExplicitScheduleTime("내일 치과")).toBe(false);
   });
