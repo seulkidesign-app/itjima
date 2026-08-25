@@ -8,6 +8,7 @@ import {
   type BrainMirrorCore,
   type BrainMirrorResult,
 } from "@/lib/brainMirror";
+import { isStaleContentRevision } from "@/lib/recordRevision";
 import { useEffect, useState, useCallback, useRef } from "react";
 
 export type { BrainMirrorResult };
@@ -18,6 +19,16 @@ export type DecisionOutcome = "today" | "later" | "archive";
 export type DecisionSource = "swipe" | "button";
 
 export type CaptureState = "pending" | "saved" | "failed";
+
+/** How firmly time is known on a canonical inbox record. */
+export type TemporalState =
+  | "exact_datetime"
+  | "date_only"
+  | "fuzzy_time"
+  | "ambiguous"
+  | "no_time";
+
+export type ClarificationState = "pending" | "resolved" | "dismissed";
 
 export type InboxItem = {
   id: string;
@@ -31,6 +42,22 @@ export type InboxItem = {
   decision_source?: DecisionSource;
   /** Local-only sync indicator — stripped before cloud writes. */
   capture_state?: CaptureState;
+  /**
+   * Canonical record extensions (M1). Kept local-first until cloud columns exist —
+   * pickCloudFields strips unknown keys via FULL_CLOUD_KEYS.
+   */
+  raw_text?: string | null;
+  start_time?: string | null;
+  end_time?: string | null;
+  all_day?: boolean | null;
+  temporal_state?: TemporalState | null;
+  structured_at?: string | null;
+  clarification_state?: ClarificationState | null;
+  /**
+   * Local-only. Bumped on user text/time edits so late parser/AI responses
+   * can be rejected (see recordRevision).
+   */
+  content_revision?: number;
 };
 export type RepeatRule = "daily" | "weekly" | "monthly" | "yearly";
 
@@ -807,8 +834,16 @@ export async function setInboxBrainMirror(
   inbox: ReturnType<typeof useInbox>,
   id: string,
   result: BrainMirrorCore | BrainMirrorResult,
-) {
+  options?: { expectedRevision?: number },
+): Promise<{ applied: boolean; reason?: "stale" | "missing" }> {
   const existing = inbox.items.find((it) => it.id === id);
+  if (!existing) return { applied: false, reason: "missing" };
+  if (
+    options?.expectedRevision !== undefined &&
+    isStaleContentRevision(options.expectedRevision, existing)
+  ) {
+    return { applied: false, reason: "stale" };
+  }
   const core: BrainMirrorCore = {
     title: result.title,
     items: result.items,
@@ -817,5 +852,7 @@ export async function setInboxBrainMirror(
     confidence: result.confidence,
   };
   const snapshot = finalizeBrainMirror(core, existing?.brain_mirror);
+  // Never write text / temporal fields from AI — mirror metadata only.
   await inbox.update(id, { brain_mirror: snapshot } as Partial<InboxItem>);
+  return { applied: true };
 }

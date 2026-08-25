@@ -8,6 +8,7 @@ import { LeftItemRow } from "@/components/home/LeftItemRow";
 import { featureEnabled } from "@/lib/features";
 import { useLang, useT } from "@/lib/i18n";
 import { canAutoCommitTimedCapture } from "@/lib/nlAutoCommit";
+import { isStructuredTimedRecord } from "@/lib/recordTemporal";
 import {
   understandNaturalLanguage,
   type ClarifyPick,
@@ -83,7 +84,9 @@ export function InboxChat({
   const { lang } = useLang();
   const uiLang = lang === "en" ? "en" : "ko";
 
-  const surfaces: ItemSurface[] = itemsAsc.map((it) => {
+  const surfaces: ItemSurface[] = itemsAsc
+    .filter((it) => !isStructuredTimedRecord(it))
+    .map((it) => {
     const isNewest = it.id === newestId;
     const inFlight = autoCommitInFlightIds.has(it.id);
     const autoEligible = canAutoCommitTimedCapture(it.text, uiLang);
@@ -124,7 +127,7 @@ export function InboxChat({
     (s): s is Extract<ItemSurface, { kind: "ambiguity" }> =>
       s.kind === "ambiguity",
   );
-  const isEmpty = itemsAsc.length === 0 && !savedFeedback;
+  const isEmpty = surfaces.length === 0 && !savedFeedback;
 
   return (
     <div className="home-chat-lane chat-scroll flex min-h-0 flex-1 flex-col gap-3 px-5 pb-[calc(5.75rem+env(safe-area-inset-bottom))] pt-2">

@@ -62,7 +62,7 @@ test.describe("Focused natural-language guards", () => {
       GUEST_SCHEDULE_KEY,
     );
     expect((await readGuestList(page, GUEST_SCHEDULE_KEY)).length).toBe(1);
-    expect((await readGuestList(page, GUEST_INBOX_KEY)).length).toBe(0);
+    expect((await readGuestList(page, GUEST_INBOX_KEY)).length).toBe(1);
   });
 
   test("capture never opens a calendar automatically", async ({ page }) => {

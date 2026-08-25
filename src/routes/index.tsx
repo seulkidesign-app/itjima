@@ -13,7 +13,7 @@ import { InboxChat } from "@/components/home/InboxChat";
 import { DecisionLauncher } from "@/components/home/DecisionLauncher";
 import { ContextMenu } from "@/components/home/ContextMenu";
 import { PasteSheet } from "@/components/home/PasteSheet";
-import { archiveFromInbox, scheduleFromInbox } from "@/lib/thoughtProvenance";
+import { archiveFromInbox } from "@/lib/thoughtProvenance";
 import { pendingDecisionItems } from "@/lib/decision";
 import { inboxScheduleDefaults } from "@/lib/inboxScheduleDefaults";
 import { detectDate } from "@/lib/dateDetect";
@@ -28,6 +28,15 @@ import {
   undoScheduleToInbox,
   type LaterInboxScheduleFields,
 } from "@/lib/convertLaterInboxToSchedule";
+import { findScheduleProjection } from "@/lib/scheduleProjection";
+import {
+  contentRevisionOf,
+  withBumpedContentRevision,
+} from "@/lib/recordRevision";
+import {
+  isAmbiguousTemporalReason,
+  temporalStateFromAutoCommitReason,
+} from "@/lib/recordTemporal";
 import {
   buildNaturalScheduleDraft,
   formatCaptureWhenLabel,
@@ -64,6 +73,7 @@ import {
   type DecisionOutcome,
   type DecisionSource,
   type InboxItem,
+  type ScheduleItem,
 } from "@/lib/store";
 import { ThoughtDetailSheet } from "@/components/ThoughtDetailSheet";
 import { track } from "@/lib/analytics";
@@ -248,7 +258,7 @@ function Inbox() {
   ) => {
     if (outcome === "today") {
       const { start, end, text, options } = inboxScheduleDefaults(it);
-      const payload = scheduleFromInbox(it, {
+      const fields: LaterInboxScheduleFields = {
         text,
         start_time: start.toISOString(),
         end_time: end.toISOString(),
@@ -257,9 +267,6 @@ function Inbox() {
         start_all_day: options.startAllDay,
         end_all_day: options.endAllDay,
         repeat: options.repeat,
-      });
-      const { item: created, cloudSynced: scheduleSynced } = await schedules.add({
-        ...payload,
         ...(options.reminderMinutes !== null
           ? {
               alarm_at: new Date(
@@ -267,13 +274,21 @@ function Inbox() {
               ).toISOString(),
             }
           : {}),
-      });
-      const inboxSynced = await inbox.remove(it.id);
-      track("schedule_created", { source: "decision_deck", text_length: text.length });
-      if (!allCloudSynced(scheduleSynced, inboxSynced)) {
-        throw new Error("sync failed");
+      };
+      const result = await commitInboxToSchedule(
+        it,
+        fields,
+        scheduleCommitOps(),
+        { expectedRevision: contentRevisionOf(it) },
+      );
+      if (result.status !== "ok") {
+        throw new Error(result.status);
       }
-      return { scheduleId: created.id };
+      track("schedule_created", {
+        source: "decision_deck",
+        text_length: text.length,
+      });
+      return { scheduleId: result.scheduleId };
     }
 
     if (outcome === "later") {
@@ -304,12 +319,40 @@ function Inbox() {
     };
 
     if (snap.outcome === "today" && snap.scheduleId) {
-      await schedules.remove(snap.scheduleId);
-      await inbox.add({
-        ...base,
-        id: snap.item.id,
-        created_at: snap.item.created_at,
-      });
+      const sched =
+        findScheduleProjection(schedules.items, snap.item.id) ??
+        schedules.items.find((s) => s.id === snap.scheduleId);
+      const fields: LaterInboxScheduleFields = {
+        text: sched?.text ?? snap.item.text,
+        start_time: sched?.start_time ?? new Date().toISOString(),
+        end_time: sched?.end_time ?? new Date().toISOString(),
+        alarm: sched?.alarm,
+        all_day: sched?.all_day,
+        start_all_day: sched?.start_all_day,
+        end_all_day: sched?.end_all_day,
+        repeat: sched?.repeat ?? null,
+        alarm_at: sched?.alarm_at,
+      };
+      const undone = await undoScheduleToInbox(
+        snap.scheduleId,
+        snap.item,
+        fields,
+        scheduleCommitOps(),
+      );
+      if (undone.status !== "ok") {
+        await schedules.remove(snap.scheduleId);
+        await inbox.update(
+          snap.item.id,
+          withBumpedContentRevision(snap.item, {
+            start_time: null,
+            end_time: null,
+            all_day: null,
+            temporal_state: "no_time",
+            structured_at: null,
+            clarification_state: "dismissed",
+          }),
+        );
+      }
       return;
     }
 
@@ -353,21 +396,15 @@ function Inbox() {
           alarm_at?: string | null;
         },
       ) => schedules.add(payload, { confirmCloud: true }),
+      updateSchedule: (id: string, patch: Partial<ScheduleItem>) =>
+        schedules.update(id, patch),
       removeSchedule: (id: string) => schedules.remove(id),
-      removeInbox: (id: string) => inbox.remove(id),
-      restoreInbox: async (item: InboxItem) => {
-        await inbox.add({
-          id: item.id,
-          text: item.text,
-          images: item.images ?? [],
-          created_at: item.created_at,
-          brain_mirror: item.brain_mirror ?? null,
-          decision: item.decision,
-          decided_at: item.decided_at,
-          decision_source: item.decision_source,
-          status: item.status ?? "active",
-        });
-      },
+      getScheduleByRecordId: (recordId: string) =>
+        findScheduleProjection(schedules.items, recordId),
+      getInboxById: (recordId: string) =>
+        inbox.items.find((it) => it.id === recordId),
+      updateInbox: (id: string, patch: Partial<InboxItem>) =>
+        inbox.update(id, patch),
     }),
     [inbox, schedules],
   );
@@ -416,6 +453,7 @@ function Inbox() {
           if (result.status === "ok") {
             savedUndoRef.current = null;
             setSavedFeedback(null);
+            acknowledgeItem(snap.inboxItem.id);
             toast.message(t("남겨 둔 걸로 되돌렸어요", "Restored as left here"));
             return;
           }
@@ -460,7 +498,7 @@ function Inbox() {
         },
       );
     },
-    [lang, scheduleCommitOps, t],
+    [lang, scheduleCommitOps, t, acknowledgeItem],
   );
 
   const commitInboxSchedule = async (
@@ -490,8 +528,10 @@ function Inbox() {
         : {}),
     };
 
-    const result = await commitInboxToSchedule(it, fields, scheduleCommitOps());
-    if (result.status === "busy") return null;
+    const result = await commitInboxToSchedule(it, fields, scheduleCommitOps(), {
+      expectedRevision: contentRevisionOf(it),
+    });
+    if (result.status === "busy" || result.status === "stale_revision") return null;
     if (result.status !== "ok") {
       throw new Error(result.status);
     }
@@ -694,6 +734,13 @@ function Inbox() {
 
   const moveToDelete = async (it: InboxItem) => {
     try {
+      // Canonical delete also drops derived schedule projection (same id / source_id).
+      const projections = schedules.items.filter(
+        (s) => s.id === it.id || s.source_id === it.id,
+      );
+      for (const proj of projections) {
+        await schedules.remove(proj.id);
+      }
       const deleted = await inbox.softDelete(it.id);
       track("thought_swiped_delete", { text_length: it.text.length });
       if (deleted) {
@@ -733,16 +780,27 @@ function Inbox() {
     try {
       let created: InboxItem;
       if (replaceId && items.some((it) => it.id === replaceId)) {
-        await inbox.update(replaceId, { text, images });
-        created = {
-          ...(items.find((it) => it.id === replaceId) as InboxItem),
+        const prev = items.find((it) => it.id === replaceId) as InboxItem;
+        const patch = withBumpedContentRevision(prev, {
           text,
           images,
+          raw_text: prev.raw_text ?? prev.text,
+        });
+        await inbox.update(replaceId, patch);
+        created = {
+          ...prev,
+          ...patch,
+          text,
+          images,
+          raw_text: prev.raw_text ?? prev.text,
         };
       } else {
         ({ item: created } = await inbox.add({
           text,
           images,
+          raw_text: text,
+          temporal_state: "no_time",
+          content_revision: 0,
         }));
       }
       track("thought_created", {
@@ -797,6 +855,13 @@ function Inbox() {
         }
       } else {
         if (isFirst) markFirstCaptureDone();
+        const temporal_state = temporalStateFromAutoCommitReason(decision.reason);
+        await inbox.update(created.id, {
+          temporal_state,
+          clarification_state: isAmbiguousTemporalReason(decision.reason)
+            ? "pending"
+            : null,
+        });
         // Undated / non-timed: durable raw only — no taxonomy confirmation.
         // Ambiguous timed stays in inbox for InlinePromise (AM/PM, multi-clock, …).
         if (
@@ -960,7 +1025,10 @@ function Inbox() {
         onArchive={moveToArchive}
         onDelete={moveToDelete}
         onSaveEdit={async (item, text) => {
-          await inbox.update(item.id, { text });
+          await inbox.update(
+            item.id,
+            withBumpedContentRevision(item, { text }),
+          );
           toast.success(t("고쳤어요", "Saved your edit"));
         }}
       />

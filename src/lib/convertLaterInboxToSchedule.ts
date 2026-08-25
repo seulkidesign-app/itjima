@@ -1,5 +1,13 @@
 import { thoughtFirstLine } from "@/lib/brainMirror";
 import { clearInboxTombstones } from "@/lib/decisionRecovery";
+import {
+  attachExactTemporalPatch,
+  clearTemporalMetadataPatch,
+} from "@/lib/recordTemporal";
+import {
+  contentRevisionOf,
+  isStaleContentRevision,
+} from "@/lib/recordRevision";
 import { scheduleFromInbox } from "@/lib/thoughtProvenance";
 import type { InboxItem, RepeatRule, ScheduleItem } from "@/lib/store";
 
@@ -21,16 +29,25 @@ export type ConvertLaterInboxOps = {
       alarm_at?: string | null;
     },
   ) => Promise<{ item: Pick<ScheduleItem, "id">; cloudSynced: boolean }>;
+  updateSchedule: (
+    id: string,
+    patch: Partial<ScheduleItem>,
+  ) => Promise<boolean | void>;
   removeSchedule: (id: string) => Promise<boolean | void>;
-  removeInbox: (id: string) => Promise<boolean>;
-  restoreInbox: (item: InboxItem) => Promise<void>;
+  /** Find existing projection by canonical id (same id or source_id). */
+  getScheduleByRecordId: (recordId: string) => ScheduleItem | undefined;
+  /** Current canonical row (for stale-revision checks). */
+  getInboxById?: (recordId: string) => InboxItem | undefined;
+  /** Patch canonical inbox record — never delete on timed attach. */
+  updateInbox: (id: string, patch: Partial<InboxItem>) => Promise<boolean | void>;
 };
 
 export type ConvertLaterInboxResult =
   | { status: "ok"; scheduleId: string }
   | { status: "busy" }
   | { status: "create_failed" }
-  | { status: "remove_failed_rolled_back" };
+  | { status: "attach_failed_rolled_back" }
+  | { status: "stale_revision" };
 
 export type UndoScheduleToInboxResult =
   | { status: "ok" }
@@ -46,28 +63,32 @@ export function laterInboxScheduleDraftTitle(item: InboxItem): string {
   return thoughtFirstLine(item.text);
 }
 
-async function rollbackCreatedSchedule(
-  ops: ConvertLaterInboxOps,
-  scheduleId: string,
-  inboxItem: InboxItem,
+function projectionPayload(
+  item: InboxItem,
+  fields: LaterInboxScheduleFields,
 ) {
-  await ops.removeSchedule(scheduleId);
-  clearInboxTombstones(inboxItem.id);
-  await ops.restoreInbox(inboxItem);
+  const { alarm_at, ...scheduleFields } = fields;
+  return {
+    ...scheduleFromInbox(item, scheduleFields),
+    ...(alarm_at !== undefined ? { alarm_at } : {}),
+  };
 }
 
 /**
- * Shared inbox → schedule commit for capture auto-commit, AM/PM resolve,
- * and later-inbox conversion.
+ * Attach structured time to a canonical inbox record and upsert its
+ * ScheduleItem projection. Never deletes the inbox record.
  *
- * Order is create-schedule → remove-inbox. Never deletes the inbox first.
- * On create failure the inbox is untouched. On remove failure the new schedule
- * is rolled back and the inbox is restored so the item is not duplicated.
+ * Identity: prefer ScheduleItem.id === InboxItem.id; always set source_id.
+ * Legacy rows (random id + source_id) are updated in place — no duplicate.
+ *
+ * Pass `expectedRevision` when the commit was started from an async parse so
+ * a user edit mid-flight rejects the stale apply.
  */
 export async function convertLaterInboxToSchedule(
   item: InboxItem,
   fields: LaterInboxScheduleFields,
   ops: ConvertLaterInboxOps,
+  options?: { expectedRevision?: number },
 ): Promise<ConvertLaterInboxResult> {
   if (inFlightIds.has(item.id)) {
     return { status: "busy" };
@@ -75,39 +96,87 @@ export async function convertLaterInboxToSchedule(
   inFlightIds.add(item.id);
 
   try {
-    const { alarm_at, ...scheduleFields } = fields;
-    const payload = {
-      ...scheduleFromInbox(item, scheduleFields),
-      ...(alarm_at !== undefined ? { alarm_at } : {}),
-    };
-
-    let created: Pick<ScheduleItem, "id">;
-    let cloudSynced: boolean;
-    try {
-      ({ item: created, cloudSynced } = await ops.addSchedule(payload));
-    } catch {
-      return { status: "create_failed" };
+    const expected =
+      options?.expectedRevision ?? contentRevisionOf(item);
+    const live = ops.getInboxById?.(item.id) ?? item;
+    if (isStaleContentRevision(expected, live)) {
+      return { status: "stale_revision" };
     }
 
-    if (!cloudSynced) {
-      // Confirmed create failed (and store opt-in may already have rolled back).
-      // removeSchedule is idempotent cleanup if an optimistic remnant remains.
-      await ops.removeSchedule(created.id);
-      return { status: "create_failed" };
+    const payload = projectionPayload(live, fields);
+    const existing = ops.getScheduleByRecordId(item.id);
+    let scheduleId = existing?.id ?? item.id;
+
+    if (existing) {
+      try {
+        const ok = await ops.updateSchedule(existing.id, {
+          text: payload.text,
+          start_time: payload.start_time,
+          end_time: payload.end_time,
+          alarm: payload.alarm,
+          all_day: payload.all_day,
+          start_all_day: payload.start_all_day,
+          end_all_day: payload.end_all_day,
+          repeat: payload.repeat,
+          alarm_at: payload.alarm_at,
+          source_id: item.id,
+          raw_text: payload.raw_text,
+          status: "active",
+        });
+        if (ok === false) {
+          return { status: "create_failed" };
+        }
+      } catch {
+        return { status: "create_failed" };
+      }
+      scheduleId = existing.id;
+    } else {
+      let created: Pick<ScheduleItem, "id">;
+      let cloudSynced: boolean;
+      try {
+        ({ item: created, cloudSynced } = await ops.addSchedule(payload));
+      } catch {
+        return { status: "create_failed" };
+      }
+
+      if (!cloudSynced) {
+        await ops.removeSchedule(created.id);
+        return { status: "create_failed" };
+      }
+      scheduleId = created.id;
+    }
+
+    // Re-check after async schedule write — user may have edited meanwhile.
+    const liveAfter = ops.getInboxById?.(item.id) ?? live;
+    if (isStaleContentRevision(expected, liveAfter)) {
+      // Only roll back a projection we just created; leave legacy updates alone
+      // when stale — safer than wiping an older schedule the user may still want.
+      if (!existing) {
+        await ops.removeSchedule(scheduleId);
+      }
+      return { status: "stale_revision" };
     }
 
     try {
-      const removed = await ops.removeInbox(item.id);
-      if (!removed) {
-        await rollbackCreatedSchedule(ops, created.id, item);
-        return { status: "remove_failed_rolled_back" };
+      const patched = await ops.updateInbox(
+        item.id,
+        attachExactTemporalPatch({
+          start_time: fields.start_time,
+          end_time: fields.end_time,
+          all_day: fields.all_day,
+        }),
+      );
+      if (patched === false) {
+        if (!existing) await ops.removeSchedule(scheduleId);
+        return { status: "attach_failed_rolled_back" };
       }
     } catch {
-      await rollbackCreatedSchedule(ops, created.id, item);
-      return { status: "remove_failed_rolled_back" };
+      if (!existing) await ops.removeSchedule(scheduleId);
+      return { status: "attach_failed_rolled_back" };
     }
 
-    return { status: "ok", scheduleId: created.id };
+    clearInboxTombstones(item.id);
+    return { status: "ok", scheduleId };
   } finally {
     inFlightIds.delete(item.id);
   }
@@ -117,8 +186,8 @@ export async function convertLaterInboxToSchedule(
 export const commitInboxToSchedule = convertLaterInboxToSchedule;
 
 /**
- * Undo an auto-committed schedule back to a durable left item (raw inbox).
- * Never leaves both schedule and inbox present.
+ * Undo timed attach: remove schedule projection and clear temporal metadata
+ * on the canonical record. The record itself stays.
  */
 export async function undoScheduleToInbox(
   scheduleId: string,
@@ -145,15 +214,16 @@ export async function undoScheduleToInbox(
 
     clearInboxTombstones(inboxItem.id);
     try {
-      await ops.restoreInbox(inboxItem);
+      const cleared = await ops.updateInbox(
+        inboxItem.id,
+        clearTemporalMetadataPatch(),
+      );
+      if (cleared === false) {
+        throw new Error("clear temporal failed");
+      }
     } catch {
-      // Restore failed after schedule delete — recreate schedule so text is not lost.
       try {
-        const { alarm_at, ...scheduleFields } = fields;
-        const payload = {
-          ...scheduleFromInbox(inboxItem, scheduleFields),
-          ...(alarm_at !== undefined ? { alarm_at } : {}),
-        };
+        const payload = projectionPayload(inboxItem, fields);
         const { item: created, cloudSynced } = await ops.addSchedule(payload);
         if (!cloudSynced) {
           await ops.removeSchedule(created.id);

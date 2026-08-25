@@ -14,12 +14,14 @@ function sanitizeProvenanceText(value: unknown): string {
 
 export function inboxSnapshot(item: InboxItem) {
   const text = sanitizeProvenanceText(item.text);
+  const raw =
+    sanitizeProvenanceText(item.raw_text) || text;
   return {
     text,
     images: item.images ?? [],
     brain_mirror: item.brain_mirror ?? null,
     source_id: item.id,
-    raw_text: text,
+    raw_text: raw,
   };
 }
 
@@ -52,6 +54,9 @@ export function scheduleFromInbox(
           endAllDay: opts.all_day ?? false,
         });
   return {
+    // Same id as canonical record when safe (separate table PKs; reminder sync
+    // keys off schedule.id which then equals the product-level record id).
+    id: item.id,
     ...opts,
     ...allDayFields,
     alarm: opts.alarm ?? false,

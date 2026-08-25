@@ -87,12 +87,19 @@ export function recoverLocallyCommittedDecision(
     return inbox?.decision === "later" ? {} : null;
   }
 
-  if (inbox) return null;
-
   if (outcome === "today") {
-    const id = firstNewId(destinationIds("schedules", itemId), before.scheduleIds);
+    // M1: canonical inbox stays; recovery looks for a new projection
+    // (legacy source_id or same-id as the record).
+    const after = destinationIds("schedules", itemId);
+    for (const row of readRowsForBucket("schedules")) {
+      if (row.id === itemId) after.add(String(row.id));
+    }
+    const id = firstNewId(after, before.scheduleIds);
     return id ? { scheduleId: id } : null;
   }
+
+  // Archive still removes the inbox row.
+  if (inbox) return null;
 
   const id = firstNewId(destinationIds("archive", itemId), before.archiveIds);
   return id ? { archiveId: id } : null;

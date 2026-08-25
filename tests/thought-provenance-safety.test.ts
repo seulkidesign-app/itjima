@@ -37,6 +37,7 @@ describe("thought provenance safety", () => {
     });
 
     expect(schedule).toMatchObject({
+      id: thought.id,
       text: "치과",
       raw_text: thought.text,
       source_id: thought.id,

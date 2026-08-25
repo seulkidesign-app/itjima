@@ -24,6 +24,7 @@ import {
   setInboxBrainMirror,
   type InboxItem,
 } from "@/lib/store";
+import { contentRevisionOf } from "@/lib/recordRevision";
 import {
   SWIPE_PREVIEW,
   dragProgress,
@@ -224,6 +225,7 @@ export function CaptureRelease({
         item.text,
         lang === "en" ? "en" : "ko",
       );
+      const requestRevision = contentRevisionOf(item);
 
       if (
         item.text.trim().length >= 2 &&
@@ -249,12 +251,17 @@ export function CaptureRelease({
               mirror,
             );
             try {
-              await setInboxBrainMirror(inboxRef.current, item.id, {
-                ...mirror,
-                title: sentence,
-                items: [sentence],
-                suggestedAction: sentence,
-              });
+              await setInboxBrainMirror(
+                inboxRef.current,
+                item.id,
+                {
+                  ...mirror,
+                  title: sentence,
+                  items: [sentence],
+                  suggestedAction: sentence,
+                },
+                { expectedRevision: requestRevision },
+              );
             } catch {
               /* quiet */
             }

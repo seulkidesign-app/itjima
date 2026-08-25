@@ -182,7 +182,8 @@ test.describe("Decision deck swipe", () => {
     await expect
       .poll(async () => (await readGuestList(page, GUEST_SCHEDULE_KEY)).length)
       .toBe(1);
-    expect((await readGuestList(page, GUEST_INBOX_KEY)).length).toBe(0);
+    // M1: DecisionDeck today keeps the canonical inbox record.
+    expect((await readGuestList(page, GUEST_INBOX_KEY)).length).toBe(1);
   });
 
   test("left swipe archives", async ({ page }) => {

@@ -5,6 +5,7 @@ import { isBrainMirrorCandidate } from "@/lib/brainMirror";
 import { fetchBrainMirror, fetchAiOrganize } from "@/lib/brainMirrorApi";
 import { resolveIntelligence } from "@/lib/localClassifier";
 import { setInboxBrainMirror, useInbox, type InboxItem } from "@/lib/store";
+import { contentRevisionOf } from "@/lib/recordRevision";
 import { detectDate } from "@/lib/dateDetect";
 import { useT } from "@/lib/i18n";
 import { haptic, tap } from "@/lib/haptics";
@@ -99,7 +100,7 @@ export function BrainMirrorPanel({
   }, []);
 
   const reveal = useCallback(
-    (mirror: BrainMirrorResult, source: "local" | "api" | "organize") => {
+    (mirror: BrainMirrorResult, source: "local" | "api" | "organize", expectedRevision: number) => {
       const gen = fetchGen.current;
       setResult(mirror);
       setPhase("ready");
@@ -112,14 +113,17 @@ export function BrainMirrorPanel({
         setVisible(true);
         haptic([3, 8, 4]);
       }, wait);
-      void setInboxBrainMirror(inbox, item.id, mirror);
+      void setInboxBrainMirror(inbox, item.id, mirror, {
+        expectedRevision,
+      });
     },
-    [inbox],
+    [inbox, item.id],
   );
 
   const runFallbackApi = useCallback(() => {
     if (!item.text.trim()) return;
     const gen = ++fetchGen.current;
+    const requestRevision = contentRevisionOf(item);
     sessionStorage.setItem(SK.attempted(item.id), "1");
     setPhase("pending");
 
@@ -178,6 +182,7 @@ export function BrainMirrorPanel({
         reveal(
           mirror,
           outcome.source === "classify" ? "api" : "local",
+          requestRevision,
         );
       } catch {
         if (!finished && fetchGen.current === gen) hideSilently(true, true);
@@ -190,6 +195,7 @@ export function BrainMirrorPanel({
   const runOrganize = useCallback(async () => {
     if (!item.text.trim() || acting) return;
     const gen = ++fetchGen.current;
+    const requestRevision = contentRevisionOf(item);
     setPhase("organizing");
     tap();
 
@@ -213,7 +219,7 @@ export function BrainMirrorPanel({
         setPhase("organize_offer");
         return;
       }
-      reveal(outcome.result, "organize");
+      reveal(outcome.result, "organize", requestRevision);
     } catch {
       if (fetchGen.current === gen) {
         toast.message(
@@ -388,8 +394,12 @@ export async function runUserOrganize(
   item: InboxItem,
   inbox: InboxHandle,
 ): Promise<BrainMirrorResult | null> {
+  const requestRevision = contentRevisionOf(item);
   const outcome = await fetchAiOrganize(item.text);
   if (outcome.status !== "ok" || !outcome.result.items.length) return null;
-  await setInboxBrainMirror(inbox, item.id, outcome.result);
+  const applied = await setInboxBrainMirror(inbox, item.id, outcome.result, {
+    expectedRevision: requestRevision,
+  });
+  if (!applied.applied) return null;
   return outcome.result;
 }

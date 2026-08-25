@@ -29,10 +29,10 @@ describe("decision local recovery", () => {
 
   it("recovers a locally committed schedule after a cloud-only failure", () => {
     const before = captureDecisionStorage(thought.id);
-    write("inbox", []);
+    // M1: inbox may remain; a new schedule projection is the commit signal.
     write("schedules", [
       {
-        id: "schedule-1",
+        id: thought.id,
         text: thought.text,
         source_id: thought.id,
         created_at: "2026-07-27T01:01:00.000Z",
@@ -40,7 +40,7 @@ describe("decision local recovery", () => {
     ]);
 
     expect(recoverLocallyCommittedDecision("today", thought.id, before)).toEqual({
-      scheduleId: "schedule-1",
+      scheduleId: thought.id,
     });
   });
 
@@ -53,8 +53,7 @@ describe("decision local recovery", () => {
       },
     ]);
     const before = captureDecisionStorage(thought.id);
-    write("inbox", []);
-
+    // No new schedule appeared after the snapshot.
     expect(recoverLocallyCommittedDecision("today", thought.id, before)).toBeNull();
   });
 

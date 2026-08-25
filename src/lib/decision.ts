@@ -1,4 +1,5 @@
 import type { DecisionOutcome, InboxItem } from "@/lib/store";
+import { isStructuredTimedRecord } from "@/lib/recordTemporal";
 import {
   SWIPE_DISTANCE_RATIO,
   SWIPE_KEEP_RATIO,
@@ -13,7 +14,9 @@ export type DragAxis = "horizontal" | "vertical" | null;
 
 /** Active inbox rows still waiting for a deck decision. */
 export function pendingDecisionItems(items: InboxItem[]) {
-  return items.filter((it) => !it.decision);
+  return items.filter(
+    (it) => !it.decision && !isStructuredTimedRecord(it),
+  );
 }
 
 /** Lock drag to one axis once movement clearly dominates. */

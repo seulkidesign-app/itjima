@@ -49,9 +49,37 @@ export function mergeCloudRow<T extends { id: string }>(
       "decided_at",
       "decision_source",
       "capture_state",
+      "raw_text",
+      "start_time",
+      "end_time",
+      "all_day",
+      "temporal_state",
+      "structured_at",
+      "clarification_state",
+      "content_revision",
     ] as const) {
       if (localRow[key] !== undefined && cloudRow[key] === undefined) {
         merged[key] = localRow[key];
+      }
+    }
+
+    // Prefer a higher local content_revision so stale cloud rows cannot
+    // overwrite a fresher user edit that has not synced yet.
+    const localRev = Number(localRow.content_revision ?? 0);
+    const cloudRev = Number(cloudRow.content_revision ?? 0);
+    if (localRev > cloudRev) {
+      merged.text = localRow.text;
+      merged.content_revision = localRev;
+      for (const key of [
+        "start_time",
+        "end_time",
+        "all_day",
+        "temporal_state",
+        "structured_at",
+        "clarification_state",
+        "raw_text",
+      ] as const) {
+        if (localRow[key] !== undefined) merged[key] = localRow[key];
       }
     }
   }

@@ -87,6 +87,9 @@ import {
   rawPreview,
 } from "@/lib/thoughtProvenance";
 import { convertLaterInboxToSchedule } from "@/lib/convertLaterInboxToSchedule";
+import { isStructuredTimedRecord } from "@/lib/recordTemporal";
+import { findScheduleProjection, dedupeScheduleProjections } from "@/lib/scheduleProjection";
+import { withBumpedContentRevision } from "@/lib/recordRevision";
 import { SPRING_SNAP_BACK, SHEET_BACKDROP_CLASS, SHEET_BACKDROP_FADE } from "@/lib/motion";
 import { useListStagger } from "@/lib/listStagger";
 import { toast } from "sonner";
@@ -229,11 +232,13 @@ function Schedule() {
   }, [items]);
 
   const activeItems = useMemo(
-    () => items.filter((s) => s.status !== "done"),
+    () =>
+      dedupeScheduleProjections(items.filter((s) => s.status !== "done")),
     [items],
   );
   const doneItems = useMemo(
-    () => items.filter((s) => s.status === "done"),
+    () =>
+      dedupeScheduleProjections(items.filter((s) => s.status === "done")),
     [items],
   );
 
@@ -271,6 +276,21 @@ function Schedule() {
         repeat: pending.repeat ?? null,
         ...alarmPayload,
       });
+      const recordId = pending.edit.source_id || pending.edit.id;
+      if (inbox.items.some((it) => it.id === recordId)) {
+        const canonical = inbox.items.find((it) => it.id === recordId);
+        await inbox.update(
+          recordId,
+          withBumpedContentRevision(canonical, {
+            text: pending.text,
+            start_time: pending.start.toISOString(),
+            end_time: pending.end.toISOString(),
+            all_day: allDayFields.all_day,
+            temporal_state: "exact_datetime",
+            structured_at: new Date().toISOString(),
+          }),
+        );
+      }
       return {
         ...pending.edit,
         text: pending.text,
@@ -505,7 +525,10 @@ function Schedule() {
   );
 
   const laterInboxItems = useMemo(
-    () => inbox.items.filter((it) => it.decision === "later"),
+    () =>
+      inbox.items.filter(
+        (it) => it.decision === "later" && !isStructuredTimedRecord(it),
+      ),
     [inbox.items],
   );
 
@@ -644,21 +667,13 @@ function Schedule() {
       },
       {
         addSchedule: (payload) => add(payload, { confirmCloud: true }),
+        updateSchedule: (id, patch) => update(id, patch),
         removeSchedule: (id) => remove(id),
-        removeInbox: (id) => inbox.remove(id),
-        restoreInbox: async (item) => {
-          await inbox.add({
-            id: item.id,
-            text: item.text,
-            images: item.images ?? [],
-            created_at: item.created_at,
-            brain_mirror: item.brain_mirror ?? null,
-            decision: item.decision,
-            decided_at: item.decided_at,
-            decision_source: item.decision_source,
-            status: item.status ?? "active",
-          });
-        },
+        getScheduleByRecordId: (recordId) =>
+          findScheduleProjection(items, recordId),
+        getInboxById: (recordId) =>
+          inbox.items.find((row) => row.id === recordId),
+        updateInbox: (id, patch) => inbox.update(id, patch),
       },
     );
 
@@ -671,11 +686,11 @@ function Schedule() {
       return;
     }
 
-    if (result.status === "remove_failed_rolled_back") {
+    if (result.status === "attach_failed_rolled_back") {
       toast.error(
         t(
-          "저장을 끝까지 마치지 못했어요. 원래 기록으로 돌려뒀어요.",
-          "Couldn't finish saving — restored the original record.",
+          "저장을 끝까지 마치지 못했어요. 일정을 되돌렸어요.",
+          "Couldn't finish saving — rolled back the schedule.",
         ),
       );
       return;
@@ -697,6 +712,10 @@ function Schedule() {
   const markDone = async (s: ScheduleItem) => {
     try {
       const done = await update(s.id, { status: "done" });
+      const recordId = s.source_id || s.id;
+      if (inbox.items.some((it) => it.id === recordId)) {
+        await inbox.update(recordId, { status: "done" });
+      }
       if (userId) await cancelScheduleReminders(userId, s.id);
       hapticConfirm();
       track("schedule_completed", { text_length: s.text.length });
@@ -717,6 +736,10 @@ function Schedule() {
       });
       if (userId) await cancelScheduleReminders(userId, s.id);
       const scheduleSynced = await remove(s.id);
+      const recordId = s.source_id || s.id;
+      if (inbox.items.some((it) => it.id === recordId)) {
+        await inbox.softDelete(recordId);
+      }
       if (pins.has(s.id)) togglePin(s.id);
       if (allCloudSynced(archiveSynced, scheduleSynced)) {
         toast.success(t("생각 지도로 옮겼어요", "Moved to thought map"), scheduleToast);
@@ -886,6 +909,10 @@ function Schedule() {
               try {
                 if (userId) await cancelScheduleReminders(userId, s.id);
                 const deleted = await remove(s.id);
+                const recordId = s.source_id || s.id;
+                if (inbox.items.some((it) => it.id === recordId)) {
+                  await inbox.softDelete(recordId);
+                }
                 if (pins.has(s.id)) togglePin(s.id);
                 if (deleted) toast(t("삭제했어요", "Deleted"));
               } catch {

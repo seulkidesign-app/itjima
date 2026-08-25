@@ -31,12 +31,22 @@ test.describe("Natural-language scheduling", () => {
     ).toBeVisible();
     await expect(phone(page).getByTestId("commitment-confirm")).toHaveCount(0);
     await expect(phone(page).getByTestId("promise-primary")).toHaveCount(0);
-    expect((await readGuestList(page, GUEST_INBOX_KEY)).length).toBe(0);
+    // M1: canonical inbox record is kept; schedule is a derived projection.
+    const inbox = (await readGuestList(page, GUEST_INBOX_KEY)) as Array<{
+      temporal_state?: string;
+      start_time?: string;
+    }>;
+    expect(inbox.length).toBe(1);
+    expect(inbox[0]?.temporal_state).toBe("exact_datetime");
+    expect(inbox[0]?.start_time).toBeTruthy();
     expect((await readGuestList(page, GUEST_SCHEDULE_KEY)).length).toBe(1);
     const schedules = (await readGuestList(page, GUEST_SCHEDULE_KEY)) as Array<{
       text?: string;
+      id?: string;
+      source_id?: string;
     }>;
     expect(schedules[0]?.text ?? "").toMatch(/Dentist/i);
+    expect(schedules[0]?.id || schedules[0]?.source_id).toBeTruthy();
   });
 
   test("ambiguous English schedule resolves with inline choices", async ({ page }) => {
@@ -49,7 +59,7 @@ test.describe("Natural-language scheduling", () => {
     const choices = promise.getByTestId("promise-clarify-chips");
     await expect(choices).toBeVisible();
     await choices.getByRole("button").first().click();
-    expect((await readGuestList(page, GUEST_INBOX_KEY)).length).toBe(0);
+    expect((await readGuestList(page, GUEST_INBOX_KEY)).length).toBe(1);
     expect((await readGuestList(page, GUEST_SCHEDULE_KEY)).length).toBe(1);
   });
 
@@ -94,7 +104,12 @@ test.describe("Natural-language scheduling in Korean", () => {
     await expect(phone(page).getByTestId("commitment-confirm")).toHaveCount(0);
     await expect(phone(page).getByTestId("promise-primary")).toHaveCount(0);
     expect((await readGuestList(page, GUEST_SCHEDULE_KEY)).length).toBe(1);
-    expect((await readGuestList(page, GUEST_INBOX_KEY)).length).toBe(0);
+    // M1: record kept with temporal metadata.
+    const inbox = (await readGuestList(page, GUEST_INBOX_KEY)) as Array<{
+      temporal_state?: string;
+    }>;
+    expect(inbox.length).toBe(1);
+    expect(inbox[0]?.temporal_state).toBe("exact_datetime");
   });
 
   test("오전/오후가 애매하면 선택 후 바로 일정 생성", async ({ page }) => {
@@ -110,7 +125,7 @@ test.describe("Natural-language scheduling in Korean", () => {
     );
     await promise.getByTestId("promise-confirm-afternoon").click();
     expect((await readGuestList(page, GUEST_SCHEDULE_KEY)).length).toBe(1);
-    expect((await readGuestList(page, GUEST_INBOX_KEY)).length).toBe(0);
+    expect((await readGuestList(page, GUEST_INBOX_KEY)).length).toBe(1);
     await expect(
       phone(page).getByTestId("saved-schedule-feedback"),
     ).toBeVisible();
