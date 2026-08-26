@@ -14,7 +14,7 @@ type InboxSeed = {
 };
 
 async function resetCapture(page: Page) {
-  await page.goto("/");
+  await page.goto("/app");
   await page.evaluate(() => {
     for (const k of Object.keys(localStorage)) {
       if (k.startsWith("itjima.")) localStorage.removeItem(k);
@@ -63,17 +63,18 @@ async function viewportMetrics(page: Page) {
 
 async function bubbleBox(page: Page, text: string) {
   const ui = await app(page);
+  // Capture list uses LeftItemRow (no chat-bubble class).
   return ui
-    .getByText(text, { exact: true })
-    .locator("xpath=ancestor::div[contains(@class,'chat-bubble')]")
+    .getByTestId("left-item-row")
+    .filter({ hasText: text })
     .first()
     .boundingBox();
 }
 
 async function dragBubble(page: Page, text: string, deltaX: number) {
   const ui = await app(page);
-  const bubble = ui.getByRole("paragraph").filter({ hasText: text }).first();
-  const box = await bubble.boundingBox();
+  const row = ui.getByTestId("left-item-row").filter({ hasText: text }).first();
+  const box = await row.boundingBox();
   expect(box).toBeTruthy();
   const startX = box!.x + box!.width / 2;
   const y = box!.y + box!.height / 2;
@@ -100,13 +101,13 @@ test.describe("Home chat bubbles without swipe tray", () => {
       },
       {
         id: `qa2-long-${now}`,
-        text:
-          "내일 아침에 치과 예약 전화하고, 저녁에는 친구랑 저녁 약속 장소를 다시 확인해야 해.",
+        text: "치과 예약 전화하고 저녁 약속 장소 확인",
         images: [],
         created_at: new Date(now).toISOString(),
         status: "active",
       },
     ]);
+    await expect(page.getByTestId("left-item-row")).toHaveCount(2);
   }
 
   test("closed state keeps bubbles inside viewport without horizontal scroll", async ({
@@ -116,10 +117,7 @@ test.describe("Home chat bubbles without swipe tray", () => {
     const metrics = await viewportMetrics(page);
     expect(metrics.scrollWidth).toBeLessThanOrEqual(metrics.clientWidth + 1);
 
-    for (const text of [
-      "여행",
-      "내일 아침에 치과 예약 전화하고, 저녁에는 친구랑 저녁 약속 장소를 다시 확인해야 해.",
-    ]) {
+    for (const text of ["여행", "치과 예약 전화하고 저녁 약속 장소 확인"]) {
       const bubble = await bubbleBox(page, text);
       expect(bubble).toBeTruthy();
       expect(bubble!.x).toBeGreaterThanOrEqual(0);

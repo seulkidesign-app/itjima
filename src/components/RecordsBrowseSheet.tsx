@@ -1,6 +1,7 @@
 import { Search } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { BottomSheet } from "./BottomSheet";
+import { OrganizeSummarySheet } from "./OrganizeSummarySheet";
 import { useT } from "@/lib/i18n";
 import {
   getBrowsableRecords,
@@ -23,9 +24,13 @@ export function RecordsBrowseSheet({
 }: Props) {
   const t = useT();
   const [query, setQuery] = useState("");
+  const [organizeOpen, setOrganizeOpen] = useState(false);
 
   useEffect(() => {
-    if (!open) setQuery("");
+    if (!open) {
+      setQuery("");
+      setOrganizeOpen(false);
+    }
   }, [open]);
 
   const results = useMemo(
@@ -40,97 +45,149 @@ export function RecordsBrowseSheet({
   if (!open) return null;
 
   return (
-    <BottomSheet
-      open={open}
-      onClose={onClose}
-      maxHeight="78dvh"
-      title={t("전체 기록", "All records")}
-    >
-      <div
-        className="sheet-scroll flex min-h-0 flex-1 flex-col overflow-y-auto px-5 pb-[calc(env(safe-area-inset-bottom)+1rem)]"
-        data-testid="records-browse-sheet"
+    <>
+      <BottomSheet
+        open={open}
+        onClose={onClose}
+        maxHeight="78dvh"
+        title={t("전체 기록", "All records")}
       >
-        <label className="relative mt-1 block">
-          <Search
-            size={16}
-            className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-ink-soft"
-            aria-hidden
-          />
-          <input
-            type="search"
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            placeholder={t("기록 검색", "Search records")}
-            aria-label={t("기록 검색", "Search records")}
-            data-testid="records-browse-search"
-            className="w-full rounded-full border border-ink/10 bg-ink/[0.03] py-3 pl-10 pr-4 text-[15px] text-ink input-focus-ring"
-          />
-        </label>
+        <div
+          className="sheet-scroll flex min-h-0 flex-1 flex-col overflow-y-auto px-5 pb-[calc(env(safe-area-inset-bottom)+1rem)]"
+          data-testid="records-browse-sheet"
+        >
+          <div className="mt-1 flex items-center justify-between gap-2">
+            <p className="quietly-section-label">
+              {t("최근 기록", "Recent records")}
+            </p>
+            <button
+              type="button"
+              data-testid="records-browse-organize"
+              onClick={() => setOrganizeOpen(true)}
+              className="touch-press inline-flex min-h-11 items-center rounded-full border border-[var(--quietly-border)] bg-white px-3 text-[12px] font-bold text-ink"
+            >
+              {t("정리하기", "Organize")}
+            </button>
+          </div>
 
-        {emptyAll ? (
-          <p
-            className="mt-8 text-center text-[14px] text-ink-soft"
-            data-testid="records-browse-empty"
-          >
-            {t("아직 남긴 기록이 없어요", "No records yet")}
-          </p>
-        ) : emptySearch ? (
-          <p
-            className="mt-8 text-center text-[14px] text-ink-soft"
-            data-testid="records-browse-no-results"
-          >
-            {t("찾는 기록이 없어요", "No matching records")}
-          </p>
-        ) : (
-          <ul
-            className="mt-3 flex flex-col"
-            data-testid={
-              isSearching
-                ? "records-browse-search-results"
-                : "records-browse-list"
-            }
-          >
-            {results.map((item) => {
-              const done = item.status === "done";
-              const title =
-                item.text.trim() || t("(내용 없음)", "(No text)");
-              return (
-                <li key={item.id} className="border-b border-ink/[0.06] last:border-b-0">
-                  <button
-                    type="button"
-                    data-testid="records-browse-row"
-                    data-record-id={item.id}
-                    data-status={item.status ?? "active"}
-                    onClick={() => {
-                      onClose();
-                      onOpenRecord(item);
-                    }}
-                    className="flex min-h-11 w-full flex-col items-start gap-0.5 px-1 py-3 text-left touch-press"
+          <label className="relative mt-3 block">
+            <Search
+              size={16}
+              className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-ink-soft"
+              aria-hidden
+            />
+            <input
+              type="search"
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder={t("검색어를 입력하세요", "Enter a search term")}
+              aria-label={t("기록 검색", "Search records")}
+              data-testid="records-browse-search"
+              className="w-full rounded-full border border-[var(--quietly-border)] bg-white py-3 pl-10 pr-4 text-[15px] text-ink shadow-[var(--shadow-input)] input-focus-ring"
+            />
+          </label>
+
+          {emptyAll ? (
+            <p
+              className="mt-8 text-center text-[14px] text-ink-soft"
+              data-testid="records-browse-empty"
+            >
+              {t("아직 남긴 기록이 없어요", "No records yet")}
+            </p>
+          ) : emptySearch ? (
+            <div
+              className="mt-10 flex flex-col items-center text-center"
+              data-testid="records-browse-no-results"
+            >
+              <p className="text-[16px] font-bold text-ink">
+                {t("검색 결과가 없어요.", "No search results.")}
+              </p>
+              <p className="mt-2 max-w-[16rem] text-[13px] leading-relaxed text-ink-soft">
+                {t(
+                  "다른 키워드로 검색하거나 오타를 확인해 보세요.",
+                  "Try another keyword or check for typos.",
+                )}
+              </p>
+              <button
+                type="button"
+                onClick={() => setQuery("")}
+                className="touch-press mt-5 inline-flex min-h-11 items-center justify-center rounded-full bg-primary px-5 text-[14px] font-bold text-ink"
+              >
+                {t("전체 기록 보기", "View all records")}
+              </button>
+            </div>
+          ) : (
+            <ul
+              className="mt-3 flex flex-col"
+              data-testid={
+                isSearching
+                  ? "records-browse-search-results"
+                  : "records-browse-list"
+              }
+            >
+              {results.map((item) => {
+                const done = item.status === "done";
+                const title =
+                  item.text.trim() || t("(내용 없음)", "(No text)");
+                return (
+                  <li
+                    key={item.id}
+                    className="quietly-record-row last:border-b-0"
                   >
-                    <span
-                      className={`text-[15px] font-semibold leading-snug text-ink ${
-                        done ? "line-through decoration-ink/20" : ""
-                      }`}
+                    <button
+                      type="button"
+                      data-testid="records-browse-row"
+                      data-record-id={item.id}
+                      data-status={item.status ?? "active"}
+                      onClick={() => {
+                        onClose();
+                        onOpenRecord(item);
+                      }}
+                      className="flex min-h-11 w-full items-start gap-2.5 px-1 py-3 text-left touch-press"
                     >
-                      {title}
-                    </span>
-                    {done && (
-                      <span className="text-[12px] font-medium text-ink-soft">
-                        {t("완료", "Done")}
+                      <span
+                        className="quietly-record-dot mt-[6px]"
+                        data-done={done ? "true" : "false"}
+                        aria-hidden
+                      />
+                      <span className="min-w-0 flex-1">
+                        <span
+                          className={`block text-[15px] font-semibold leading-snug text-ink ${
+                            done ? "text-ink-soft" : ""
+                          }`}
+                        >
+                          {title}
+                        </span>
+                        {done && (
+                          <span className="mt-1 block text-[12px] font-medium text-ink-soft">
+                            {t("완료", "Done")}
+                          </span>
+                        )}
+                        {item.start_time && !done && (
+                          <span className="mt-1 block text-[12px] font-medium text-ink-soft">
+                            {t("일정 있음", "On schedule")}
+                          </span>
+                        )}
+                        {!item.start_time && !done && (
+                          <span className="mt-1 block text-[12px] font-medium text-ink-soft">
+                            {t("날짜 없음", "No date")}
+                          </span>
+                        )}
                       </span>
-                    )}
-                    {item.start_time && (
-                      <span className="text-[12px] font-medium text-ink-soft">
-                        {t("일정 있음", "On schedule")}
-                      </span>
-                    )}
-                  </button>
-                </li>
-              );
-            })}
-          </ul>
-        )}
-      </div>
-    </BottomSheet>
+                    </button>
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+        </div>
+      </BottomSheet>
+
+      <OrganizeSummarySheet
+        items={items}
+        open={organizeOpen}
+        onClose={() => setOrganizeOpen(false)}
+      />
+    </>
   );
 }

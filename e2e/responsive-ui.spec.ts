@@ -57,7 +57,7 @@ test.describe("responsive UI safeguards", () => {
     { width: 768, height: 1024 },
     { width: 1440, height: 1000 },
   ] as const) {
-    for (const route of ["/", "/archive", "/auth"] as const) {
+    for (const route of ["/", "/app", "/archive", "/auth"] as const) {
       test(route + " has no horizontal overflow at " + viewport.width + "px", async ({
         page,
       }) => {
@@ -70,7 +70,7 @@ test.describe("responsive UI safeguards", () => {
 
   test("desktop uses an independent full-browser workspace", async ({ page }) => {
     await page.setViewportSize({ width: 1440, height: 1000 });
-    await page.goto("/?lang=en");
+    await page.goto("/app?lang=en");
     const shell = page.locator(".itjima-desktop-shell");
     const nav = page.locator(".itjima-desktop-nav");
     const chat = page.locator(".home-chat-lane");
@@ -96,7 +96,7 @@ test.describe("responsive UI safeguards", () => {
 
   test("tablet uses its own compact toolbar", async ({ page }) => {
     await page.setViewportSize({ width: 768, height: 1024 });
-    await page.goto("/?lang=en");
+    await page.goto("/app?lang=en");
     await expect(page.locator(".tablet-app-nav")).toBeVisible();
     await expect(page.locator(".mobile-app-header")).toBeHidden();
     await expect(page.locator(".mobile-bottom-nav")).toBeHidden();
@@ -107,7 +107,7 @@ test.describe("responsive UI safeguards", () => {
     await page.setViewportSize({ width: 1440, height: 1000 });
     await page.goto("/schedule?lang=en");
     await page.keyboard.press("Meta+1");
-    await expect(page).toHaveURL(/\/$/);
+    await expect(page).toHaveURL(/\/app/);
     await page.keyboard.press("Meta+K");
     await expect(page.locator("#capture-input")).toBeFocused();
     await page.keyboard.press("Meta+3");

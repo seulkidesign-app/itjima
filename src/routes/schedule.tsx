@@ -22,6 +22,7 @@ import {
   Move,
   CheckSquare,
   Archive,
+  CalendarDays,
 } from "lucide-react";
 import { animate, motion, AnimatePresence, LayoutGroup } from "framer-motion";
 import {
@@ -846,11 +847,17 @@ function Schedule() {
       />
       <div className="sticky top-0 z-10 shrink-0 bg-white">
         <div className="px-5 pb-3 pt-6">
-          <h1 className="page-title">{t("일정", "Schedule")}</h1>
+          <h1 className="page-title inline-flex items-center gap-2">
+            <span
+              className="inline-block h-3 w-3 rounded-full bg-primary"
+              aria-hidden
+            />
+            {t("내 일정", "Schedule")}
+          </h1>
           <p className="page-eyebrow mt-2.5 max-w-[22rem] leading-relaxed text-ink-soft">
             {t(
-              "오늘과 다가올 일정을 한곳에서 볼 수 있어요.",
-              "See today and what’s next in one place.",
+              "시간이 포함된 기록은 여기에 자동으로 나타나요.",
+              "Timed records show up here automatically.",
             )}
           </p>
         </div>
@@ -2076,13 +2083,19 @@ function Empty() {
       role="status"
       data-testid="schedule-empty"
     >
+      <div
+        className="mb-5 grid h-20 w-20 place-items-center rounded-full bg-white shadow-card"
+        aria-hidden
+      >
+        <CalendarDays className="text-primary" size={32} strokeWidth={1.8} />
+      </div>
       <p className="text-[19px] font-semibold tracking-[-0.025em] text-ink">
-        {t("아직 일정이 없어요", "No schedules yet")}
+        {t("아직 일정이 없어요.", "No schedules yet.")}
       </p>
       <p className="mt-2 max-w-[280px] text-[14px] leading-relaxed text-ink-soft">
         {t(
-          "말하듯 남기면 잊지마가 시간을 정리해드려요.",
-          "Say it like you mean it — Itjima will sort the time.",
+          "시간이 포함된 기록은 여기에 자동으로 나타나요.",
+          "Timed records show up here automatically.",
         )}
       </p>
       <Link

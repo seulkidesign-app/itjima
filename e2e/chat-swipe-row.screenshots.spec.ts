@@ -3,7 +3,7 @@ import { CAPTURE_LINK_NAME, GUEST_INBOX_KEY } from "./helpers";
 
 async function seed(page: import("@playwright/test").Page, width: number) {
   await page.setViewportSize({ width, height: 844 });
-  await page.goto("/");
+  await page.goto("/app");
   await page.evaluate(
     ({ key, item }) => {
       for (const k of Object.keys(localStorage)) {

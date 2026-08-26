@@ -95,7 +95,7 @@ test.describe("Schedule V1", () => {
       phone(page).getByRole("heading", { name: "Schedule", exact: true }),
     ).toBeVisible();
     await expect(
-      phone(page).getByText("Today and what's coming — in one place."),
+      phone(page).getByText(/Timed records show up here automatically|시간이 포함된 기록/),
     ).toBeVisible();
     await expect(phone(page).getByTestId("schedule-today-list")).toBeVisible();
     await expect(phone(page).getByText("Today compact row")).toBeVisible();

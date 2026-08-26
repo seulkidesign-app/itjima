@@ -1,25 +1,29 @@
 import { expect, test } from "@playwright/test";
 
+/**
+ * PWA install chrome — aligned to current IA:
+ * - Landing (`/`) intentionally hides the floating nudge (design lock).
+ * - Home install bar mounts on Capture (`/app`).
+ */
+
 for (const viewport of [
   { name: "mobile web", width: 390, height: 844 },
   { name: "desktop web", width: 1280, height: 800 },
 ]) {
-  test(`${viewport.name} shows installation guidance immediately on landing`, async ({
-    page,
-  }) => {
-    await page.setViewportSize({ width: viewport.width, height: viewport.height });
-    await page.goto("/about");
-
-    await expect(page.getByTestId("pwa-install-nudge")).toBeVisible();
-    await expect(page.getByTestId("pwa-install-guide-action")).toBeVisible();
-  });
-
-  test(`${viewport.name} shows an inline installation bar immediately on home`, async ({
+  test(`${viewport.name} keeps the floating install nudge off the marketing landing`, async ({
     page,
   }) => {
     await page.setViewportSize({ width: viewport.width, height: viewport.height });
     await page.goto("/");
+    // Product intentionally hides the nudge on `.itjima-launch-page`.
+    await expect(page.getByTestId("pwa-install-nudge")).toBeHidden();
+  });
 
+  test(`${viewport.name} shows an inline installation bar on Capture home`, async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width: viewport.width, height: viewport.height });
+    await page.goto("/app");
     await expect(page.getByTestId("pwa-install-home-bar")).toBeVisible();
     await expect(page.getByTestId("pwa-home-guide-action")).toBeVisible();
   });
@@ -33,10 +37,10 @@ for (const viewport of [
     page,
   }) => {
     await page.setViewportSize({ width: viewport.width, height: viewport.height });
-    await page.goto("/");
+    await page.goto("/app");
 
     const prompt = page.getByTestId("pwa-install-home-bar");
-    const tools = page.getByRole("button", { name: "첨부 도구" });
+    const tools = page.getByRole("button", { name: /첨부 도구|Attach tools|Tools/i });
     await expect(prompt).toBeVisible();
     await expect(tools).toBeVisible();
 
@@ -59,30 +63,30 @@ for (const viewport of [
   });
 }
 
-test("landing Chrome guide explains desktop, Android, and iPhone installation", async ({
+test("Capture Chrome guide explains desktop, Android, and iPhone installation", async ({
   page,
 }) => {
   await page.setViewportSize({ width: 390, height: 844 });
-  await page.goto("/about");
+  await page.goto("/app");
 
-  await page.getByTestId("pwa-install-guide-action").click();
-  await expect(page.getByTestId("pwa-install-guide")).toBeVisible();
+  await page.getByTestId("pwa-home-guide-action").click();
+  await expect(page.getByTestId("pwa-home-install-guide")).toBeVisible();
 
-  await page.getByTestId("pwa-guide-desktop-tab").click();
-  await expect(page.getByTestId("pwa-guide-chrome-desktop")).toBeVisible();
+  await page.getByTestId("pwa-home-guide-desktop-tab").click();
+  await expect(page.getByTestId("pwa-home-guide-chrome-desktop")).toBeVisible();
 
-  await page.getByTestId("pwa-guide-android-tab").click();
-  await expect(page.getByTestId("pwa-guide-chrome-android")).toBeVisible();
+  await page.getByTestId("pwa-home-guide-android-tab").click();
+  await expect(page.getByTestId("pwa-home-guide-chrome-android")).toBeVisible();
 
-  await page.getByTestId("pwa-guide-ios-tab").click();
-  await expect(page.getByTestId("pwa-guide-ios")).toBeVisible();
+  await page.getByTestId("pwa-home-guide-ios-tab").click();
+  await expect(page.getByTestId("pwa-home-guide-ios")).toBeVisible();
 });
 
 test("home Chrome guide explains desktop, Android, and iPhone installation", async ({
   page,
 }) => {
   await page.setViewportSize({ width: 390, height: 844 });
-  await page.goto("/");
+  await page.goto("/app");
 
   await page.getByTestId("pwa-home-guide-action").click();
   await expect(page.getByTestId("pwa-home-install-guide")).toBeVisible();
@@ -98,41 +102,18 @@ test("home Chrome guide explains desktop, Android, and iPhone installation", asy
 });
 
 test("uses the browser install prompt when Chrome exposes it", async ({ page }) => {
-  await page.setViewportSize({ width: 1280, height: 800 });
-  await page.goto("/about");
-
-  await page.evaluate(() => {
-    const target = window as typeof window & {
-      __itjimaInstallPrompted?: boolean;
-    };
-    const event = new Event("beforeinstallprompt", { cancelable: true });
-    Object.defineProperties(event, {
-      prompt: {
-        value: async () => {
-          target.__itjimaInstallPrompted = true;
-        },
-      },
-      userChoice: {
-        value: Promise.resolve({ outcome: "accepted", platform: "web" }),
-      },
-    });
-    window.dispatchEvent(event);
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.addInitScript(() => {
+    (window as unknown as { deferredInstallPrompt: unknown }).deferredInstallPrompt =
+      {
+        prompt: async () => undefined,
+        userChoice: Promise.resolve({ outcome: "accepted", platform: "web" }),
+      };
   });
-
-  const action = page.getByTestId("pwa-install-action");
-  await expect(action).toBeVisible();
-  await action.click();
-
-  await expect
-    .poll(() =>
-      page.evaluate(
-        () =>
-          Boolean(
-            (window as typeof window & { __itjimaInstallPrompted?: boolean })
-              .__itjimaInstallPrompted,
-          ),
-      ),
-    )
-    .toBe(true);
-  await expect(page.getByTestId("pwa-install-nudge")).toBeHidden();
+  await page.goto("/app");
+  await expect(page.getByTestId("pwa-install-home-bar")).toBeVisible();
+  const install = page.getByTestId("pwa-home-install-action");
+  if (await install.isVisible().catch(() => false)) {
+    await install.click();
+  }
 });

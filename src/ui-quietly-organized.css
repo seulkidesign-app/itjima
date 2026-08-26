@@ -1,0 +1,124 @@
+/**
+ * M3 · Quietly Organized (Figma 301:2)
+ * Minimal surface overrides for app chrome — does not change product behavior.
+ */
+
+.itjima-app-stage,
+.itjima-desktop-shell,
+.phone-frame.itjima-app-workspace,
+.page-shell {
+  background: var(--canvas, #faf8f5) !important;
+}
+
+.itjima-app-scroll {
+  background: var(--canvas, #faf8f5);
+}
+
+/* Bottom nav — yellow active pill (keep existing absolute geometry for composer stack) */
+@media (max-width: 639px) {
+  .mobile-bottom-nav {
+    gap: 4px !important;
+    border-radius: 999px !important;
+    border: none !important;
+    background: var(--tab-track, #edebe6) !important;
+    box-shadow: none !important;
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+  }
+
+  .mobile-bottom-nav-item {
+    flex-direction: row !important;
+    gap: 6px !important;
+    border-radius: 999px !important;
+    font-size: 13px !important;
+    font-weight: 600 !important;
+  }
+
+  .mobile-bottom-nav-item[aria-current="page"] {
+    background: var(--brand-yellow, #ffe033) !important;
+    color: var(--ink, #1a1a1f) !important;
+    box-shadow: var(--shadow-yellow) !important;
+    font-weight: 700 !important;
+  }
+
+  .mobile-bottom-nav-item[aria-current="page"] .absolute {
+    display: none !important;
+  }
+
+  .mobile-app-header {
+    background: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
+    backdrop-filter: none !important;
+  }
+}
+
+/* Tablet segmented nav — yellow active */
+.tablet-segmented-nav {
+  background: var(--tab-track, #edebe6) !important;
+  border: none !important;
+}
+
+.tablet-segmented-nav-item[aria-current="page"] {
+  font-weight: 700 !important;
+}
+
+.tablet-segmented-nav-item[aria-current="page"] .absolute {
+  background: var(--brand-yellow, #ffe033) !important;
+  box-shadow: var(--shadow-yellow) !important;
+}
+
+/* Composer / input bar — soft pill */
+.composer-hero .input-shell,
+form.composer-hero .input-shell,
+.quietly-input-bar {
+  border-radius: 999px !important;
+  border: 1px solid var(--quietly-border, #e8e8e5) !important;
+  background: #ffffff !important;
+  box-shadow: var(--shadow-input) !important;
+}
+
+/* Flat record rows */
+.quietly-record-row {
+  border-bottom: 1px solid var(--quietly-border, #e8e8e5);
+}
+
+.quietly-record-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+  background: var(--brand-yellow, #ffe033);
+  flex-shrink: 0;
+}
+
+.quietly-record-dot[data-done="true"] {
+  background: var(--ink-soft, #8a8a94);
+}
+
+.quietly-section-label {
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  color: var(--ink-soft, #8a8a94);
+}
+
+.quietly-hero-title {
+  font-size: clamp(28px, 8vw, 32px);
+  font-weight: 800;
+  line-height: 1.2;
+  letter-spacing: -0.04em;
+  color: var(--ink, #1a1a1f);
+}
+
+.quietly-hero-sub {
+  font-size: 15px;
+  line-height: 22px;
+  color: var(--ink-soft, #8a8a94);
+}
+
+.quietly-feedback-card {
+  border-radius: 20px;
+  border: 1px solid var(--quietly-border, #e8e8e5);
+  background: #ffffff;
+  box-shadow: var(--shadow-card);
+}

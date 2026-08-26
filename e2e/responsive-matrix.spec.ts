@@ -94,7 +94,7 @@ for (const viewport of viewports) {
     page,
   }) => {
     await page.setViewportSize({ width: viewport.width, height: viewport.height });
-    await page.goto("/?lang=en");
+    await page.goto("/app?lang=en");
 
     await expect(page.locator("#capture-input")).toBeVisible();
     if (viewport.width < 1024) {

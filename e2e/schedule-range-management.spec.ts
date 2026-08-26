@@ -272,10 +272,11 @@ test("an armed reminder is visible on the schedule card with its fire time", asy
   await phone(page).getByRole("link", { name: /^Schedule/ }).click();
   await phone(page).getByRole("tab", { name: "Upcoming" }).click();
 
-  const row = phone(page).getByRole("button", {
-    name: new RegExp(seeded.text),
-  });
+  const row = phone(page)
+    .locator('li[data-reminder="on"]')
+    .filter({ hasText: seeded.text })
+    .first();
   await expect(row).toBeVisible();
-  await expect(row).toContainText("Reminder on");
-  await expect(row).toContainText("Tomorrow");
+  await expect(row.getByRole("button", { name: /^Reminder/ })).toBeVisible();
+  await expect(row).toContainText(/Tomorrow|내일/);
 });

@@ -89,12 +89,12 @@
   --radius-lg: 24px;
   --radius-pill: 999px;
 
-  /* Brand palette */
-  --brand-yellow: #ffd43b;
+  /* Brand palette — Figma 301:2 Quietly Organized */
+  --brand-yellow: #ffe033;
   --brand-yellow-soft: #fff8dc;
 
   /* Semantic palette */
-  --semantic-schedule: #ffd43b;
+  --semantic-schedule: #ffe033;
   --semantic-schedule-soft: #fff8dc;
   --semantic-schedule-border: oklch(0.88 0.12 95 / 0.45);
   --semantic-task: #5b9cfa;
@@ -103,17 +103,20 @@
   --semantic-archive: #62c878;
   --semantic-archive-soft: #eefaf1;
   --semantic-archive-border: oklch(0.75 0.1 145 / 0.35);
-  --semantic-keep: #9a9a90;
-  --semantic-keep-soft: #f7f7f5;
+  --semantic-keep: #8a8a94;
+  --semantic-keep-soft: #f5f5f2;
   --semantic-danger: #e5484d;
   --semantic-danger-soft: #fff0f0;
 
-  /* Surfaces */
-  --background: #ffffff;
-  --foreground: #111111;
-  --ink: #111111;
-  --ink-soft: #9a9a90;
-  --meta: #9a9a90;
+  /* Surfaces — warm canvas, not sterile white */
+  --canvas: #faf8f5;
+  --tab-track: #edebe6;
+  --quietly-border: #e8e8e5;
+  --background: #faf8f5;
+  --foreground: #1a1a1f;
+  --ink: #1a1a1f;
+  --ink-soft: #8a8a94;
+  --meta: #8a8a94;
 
   --glass: oklch(1 0 0 / 0.92);
   --glass-border: oklch(0 0 0 / 0.05);
@@ -123,39 +126,39 @@
   --popover: #ffffff;
   --popover-foreground: #111111;
 
-  --primary: #ffd43b;
-  --primary-foreground: #111111;
-  --secondary: #f7f7f5;
-  --secondary-foreground: #111111;
-  --muted: #f7f7f5;
-  --muted-foreground: #9a9a90;
-  --accent: #f7f7f5;
-  --accent-foreground: #111111;
-  --destructive: #111111;
+  --primary: #ffe033;
+  --primary-foreground: #1a1a1f;
+  --secondary: #f5f5f2;
+  --secondary-foreground: #1a1a1f;
+  --muted: #f5f5f2;
+  --muted-foreground: #8a8a94;
+  --accent: #f5f5f2;
+  --accent-foreground: #1a1a1f;
+  --destructive: #1a1a1f;
   --destructive-foreground: #ffffff;
 
-  --border: oklch(0 0 0 / 0.05);
-  --input: #f7f7f5;
-  --ring: #ffd43b;
+  --border: #e8e8e5;
+  --input: #ffffff;
+  --ring: #ffe033;
   --surface: #ffffff;
-  --surface-subtle: #f7f7f5;
+  --surface-subtle: #f5f5f2;
   --backdrop: oklch(0 0 0 / 0.35);
-  --focus-ring: #ffd43b;
+  --focus-ring: #ffe033;
   --disabled: oklch(0.62 0.02 100 / 0.45);
 
-  --bg-gradient: #ffffff;
+  --bg-gradient: #faf8f5;
 
-  /* Shadows — soft diffused (Apple Reminders–like) */
+  /* Shadows — Quietly Organized (soft, not glassy) */
   --shadow-card:
-    0 1px 2px oklch(0 0 0 / 0.018), 0 10px 36px -10px oklch(0 0 0 / 0.05);
+    0 10px 13px rgba(26, 26, 31, 0.06);
   --shadow-float:
-    0 2px 6px oklch(0 0 0 / 0.025), 0 20px 52px -14px oklch(0 0 0 / 0.075);
+    0 10px 13px rgba(26, 26, 31, 0.08);
+  --shadow-input:
+    0 10px 13px rgba(26, 26, 31, 0.08);
   --shadow-craft:
-    0 1px 0 oklch(1 0 0 / 0.65) inset, 0 2px 8px oklch(0 0 0 / 0.02),
-    0 18px 44px -16px oklch(0 0 0 / 0.06);
+    0 1px 0 oklch(1 0 0 / 0.65) inset, 0 10px 13px rgba(26, 26, 31, 0.05);
   --shadow-yellow:
-    0 0 0 2px oklch(0.92 0.14 95 / 0.45),
-    0 8px 24px -6px oklch(0.92 0.14 95 / 0.22);
+    0 4px 5px rgba(26, 26, 31, 0.1);
   --shadow-muted:
     0 0 0 2px oklch(0.62 0.02 100 / 0.25), 0 8px 24px -6px oklch(0 0 0 / 0.08);
 }
@@ -172,7 +175,7 @@
   body {
     font-family: var(--font-sans);
     color: var(--color-foreground);
-    background: #ffffff;
+    background: var(--canvas, #faf8f5);
     -webkit-font-smoothing: antialiased;
     overscroll-behavior: none;
   }

@@ -91,7 +91,7 @@ test.describe("IA navigation (Capture / Tasks & schedule / Archive)", () => {
       page.getByRole("heading", { name: "Schedule", exact: true }),
     ).toBeVisible();
     await expect(
-      page.getByText("See today and what’s next in one place."),
+      page.getByText(/Timed records show up here automatically|시간이 포함된 기록/),
     ).toBeVisible();
     await expect(page.getByRole("tab", { name: "Today" })).toBeVisible();
     await expect(page.getByRole("tab", { name: "Upcoming" })).toBeVisible();

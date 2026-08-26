@@ -1,7 +1,7 @@
 import { expect, test } from "@playwright/test";
 
 async function useEnglish(page: import("@playwright/test").Page) {
-  await page.goto("/");
+  await page.goto("/app");
   await page.evaluate(() => {
     localStorage.setItem("itjima_lang", "en");
   });
@@ -24,14 +24,16 @@ for (const viewport of [
     });
     await expect(brand).toBeVisible();
     await brand.click();
-    await expect(page).toHaveURL(/\/about$/);
+    // Brand links to marketing landing at `/` (/about redirects there).
+    await expect(page).toHaveURL(/\/$/);
 
     const openApp = page
       .getByRole("banner")
-      .getByRole("link", { name: "Open app", exact: true });
+      .getByRole("link", { name: /Open app|앱 열기/i })
+      .first();
     await expect(openApp).toBeVisible();
     await openApp.click();
-    await expect(page).toHaveURL(/\/$/);
+    await expect(page).toHaveURL(/\/app\/?$/);
 
     await page.getByRole("link", {
       name: "Schedule",
@@ -40,6 +42,6 @@ for (const viewport of [
     await expect(page).toHaveURL(/\/schedule$/);
 
     await page.getByRole("link", { name: "Capture", exact: true }).click();
-    await expect(page).toHaveURL(/\/$/);
+    await expect(page).toHaveURL(/\/app\/?$/);
   });
 }

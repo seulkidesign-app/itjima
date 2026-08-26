@@ -15,8 +15,22 @@ import {
 async function submitThought(page: Page, text: string) {
   const frame = phone(page);
   await frame.locator("textarea").first().fill(text);
-  await frame.getByRole("button", { name: "Capture", exact: true }).click();
-  await frame.getByText(text, { exact: true }).first().waitFor({ state: "visible" });
+  await frame.locator('form.composer-hero button[type="submit"]').click();
+  // Timed captures may leave Capture via saved-schedule feedback instead of a list row.
+  await expect
+    .poll(async () => {
+      const hasFeedback = await frame
+        .getByTestId("saved-schedule-feedback")
+        .isVisible()
+        .catch(() => false);
+      const hasRow = await frame
+        .getByText(text, { exact: true })
+        .first()
+        .isVisible()
+        .catch(() => false);
+      return hasFeedback || hasRow;
+    })
+    .toBe(true);
 }
 
 test.describe("Current product information architecture", () => {
@@ -42,17 +56,19 @@ test.describe("Current product information architecture", () => {
   });
 
   test("context menu scheduling keeps Capture until confirmation", async ({ page }) => {
-    await submitThought(page, "Dentist tomorrow at 3pm");
+    // Avoid NL "task"/"schedule_*" intents that skip FocusScheduleSheet.
+    await submitThought(page, "Blue notebook sketch");
     expect((await readGuestList(page, GUEST_INBOX_KEY)).length).toBe(1);
-    await openContextMenu(page, "Dentist tomorrow at 3pm");
+    await openContextMenu(page, "Blue notebook sketch");
     await contextMenuDialog(page)
       .getByRole("menuitem", { name: "Bring it back then", exact: true })
       .click();
     await completeScheduleDialog(page);
-    expect((await readGuestList(page, GUEST_INBOX_KEY)).length).toBe(0);
+    // M1/M2: canonical inbox record is kept; schedule is a derived projection.
+    expect((await readGuestList(page, GUEST_INBOX_KEY)).length).toBe(1);
     expect((await readGuestList(page, GUEST_SCHEDULE_KEY)).length).toBe(1);
     await gotoScheduleUpcoming(page);
-    await expect(phone(page).getByText(/Dentist/i).first()).toBeVisible();
+    await expect(phone(page).getByText(/Blue notebook/i).first()).toBeVisible();
   });
 
   test("legacy thought map remains behind its feature flag", async ({ page }) => {

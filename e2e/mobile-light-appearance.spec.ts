@@ -20,7 +20,7 @@ test("[critical] installed mobile UI stays consistently light when the OS reques
 }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await page.emulateMedia({ colorScheme: "dark" });
-  await page.goto("/?lang=en");
+  await page.goto("/app?lang=en");
 
   await expect(page.locator("#capture-input")).toBeVisible();
 

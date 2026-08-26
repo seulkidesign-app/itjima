@@ -158,7 +158,8 @@ for (const viewport of [
     await resetAppState(page);
     await seedArchive(page);
 
-    for (const route of ["/", "/schedule", "/archive", "/rediscovery"]) {
+    // `/` is marketing landing (no app shell). Capture lives at `/app`.
+    for (const route of ["/app", "/schedule", "/archive", "/rediscovery"]) {
       await page.goto(route);
       await page.locator(".phone-frame").waitFor({ state: "visible" });
       await expectNoHorizontalOverflow(page);

@@ -1,6 +1,6 @@
 import { MoreHorizontal } from "lucide-react";
 import type { InboxItem } from "@/lib/store";
-import { useT } from "@/lib/i18n";
+import { useLang, useT } from "@/lib/i18n";
 
 type Props = {
   item: InboxItem;
@@ -9,9 +9,31 @@ type Props = {
   onOpenDetail?: () => void;
   showSetTime?: boolean;
   isNewest?: boolean;
+  metaRight?: string | null;
 };
 
-/** Quiet “남긴 것” list row — title first, soft action, ··· for lifecycle. */
+function relativeMeta(createdAt: string, lang: "ko" | "en"): string {
+  const created = new Date(createdAt).getTime();
+  if (!Number.isFinite(created)) return lang === "ko" ? "방금" : "Just now";
+  const delta = Date.now() - created;
+  const minute = 60_000;
+  const hour = 60 * minute;
+  const day = 24 * hour;
+  if (delta < 2 * minute) return lang === "ko" ? "방금" : "Just now";
+  if (delta < hour) {
+    const n = Math.max(1, Math.floor(delta / minute));
+    return lang === "ko" ? `${n}분 전` : `${n}m ago`;
+  }
+  if (delta < day) {
+    const n = Math.max(1, Math.floor(delta / hour));
+    return lang === "ko" ? `${n}시간 전` : `${n}h ago`;
+  }
+  const n = Math.max(1, Math.floor(delta / day));
+  if (n === 1) return lang === "ko" ? "어제" : "Yesterday";
+  return lang === "ko" ? `${n}일 전` : `${n}d ago`;
+}
+
+/** Quiet flat record row — yellow dot + title + temporal typography (Figma 301:2). */
 export function LeftItemRow({
   item,
   onSetTime,
@@ -19,32 +41,61 @@ export function LeftItemRow({
   onOpenDetail,
   showSetTime = true,
   isNewest = false,
+  metaRight = null,
 }: Props) {
   const t = useT();
+  const { lang } = useLang();
+  const uiLang = lang === "en" ? "en" : "ko";
   const title = item.text.trim() || t("(내용 없음)", "(No text)");
+  const meta = relativeMeta(item.created_at, uiLang);
+  const done = item.status === "done";
 
   return (
     <li
       data-testid="left-item-row"
       data-chat-turn=""
-      className="home-chat-turn flex items-start gap-2 border-b border-ink/[0.06] py-3 last:border-b-0"
+      className="quietly-record-row home-chat-turn flex items-start gap-2 py-3 last:border-b-0"
       data-newest={isNewest ? "true" : "false"}
       data-has-promise="false"
     >
+      <span
+        className="quietly-record-dot mt-[6px]"
+        data-done={done ? "true" : "false"}
+        aria-hidden
+      />
       <div className="min-w-0 flex-1">
-        {onOpenDetail ? (
-          <button
-            type="button"
-            data-testid="left-item-open-detail"
-            onClick={onOpenDetail}
-            className="touch-press w-full text-left"
-          >
-            <p className="text-[16px] font-semibold leading-snug text-ink">{title}</p>
-          </button>
-        ) : (
-          <p className="text-[16px] font-semibold leading-snug text-ink">{title}</p>
-        )}
-        {showSetTime && (
+        <div className="flex items-start gap-2">
+          {onOpenDetail ? (
+            <button
+              type="button"
+              data-testid="left-item-open-detail"
+              aria-label={t("생각 열기", "Open thought")}
+              onClick={onOpenDetail}
+              className="touch-press min-w-0 flex-1 text-left"
+            >
+              <p
+                className={`text-[16px] font-semibold leading-snug tracking-[-0.01em] text-ink ${
+                  done ? "text-ink-soft" : ""
+                }`}
+              >
+                {title}
+              </p>
+            </button>
+          ) : (
+            <p className="min-w-0 flex-1 text-[16px] font-semibold leading-snug text-ink">
+              {title}
+            </p>
+          )}
+          {metaRight ? (
+            <span className="shrink-0 pt-0.5 text-[12px] font-medium text-ink-soft">
+              {metaRight}
+            </span>
+          ) : null}
+        </div>
+        <p className="mt-1 text-[13px] font-medium tabular-nums text-ink-soft">
+          {meta}
+        </p>
+        {showSetTime && !done && (
           <button
             type="button"
             data-testid="left-item-set-time"

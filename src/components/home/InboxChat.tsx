@@ -130,23 +130,30 @@ export function InboxChat({
       s.kind === "ambiguity",
   );
   const isEmpty = surfaces.length === 0 && !savedFeedback;
+  // Many Records: keep Home sparse — show a short recent slice only.
+  // Keep ascending order (newest at bottom) for Capture chat scroll semantics.
+  const HOME_RECENT_LIMIT = 3;
+  const recentQuiet = quietItems.slice(-HOME_RECENT_LIMIT);
+  const olderQuietCount = Math.max(0, quietItems.length - recentQuiet.length);
 
   return (
     <div className="home-chat-lane chat-scroll flex min-h-0 flex-1 flex-col gap-3 px-5 pb-[calc(5.75rem+env(safe-area-inset-bottom))] pt-2">
-      {onOpenAllRecords && (
-        <div className="flex justify-end">
-          <button
-            type="button"
-            data-testid="open-all-records"
-            onClick={onOpenAllRecords}
-            className="touch-press min-h-11 px-1 text-[13px] font-semibold text-ink-soft underline-offset-2 hover:underline"
-          >
-            {t("전체 기록", "All records")}
-          </button>
-        </div>
-      )}
       {isEmpty ? (
-        <HomeEmptyHero />
+        <>
+          <HomeEmptyHero />
+          {onOpenAllRecords && (
+            <div className="flex justify-center">
+              <button
+                type="button"
+                data-testid="open-all-records"
+                onClick={onOpenAllRecords}
+                className="touch-press min-h-11 px-2 text-center text-[13px] font-semibold text-ink-soft underline-offset-2 hover:underline"
+              >
+                {t("전체 기록", "All records")}
+              </button>
+            </div>
+          )}
+        </>
       ) : (
         <>
           {questionSurfaces.map(({ item: it, isNewest, recovery }) => (
@@ -159,7 +166,7 @@ export function InboxChat({
             >
               {recovery ? (
                 <div
-                  className="w-full rounded-[16px] border border-ink/[0.08] bg-white px-4 py-3.5"
+                  className="quietly-feedback-card w-full px-4 py-3.5"
                   data-testid="capture-commit-recovery"
                 >
                   <p className="text-[16px] font-semibold text-ink">
@@ -215,17 +222,17 @@ export function InboxChat({
             </div>
           ))}
 
-          {quietItems.length > 0 && (
+          {recentQuiet.length > 0 && (
             <section
               className="flex flex-col"
               data-testid="left-items-section"
-              aria-label={t("남긴 것", "Left behind")}
+              aria-label={t("방금 남긴 것", "Just left")}
             >
-              <h2 className="mb-1 text-[13px] font-semibold tracking-[-0.01em] text-ink-soft">
-                {t("남긴 것", "Left behind")}
+              <h2 className="quietly-section-label mb-1">
+                {t("방금 남긴 것", "Just left")}
               </h2>
               <ul className="flex flex-col">
-                {quietItems.map(({ item: it, isNewest }) => (
+                {recentQuiet.map(({ item: it, isNewest }) => (
                   <LeftItemRow
                     key={it.id}
                     item={it}
@@ -236,7 +243,35 @@ export function InboxChat({
                   />
                 ))}
               </ul>
+              {onOpenAllRecords && (
+                <button
+                  type="button"
+                  data-testid="open-all-records"
+                  onClick={onOpenAllRecords}
+                  className="touch-press mx-auto mt-3 min-h-11 px-2 text-center text-[13px] font-semibold text-ink-soft underline-offset-2 hover:underline"
+                >
+                  {olderQuietCount > 0
+                    ? t(
+                        `이전 기록 보기 ${olderQuietCount} →`,
+                        `View ${olderQuietCount} earlier →`,
+                      )
+                    : t("이전 기록 보기 →", "View earlier records →")}
+                </button>
+              )}
             </section>
+          )}
+
+          {!recentQuiet.length && onOpenAllRecords && (
+            <div className="flex justify-end">
+              <button
+                type="button"
+                data-testid="open-all-records"
+                onClick={onOpenAllRecords}
+                className="touch-press min-h-11 px-1 text-[13px] font-semibold text-ink-soft underline-offset-2 hover:underline"
+              >
+                {t("전체 기록", "All records")}
+              </button>
+            </div>
           )}
         </>
       )}

@@ -198,15 +198,16 @@ export function ScheduleCompactRow({
       </button>
 
       <span className="min-w-0 flex-1 pt-2.5">
+        {/* Time-first hierarchy (Figma 24) */}
+        <span className="block text-[15px] font-semibold tabular-nums leading-snug tracking-[-0.01em] text-ink">
+          {displayTime}
+        </span>
         <span
-          className={`block text-[16px] font-semibold leading-snug tracking-[-0.01em] text-ink ${
-            done ? "line-through decoration-ink/20" : ""
+          className={`mt-0.5 block text-[16px] font-semibold leading-snug tracking-[-0.01em] text-ink ${
+            done ? "line-through decoration-ink/20 text-ink-soft" : ""
           }`}
         >
           {title}
-        </span>
-        <span className="mt-0.5 block text-[13px] font-medium tabular-nums leading-snug text-ink-soft">
-          {displayTime}
         </span>
         {s.alarm && !done && (
           <ReminderMeta label={alarmLabel} onOpen={onAlarm} t={t} />

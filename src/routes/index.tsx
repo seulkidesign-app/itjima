@@ -134,6 +134,12 @@ function Inbox() {
   const [cleanupReviewOpen, setCleanupReviewOpen] = useState(false);
   const [recordsBrowseOpen, setRecordsBrowseOpen] = useState(false);
   const [detailItem, setDetailItem] = useState<InboxItem | null>(null);
+
+  useEffect(() => {
+    const openBrowse = () => setRecordsBrowseOpen(true);
+    window.addEventListener("itjima:open-browse", openBrowse);
+    return () => window.removeEventListener("itjima:open-browse", openBrowse);
+  }, []);
   const [menuFor, setMenuFor] = useState<string | null>(null);
   const [pasteSheet, setPasteSheet] = useState<{
     chunks: string[];

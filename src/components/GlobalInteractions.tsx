@@ -51,7 +51,7 @@ export function GlobalInteractions() {
 
       if (event.key === "1") {
         event.preventDefault();
-        void navigate({ to: "/" });
+        void navigate({ to: "/app" });
       } else if (event.key === "2") {
         event.preventDefault();
         void navigate({ to: "/schedule" });
@@ -60,8 +60,8 @@ export function GlobalInteractions() {
         void navigate({ to: "/archive" });
       } else if (event.key.toLowerCase() === "k" && !isEditable) {
         event.preventDefault();
-        if (pathname !== "/") {
-          void navigate({ to: "/" }).then(() => {
+        if (pathname !== "/app") {
+          void navigate({ to: "/app" }).then(() => {
             window.setTimeout(() => document.getElementById("capture-input")?.focus(), 120);
           });
         } else {

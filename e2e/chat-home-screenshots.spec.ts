@@ -11,7 +11,7 @@ test.describe("Chat home mobile screenshots", () => {
   test("capture four chat home states at 375px", async ({ page }) => {
     mkdirSync(OUT_DIR, { recursive: true });
 
-    await page.goto("/");
+    await page.goto("/app");
     await page.evaluate(() => {
       for (const k of Object.keys(localStorage)) {
         if (k.startsWith("itjima.")) localStorage.removeItem(k);
@@ -21,7 +21,7 @@ test.describe("Chat home mobile screenshots", () => {
     });
     await page.reload();
     await phone(page)
-      .getByRole("link", { name: /^(남기기|던지기)/ })
+      .getByRole("link", { name: /^(남기기|Capture)/ })
       .waitFor();
 
     await phone(page).screenshot({

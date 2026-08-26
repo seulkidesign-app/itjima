@@ -83,7 +83,7 @@ test("multi-day range, schedule switches, and reminder metadata stay visually al
     .filter({ hasText: seeded.text })
     .first();
   await expect(row).toBeVisible();
-  const reminder = row.locator('button[aria-label*="Reminder on"]');
+  const reminder = row.locator('button[aria-label^="Reminder"]');
   await expect(reminder).toBeVisible();
 
   const reminderGeometry = await Promise.all([
@@ -99,7 +99,7 @@ test("multi-day range, schedule switches, and reminder metadata stay visually al
     reminderGeometry[0]!.x + reminderGeometry[0]!.width + 1,
   );
 
-  await row.click();
+  await row.getByTestId("schedule-row-edit").click();
   const dialog = page.getByRole("dialog").last();
   await expect(dialog).toBeVisible();
   await dialog.getByRole("button", { name: "Add time and end" }).click();

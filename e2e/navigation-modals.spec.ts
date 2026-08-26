@@ -166,7 +166,7 @@ test.describe("Navigation and modals", () => {
     await openContextMenu(page, text);
 
     await expect(contextMenuDialog(page)).toBeVisible();
-    await expect(page).toHaveURL(/\/$/);
+    await expect(page).toHaveURL(/\/($|app)/);
 
     await page.keyboard.press("Escape");
     await expect(contextMenuDialog(page)).toHaveCount(0);

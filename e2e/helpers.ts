@@ -164,12 +164,39 @@ export async function completeScheduleDialog(page: Page) {
     return;
   }
 
-  const pickTime = sheet.getByRole("button", { name: /Pick a time|Add time/i });
-  if (await pickTime.isVisible()) {
-    await pickTime.click();
+  // ScheduleChoiceFlow: when → time → reminder
+  const todayQuick = sheet.getByRole("button", { name: /^(Today|오늘)$/ });
+  if (await todayQuick.isVisible().catch(() => false)) {
+    await todayQuick.click();
   }
-  await sheet.getByRole("button", { name: "Set a reminder" }).click();
-  await sheet.getByRole("button", { name: "Add to schedule" }).click();
+
+  const whenContinue = sheet.getByRole("button", {
+    name: /selected|선택|Choose a date|날짜 선택/,
+  });
+  if (await whenContinue.isVisible().catch(() => false)) {
+    await whenContinue.click();
+  }
+
+  const setReminder = sheet.getByRole("button", {
+    name: /Set a reminder|알림 정하기/,
+  });
+  if (await setReminder.isVisible().catch(() => false)) {
+    await setReminder.click();
+  }
+
+  const addOrSave = sheet.getByRole("button", {
+    name: /Add to schedule|일정에 추가|^(Save|저장)\b/,
+  });
+  await addOrSave.click();
+
+  const notification = page.getByRole("dialog", { name: /Notification|알림/ });
+  if (await notification.isVisible().catch(() => false)) {
+    await notification
+      .getByRole("button", {
+        name: /Save without notifications|알림 없이 저장/,
+      })
+      .click();
+  }
 }
 
 async function forceAcknowledgeInlinePromises(page: Page) {
