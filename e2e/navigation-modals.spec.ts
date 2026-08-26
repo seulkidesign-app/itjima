@@ -129,27 +129,17 @@ test.describe("Navigation and modals", () => {
     await expect(page.getByRole("dialog")).toHaveCount(0);
   });
 
-  test("focus sort blocks tab navigation until closed", async ({ page }) => {
+  test("focus sort is unreachable so tab navigation stays available (M2)", async ({ page }) => {
     await addThought(page, "First thought for sort");
     await addThought(page, "Second thought for sort");
 
     await openContextMenuRaw(page, "First thought for sort");
-    await clickContextMenuItem(page, "Sort one by one");
-    await phone(page)
-      .getByRole("dialog", { name: "One by one" })
-      .waitFor({ state: "visible" });
-    await expect(page).toHaveURL(/\/$/);
-
-    const tutorial = phone(page).getByTestId("swipe-tutorial");
-    if (await tutorial.isVisible().catch(() => false)) {
-      await tutorial.getByRole("button", { name: /Got it|알겠어요/ }).click();
-    }
-
-    await phone(page)
-      .getByRole("dialog", { name: "One by one" })
-      .getByRole("button", { name: "Close", exact: true })
-      .click();
-    await expect(phone(page).getByRole("dialog")).toHaveCount(0);
+    const menu = phone(page).getByTestId("inbox-context-menu");
+    await expect(
+      menu.getByRole("menuitem", { name: /Sort one by one|하나씩 정리하기/i }),
+    ).toHaveCount(0);
+    await page.keyboard.press("Escape");
+    await expect(phone(page).getByRole("dialog", { name: /One by one|하나씩/ })).toHaveCount(0);
   });
 
   test("archive edit dialog blocks tab navigation until dismissed", async ({

@@ -74,33 +74,15 @@ test("landing motion respects reduced-motion preference", async ({
   await context.close();
 });
 
-test("pre-brand deck card keeps whole-card directional interaction", async ({
+test("pre-brand Capture menu no longer opens DecisionDeck (M2)", async ({
   page,
 }) => {
   await addThought(page, `카드 모션 유지 ${Date.now()}`);
   const app = phone(page);
   await app.getByTestId("left-item-more").last().click();
-  await page
-    .getByTestId("inbox-context-menu")
-    .getByRole("menuitem", { name: /Sort one by one|하나씩 정리하기/, exact: true })
-    .click({ force: true });
-
-  const card = app.getByTestId("decision-deck-active-card");
-  await expect(card).toBeVisible();
-  await expect(card.locator(".deck-card-kicker")).toHaveCount(0);
-
-  const box = await card.boundingBox();
-  expect(box).toBeTruthy();
-  const x = box!.x + box!.width / 2;
-  const y = box!.y + box!.height / 2;
-  await page.mouse.move(x, y);
-  await page.mouse.down();
-  await page.mouse.move(x + box!.width * 0.22, y, { steps: 12 });
-
-  await expect(card.getByTestId("decision-outcome-label")).toHaveAttribute(
-    "data-outcome",
-    "today",
-  );
-  await page.mouse.up();
-  await expect(card).toBeVisible();
+  const menu = page.getByTestId("inbox-context-menu");
+  await expect(
+    menu.getByRole("menuitem", { name: /Sort one by one|하나씩 정리하기/i }),
+  ).toHaveCount(0);
+  await expect(app.getByTestId("decision-deck-active-card")).toHaveCount(0);
 });

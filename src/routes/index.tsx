@@ -76,6 +76,14 @@ import {
   type ScheduleItem,
 } from "@/lib/store";
 import { ThoughtDetailSheet } from "@/components/ThoughtDetailSheet";
+import { RecordsBrowseSheet } from "@/components/RecordsBrowseSheet";
+import {
+  deleteRecord,
+  syncRecordTemporal,
+  syncRecordText,
+  undoDeleteRecord,
+  type CanonicalMutationOps,
+} from "@/lib/canonicalMutations";
 import { track } from "@/lib/analytics";
 import { showActionToast, showUndoActionToast, showUndoToast as showUndoToastBase } from "@/lib/undoToast";
 import { useT, useLang } from "@/lib/i18n";
@@ -124,6 +132,7 @@ function Inbox() {
     null,
   );
   const [cleanupReviewOpen, setCleanupReviewOpen] = useState(false);
+  const [recordsBrowseOpen, setRecordsBrowseOpen] = useState(false);
   const [detailItem, setDetailItem] = useState<InboxItem | null>(null);
   const [menuFor, setMenuFor] = useState<string | null>(null);
   const [pasteSheet, setPasteSheet] = useState<{
@@ -152,6 +161,26 @@ function Inbox() {
     setAcknowledgedIds(loadAcknowledgedIds(userId));
   }, [userId]);
   const items = inbox.items;
+  const allInboxItems = inbox.allItems;
+  const mutationOps = useCallback((): CanonicalMutationOps => {
+    return {
+      getInboxById: (id) => allInboxItems.find((it) => it.id === id),
+      updateInbox: (id, patch) => inbox.update(id, patch),
+      softDeleteInbox: (id) => inbox.softDelete(id),
+      // Read LS directly so delete snapshots never miss a just-written projection.
+      getSchedules: () => {
+        try {
+          const key = `itjima.${userId ?? "guest"}.schedules`;
+          return JSON.parse(localStorage.getItem(key) || "[]") as ScheduleItem[];
+        } catch {
+          return schedules.items;
+        }
+      },
+      updateSchedule: (id, patch) => schedules.update(id, patch),
+      removeSchedule: (id) => schedules.remove(id),
+      addSchedule: async (payload) => schedules.add(payload),
+    };
+  }, [allInboxItems, inbox, schedules, userId]);
   const pendingItems = useMemo(() => pendingDecisionItems(items), [items]);
   const menuItem = menuFor
     ? items.find((x) => x.id === menuFor)
@@ -734,19 +763,12 @@ function Inbox() {
 
   const moveToDelete = async (it: InboxItem) => {
     try {
-      // Canonical delete also drops derived schedule projection (same id / source_id).
-      const projections = schedules.items.filter(
-        (s) => s.id === it.id || s.source_id === it.id,
-      );
-      for (const proj of projections) {
-        await schedules.remove(proj.id);
-      }
-      const deleted = await inbox.softDelete(it.id);
+      const snapshot = await deleteRecord(it.id, mutationOps());
       track("thought_swiped_delete", { text_length: it.text.length });
-      if (deleted) {
+      if (snapshot) {
         track("thought_deleted", { text_length: it.text.length });
         showUndoToast(t("삭제했어요", "Deleted"), async () => {
-          await inbox.update(it.id, { status: "active" } as Partial<InboxItem>);
+          await undoDeleteRecord(snapshot, mutationOps());
         });
       }
     } catch {
@@ -781,15 +803,10 @@ function Inbox() {
       let created: InboxItem;
       if (replaceId && items.some((it) => it.id === replaceId)) {
         const prev = items.find((it) => it.id === replaceId) as InboxItem;
-        const patch = withBumpedContentRevision(prev, {
-          text,
-          images,
-          raw_text: prev.raw_text ?? prev.text,
-        });
-        await inbox.update(replaceId, patch);
+        await syncRecordText(replaceId, text, mutationOps());
+        await inbox.update(replaceId, { images });
         created = {
           ...prev,
-          ...patch,
           text,
           images,
           raw_text: prev.raw_text ?? prev.text,
@@ -994,6 +1011,7 @@ function Inbox() {
           }
           void navigate({ to: "/schedule" });
         }}
+        onOpenAllRecords={() => setRecordsBrowseOpen(true)}
       />
 
       <div className="composer-hero relative sticky bottom-0 z-20 shrink-0">
@@ -1018,19 +1036,33 @@ function Inbox() {
       </div>
 
       <ThoughtDetailSheet
-        item={detailItem}
+        item={
+          detailItem
+            ? allInboxItems.find((it) => it.id === detailItem.id) ?? detailItem
+            : null
+        }
         open={Boolean(detailItem)}
         onClose={() => setDetailItem(null)}
         onSchedule={openHomeSchedule}
         onArchive={moveToArchive}
         onDelete={moveToDelete}
         onSaveEdit={async (item, text) => {
-          await inbox.update(
-            item.id,
-            withBumpedContentRevision(item, { text }),
-          );
+          await syncRecordText(item.id, text, mutationOps());
           toast.success(t("고쳤어요", "Saved your edit"));
         }}
+        onClearTemporal={async (item) => {
+          await syncRecordTemporal(item.id, null, mutationOps());
+          toast.success(
+            t("날짜·시간을 지웠어요", "Removed date & time"),
+          );
+        }}
+      />
+
+      <RecordsBrowseSheet
+        open={recordsBrowseOpen}
+        items={allInboxItems}
+        onClose={() => setRecordsBrowseOpen(false)}
+        onOpenRecord={setDetailItem}
       />
 
       {menuItem && (
@@ -1038,7 +1070,7 @@ function Inbox() {
           menuItem={menuItem}
           onClose={() => setMenuFor(null)}
           onOpenCleanup={() => setCleanupReviewOpen(true)}
-          onOpenDecisionDeck={() => openDecisionDeck(menuItem.id)}
+          onOpenAllRecords={() => setRecordsBrowseOpen(true)}
           onUnderstandAgain={handleUnderstandAgain}
           onOpenHomeSchedule={openHomeSchedule}
           onMoveToArchive={moveToArchive}

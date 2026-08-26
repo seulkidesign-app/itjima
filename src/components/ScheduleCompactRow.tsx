@@ -179,11 +179,10 @@ export function ScheduleCompactRow({
         onPointerDown={(event) => event.stopPropagation()}
         onClick={(event) => {
           event.stopPropagation();
-          if (!done) onComplete();
+          onComplete();
         }}
-        disabled={done}
         className="touch-press grid h-11 w-11 shrink-0 place-items-center rounded-full"
-        aria-label={done ? t("완료됨", "Completed") : t("완료", "Complete")}
+        aria-label={done ? t("완료 취소", "Undo complete") : t("완료", "Complete")}
         data-testid="schedule-row-complete"
       >
         <span

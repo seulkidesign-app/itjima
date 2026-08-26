@@ -802,14 +802,17 @@ function useLocalList<T extends { id: string; created_at: string }>(
 
 function useInboxList() {
   const list = useLocalList<InboxItem>("inbox", "inbox");
+  /** Capture “남긴 것” — active only (unchanged view policy). */
   const items = list.items.filter((it) => !it.status || it.status === "active");
+  /** Full local inbox including done/deleted for browse & mutations. */
+  const allItems = list.items;
   const softDelete = useCallback(
     async (id: string) => {
       return list.update(id, { status: "deleted" } as Partial<InboxItem>);
     },
     [list],
   );
-  return { ...list, items, softDelete };
+  return { ...list, items, allItems, softDelete };
 }
 
 export const useInbox = () => useInboxList();
@@ -831,7 +834,13 @@ export function dismissLogin() {
 
 /** Attach Brain Mirror result to an inbox item (local + cloud when signed in). */
 export async function setInboxBrainMirror(
-  inbox: ReturnType<typeof useInbox>,
+  inbox: {
+    items: InboxItem[];
+    update: (
+      id: string,
+      patch: Partial<InboxItem>,
+    ) => Promise<boolean | void>;
+  },
   id: string,
   result: BrainMirrorCore | BrainMirrorResult,
   options?: { expectedRevision?: number },

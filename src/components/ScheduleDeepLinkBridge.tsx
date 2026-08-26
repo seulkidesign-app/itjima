@@ -24,7 +24,9 @@ function readScheduleTarget(
   for (const key of scheduleStorageKeys(userId)) {
     try {
       const rows = JSON.parse(localStorage.getItem(key) || "[]") as ScheduleItem[];
-      const found = rows.find((row) => row.id === id);
+      const found =
+        rows.find((row) => row.id === id) ??
+        rows.find((row) => row.source_id === id);
       if (found) return found;
     } catch {
       // A damaged bucket should not block the rest of the app.

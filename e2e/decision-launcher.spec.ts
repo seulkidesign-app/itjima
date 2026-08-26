@@ -3,11 +3,9 @@ import {
   resetAppState,
   addThought,
   phone,
-  readGuestList,
-  GUEST_INBOX_KEY,
   dismissInlinePromise,
   closeDecisionDeckIfOpen,
-  openDecisionDeckFromMenu,
+  assertDecisionDeckUnreachableFromMenu,
 } from "./helpers";
 
 test.describe("Home Decision launcher (demoted)", () => {
@@ -23,26 +21,19 @@ test.describe("Home Decision launcher (demoted)", () => {
     await expect(phone(page).getByTestId("decision-launcher")).toHaveCount(0);
   });
 
-  test("··· menu still opens DecisionDeck from newest item", async ({
+  test("··· menu does not open DecisionDeck in V0.2 (M2)", async ({
     page,
   }) => {
     const stamp = Date.now();
-    const older = `Older thought ${stamp}`;
     const newer = `Newer thought ${stamp}`;
-    await addThought(page, older);
+    await addThought(page, `Older thought ${stamp}`);
     await addThought(page, newer);
     await dismissInlinePromise(page);
     await closeDecisionDeckIfOpen(page);
 
-    await openDecisionDeckFromMenu(page, newer);
-
-    const deck = phone(page).getByRole("dialog", { name: "One by one" });
-    await expect(deck.getByLabel("1 / 2")).toBeVisible();
+    await assertDecisionDeckUnreachableFromMenu(page, newer);
     await expect(
-      deck.locator("p").filter({ hasText: newer }).first(),
-    ).toBeVisible();
-
-    const inbox = await readGuestList(page, GUEST_INBOX_KEY);
-    expect(inbox.length).toBe(2);
+      phone(page).getByRole("dialog", { name: "One by one" }),
+    ).toHaveCount(0);
   });
 });

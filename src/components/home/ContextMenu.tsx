@@ -4,7 +4,7 @@ import {
   Calendar,
   Archive as ArchiveIcon,
   Sparkles,
-  ListOrdered,
+  BookOpen,
 } from "lucide-react";
 import { useEffect, useRef } from "react";
 import { FEATURES } from "@/lib/features";
@@ -15,7 +15,8 @@ type Props = {
   menuItem: InboxItem;
   onClose: () => void;
   onOpenCleanup: () => void;
-  onOpenDecisionDeck: () => void;
+  /** V0.2: open All Records browse (DecisionDeck one-by-one is unreachable). */
+  onOpenAllRecords: () => void;
   onUnderstandAgain: (item: InboxItem) => void | Promise<void>;
   onOpenHomeSchedule: (item: InboxItem) => void;
   onMoveToArchive: (item: InboxItem) => void;
@@ -55,7 +56,7 @@ export function ContextMenu({
   menuItem,
   onClose,
   onOpenCleanup,
-  onOpenDecisionDeck,
+  onOpenAllRecords,
   onUnderstandAgain,
   onOpenHomeSchedule,
   onMoveToArchive,
@@ -135,11 +136,11 @@ export function ContextMenu({
         )}
         <MenuItem
           buttonRef={firstRef()}
-          icon={<ListOrdered size={18} aria-hidden />}
-          label={t("하나씩 정리하기", "Sort one by one")}
+          icon={<BookOpen size={18} aria-hidden />}
+          label={t("전체 기록", "All records")}
           onClick={() => {
             onClose();
-            onOpenDecisionDeck();
+            onOpenAllRecords();
           }}
         />
         {FEATURES.BRAIN_MIRROR && (

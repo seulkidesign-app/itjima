@@ -348,8 +348,11 @@ export async function openContextMenuRaw(page: Page, thoughtText: string) {
   });
 }
 
-/** Open DecisionDeck via ··· menu (sticky launcher removed in V02-08D). */
-export async function openDecisionDeckFromMenu(
+/**
+ * M2: DecisionDeck one-by-one launcher is removed from V0.2 UI.
+ * Assert the menu entry is gone; do not open the deck.
+ */
+export async function assertDecisionDeckUnreachableFromMenu(
   page: Page,
   thoughtText?: string,
 ) {
@@ -363,10 +366,24 @@ export async function openDecisionDeckFromMenu(
     await more.click();
     await contextMenuDialog(page).waitFor({ state: "visible", timeout: 10_000 });
   }
-  await clickContextMenuItem(page, "Sort one by one");
-  const dialog = frame.getByRole("dialog", { name: /One by one|하나씩/ });
-  await dialog.waitFor({ state: "visible" });
-  return dialog;
+  const menu = contextMenuDialog(page);
+  await expect(
+    menu.getByRole("menuitem", { name: /Sort one by one|하나씩 정리하기/i }),
+  ).toHaveCount(0);
+  await expect(
+    menu.getByRole("menuitem", { name: /All records|전체 기록/i }),
+  ).toBeVisible();
+}
+
+/** @deprecated M2 — DecisionDeck launcher removed; use assertDecisionDeckUnreachableFromMenu. */
+export async function openDecisionDeckFromMenu(
+  page: Page,
+  thoughtText?: string,
+) {
+  await assertDecisionDeckUnreachableFromMenu(page, thoughtText);
+  throw new Error(
+    "DecisionDeck launcher is unreachable in V0.2 UI (M2). Do not open the deck from product chrome.",
+  );
 }
 
 export async function getTabCount(

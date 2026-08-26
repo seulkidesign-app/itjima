@@ -116,15 +116,11 @@ test.describe("Design polish visual regression", () => {
 
     await phone(page).screenshot({ path: join(OUT_DIR, "01-home.png") });
 
-    await phone(page).getByTestId("left-item-more").last().click();
-    await page
-      .getByTestId("inbox-context-menu")
-      .getByRole("menuitem", { name: "Sort one by one", exact: true })
-      .click({ force: true });
-    await phone(page).getByTestId("decision-deck-active-card").waitFor();
+    await phone(page).getByTestId("open-all-records").click();
+    await phone(page).getByTestId("records-browse-sheet").waitFor();
     await page.waitForTimeout(300);
-    await phone(page).screenshot({ path: join(OUT_DIR, "02-decision-deck.png") });
-    await phone(page).getByRole("button", { name: "Close", exact: true }).click();
+    await phone(page).screenshot({ path: join(OUT_DIR, "02-all-records.png") });
+    await page.keyboard.press("Escape");
 
     await phone(page).getByRole("link", { name: /^Schedule/ }).click();
     await phone(page).getByRole("heading", { name: "Schedule", exact: true }).waitFor();

@@ -4,6 +4,7 @@ import {
   useMemo,
   useRef,
   useState,
+  useCallback,
   type ComponentProps,
   type ComponentType,
   type PointerEvent as ReactPointerEvent,
@@ -89,7 +90,16 @@ import {
 import { convertLaterInboxToSchedule } from "@/lib/convertLaterInboxToSchedule";
 import { isStructuredTimedRecord } from "@/lib/recordTemporal";
 import { findScheduleProjection, dedupeScheduleProjections } from "@/lib/scheduleProjection";
-import { withBumpedContentRevision } from "@/lib/recordRevision";
+import {
+  canonicalIdFromSchedule,
+  completeRecord,
+  deleteRecord,
+  syncRecordTemporal,
+  undoCompleteRecord,
+  undoDeleteRecord,
+  type CanonicalMutationOps,
+} from "@/lib/canonicalMutations";
+import { showUndoToast } from "@/lib/undoToast";
 import { SPRING_SNAP_BACK, SHEET_BACKDROP_CLASS, SHEET_BACKDROP_FADE } from "@/lib/motion";
 import { useListStagger } from "@/lib/listStagger";
 import { toast } from "sonner";
@@ -195,6 +205,24 @@ function Schedule() {
   const { items, update, remove, add, syncState, retrySync } = useSchedules();
   const archive = useArchive();
   const inbox = useInbox();
+  const mutationOps = useCallback((): CanonicalMutationOps => {
+    return {
+      getInboxById: (id) => inbox.allItems.find((it) => it.id === id),
+      updateInbox: (id, patch) => inbox.update(id, patch),
+      softDeleteInbox: (id) => inbox.softDelete(id),
+      getSchedules: () => {
+        try {
+          const key = `itjima.${userId ?? "guest"}.schedules`;
+          return JSON.parse(localStorage.getItem(key) || "[]") as ScheduleItem[];
+        } catch {
+          return items;
+        }
+      },
+      updateSchedule: (id, patch) => update(id, patch),
+      removeSchedule: (id) => remove(id),
+      addSchedule: async (payload) => add(payload),
+    };
+  }, [inbox, items, update, remove, add, userId]);
   const [tab, setTab] = useState<"today" | "list" | "cal">("today");
   const [sheet, setSheet] = useState<{
     open: boolean;
@@ -224,7 +252,7 @@ function Schedule() {
   useEffect(() => {
     const id = sessionStorage.getItem("itjima.openScheduleEdit");
     if (!id) return;
-    const target = items.find((s) => s.id === id);
+    const target = findScheduleProjection(items, id);
     if (!target) return;
     sessionStorage.removeItem("itjima.openScheduleEdit");
     setTab("list");
@@ -268,28 +296,40 @@ function Schedule() {
     });
 
     if (pending.edit) {
-      await update(pending.edit.id, {
-        text: pending.text,
-        start_time: pending.start.toISOString(),
-        end_time: pending.end.toISOString(),
-        ...allDayFields,
-        repeat: pending.repeat ?? null,
-        ...alarmPayload,
-      });
-      const recordId = pending.edit.source_id || pending.edit.id;
-      if (inbox.items.some((it) => it.id === recordId)) {
-        const canonical = inbox.items.find((it) => it.id === recordId);
-        await inbox.update(
+      const recordId = canonicalIdFromSchedule(pending.edit);
+      const hasCanonical = inbox.allItems.some((it) => it.id === recordId);
+
+      if (hasCanonical) {
+        // Canonical-first: mutate record, then sync projection fields.
+        await syncRecordTemporal(
           recordId,
-          withBumpedContentRevision(canonical, {
+          {
             text: pending.text,
             start_time: pending.start.toISOString(),
             end_time: pending.end.toISOString(),
             all_day: allDayFields.all_day,
-            temporal_state: "exact_datetime",
-            structured_at: new Date().toISOString(),
-          }),
+          },
+          mutationOps(),
         );
+        await update(pending.edit.id, {
+          text: pending.text,
+          start_time: pending.start.toISOString(),
+          end_time: pending.end.toISOString(),
+          ...allDayFields,
+          repeat: pending.repeat ?? null,
+          ...alarmPayload,
+          source_id: recordId,
+        });
+      } else {
+        // Schedule-only legacy row — no fake canonical.
+        await update(pending.edit.id, {
+          text: pending.text,
+          start_time: pending.start.toISOString(),
+          end_time: pending.end.toISOString(),
+          ...allDayFields,
+          repeat: pending.repeat ?? null,
+          ...alarmPayload,
+        });
       }
       return {
         ...pending.edit,
@@ -711,17 +751,65 @@ function Schedule() {
 
   const markDone = async (s: ScheduleItem) => {
     try {
-      const done = await update(s.id, { status: "done" });
-      const recordId = s.source_id || s.id;
-      if (inbox.items.some((it) => it.id === recordId)) {
-        await inbox.update(recordId, { status: "done" });
+      const recordId = canonicalIdFromSchedule(s);
+      if (inbox.allItems.some((it) => it.id === recordId)) {
+        await completeRecord(recordId, mutationOps());
+      } else {
+        await update(s.id, { status: "done" });
       }
       if (userId) await cancelScheduleReminders(userId, s.id);
       hapticConfirm();
       track("schedule_completed", { text_length: s.text.length });
-      if (done) toast.success(t("다녀온 기억이에요", "You can let this go"), scheduleToast);
+      showUndoToast(
+        t("다녀온 기억이에요", "You can let this go"),
+        async () => {
+          if (inbox.allItems.some((it) => it.id === recordId)) {
+            await undoCompleteRecord(recordId, mutationOps());
+          } else {
+            await update(s.id, { status: "active" });
+          }
+        },
+        { undoLabel: t("되돌리기", "Undo") },
+      );
     } catch {
       toast.error(t("완료하지 못했어요", "Couldn't mark done"));
+    }
+  };
+
+  const undoDone = async (s: ScheduleItem) => {
+    try {
+      const recordId = canonicalIdFromSchedule(s);
+      if (inbox.allItems.some((it) => it.id === recordId)) {
+        await undoCompleteRecord(recordId, mutationOps());
+      } else {
+        await update(s.id, { status: "active" });
+      }
+      toast.success(t("다시 열어 뒀어요", "Marked active again"), scheduleToast);
+    } catch {
+      toast.error(t("되돌리지 못했어요", "Couldn't undo"));
+    }
+  };
+
+  const deleteScheduleRow = async (s: ScheduleItem) => {
+    try {
+      if (userId) await cancelScheduleReminders(userId, s.id);
+      const recordId = canonicalIdFromSchedule(s);
+      if (inbox.allItems.some((it) => it.id === recordId)) {
+        const snapshot = await deleteRecord(recordId, mutationOps());
+        if (pins.has(s.id)) togglePin(s.id);
+        if (snapshot) {
+          showUndoToast(t("삭제했어요", "Deleted"), async () => {
+            await undoDeleteRecord(snapshot, mutationOps());
+          });
+        }
+        return;
+      }
+      // Schedule-only legacy: remove projection only.
+      const deleted = await remove(s.id);
+      if (pins.has(s.id)) togglePin(s.id);
+      if (deleted) toast(t("삭제했어요", "Deleted"));
+    } catch {
+      toast.error(t("삭제하지 못했어요", "Couldn't delete"));
     }
   };
 
@@ -839,6 +927,7 @@ function Schedule() {
               doneItems={doneItems}
               pins={pins}
               onComplete={markDone}
+              onUndoComplete={undoDone}
               onEdit={(s) => setSheet({ open: true, edit: s })}
               onAlarm={(s) => setAlarmSheet(s)}
             />
@@ -888,7 +977,7 @@ function Schedule() {
               {doneItems.length > 0 && (
                 <DoneSection
                   items={doneItems}
-                  onComplete={markDone}
+                  onComplete={undoDone}
                   onEdit={(s) => setSheet({ open: true, edit: s })}
                   t={t}
                 />
@@ -906,18 +995,7 @@ function Schedule() {
             onEdit={(s) => setSheet({ open: true, edit: s })}
             onQuickAdd={openQuickAdd}
             onDelete={async (s) => {
-              try {
-                if (userId) await cancelScheduleReminders(userId, s.id);
-                const deleted = await remove(s.id);
-                const recordId = s.source_id || s.id;
-                if (inbox.items.some((it) => it.id === recordId)) {
-                  await inbox.softDelete(recordId);
-                }
-                if (pins.has(s.id)) togglePin(s.id);
-                if (deleted) toast(t("삭제했어요", "Deleted"));
-              } catch {
-                toast.error(t("삭제하지 못했어요", "Couldn't delete"));
-              }
+              await deleteScheduleRow(s);
             }}
             onDuplicate={duplicateSchedule}
             onDropToDate={moveEventsToDate}
@@ -1207,6 +1285,7 @@ function ScheduleTodayPanel({
   doneItems,
   pins,
   onComplete,
+  onUndoComplete,
   onEdit,
   onAlarm,
 }: {
@@ -1216,6 +1295,7 @@ function ScheduleTodayPanel({
   doneItems: ScheduleItem[];
   pins: Set<string>;
   onComplete: (s: ScheduleItem) => void;
+  onUndoComplete: (s: ScheduleItem) => void;
   onEdit: (s: ScheduleItem) => void;
   onAlarm: (s: ScheduleItem) => void;
 }) {
@@ -1258,7 +1338,7 @@ function ScheduleTodayPanel({
       {doneItems.length > 0 && (
         <DoneSection
           items={doneItems}
-          onComplete={onComplete}
+          onComplete={onUndoComplete}
           onEdit={onEdit}
           t={t}
         />

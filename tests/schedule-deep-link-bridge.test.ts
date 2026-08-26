@@ -37,6 +37,10 @@ describe("schedule reminder deep-link bridge", () => {
     expect(bridgeSource).toContain("window.history.replaceState");
   });
 
+  it("matches legacy source_id projections as well as same-id rows", () => {
+    expect(bridgeSource).toContain("row.source_id === id");
+  });
+
   it("fails safely when the target never appears", () => {
     expect(bridgeSource).toContain("MISSING_TARGET_TIMEOUT_MS");
     expect(bridgeSource).toContain("setTargetId(null)");

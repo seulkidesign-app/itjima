@@ -162,7 +162,7 @@ test.describe("IA visual QA viewports", () => {
       });
     });
 
-    test(`decision deck controls fit at ${width}px`, async ({ page }) => {
+    test(`decision deck entry is unreachable at ${width}px (M2)`, async ({ page }) => {
       await page.setViewportSize({ width, height: 844 });
       await page.goto("/app");
       await page.evaluate(() => {
@@ -175,27 +175,13 @@ test.describe("IA visual QA viewports", () => {
       await page.reload();
       await addThought(page, `Deck layout ${width}`);
       await phone(page).getByTestId("left-item-more").last().click();
-      await page
-        .getByTestId("inbox-context-menu")
-        .getByRole("menuitem", { name: "Sort one by one", exact: true })
-        .click({ force: true });
-      await phone(page)
-        .getByRole("dialog", { name: "One by one" })
-        .waitFor({ state: "visible" });
-
-      await expect(phone(page).getByTestId("decision-btn-today")).toBeVisible();
-      await expect(phone(page).getByTestId("decision-btn-later")).toBeVisible();
-      await expect(phone(page).getByTestId("decision-btn-archive")).toBeVisible();
-
-      const metrics = await page.evaluate(() => ({
-        scrollWidth: document.documentElement.scrollWidth,
-        clientWidth: document.documentElement.clientWidth,
-      }));
-      expect(metrics.scrollWidth).toBeLessThanOrEqual(metrics.clientWidth + 1);
-
-      await phone(page).screenshot({
-        path: `qa-ia/deck-${width}.png`,
-      });
+      const menu = page.getByTestId("inbox-context-menu");
+      await expect(
+        menu.getByRole("menuitem", { name: "Sort one by one", exact: true }),
+      ).toHaveCount(0);
+      await expect(
+        menu.getByRole("menuitem", { name: /All records|전체 기록/i }),
+      ).toBeVisible();
     });
   }
 });

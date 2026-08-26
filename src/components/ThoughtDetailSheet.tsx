@@ -20,6 +20,8 @@ type Props = {
   onArchive: (item: InboxItem) => void;
   onDelete: (item: InboxItem) => void;
   onSaveEdit: (item: InboxItem, text: string) => void | Promise<void>;
+  /** Clear datetime without deleting the record (timed only). */
+  onClearTemporal?: (item: InboxItem) => void | Promise<void>;
 };
 
 function ActionRow({
@@ -64,6 +66,7 @@ export function ThoughtDetailSheet({
   onArchive,
   onDelete,
   onSaveEdit,
+  onClearTemporal,
 }: Props) {
   const t = useT();
   const [editing, setEditing] = useState(false);
@@ -76,6 +79,8 @@ export function ThoughtDetailSheet({
   }, [open, item]);
 
   if (!item) return null;
+
+  const hasTemporal = Boolean(item.start_time);
 
   const copyText = async () => {
     try {
@@ -139,7 +144,11 @@ export function ThoughtDetailSheet({
             <div className="mt-3 flex flex-col gap-0.5">
               <ActionRow
                 icon={<Calendar size={18} strokeWidth={2} />}
-                label={t("일정으로 보내기", "Send to schedule")}
+                label={
+                  hasTemporal
+                    ? t("일정 바꾸기", "Change schedule")
+                    : t("일정으로 보내기", "Send to schedule")
+                }
                 description={t("언제 다시 떠올릴까요?", "When should we bring it back?")}
                 onClick={() => {
                   tap();
@@ -147,6 +156,21 @@ export function ThoughtDetailSheet({
                   onSchedule(item);
                 }}
               />
+              {hasTemporal && onClearTemporal && (
+                <ActionRow
+                  icon={<Calendar size={18} strokeWidth={2} />}
+                  label={t("날짜·시간 지우기", "Remove date & time")}
+                  description={t(
+                    "기록은 남기고 일정만 없애요",
+                    "Keep the record, drop only the schedule",
+                  )}
+                  onClick={() => {
+                    tap();
+                    onClose();
+                    void onClearTemporal(item);
+                  }}
+                />
+              )}
               <ActionRow
                 icon={<Archive size={18} strokeWidth={2} />}
                 label={t("보관하기", "Save to vault")}

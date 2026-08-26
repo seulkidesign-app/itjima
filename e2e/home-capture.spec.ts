@@ -7,7 +7,6 @@ import {
   GUEST_INBOX_KEY,
   CAPTURE_LINK_NAME,
   contextMenuDialog,
-  clickContextMenuItem,
 } from "./helpers";
 
 async function installSpeechMock(page: Page) {
@@ -334,7 +333,7 @@ test.describe("Home capture UX", () => {
     ).toBeVisible();
   });
 
-  test("sticky launcher is absent; ··· opens DecisionDeck", async ({ page }) => {
+  test("sticky launcher is absent; ··· does not open DecisionDeck (M2)", async ({ page }) => {
     const stamp = Date.now();
     const a = `Launcher A ${stamp}`;
     const b = `Launcher B ${stamp}`;
@@ -349,9 +348,12 @@ test.describe("Home capture UX", () => {
       .filter({ hasText: b })
       .getByTestId("left-item-more")
       .click();
-    await clickContextMenuItem(page, "Sort one by one");
+    const menu = contextMenuDialog(page);
     await expect(
-      phone(page).getByRole("dialog", { name: "One by one" }),
+      menu.getByRole("menuitem", { name: /Sort one by one|하나씩 정리하기/i }),
+    ).toHaveCount(0);
+    await expect(
+      menu.getByRole("menuitem", { name: /All records|전체 기록/i }),
     ).toBeVisible();
   });
 });

@@ -45,6 +45,7 @@ type Props = {
   onRetryCapture: (item: InboxItem) => void;
   onEditCaptureText: (text: string, itemId: string) => void;
   onEditSavedSchedule: () => void;
+  onOpenAllRecords?: () => void;
 };
 
 type ItemSurface =
@@ -75,10 +76,11 @@ export function InboxChat({
   onMoveToDelete,
   onAcknowledgeItem,
   onMaybeNudgeLogin,
-  onOpenDetail: _onOpenDetail,
+  onOpenDetail,
   onRetryCapture: _onRetryCapture,
   onEditCaptureText,
   onEditSavedSchedule,
+  onOpenAllRecords,
 }: Props) {
   const t = useT();
   const { lang } = useLang();
@@ -131,6 +133,18 @@ export function InboxChat({
 
   return (
     <div className="home-chat-lane chat-scroll flex min-h-0 flex-1 flex-col gap-3 px-5 pb-[calc(5.75rem+env(safe-area-inset-bottom))] pt-2">
+      {onOpenAllRecords && (
+        <div className="flex justify-end">
+          <button
+            type="button"
+            data-testid="open-all-records"
+            onClick={onOpenAllRecords}
+            className="touch-press min-h-11 px-1 text-[13px] font-semibold text-ink-soft underline-offset-2 hover:underline"
+          >
+            {t("전체 기록", "All records")}
+          </button>
+        </div>
+      )}
       {isEmpty ? (
         <HomeEmptyHero />
       ) : (
@@ -218,6 +232,7 @@ export function InboxChat({
                     isNewest={isNewest}
                     onSetTime={() => onOpenPromiseSchedule(it)}
                     onOpenMenu={() => onOpenContextMenu(it.id)}
+                    onOpenDetail={() => onOpenDetail(it)}
                   />
                 ))}
               </ul>

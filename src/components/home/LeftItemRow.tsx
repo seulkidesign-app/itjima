@@ -6,6 +6,7 @@ type Props = {
   item: InboxItem;
   onSetTime: () => void;
   onOpenMenu: () => void;
+  onOpenDetail?: () => void;
   showSetTime?: boolean;
   isNewest?: boolean;
 };
@@ -15,6 +16,7 @@ export function LeftItemRow({
   item,
   onSetTime,
   onOpenMenu,
+  onOpenDetail,
   showSetTime = true,
   isNewest = false,
 }: Props) {
@@ -30,7 +32,18 @@ export function LeftItemRow({
       data-has-promise="false"
     >
       <div className="min-w-0 flex-1">
-        <p className="text-[16px] font-semibold leading-snug text-ink">{title}</p>
+        {onOpenDetail ? (
+          <button
+            type="button"
+            data-testid="left-item-open-detail"
+            onClick={onOpenDetail}
+            className="touch-press w-full text-left"
+          >
+            <p className="text-[16px] font-semibold leading-snug text-ink">{title}</p>
+          </button>
+        ) : (
+          <p className="text-[16px] font-semibold leading-snug text-ink">{title}</p>
+        )}
         {showSetTime && (
           <button
             type="button"
