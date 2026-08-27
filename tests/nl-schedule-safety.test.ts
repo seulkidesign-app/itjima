@@ -97,7 +97,7 @@ describe("inline ambiguity resolution", () => {
     ]);
   });
 
-  it("offers AM and PM without changing the title", () => {
+  it("offers AM, PM, and no-time without inventing a meridiem", () => {
     const choices = scheduleConfirmationChoices(
       "내일 3시에 치과",
       "assumed_meridiem",
@@ -108,10 +108,12 @@ describe("inline ambiguity resolution", () => {
     expect(choices.map((choice) => choice.label)).toEqual([
       "오전 3시",
       "오후 3시",
+      "시간 없이",
     ]);
     expect(choices.map((choice) => choice.resolvedText)).toEqual([
       "내일 오전 3시에 치과",
       "내일 오후 3시에 치과",
+      "내일 치과",
     ]);
   });
 

@@ -50,8 +50,6 @@ const TASK_VERB_RE =
 const TASK_ACTION_RE =
   /(?:하기|하자|해야|돌리기|갱신(?:하기)?|알아보(?:기)?|제출(?:하기)?|전화(?:하기)?|연락(?:하기)?|보내(?:기)?|call|submit|send)/i;
 
-const MEETING_RE = /(?:만나|약속|미팅|회의|meet|appointment)/i;
-
 const WATCH_READ_RE =
   /(?:보기|읽기|\bread\b|\bwatch\b|\bsee\b|볼\s)/i;
 
@@ -149,13 +147,19 @@ function isTimeOnlyPhrase(text: string): boolean {
 function isClarifySchedule(text: string): boolean {
   if (NEXT_MONTH_EARLY_RE.test(text)) return true;
   if (/이번\s*주\s*안/i.test(text)) return true;
-  // Vague timing always asks; resolved weekend (e.g. 주말에 만나기) can be exact all-day
+  // Vague timing always asks
   if (VAGUE_WHEN_RE.test(text)) return true;
+  // "주말" is rough temporal intent — never silently resolve to Sat/Sun.
+  if (
+    /(?:주말|weekend)/i.test(text) &&
+    !/(?:토|일)요일|\b(?:saturday|sunday)\b/i.test(text)
+  ) {
+    return true;
+  }
   const det = detectDate(text);
   if (!det) {
     if (isRelativeDateReference(text) && WATCH_READ_RE.test(text)) return true;
     if (/다음\s*주|next\s+week/i.test(text) && !TIME_RE.test(text)) return true;
-    if (/(?:주말|weekend)/i.test(text) && MEETING_RE.test(text)) return true;
     return false;
   }
   // "다음 주" without a clock time is still wide — ask once
