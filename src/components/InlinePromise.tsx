@@ -6,7 +6,6 @@ import {
 } from "@/lib/nlSchedule";
 import { buildPromiseCard } from "@/lib/promiseCard";
 import {
-  assumedMeridiemQuestion,
   extractClockPlanLines,
   scheduleConfirmationChoices,
   scheduleConfirmationReason,
@@ -37,20 +36,19 @@ type Props = {
 function confirmationCopy(
   reason: ScheduleConfirmationReason,
   lang: "ko" | "en",
-  text = "",
 ): string {
   const ko: Record<ScheduleConfirmationReason, string> = {
     past_today: "오늘 시간은 이미 지났어요. 내일 같은 시간으로 바로 옮길 수 있어요.",
     weekend_day: "토요일인지 일요일인지 고르면 바로 일정에 넣어요.",
     after_work_time: "퇴근 시간을 골라 주세요. 선택한 시간으로 바로 추가해요.",
-    assumed_meridiem: assumedMeridiemQuestion(text, "ko"),
+    assumed_meridiem: "몇 시로 기억할까요?",
     multiple_clocks: "시간이 두 개 있어요",
   };
   const en: Record<ScheduleConfirmationReason, string> = {
     past_today: "That time has passed today. Move it to the same time tomorrow in one tap.",
     weekend_day: "Choose Saturday or Sunday and add it right away.",
     after_work_time: "Choose your after-work time and add it right away.",
-    assumed_meridiem: assumedMeridiemQuestion(text, "en"),
+    assumed_meridiem: "Which time should I remember?",
     multiple_clocks: "There are two times here",
   };
   return lang === "en" ? en[reason] : ko[reason];
@@ -68,9 +66,8 @@ function scheduleTitlePreview(text: string, lang: "ko" | "en"): string {
 }
 
 function resolvedChoiceItem(item: InboxItem, resolvedText: string): InboxItem {
-  const next = { ...item, text: resolvedText };
-  const resolved = buildNaturalScheduleDraft(next);
-  return withInboxScheduleDraft(next, resolved);
+  const resolved = buildNaturalScheduleDraft({ ...item, text: resolvedText });
+  return withInboxScheduleDraft(item, resolved);
 }
 
 /** Ambiguity / clarify surface — never a second “save” after a clear capture. */
@@ -137,12 +134,10 @@ export function InlinePromise({
           {title}
         </strong>
         <p className="mt-2 text-[14px] font-medium leading-snug text-ink">
-          {confirmationCopy("assumed_meridiem", uiLang, item.text)}
+          {confirmationCopy("assumed_meridiem", uiLang)}
         </p>
         <div
-          className={`mt-3 grid gap-2 ${
-            confirmationChoices.length >= 3 ? "grid-cols-3" : "grid-cols-2"
-          }`}
+          className="mt-3 grid grid-cols-2 gap-2"
           data-testid="promise-confirmation-choices"
         >
           {confirmationChoices.map((choice) => (
@@ -235,40 +230,7 @@ export function InlinePromise({
           : t("일정으로 이해했어요", "Understood as a schedule")}
       </p>
 
-      {activeConfirmation && confirmationChoices.length > 0 ? (
-        <div
-          className={`mt-3 grid gap-2 ${
-            confirmationChoices.length === 1
-              ? "grid-cols-1"
-              : confirmationChoices.length >= 3
-                ? "grid-cols-3"
-                : "grid-cols-2"
-          }`}
-          data-testid="promise-confirmation-choices"
-        >
-          {confirmationChoices.map((choice) => (
-            <button
-              key={choice.id}
-              type="button"
-              data-testid={`promise-confirm-${choice.id}`}
-              onClick={() => {
-                track("nl_inline_ambiguity_resolved", {
-                  reason: activeConfirmation,
-                  choice: choice.id,
-                });
-                finish(
-                  onConfirmScheduleQuick(
-                    resolvedChoiceItem(item, choice.resolvedText),
-                  ),
-                );
-              }}
-              className="touch-press min-h-11 rounded-[12px] border border-ink/12 bg-ink/[0.03] px-3 py-2.5 text-[13px] font-semibold text-ink active:border-primary active:bg-primary/25"
-            >
-              {choice.label}
-            </button>
-          ))}
-        </div>
-      ) : card.nlIntent === "schedule_clarify" ? (
+      {card.nlIntent === "schedule_clarify" ? (
         <>
           <div
             className="mt-3 grid grid-cols-3 gap-1.5"
@@ -295,6 +257,35 @@ export function InlinePromise({
             {t("직접 고르기", "Pick manually")}
           </button>
         </>
+      ) : activeConfirmation && confirmationChoices.length > 0 ? (
+        <div
+          className={`mt-3 grid gap-2 ${
+            confirmationChoices.length === 1 ? "grid-cols-1" : "grid-cols-2"
+          }`}
+          data-testid="promise-confirmation-choices"
+        >
+          {confirmationChoices.map((choice) => (
+            <button
+              key={choice.id}
+              type="button"
+              data-testid={`promise-confirm-${choice.id}`}
+              onClick={() => {
+                track("nl_inline_ambiguity_resolved", {
+                  reason: activeConfirmation,
+                  choice: choice.id,
+                });
+                finish(
+                  onConfirmScheduleQuick(
+                    resolvedChoiceItem(item, choice.resolvedText),
+                  ),
+                );
+              }}
+              className="touch-press min-h-11 rounded-[12px] border border-ink/12 bg-ink/[0.03] px-3 py-2.5 text-[13px] font-semibold text-ink active:border-primary active:bg-primary/25"
+            >
+              {choice.label}
+            </button>
+          ))}
+        </div>
       ) : activeConfirmation ? (
         <button
           type="button"

@@ -148,8 +148,17 @@ export function detectDate(
     label = label || (/next/i.test(text) ? "Next week" : "다음 주");
   }
 
-  // Weekend is rough temporal intent — never invent Saturday/Sunday here.
-  // Callers ask (weekend_day clarification) instead of silently resolving a day.
+  // Weekend → upcoming Saturday (Sunday still counts as this weekend)
+  if (!matched && (/주말|\bweekend\b/i.test(text))) {
+    if (now.getDay() === 0) {
+      target = new Date(now);
+      target.setHours(0, 0, 0, 0);
+    } else {
+      target = nextWeekday(6, now, true);
+    }
+    matched = true;
+    label = /weekend/i.test(text) && !/주말/.test(text) ? "Weekend" : "주말";
+  }
 
   // Early next month (다음 달 초)
   if (/다음\s*달\s*초/.test(text) || /\bearly\s+next\s+month\b/i.test(text)) {
@@ -214,8 +223,7 @@ export function detectDate(
     }
   }
 
-  // Korean time: 오전/오후 N시, 24h-style 13–23시.
-  // Bare 1–12시 without meridiem is ambiguous — do not invent AM/PM.
+  // Korean time: 오후 N시 / N시 반 / bare N시 (1–6 → afternoon when meridiem omitted)
   const hmKo = text.match(
     /(오전|오후)?\s*(\d{1,2})\s*시(?:\s*(반)|(?:\s*(\d{1,2})\s*분))?/,
   );
@@ -223,21 +231,22 @@ export function detectDate(
     let h = parseInt(hmKo[2], 10);
     const mn = hmKo[3] === "반" ? 30 : hmKo[4] ? parseInt(hmKo[4], 10) : 0;
     const meridiem = hmKo[1] as "오전" | "오후" | undefined;
-    const bareAmbiguous = !meridiem && h >= 1 && h <= 12;
-    if (!bareAmbiguous) {
-      if (meridiem === "오후" && h < 12) h += 12;
-      else if (meridiem === "오전" && h === 12) h = 0;
-      if (h > 23) h = 23;
-      target.setHours(h, mn, 0, 0);
-      matched = true;
-      timeSet = true;
-      const hour12 = h % 12 || 12;
-      const meridiemLabel = meridiem ?? (h < 12 ? "오전" : "오후");
-      const minuteLabel =
-        hmKo[3] === "반" ? " 반" : mn ? ` ${mn}분` : "";
-      label =
-        `${label ? `${label} ` : ""}${meridiemLabel} ${hour12}시${minuteLabel}`.trim();
+    if (meridiem === "오후" && h < 12) h += 12;
+    else if (meridiem === "오전" && h === 12) h = 0;
+    else if (!meridiem && h >= 1 && h <= 6) {
+      // "내일 3시" → 15:00 (appointments), not 03:00
+      h += 12;
     }
+    if (h > 23) h = 23;
+    target.setHours(h, mn, 0, 0);
+    matched = true;
+    timeSet = true;
+    const hour12 = h % 12 || 12;
+    const meridiemLabel = meridiem ?? (h < 12 ? "오전" : "오후");
+    const minuteLabel =
+      hmKo[3] === "반" ? " 반" : mn ? ` ${mn}분` : "";
+    label =
+      `${label ? `${label} ` : ""}${meridiemLabel} ${hour12}시${minuteLabel}`.trim();
   }
 
   // English time: 3pm, 3:30 pm, 15:00
@@ -262,8 +271,7 @@ export function detectDate(
   }
 
   if (matched && !timeSet) {
-    // "퇴근 후" is user-specific — never invent 18:00 without a known after-work time.
-    if (/저녁|\bevening\b|\btonight\b/i.test(text)) {
+    if (/저녁|\bevening\b|퇴근\s*후|tonight/i.test(text)) {
       target.setHours(18, 0, 0, 0);
       timeSet = true;
       label = `${label ? `${label} ` : ""}저녁`.trim();
@@ -283,8 +291,10 @@ export function detectDate(
 
   if (!matched) return null;
 
-  // Never silently bump an explicit past "today" to tomorrow — preserve source day.
-  // past_today clarification offers a one-tap move when the user chooses it.
+  // Timed suggestions in the past (e.g. "오늘 3시" after 3pm) → next day
+  if (timeSet && target.getTime() <= now.getTime()) {
+    target.setDate(target.getDate() + 1);
+  }
 
   const end = new Date(target);
   end.setHours(end.getHours() + 1);

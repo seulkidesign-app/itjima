@@ -7,15 +7,9 @@ import {
 } from "@/lib/scheduleChoices";
 import type { InboxItem } from "@/lib/store";
 import { thoughtFirstLine } from "@/lib/brainMirror";
-import { hasAmbiguousBareMeridiem } from "@/lib/nlScheduleSafety";
 
 const EXPLICIT_TIME_RE =
   /(?:오전|오후|아침|점심|저녁|밤|새벽|퇴근\s*(?:후|하고|하고서|뒤)|(?:\d+|한|두|세|네)\s*(?:분|시간)\s*(?:뒤|후)|반\s*시간\s*(?:뒤|후)|\d{1,2}\s*시(?:\s*반|(?:\s*\d{1,2}\s*분))?|\b(?:morning|afternoon|evening|tonight|noon|midnight|after\s+work)\b|\bin\s+(?:\d+|an?|one|two|three|four|half(?:\s+an?)?)\s*(?:minutes?|mins?|hours?|hrs?)\b|\b(?:[01]?\d|2[0-3]):[0-5]\d\b|\b\d{1,2}(?::\d{2})?\s*(?:am|pm)\b)/i;
-
-const AFTER_WORK_RE = /퇴근\s*(?:후|하고|하고서|뒤)|\bafter\s+work\b/i;
-
-const RESOLVED_CLOCK_BESIDE_AFTER_WORK_RE =
-  /(?:오전|오후|\b(?:am|pm)\b|\d{1,2}\s*시|(?:[01]?\d|2[0-3]):[0-5]\d)/i;
 
 const REPEAT_INTENT_RE =
   /(?:매일|매일마다|매주|매주마다|매월|매달|매년|해마다|every\s+(?:day|week|month|year)|daily|weekly|monthly|yearly|annually)/i;
@@ -65,20 +59,7 @@ export type NaturalScheduleDraft = {
 };
 
 export function hasNaturalScheduleTime(text: string): boolean {
-  const trimmed = text.trim();
-  if (!EXPLICIT_TIME_RE.test(trimmed)) return false;
-  // Bare 1–12 o'clock without meridiem is ambiguous, not a resolved clock.
-  if (hasAmbiguousBareMeridiem(trimmed)) return false;
-  // After-work alone is not an absolute time without a known commute end.
-  if (AFTER_WORK_RE.test(trimmed)) {
-    const withoutAfterWork = trimmed
-      .replace(/퇴근\s*(?:후|하고|하고서|뒤)/g, " ")
-      .replace(/\bafter\s+work\b/gi, " ");
-    if (!RESOLVED_CLOCK_BESIDE_AFTER_WORK_RE.test(withoutAfterWork)) {
-      return false;
-    }
-  }
-  return true;
+  return EXPLICIT_TIME_RE.test(text.trim());
 }
 
 /** Recurrence is deliberately not collapsed into a one-off schedule. */
@@ -166,7 +147,12 @@ function relativeOffsetStart(text: string, now: Date): Date | null {
 function applyNaturalTime(target: Date, text: string, detected: Date | null): Date {
   const d = new Date(target);
 
-  // Do not invent 18:00 for after-work — clarification owns that choice.
+  const afterWork = /퇴근\s*(?:후|하고|하고서|뒤)|\bafter\s+work\b/i.test(text);
+  if (afterWork) {
+    d.setHours(18, 0, 0, 0);
+    return d;
+  }
+
   if (detected && hasNaturalScheduleTime(text)) {
     d.setHours(detected.getHours(), detected.getMinutes(), 0, 0);
     return d;
@@ -190,7 +176,9 @@ export function resolveNaturalScheduleStart(text: string, now = new Date()): Dat
   if (anchored) return applyNaturalTime(anchored, text, detected?.start ?? null);
   if (!detected) return null;
 
-  return new Date(detected.start);
+  const result = new Date(detected.start);
+  if (/퇴근\s*(?:하고|하고서|뒤)/i.test(text)) result.setHours(18, 0, 0, 0);
+  return result;
 }
 
 export function inferNaturalReminderMinutes(

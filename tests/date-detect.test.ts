@@ -11,13 +11,11 @@ describe("detectDate Korean schedule parsing", () => {
     vi.useRealTimers();
   });
 
-  it("does not invent PM for bare 3시 — date only, no clock", () => {
+  it("maps bare 3시 to 15:00, not 03:00", () => {
     const det = detectDate("내일 3시에 치과");
     expect(det).not.toBeNull();
-    expect(det!.start.getDate()).toBe(1); // Aug 1 (tomorrow)
-    // Bare hour stays unresolved; daytime anchor only, not 15:00.
-    expect(det!.start.getHours()).toBe(9);
-    expect(det!.label).toBe("내일");
+    expect(det!.start.getHours()).toBe(15);
+    expect(det!.label).toMatch(/오후\s*3시/);
   });
 
   it("keeps 오전 3시 as 03:00", () => {
@@ -30,10 +28,9 @@ describe("detectDate Korean schedule parsing", () => {
     expect(det!.start.getHours()).toBe(15);
   });
 
-  it("does not invent a clock for bare 10시", () => {
+  it("keeps bare 10시 as morning", () => {
     const det = detectDate("내일 10시 회의");
-    expect(det!.start.getHours()).toBe(9);
-    expect(det!.label).toBe("내일");
+    expect(det!.start.getHours()).toBe(10);
   });
 
   it("accepts 24h-style 15시", () => {
@@ -41,38 +38,44 @@ describe("detectDate Korean schedule parsing", () => {
     expect(det!.start.getHours()).toBe(15);
   });
 
-  it("does not invent Saturday for 주말", () => {
-    expect(detectDate("주말에 만나기")).toBeNull();
-  });
-
-  it("preserves explicit 오늘 even when the clock is already past", () => {
-    const det = detectDate("오늘 오전 9시 회의");
-    expect(det!.start.getDate()).toBe(31); // Jul 31 — no silent bump to tomorrow
-    expect(det!.start.getHours()).toBe(9);
-  });
-
-  it("does not invent 18:00 for 퇴근 후", () => {
-    const det = detectDate("오늘 퇴근 후 장보기");
+  it("resolves 주말 to Saturday", () => {
+    // 2026-07-31 is Friday → next Sat is Aug 1
+    const det = detectDate("주말에 만나기");
     expect(det).not.toBeNull();
-    expect(det!.start.getHours()).toBe(9);
-    expect(det!.label).toBe("오늘");
+    expect(det!.start.getDay()).toBe(6);
   });
 
-  // V02-07 beta regressions — bare half-hour stays unresolved
-  it("keeps tomorrow for 내일 3시 반 without inventing 15:30", () => {
+  it("bumps past timed today to tomorrow", () => {
+    const det = detectDate("오늘 오전 9시 회의");
+    expect(det!.start.getDate()).toBe(1); // Aug 1 after bump from Jul 31 9am past
+    expect(det!.start.getHours()).toBe(9);
+  });
+
+  it("maps 퇴근 후 to evening", () => {
+    const det = detectDate("오늘 퇴근 후 장보기");
+    expect(det!.start.getHours()).toBe(18);
+  });
+
+  // V02-07 beta regressions
+  it("maps 내일 3시 반 to 15:30 and keeps tomorrow", () => {
     const det = detectDate("내일 3시 반 치과");
     expect(det).not.toBeNull();
     expect(det!.start.getDate()).toBe(1); // Aug 1 (tomorrow from Jul 31)
-    expect(det!.start.getHours()).toBe(9);
-    expect(det!.label).toBe("내일");
+    expect(det!.start.getHours()).toBe(15);
+    expect(det!.start.getMinutes()).toBe(30);
+    expect(det!.label).toMatch(/오후\s*3시\s*반|오후\s*3시\s*30분/);
   });
 
-  it("does not invent a clock for bare 3시 반 alone", () => {
-    expect(detectDate("3시 반")).toBeNull();
+  it("maps bare 3시 반 to 15:30", () => {
+    const det = detectDate("3시 반");
+    expect(det!.start.getHours()).toBe(15);
+    expect(det!.start.getMinutes()).toBe(30);
   });
 
-  it("does not invent a clock for bare 3시 30분 alone", () => {
-    expect(detectDate("3시 30분")).toBeNull();
+  it("maps 3시 30분 to 15:30", () => {
+    const det = detectDate("3시 30분");
+    expect(det!.start.getHours()).toBe(15);
+    expect(det!.start.getMinutes()).toBe(30);
   });
 
   it("keeps 오전 3시 as 03:00 without a date phrase", () => {

@@ -4,9 +4,9 @@
     "expected_intent": "schedule_exact",
     "expected_confidence_tier": "high",
     "expected_date_presence": true,
-    "expected_time_presence": false,
+    "expected_time_presence": true,
     "sensitive": false,
-    "notes": "Bare hour is date-anchored but time stays ambiguous until AM/PM"
+    "notes": "Core beta example — exact schedule with time"
   },
   {
     "input": "금요일 저녁 약속",
@@ -31,9 +31,9 @@
     "expected_intent": "schedule_exact",
     "expected_confidence_tier": "high",
     "expected_date_presence": true,
-    "expected_time_presence": false,
+    "expected_time_presence": true,
     "sensitive": false,
-    "notes": "Today + after-work — date kept, clock not invented"
+    "notes": "Today with evening activity (퇴근 후 → 18:00)"
   },
   {
     "input": "모레 점심에 민지 만나기",
@@ -82,12 +82,12 @@
   },
   {
     "input": "주말에 만나기",
-    "expected_intent": "schedule_clarify",
-    "expected_confidence_tier": "medium",
-    "expected_date_presence": false,
+    "expected_intent": "schedule_exact",
+    "expected_confidence_tier": "high",
+    "expected_date_presence": true,
     "expected_time_presence": false,
     "sensitive": false,
-    "notes": "Weekend meeting — rough intent, no Saturday invent"
+    "notes": "Weekend meeting → Saturday all-day"
   },
   {
     "input": "엄마한테 전화하기",
@@ -328,9 +328,9 @@
     "expected_intent": "schedule_exact",
     "expected_confidence_tier": "high",
     "expected_date_presence": true,
-    "expected_time_presence": false,
+    "expected_time_presence": true,
     "sensitive": false,
-    "notes": "Repeated whitespace normalized — bare hour still ambiguous"
+    "notes": "Repeated whitespace normalized"
   },
   {
     "input": "4532 1234 5678 9010",
@@ -399,10 +399,10 @@
     "input": "이번 주말쯤 약속",
     "expected_intent": "schedule_clarify",
     "expected_confidence_tier": "medium",
-    "expected_date_presence": false,
+    "expected_date_presence": true,
     "expected_time_presence": false,
     "sensitive": false,
-    "notes": "Vague weekend (쯤) — clarify without inventing Sat/Sun"
+    "notes": "Vague weekend (쯤) — clarify even if weekend day is guessed"
   },
   {
     "input": "장보기",
@@ -499,9 +499,9 @@
     "expected_intent": "schedule_exact",
     "expected_confidence_tier": "high",
     "expected_date_presence": true,
-    "expected_time_presence": false,
+    "expected_time_presence": true,
     "sensitive": false,
-    "notes": "Schedule with extra line — bare hour still ambiguous"
+    "notes": "Schedule with extra line"
   },
   {
     "input": "이번 주 금요일 미팅",

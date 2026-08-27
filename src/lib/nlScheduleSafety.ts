@@ -12,8 +12,7 @@ export type ScheduleConfirmationChoiceId =
   | "after_work_18"
   | "after_work_19"
   | "morning"
-  | "afternoon"
-  | "no_time";
+  | "afternoon";
 
 export type ScheduleConfirmationChoice = {
   id: ScheduleConfirmationChoiceId;
@@ -58,8 +57,7 @@ function extractBareClock(text: string): BareClock | null {
     /(\d{1,2})\s*시(?:\s*(반)|(?:\s*(\d{1,2})\s*분))?/g,
   )) {
     const hour = Number(match[1]);
-    // 1–12 without meridiem is ambiguous; 13–23 is 24h-style and resolved.
-    if (hour < 1 || hour > 12) continue;
+    if (hour < 1 || hour > 6) continue;
     const prefix = text.slice(Math.max(0, (match.index ?? 0) - 4), match.index);
     if (/(오전|오후)\s*$/.test(prefix)) continue;
     return {
@@ -76,12 +74,8 @@ function extractBareClock(text: string): BareClock | null {
     : null;
 }
 
-export function hasAmbiguousBareMeridiem(text: string): boolean {
-  return extractBareClock(text) !== null;
-}
-
 function hasBareMeridiemGuess(text: string): boolean {
-  return hasAmbiguousBareMeridiem(text);
+  return extractBareClock(text) !== null;
 }
 
 export function countDistinctClockMentions(text: string): number {
@@ -168,41 +162,6 @@ function replaceBareMeridiem(text: string, period: "am" | "pm"): string {
     (_match, hour: string, minute?: string) =>
       `at ${hour}${minute ? `:${minute}` : ""}${period}`,
   );
-}
-
-/** Drop an ambiguous bare clock so the remaining date can stay as all-day. */
-function stripBareClock(text: string): string {
-  const koResolved = text.replace(
-    /(^|[\s(])(\d{1,2})\s*시(?:\s*(반)|(?:\s*(\d{1,2})\s*분))?/,
-    "$1",
-  );
-  if (koResolved !== text) {
-    return koResolved
-      .replace(/\s+에\s+/g, " ")
-      .replace(/\s+/g, " ")
-      .trim();
-  }
-  return text
-    .replace(/\bat\s+(1[0-2]|[1-9])(?::([0-5]\d))?(?!\s*(?:am|pm)\b)/i, " ")
-    .replace(/\s+/g, " ")
-    .trim();
-}
-
-export function assumedMeridiemQuestion(
-  text: string,
-  lang: "ko" | "en",
-): string {
-  const clock = extractBareClock(text);
-  if (lang === "en") {
-    if (!clock) return "Which time should I remember?";
-    const minute =
-      clock.minute === null
-        ? ""
-        : `:${String(clock.minute).padStart(2, "0")}`;
-    return `Is ${clock.hour}${minute} morning or afternoon?`;
-  }
-  if (!clock) return "몇 시로 기억할까요?";
-  return `${clock.hour}시는 언제인가요?`;
 }
 
 function clockChoiceLabel(
@@ -341,11 +300,6 @@ export function scheduleConfirmationChoices(
       id: "afternoon",
       label: clockChoiceLabel(clock, "pm", lang),
       resolvedText: replaceBareMeridiem(text, "pm"),
-    },
-    {
-      id: "no_time",
-      label: lang === "en" ? "No time" : "시간 없이",
-      resolvedText: stripBareClock(text),
     },
   ];
 }
