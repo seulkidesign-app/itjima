@@ -49,16 +49,16 @@ describe("inbox schedule defaults", () => {
     expect(result.start.getHours()).toBe(15);
   });
 
-  it("maps bare 3시 to a 15:00 timed schedule", () => {
+  it("keeps bare 3시 as date-only until AM/PM is chosen", () => {
     const result = inboxScheduleDefaults(thought("내일 3시에 치과"));
-    expect(result.options.allDay).toBe(false);
-    expect(result.start.getHours()).toBe(15);
+    expect(result.options.allDay).toBe(true);
+    expect(result.start.getHours()).toBe(0);
   });
 
-  it("treats 퇴근 후 as an evening timed schedule", () => {
+  it("does not invent 18:00 for 퇴근 후", () => {
     const result = inboxScheduleDefaults(thought("오늘 퇴근 후 장보기"));
-    expect(result.options.allDay).toBe(false);
-    expect(result.start.getHours()).toBe(18);
+    expect(result.options.allDay).toBe(true);
+    expect(result.start.getHours()).toBe(0);
   });
 
   it("recognizes common Korean and English time phrases", () => {

@@ -1,0 +1,9 @@
+User-agent: *
+Allow: /
+Allow: /about
+
+Disallow: /admin
+Disallow: /auth
+Disallow: /auth/callback
+
+Sitemap: https://itjima.app/sitemap.xml

@@ -30,7 +30,7 @@ describe("natural schedule commitment parsing", () => {
     vi.useRealTimers();
   });
 
-  it("turns a realistic Korean sentence into the exact commitment", () => {
+  it("turns a realistic Korean sentence into a date without inventing after-work time", () => {
     const draft = buildNaturalScheduleDraft(
       thought("다음 주 금요일 퇴근하고 치과. 전날에도 알려줘"),
     );
@@ -39,8 +39,8 @@ describe("natural schedule commitment parsing", () => {
     expect(draft.start.getMonth()).toBe(7);
     expect(draft.start.getDate()).toBe(14);
     expect(draft.start.getDay()).toBe(5);
-    expect(draft.start.getHours()).toBe(18);
-    expect(draft.options.allDay).toBe(false);
+    // After-work stays unresolved — all-day until the user picks a clock.
+    expect(draft.options.allDay).toBe(true);
     expect(draft.options.reminderMinutes).toBe(24 * 60);
     expect(draft.options.repeat).toBeNull();
     expect(draft.reminderExplicit).toBe(true);
@@ -142,19 +142,16 @@ describe("natural schedule commitment parsing", () => {
     expect(shouldShowInlinePromise("every month review bills", "en")).toBe(false);
   });
 
-  // V02-07 beta regressions
-  it("parses 내일 3시 반 as 15:30 and strips time from the title", () => {
+  // V02-07 beta regressions — bare half-hour stays unresolved until AM/PM
+  it("does not invent 15:30 for bare 내일 3시 반", () => {
     const draft = buildNaturalScheduleDraft(thought("내일 3시 반 치과"));
-    expect(draft.start.getHours()).toBe(15);
-    expect(draft.start.getMinutes()).toBe(30);
+    expect(draft.options.allDay).toBe(true);
     expect(draft.text).toBe("치과");
-    expect(draft.options.allDay).toBe(false);
   });
 
-  it("parses 3시 30분 without inventing a wrong hour", () => {
+  it("does not invent 15:30 for bare 3시 30분", () => {
     const draft = buildNaturalScheduleDraft(thought("내일 3시 30분 치과"));
-    expect(draft.start.getHours()).toBe(15);
-    expect(draft.start.getMinutes()).toBe(30);
+    expect(draft.options.allDay).toBe(true);
     expect(draft.text).toBe("치과");
   });
 });
