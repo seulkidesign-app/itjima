@@ -174,7 +174,7 @@ test.describe("M2 browse & mutation trust", () => {
       .getByTestId("records-browse-row")
       .filter({ hasText: original })
       .click();
-    const detail = page.getByRole("dialog", { name: /This thought|이 생각/i });
+    const detail = page.getByRole("dialog", { name: /Record detail|기록 상세|This thought|이 생각/i });
     await expect(detail).toBeVisible();
     await detail
       .getByRole("button", { name: /Edit|수정하기/i })
@@ -334,7 +334,7 @@ test.describe("M2 browse & mutation trust", () => {
       .getByTestId("records-browse-row")
       .filter({ hasText: title })
       .click();
-    const detail = page.getByRole("dialog", { name: /This thought|이 생각/i });
+    const detail = page.getByRole("dialog", { name: /Record detail|기록 상세|This thought|이 생각/i });
     await expect(detail).toBeVisible();
     await detail.getByRole("button", { name: /Delete|삭제하기/i }).click();
 

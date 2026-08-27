@@ -1,15 +1,9 @@
-import {
-  Archive,
-  Calendar,
-  Copy,
-  Pencil,
-  Trash2,
-} from "lucide-react";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { BottomSheet } from "./BottomSheet";
-import { useT } from "@/lib/i18n";
+import { useLang, useT } from "@/lib/i18n";
 import { tap } from "@/lib/haptics";
+import { formatCaptureWhenLabel } from "@/lib/naturalScheduleDraft";
 import type { InboxItem } from "@/lib/store";
 
 type Props = {
@@ -24,40 +18,35 @@ type Props = {
   onClearTemporal?: (item: InboxItem) => void | Promise<void>;
 };
 
-function ActionRow({
-  icon,
+function StackButton({
   label,
-  description,
   onClick,
   danger,
+  primary,
 }: {
-  icon: React.ReactNode;
   label: string;
-  description: string;
   onClick: () => void;
   danger?: boolean;
+  primary?: boolean;
 }) {
   return (
     <button
       type="button"
       onClick={onClick}
-      className={`flex w-full items-center gap-3.5 rounded-[20px] px-3 py-3.5 text-left active:bg-ink/[0.03] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink/30 ${
-        danger ? "text-meta" : "text-ink"
+      className={`touch-press flex min-h-12 w-full items-center justify-center rounded-[16px] border px-4 text-[15px] font-semibold ${
+        danger
+          ? "border-[var(--quietly-border)] bg-white text-[var(--semantic-danger,#e5484d)]"
+          : primary
+            ? "border-transparent bg-primary text-ink"
+            : "border-[var(--quietly-border)] bg-white text-ink"
       }`}
     >
-      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-[14px] bg-ink/[0.04]">
-        {icon}
-      </div>
-      <div className="min-w-0 flex-1">
-        <div className="text-[15px] font-semibold tracking-[-0.01em]">{label}</div>
-        <div className="mt-0.5 text-[13px] leading-snug text-ink-soft">
-          {description}
-        </div>
-      </div>
+      {label}
     </button>
   );
 }
 
+/** Shared record detail — Figma 319:2 Screens 14–15 (no Schedule-only detail). */
 export function ThoughtDetailSheet({
   item,
   open,
@@ -69,6 +58,8 @@ export function ThoughtDetailSheet({
   onClearTemporal,
 }: Props) {
   const t = useT();
+  const { lang } = useLang();
+  const uiLang = lang === "en" ? "en" : "ko";
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState("");
 
@@ -81,6 +72,17 @@ export function ThoughtDetailSheet({
   if (!item) return null;
 
   const hasTemporal = Boolean(item.start_time);
+  const title =
+    item.text.trim().split("\n")[0]?.trim() ||
+    t("사진만 있어요", "Photo only");
+  const whenLabel =
+    hasTemporal && item.start_time
+      ? formatCaptureWhenLabel(
+          new Date(item.start_time),
+          Boolean(item.all_day),
+          uiLang,
+        )
+      : t("날짜 없음", "No date");
 
   const copyText = async () => {
     try {
@@ -106,103 +108,98 @@ export function ThoughtDetailSheet({
     <BottomSheet
       open={open}
       onClose={onClose}
-      maxHeight="72dvh"
-      title={t("이 생각", "This thought")}
+      maxHeight="78dvh"
+      title={t("기록 상세", "Record detail")}
     >
-      <div className="sheet-scroll flex min-h-0 flex-1 flex-col overflow-y-auto px-5 pb-[calc(env(safe-area-inset-bottom)+1rem)]">
+      <div
+        className="sheet-scroll flex min-h-0 flex-1 flex-col overflow-y-auto px-5 pb-[calc(env(safe-area-inset-bottom)+1rem)]"
+        data-testid="thought-detail-sheet"
+        data-has-temporal={hasTemporal ? "true" : "false"}
+      >
         {editing ? (
           <>
+            <p className="quietly-section-label mt-1">
+              {t("내용 수정", "Edit content")}
+            </p>
             <textarea
               value={draft}
               onChange={(e) => setDraft(e.target.value)}
-              rows={5}
-              className="mt-1 w-full resize-none rounded-[20px] bg-ink/[0.03] px-4 py-3 text-[15px] leading-relaxed text-ink input-focus-ring"
+              rows={4}
+              className="mt-3 w-full resize-none rounded-[16px] border border-[var(--quietly-border)] bg-white px-4 py-3 text-[15px] leading-relaxed text-ink input-focus-ring"
               aria-label={t("생각 수정", "Edit thought")}
             />
-            <div className="mt-3 flex gap-2">
-              <button
-                type="button"
-                onClick={() => setEditing(false)}
-                className="flex-1 rounded-full border border-ink/10 py-3 text-sm font-semibold text-ink-soft"
-              >
-                {t("취소", "Cancel")}
-              </button>
-              <button
-                type="button"
+            <div className="mt-4 flex flex-col gap-2">
+              <StackButton
+                label={t("반영하기", "Save changes")}
+                primary
                 onClick={() => void saveEdit()}
-                className="flex-1 rounded-full bg-primary py-3 text-sm font-bold text-ink"
-              >
-                {t("반영하기", "Save changes")}
-              </button>
+              />
+              <StackButton
+                label={t("취소", "Cancel")}
+                onClick={() => setEditing(false)}
+              />
             </div>
           </>
         ) : (
           <>
-            <p className="mt-1 whitespace-pre-wrap rounded-[20px] bg-ink/[0.025] px-4 py-4 text-[15px] leading-relaxed text-ink">
-              {item.text.trim() || t("사진만 있어요", "Photo only")}
-            </p>
-            <div className="mt-3 flex flex-col gap-0.5">
-              <ActionRow
-                icon={<Calendar size={18} strokeWidth={2} />}
+            <div className="quietly-feedback-card mt-1 px-4 py-4">
+              <p className="whitespace-pre-wrap text-[18px] font-bold leading-snug tracking-[-0.02em] text-ink">
+                {title}
+              </p>
+              <p
+                className={`mt-2 text-[13px] font-semibold tabular-nums tracking-[-0.01em] ${
+                  hasTemporal ? "text-primary" : "text-ink-soft"
+                }`}
+              >
+                {whenLabel}
+              </p>
+            </div>
+
+            {hasTemporal ? (
+              <p className="mt-3 px-1 text-[13px] font-medium leading-snug text-ink-soft">
+                {t("일정에도 함께 보여요", "Also shown in Schedule")}
+              </p>
+            ) : (
+              <p className="mt-3 px-1 text-[13px] font-medium leading-snug text-ink-soft">
+                {t(
+                  "날짜를 추가하면 일정에서도 볼 수 있어요.",
+                  "Add a date to also see it in Schedule.",
+                )}
+              </p>
+            )}
+
+            <div className="mt-4 flex flex-col gap-2">
+              <StackButton
                 label={
                   hasTemporal
-                    ? t("일정 바꾸기", "Change schedule")
-                    : t("일정으로 보내기", "Send to schedule")
+                    ? t("시간 수정", "Change time")
+                    : t("날짜/시간 추가", "Add date/time")
                 }
-                description={t("언제 다시 떠올릴까요?", "When should we bring it back?")}
                 onClick={() => {
                   tap();
                   onClose();
                   onSchedule(item);
                 }}
               />
-              {hasTemporal && onClearTemporal && (
-                <ActionRow
-                  icon={<Calendar size={18} strokeWidth={2} />}
+              {hasTemporal && onClearTemporal ? (
+                <StackButton
                   label={t("날짜·시간 지우기", "Remove date & time")}
-                  description={t(
-                    "기록은 남기고 일정만 없애요",
-                    "Keep the record, drop only the schedule",
-                  )}
                   onClick={() => {
                     tap();
                     onClose();
                     void onClearTemporal(item);
                   }}
                 />
-              )}
-              <ActionRow
-                icon={<Archive size={18} strokeWidth={2} />}
-                label={t("보관하기", "Save to vault")}
-                description={t("나중에 다시 꺼낼 수 있어요", "You can pull it out later")}
-                onClick={() => {
-                  tap();
-                  onClose();
-                  onArchive(item);
-                }}
-              />
-              <ActionRow
-                icon={<Pencil size={18} strokeWidth={2} />}
+              ) : null}
+              <StackButton
                 label={t("수정하기", "Edit")}
-                description={t("고치고 싶을 때", "When you want to tweak it")}
                 onClick={() => {
                   tap();
                   setEditing(true);
                 }}
               />
-              <ActionRow
-                icon={<Copy size={18} strokeWidth={2} />}
-                label={t("복사하기", "Copy")}
-                description={t("다른 곳에 붙여 넣기", "Paste somewhere else")}
-                onClick={() => {
-                  tap();
-                  void copyText();
-                }}
-              />
-              <ActionRow
-                icon={<Trash2 size={18} strokeWidth={2} />}
-                label={t("삭제하기", "Delete")}
-                description={t("5초 안이면 되돌릴 수 있어요", "You have 5 seconds to undo")}
+              <StackButton
+                label={t("기록 삭제", "Delete record")}
                 danger
                 onClick={() => {
                   tap();
@@ -210,6 +207,30 @@ export function ThoughtDetailSheet({
                   onDelete(item);
                 }}
               />
+            </div>
+
+            <div className="mt-3 flex gap-2 px-0.5">
+              <button
+                type="button"
+                onClick={() => {
+                  tap();
+                  onClose();
+                  onArchive(item);
+                }}
+                className="touch-press min-h-11 flex-1 text-left text-[13px] font-medium text-ink-soft underline-offset-2 hover:underline"
+              >
+                {t("보관하기", "Save to vault")}
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  tap();
+                  void copyText();
+                }}
+                className="touch-press min-h-11 flex-1 text-right text-[13px] font-medium text-ink-soft underline-offset-2 hover:underline"
+              >
+                {t("복사하기", "Copy")}
+              </button>
             </div>
           </>
         )}

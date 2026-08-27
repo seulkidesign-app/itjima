@@ -149,7 +149,7 @@ export function TopNav() {
                   {active && (
                     <motion.span
                       layoutId="mobile-nav-active"
-                      className="absolute inset-1 rounded-[14px] bg-ink/[0.07]"
+                      className="absolute inset-1 rounded-[14px] bg-primary shadow-[var(--shadow-yellow)]"
                       transition={SPRING_TAB}
                       aria-hidden
                     />
@@ -193,7 +193,7 @@ export function TopNav() {
                   {active && (
                     <motion.span
                       layoutId="tablet-nav-active"
-                      className="absolute inset-0 rounded-[14px] bg-white shadow-card"
+                      className="absolute inset-0 rounded-[14px] bg-primary shadow-[var(--shadow-yellow)]"
                       transition={SPRING_TAB}
                       aria-hidden
                     />

@@ -230,8 +230,14 @@ export function inferNaturalReminderMinutes(
   return { minutes: hasSpecificTime ? 0 : null, explicit: false };
 }
 
-function cleanScheduleTitle(text: string): string {
-  let title = thoughtFirstLine(text);
+/** Display-only: strip spoken date/time so metadata can own the clock. */
+export function cleanScheduleTitle(text: string): string {
+  const original = thoughtFirstLine(text);
+  let title = original;
+  const hadClock =
+    /(?:오전|오후)?\s*\d{1,2}\s*시|\b\d{1,2}(?::\d{2})?\s*(?:am|pm)\b|\d{1,2}:\d{2}/i.test(
+      title,
+    );
 
   title = title
     .replace(/(?:그리고\s*)?(?:전날|하루\s*전|1\s*일\s*전|1\s*시간\s*전|한\s*시간\s*전|30\s*분\s*전|10\s*분\s*전|5\s*분\s*전|그때|시작할\s*때)?\s*(?:에도?\s*)?(?:알려\s*줘|알려줘|알림\s*(?:해|줘)|리마인드(?:\s*해줘)?)/gi, " ")
@@ -244,8 +250,6 @@ function cleanScheduleTitle(text: string): string {
     .replace(/\b(?:next|this)\s+week\b/gi, " ")
     .replace(/(일|월|화|수|목|금|토)요일/g, " ")
     .replace(/\b(?:sunday|monday|tuesday|wednesday|thursday|friday|saturday)\b/gi, " ")
-    .replace(/(?:오늘|내일|모레|글피|주말)/g, " ")
-    .replace(/\b(?:today|tomorrow|weekend)\b/gi, " ")
     .replace(/\d{1,2}\s*월\s*\d{1,2}\s*일/g, " ")
     .replace(/(?:오전|오후)?\s*\d{1,2}\s*시(?:\s*반|(?:\s*\d{1,2}\s*분))?/g, " ")
     .replace(/\b\d{1,2}(?::\d{2})?\s*(?:am|pm)\b/gi, " ")
@@ -261,7 +265,17 @@ function cleanScheduleTitle(text: string): string {
     .replace(/\s+/g, " ")
     .trim();
 
-  return title || thoughtFirstLine(text).trim();
+  // Only strip relative day words when a clock was also spoken — keeps titles
+  // like "Tomorrow meeting" / "Today compact row" intact when metadata owns the day.
+  if (hadClock) {
+    title = title
+      .replace(/(?:오늘|내일|모레|글피|주말)/g, " ")
+      .replace(/\b(?:today|tomorrow|weekend)\b/gi, " ")
+      .replace(/\s+/g, " ")
+      .trim();
+  }
+
+  return title || original.trim();
 }
 
 export function buildNaturalScheduleDraft(item: InboxItem): NaturalScheduleDraft {

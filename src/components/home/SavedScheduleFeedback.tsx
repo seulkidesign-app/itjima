@@ -43,7 +43,7 @@ export function SavedScheduleFeedback({ feedback, onEdit }: Props) {
             {feedback.title}
           </strong>
           <p
-            className="mt-1 text-[14px] font-medium tabular-nums text-ink-soft"
+            className="mt-1 text-[14px] font-semibold tabular-nums tracking-[-0.01em] text-primary"
             data-testid="saved-schedule-when"
           >
             {feedback.whenLabel}

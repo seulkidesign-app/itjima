@@ -38,6 +38,7 @@ import {
   LaterInboxRow,
 } from "@/components/ScheduleCompactRow";
 import { FocusScheduleSheet } from "@/components/FocusScheduleSheet";
+import { ThoughtDetailSheet } from "@/components/ThoughtDetailSheet";
 import type { ScheduleConfirmOptions } from "@/components/ScheduleChoiceFlow";
 import { ScheduleSheet } from "@/components/ScheduleSheet";
 import { ReminderSheet } from "@/components/ReminderSheet";
@@ -236,6 +237,9 @@ function Schedule() {
     open: boolean;
     item?: InboxItem;
   }>({ open: false });
+  const [detailSchedule, setDetailSchedule] = useState<ScheduleItem | null>(
+    null,
+  );
   const [reminderSheet, setReminderSheet] = useState<ScheduleItem | null>(null);
   const [alarmSheet, setAlarmSheet] = useState<ScheduleItem | null>(null);
   const [timerSheet, setTimerSheet] = useState<ScheduleItem | null>(null);
@@ -839,13 +843,13 @@ function Schedule() {
   };
 
   return (
-    <div className="flex h-full flex-col bg-white">
+    <div className="flex h-full flex-col bg-[var(--canvas,#faf8f5)]">
       <SyncIndicator
         syncing={syncState === "syncing"}
         error={syncState === "error"}
         onRetry={retrySync}
       />
-      <div className="sticky top-0 z-10 shrink-0 bg-white">
+      <div className="sticky top-0 z-10 shrink-0 bg-[var(--canvas,#faf8f5)]">
         <div className="px-5 pb-3 pt-6">
           <h1 className="page-title inline-flex items-center gap-2">
             <span
@@ -936,6 +940,7 @@ function Schedule() {
               onComplete={markDone}
               onUndoComplete={undoDone}
               onEdit={(s) => setSheet({ open: true, edit: s })}
+              onOpenDetail={(s) => setDetailSchedule(s)}
               onAlarm={(s) => setAlarmSheet(s)}
             />
           )
@@ -951,7 +956,7 @@ function Schedule() {
                   <h2 className="section-title mb-1.5 px-0.5">
                     {upcomingSectionLabel(sec.key, lang)}
                   </h2>
-                  <ul className="flex flex-col">
+                  <ul className="flex flex-col gap-2.5">
                     {sec.items.map((s) => (
                       <ScheduleCompactRow
                         key={s.id}
@@ -959,6 +964,7 @@ function Schedule() {
                         pinned={pins.has(s.id)}
                         onComplete={() => markDone(s)}
                         onEdit={() => setSheet({ open: true, edit: s })}
+                        onOpenDetail={() => setDetailSchedule(s)}
                         onAlarm={() => setAlarmSheet(s)}
                       />
                     ))}
@@ -986,6 +992,7 @@ function Schedule() {
                   items={doneItems}
                   onComplete={undoDone}
                   onEdit={(s) => setSheet({ open: true, edit: s })}
+                  onOpenDetail={(s) => setDetailSchedule(s)}
                   t={t}
                 />
               )}
@@ -1072,6 +1079,68 @@ function Schedule() {
         onClose={() => setFocusScheduleSheet({ open: false })}
         onConfirm={(text, start, end, options) => {
           void saveLaterInboxSchedule(text, start, end, options);
+        }}
+      />
+
+      <ThoughtDetailSheet
+        item={
+          detailSchedule
+            ? {
+                id: canonicalIdFromSchedule(detailSchedule),
+                text: detailSchedule.raw_text || detailSchedule.text,
+                images: [],
+                created_at: detailSchedule.created_at,
+                status:
+                  detailSchedule.status === "done" ? "done" : "active",
+                start_time: detailSchedule.start_time,
+                end_time: detailSchedule.end_time,
+                all_day: detailSchedule.all_day ?? null,
+                brain_mirror: detailSchedule.brain_mirror ?? null,
+                raw_text: detailSchedule.raw_text ?? null,
+              }
+            : null
+        }
+        open={Boolean(detailSchedule)}
+        onClose={() => setDetailSchedule(null)}
+        onSchedule={() => {
+          const s = detailSchedule;
+          setDetailSchedule(null);
+          if (s) setSheet({ open: true, edit: s });
+        }}
+        onArchive={() => {
+          const s = detailSchedule;
+          setDetailSchedule(null);
+          if (s) void moveDoneToArchive(s);
+        }}
+        onDelete={() => {
+          const s = detailSchedule;
+          setDetailSchedule(null);
+          if (s) void deleteScheduleRow(s);
+        }}
+        onSaveEdit={async (_item, text) => {
+          const s = detailSchedule;
+          if (!s) return;
+          await update(s.id, { text, raw_text: text });
+          const recordId = canonicalIdFromSchedule(s);
+          if (inbox.allItems.some((it) => it.id === recordId)) {
+            await inbox.update(recordId, { text, raw_text: text });
+          }
+          toast.success(t("고쳤어요", "Saved your edit"));
+        }}
+        onClearTemporal={async () => {
+          const s = detailSchedule;
+          setDetailSchedule(null);
+          if (!s) return;
+          const recordId = canonicalIdFromSchedule(s);
+          if (inbox.allItems.some((it) => it.id === recordId)) {
+            await syncRecordTemporal(recordId, null, mutationOps());
+          } else {
+            if (userId) await cancelScheduleReminders(userId, s.id);
+            await remove(s.id);
+          }
+          toast.success(
+            t("날짜·시간을 지웠어요", "Removed date & time"),
+          );
         }}
       />
 
@@ -1294,6 +1363,7 @@ function ScheduleTodayPanel({
   onComplete,
   onUndoComplete,
   onEdit,
+  onOpenDetail,
   onAlarm,
 }: {
   todayItems: ScheduleItem[];
@@ -1304,6 +1374,7 @@ function ScheduleTodayPanel({
   onComplete: (s: ScheduleItem) => void;
   onUndoComplete: (s: ScheduleItem) => void;
   onEdit: (s: ScheduleItem) => void;
+  onOpenDetail: (s: ScheduleItem) => void;
   onAlarm: (s: ScheduleItem) => void;
 }) {
   const t = useT();
@@ -1313,7 +1384,7 @@ function ScheduleTodayPanel({
     <div className="flex flex-col animate-fade-in pb-2 pt-1">
       {todayItems.length > 0 ? (
         <ul
-          className={`flex flex-col ${stagger.className}`}
+          className={`flex flex-col gap-2.5 ${stagger.className}`}
           data-stagger={stagger["data-stagger"]}
           data-testid="schedule-today-list"
         >
@@ -1324,6 +1395,7 @@ function ScheduleTodayPanel({
               pinned={pins.has(s.id)}
               onComplete={() => onComplete(s)}
               onEdit={() => onEdit(s)}
+              onOpenDetail={() => onOpenDetail(s)}
               onAlarm={() => onAlarm(s)}
             />
           ))}
@@ -1347,6 +1419,7 @@ function ScheduleTodayPanel({
           items={doneItems}
           onComplete={onUndoComplete}
           onEdit={onEdit}
+          onOpenDetail={onOpenDetail}
           t={t}
         />
       )}
@@ -1358,11 +1431,13 @@ function DoneSection({
   items,
   onComplete,
   onEdit,
+  onOpenDetail,
   t,
 }: {
   items: ScheduleItem[];
   onComplete: (s: ScheduleItem) => void;
   onEdit: (s: ScheduleItem) => void;
+  onOpenDetail?: (s: ScheduleItem) => void;
   t: ReturnType<typeof useT>;
 }) {
   const [open, setOpen] = useState(false);
@@ -1398,6 +1473,9 @@ function DoneSection({
                 done
                 onComplete={() => onComplete(s)}
                 onEdit={() => onEdit(s)}
+                onOpenDetail={
+                  onOpenDetail ? () => onOpenDetail(s) : undefined
+                }
               />
             ))}
           </motion.ul>

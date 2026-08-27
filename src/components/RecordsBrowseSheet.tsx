@@ -2,12 +2,47 @@ import { Search } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { BottomSheet } from "./BottomSheet";
 import { OrganizeSummarySheet } from "./OrganizeSummarySheet";
-import { useT } from "@/lib/i18n";
+import { useLang, useT } from "@/lib/i18n";
 import {
   getBrowsableRecords,
   searchCanonicalRecords,
 } from "@/lib/canonicalBrowse";
+import { formatCaptureWhenLabel } from "@/lib/naturalScheduleDraft";
 import type { InboxItem } from "@/lib/store";
+
+/** Flat temporal metadata (Figma 319:2 Screen 10 / 29) — never pill/button chrome. */
+function browseWhenMeta(
+  item: InboxItem,
+  lang: "ko" | "en",
+  t: ReturnType<typeof useT>,
+): string {
+  const done = item.status === "done";
+  if (done) {
+    const created = new Date(item.created_at).getTime();
+    const dayMs = 24 * 60 * 60 * 1000;
+    const days = Number.isFinite(created)
+      ? Math.max(0, Math.floor((Date.now() - created) / dayMs))
+      : 0;
+    if (days <= 0) {
+      return lang === "en" ? "Completed" : "완료";
+    }
+    const ago =
+      lang === "en"
+        ? days === 1
+          ? "1 day ago"
+          : `${days} days ago`
+        : `${days}일 전`;
+    return `${ago} · ${lang === "en" ? "Completed" : "완료"}`;
+  }
+  if (item.start_time) {
+    return formatCaptureWhenLabel(
+      new Date(item.start_time),
+      Boolean(item.all_day),
+      lang,
+    );
+  }
+  return t("날짜 없음", "No date");
+}
 
 type Props = {
   items: InboxItem[];
@@ -23,6 +58,8 @@ export function RecordsBrowseSheet({
   onOpenRecord,
 }: Props) {
   const t = useT();
+  const { lang } = useLang();
+  const uiLang = lang === "en" ? "en" : "ko";
   const [query, setQuery] = useState("");
   const [organizeOpen, setOrganizeOpen] = useState(false);
 
@@ -158,21 +195,9 @@ export function RecordsBrowseSheet({
                         >
                           {title}
                         </span>
-                        {done && (
-                          <span className="mt-1 block text-[12px] font-medium text-ink-soft">
-                            {t("완료", "Done")}
-                          </span>
-                        )}
-                        {item.start_time && !done && (
-                          <span className="mt-1 block text-[12px] font-medium text-ink-soft">
-                            {t("일정 있음", "On schedule")}
-                          </span>
-                        )}
-                        {!item.start_time && !done && (
-                          <span className="mt-1 block text-[12px] font-medium text-ink-soft">
-                            {t("날짜 없음", "No date")}
-                          </span>
-                        )}
+                        <span className="mt-1 block text-[12px] font-medium tabular-nums tracking-[-0.01em] text-ink-soft">
+                          {browseWhenMeta(item, uiLang, t)}
+                        </span>
                       </span>
                     </button>
                   </li>

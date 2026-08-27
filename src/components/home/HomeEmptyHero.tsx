@@ -1,6 +1,6 @@
 import { useLang, useT } from "@/lib/i18n";
 
-/** Empty Capture home — Figma 301:2 Screen_01 Quietly Organized. */
+/** Empty Capture home — Figma 319:2 Screen_01 Quietly Organized. */
 export function HomeEmptyHero() {
   const t = useT();
   const { lang } = useLang();

@@ -1,6 +1,6 @@
 /**
- * M3 · Quietly Organized (Figma 301:2)
- * Minimal surface overrides for app chrome — does not change product behavior.
+ * M4 · FINAL UI SYNC (Figma 319:2)
+ * Quietly Organized chrome — does not change product behavior.
  */
 
 .itjima-app-stage,
@@ -12,6 +12,51 @@
 
 .itjima-app-scroll {
   background: var(--canvas, #faf8f5);
+}
+
+/* Schedule cards — Screen 24 */
+.quietly-schedule-card {
+  border-radius: 20px;
+  border: 1px solid var(--quietly-border, #e8e8e5);
+  background: #ffffff;
+  box-shadow: var(--shadow-card, 0 8px 24px -18px rgba(26, 26, 31, 0.18));
+  padding: 12px 14px 12px 8px;
+}
+
+/* Desktop nav — yellow active like mobile (override legacy ink/glass sidebar) */
+@media (min-width: 1024px) {
+  .itjima-desktop-nav {
+    width: var(--ij-desktop-sidebar, 220px);
+    background: var(--canvas, #faf8f5) !important;
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+    border-color: var(--quietly-border, #e8e8e5) !important;
+    box-shadow: none !important;
+  }
+
+  .itjima-desktop-nav-item[aria-current="page"] {
+    background: var(--brand-yellow, #ffe033) !important;
+    color: var(--ink, #1a1a1f) !important;
+    box-shadow: var(--shadow-yellow) !important;
+  }
+
+  .itjima-desktop-nav .itjima-desktop-settings,
+  .itjima-desktop-nav [data-testid="open-settings"] {
+    min-height: 48px !important;
+    height: auto !important;
+    padding-block: 12px !important;
+  }
+
+  .itjima-desktop-nav .itjima-desktop-nav-item {
+    min-height: 48px !important;
+  }
+
+  .itjima-desktop-shell .phone-frame.itjima-app-workspace,
+  .itjima-desktop-shell .itjima-app-content,
+  .itjima-desktop-shell .itjima-app-scroll,
+  .itjima-desktop-shell .page-shell {
+    background: var(--canvas, #faf8f5) !important;
+  }
 }
 
 /* Bottom nav — yellow active pill (keep existing absolute geometry for composer stack) */
@@ -35,14 +80,8 @@
   }
 
   .mobile-bottom-nav-item[aria-current="page"] {
-    background: var(--brand-yellow, #ffe033) !important;
     color: var(--ink, #1a1a1f) !important;
-    box-shadow: var(--shadow-yellow) !important;
     font-weight: 700 !important;
-  }
-
-  .mobile-bottom-nav-item[aria-current="page"] .absolute {
-    display: none !important;
   }
 
   .mobile-app-header {
@@ -61,11 +100,6 @@
 
 .tablet-segmented-nav-item[aria-current="page"] {
   font-weight: 700 !important;
-}
-
-.tablet-segmented-nav-item[aria-current="page"] .absolute {
-  background: var(--brand-yellow, #ffe033) !important;
-  box-shadow: var(--shadow-yellow) !important;
 }
 
 /* Composer / input bar — soft pill */
@@ -120,5 +154,5 @@ form.composer-hero .input-shell,
   border-radius: 20px;
   border: 1px solid var(--quietly-border, #e8e8e5);
   background: #ffffff;
-  box-shadow: var(--shadow-card);
+  box-shadow: var(--shadow-card, 0 8px 24px -18px rgba(26, 26, 31, 0.18));
 }

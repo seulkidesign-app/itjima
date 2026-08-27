@@ -98,9 +98,9 @@ test("capture scheduling always shows start and end dates and time switches reve
     .first()
     .click();
 
-  const detail = page.getByRole("dialog", { name: "이 생각" });
+  const detail = page.getByRole("dialog", { name: /기록 상세|이 생각/ });
   await expect(detail).toBeVisible();
-  await detail.getByRole("button", { name: "일정으로 보내기" }).click();
+  await detail.getByRole("button", { name: /날짜\/시간 추가|일정으로 보내기|Add date\/time|Send to schedule/ }).click();
 
   const flow = page.getByTestId("schedule-choice-flow");
   await expect(flow).toBeVisible();

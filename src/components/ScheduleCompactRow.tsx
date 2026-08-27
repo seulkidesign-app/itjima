@@ -6,6 +6,7 @@ import {
   resolveScheduleAllDayFlags,
 } from "@/lib/scheduleTime";
 import { scheduleDisplayTitle } from "@/lib/thoughtProvenance";
+import { cleanScheduleTitle } from "@/lib/naturalScheduleDraft";
 import { isMissed } from "@/lib/scheduleGroups";
 import { useT, useLang } from "@/lib/i18n";
 import { haptic, confirm as hapticConfirm } from "@/lib/haptics";
@@ -24,48 +25,10 @@ export type ScheduleCompactRowProps = {
   inPastSection?: boolean;
   onComplete: () => void;
   onEdit: () => void;
+  /** Shared Screen 15 detail — optional; falls back to onEdit. */
+  onOpenDetail?: () => void;
   onAlarm?: () => void;
 };
-
-function ReminderMeta({
-  label,
-  onOpen,
-  t,
-}: {
-  label: string;
-  onOpen?: () => void;
-  t: ReturnType<typeof useT>;
-}) {
-  const content = (
-    <>
-      <Bell size={13} strokeWidth={2.2} aria-hidden />
-      <span>{label}</span>
-    </>
-  );
-
-  if (!onOpen) {
-    return (
-      <span className="mt-0.5 inline-flex max-w-full items-center gap-1 text-[12px] font-medium text-ink-soft">
-        {content}
-      </span>
-    );
-  }
-
-  return (
-    <button
-      type="button"
-      onPointerDown={(event) => event.stopPropagation()}
-      onClick={(event) => {
-        event.stopPropagation();
-        onOpen();
-      }}
-      className="touch-press mt-0.5 inline-flex min-h-11 max-w-full items-center gap-1 -ml-1 px-1 text-left text-[12px] font-medium text-ink-soft underline-offset-2 hover:underline"
-      aria-label={`${t("알림", "Reminder")} · ${label}`}
-    >
-      {content}
-    </button>
-  );
-}
 
 export function ScheduleCompactRow({
   s,
@@ -74,12 +37,14 @@ export function ScheduleCompactRow({
   inPastSection = false,
   onComplete,
   onEdit,
+  onOpenDetail,
   onAlarm,
 }: ScheduleCompactRowProps) {
   const t = useT();
   const { lang } = useLang();
   const locale = lang === "en" ? "en" : "ko";
-  const title = scheduleDisplayTitle(s);
+  const rawTitle = scheduleDisplayTitle(s);
+  const title = cleanScheduleTitle(rawTitle) || rawTitle;
   const flags = resolveScheduleAllDayFlags(s);
   const start = new Date(s.start_time);
   const end = new Date(s.end_time);
@@ -90,6 +55,7 @@ export function ScheduleCompactRow({
     flags.endAllDay,
     locale,
   );
+  const openDetail = onOpenDetail ?? onEdit;
   const alarmAt = effectiveAlarmAt(s);
   const alarmLabel = alarmAt
     ? formatAlarmLabel(alarmAt, locale)
@@ -149,7 +115,7 @@ export function ScheduleCompactRow({
 
   return (
     <li
-      className={`relative flex min-h-[52px] touch-none select-none items-start gap-1 border-b border-ink/[0.06] px-0.5 py-2.5 last:border-b-0 ${
+      className={`quietly-schedule-card relative flex min-h-[52px] touch-none select-none items-start gap-2 ${
         done ? "opacity-50" : ""
       }`}
       data-gesture={dragging.current || acting ? "true" : undefined}
@@ -197,9 +163,30 @@ export function ScheduleCompactRow({
         </span>
       </button>
 
-      <span className="min-w-0 flex-1 pt-2.5">
-        {/* Time-first hierarchy (Figma 24) */}
-        <span className="block text-[15px] font-semibold tabular-nums leading-snug tracking-[-0.01em] text-ink">
+      {/* Non-button hit target — avoids nesting ReminderMeta's button */}
+      <div
+        role="button"
+        tabIndex={0}
+        onPointerDown={(event) => {
+          if ((event.target as HTMLElement).closest("button")) return;
+          event.stopPropagation();
+        }}
+        onClick={(event) => {
+          if ((event.target as HTMLElement).closest("button")) return;
+          event.stopPropagation();
+          openDetail();
+        }}
+        onKeyDown={(event) => {
+          if (event.key === "Enter" || event.key === " ") {
+            event.preventDefault();
+            openDetail();
+          }
+        }}
+        className="min-w-0 flex-1 cursor-pointer pt-2.5 text-left touch-press"
+        data-testid="schedule-row-open-detail"
+      >
+        {/* Time-first hierarchy (Figma 24) — yellow metadata owns the clock */}
+        <span className="block text-[14px] font-semibold tabular-nums leading-snug tracking-[-0.01em] text-primary">
           {displayTime}
         </span>
         <span
@@ -209,9 +196,6 @@ export function ScheduleCompactRow({
         >
           {title}
         </span>
-        {s.alarm && !done && (
-          <ReminderMeta label={alarmLabel} onOpen={onAlarm} t={t} />
-        )}
         {missed && (
           <span className="mt-0.5 block text-[12px] font-medium text-ink-soft/80">
             {t("지남", "Past")}
@@ -222,7 +206,22 @@ export function ScheduleCompactRow({
             {t("고정", "Pinned")}
           </span>
         )}
-      </span>
+      </div>
+
+      {s.alarm && !done && (
+        <button
+          type="button"
+          onPointerDown={(event) => event.stopPropagation()}
+          onClick={(event) => {
+            event.stopPropagation();
+            onAlarm?.();
+          }}
+          className="touch-press mt-0.5 inline-flex h-11 min-w-11 shrink-0 items-center justify-center text-ink-soft"
+          aria-label={`${t("알림", "Reminder")} · ${alarmLabel}`}
+        >
+          <Bell size={16} strokeWidth={2.2} aria-hidden />
+        </button>
+      )}
 
       {!done && (
         <button

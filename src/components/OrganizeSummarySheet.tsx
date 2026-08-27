@@ -83,10 +83,10 @@ export function OrganizeSummarySheet({ items, open, onClose }: Props) {
               data-testid={`organize-tile-${key}`}
             >
               <Icon size={18} className="text-ink-soft" aria-hidden />
-              <p className="text-[32px] font-black tabular-nums leading-none tracking-[-0.04em] text-ink">
+              <p className="text-[36px] font-black tabular-nums leading-none tracking-[-0.05em] text-ink">
                 {count}
               </p>
-              <p className="text-[13px] font-semibold text-ink-soft">{label}</p>
+              <p className="text-[13px] font-medium text-ink-soft">{label}</p>
             </div>
           ))}
         </div>
