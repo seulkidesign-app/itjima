@@ -47,11 +47,13 @@ jobs:
           cat /tmp/itjima-preview.log
           exit 1
 
-      - name: Capture empty Korean app Home
+      - name: Capture and diagnose empty Korean app Home
         run: |
           mkdir -p qa-app-319
           node --input-type=module <<'NODE'
           import { chromium } from '@playwright/test';
+          import { writeFile } from 'node:fs/promises';
+
           const browser = await chromium.launch({ headless: true });
           const context = await browser.newContext({
             viewport: { width: 390, height: 844 },
@@ -72,6 +74,69 @@ jobs:
           await page.reload({ waitUntil: 'domcontentloaded' });
           await page.locator('body').waitFor({ state: 'visible', timeout: 10_000 });
           await page.waitForTimeout(800);
+
+          const diagnostics = await page.evaluate(() => {
+            const describe = (selector) => {
+              const el = document.querySelector(selector);
+              if (!el) return null;
+              const rect = el.getBoundingClientRect();
+              const style = getComputedStyle(el);
+              const before = getComputedStyle(el, '::before');
+              const after = getComputedStyle(el, '::after');
+              return {
+                selector,
+                rect: { x: rect.x, y: rect.y, width: rect.width, height: rect.height },
+                background: style.background,
+                backgroundColor: style.backgroundColor,
+                backgroundImage: style.backgroundImage,
+                boxShadow: style.boxShadow,
+                before: {
+                  content: before.content,
+                  display: before.display,
+                  background: before.background,
+                  backgroundColor: before.backgroundColor,
+                  backgroundImage: before.backgroundImage,
+                  opacity: before.opacity,
+                  position: before.position,
+                },
+                after: {
+                  content: after.content,
+                  display: after.display,
+                  background: after.background,
+                  backgroundColor: after.backgroundColor,
+                  backgroundImage: after.backgroundImage,
+                  opacity: after.opacity,
+                  position: after.position,
+                },
+              };
+            };
+
+            return {
+              viewport: { width: innerWidth, height: innerHeight },
+              elements: [
+                'html',
+                'body',
+                '#root',
+                '.itjima-app-stage',
+                '.phone-frame',
+                '.page-shell',
+                '.itjima-app-scroll',
+                '.home-chat-lane',
+                '.mobile-app-header',
+                '[data-testid="home-empty-hero"]',
+                'form.composer-hero',
+                '.mobile-bottom-nav',
+                '[data-testid="open-browse-search"]'
+              ].map(describe),
+            };
+          });
+
+          await writeFile(
+            'qa-app-319/diagnostics.json',
+            JSON.stringify(diagnostics, null, 2),
+            'utf8',
+          );
+
           await page.screenshot({
             path: 'qa-app-319/app-empty-mobile-ko.png',
             animations: 'disabled',
@@ -80,10 +145,10 @@ jobs:
           await browser.close();
           NODE
 
-      - name: Upload app screenshot
+      - name: Upload app screenshot and diagnostics
         uses: actions/upload-artifact@v4
         with:
           name: qa-app-319-${{ github.run_number }}
-          path: qa-app-319/app-empty-mobile-ko.png
+          path: qa-app-319/*
           if-no-files-found: error
           retention-days: 7
