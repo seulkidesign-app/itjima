@@ -21,6 +21,10 @@ replacements = [
         '<div className="flex-1 px-5 pb-24">',
         '<div className="mx-auto w-full max-w-[680px] flex-1 px-5 pb-24">',
     ),
+    (
+        '        ) : tab === "list" ? (\n',
+        '        ) : (\n',
+    ),
 ]
 
 for old, new in replacements:
