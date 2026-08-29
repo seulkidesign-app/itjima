@@ -1,97 +1,40 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { Search } from "lucide-react";
+import { AnimatePresence, motion } from "framer-motion";
+import { toast } from "sonner";
+
 import {
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-  useCallback,
-  type ComponentProps,
-  type ComponentType,
-  type PointerEvent as ReactPointerEvent,
-} from "react";
-import {
-  Plus,
-  Pin,
-  Check,
-  Bell,
-  BellOff,
-  Timer,
-  Copy,
-  Trash2,
-  Pencil,
-  Move,
-  CheckSquare,
-  Archive,
-  CalendarDays,
-} from "lucide-react";
-import { animate, motion, AnimatePresence, LayoutGroup } from "framer-motion";
-import {
-  useSchedules,
   useArchive,
   useInbox,
+  useSchedules,
   useUserId,
-  type InboxItem,
   type ScheduleItem,
 } from "@/lib/store";
-import {
-  ScheduleCompactRow,
-  LaterInboxRow,
-} from "@/components/ScheduleCompactRow";
-import { FocusScheduleSheet } from "@/components/FocusScheduleSheet";
+import { ScheduleCompactRow } from "@/components/ScheduleCompactRow";
 import { ThoughtDetailSheet } from "@/components/ThoughtDetailSheet";
-import type { ScheduleConfirmOptions } from "@/components/ScheduleChoiceFlow";
 import { ScheduleSheet } from "@/components/ScheduleSheet";
 import { ReminderSheet } from "@/components/ReminderSheet";
 import { ScheduleAlarmSheet } from "@/components/ScheduleAlarmSheet";
-import { ScheduleTimerSheet } from "@/components/ScheduleTimerSheet";
-import {
-  CalendarDragLayer,
-  CalendarDayCell,
-  CalendarWeekSpanBars,
-  computeWeekSpanSegments,
-  isMultiDaySchedule,
-  scheduleRangeInMonth,
-  useCalendarScrollParent,
-} from "@/components/CalendarDragLayer";
 import { ScheduleListSkeleton } from "@/components/Skeleton";
 import { SyncIndicator } from "@/components/SyncIndicator";
-import { partitionTodaySchedules } from "@/lib/todaySuggestions";
-import { useScrollLock } from "@/hooks/useScrollLock";
+import { ScheduleNotificationOnboardingSheet } from "@/components/ScheduleNotificationOnboardingSheet";
+import { NotificationDeniedHelpSheet } from "@/components/NotificationDeniedHelpSheet";
+import { IosInstallHint } from "@/components/IosInstallHint";
+
+import { useT, useLang } from "@/lib/i18n";
 import { allCloudSynced } from "@/lib/syncFeedback";
 import {
-  bindInAppReminders,
   clearReminderOffset,
-  clearActiveTimer,
-  effectiveAlarmAt,
   formatAlarmLabel,
-  formatTimerLabel,
-  getActiveTimerEnd,
   presetToAlarmAt,
-  presetToTimerEnd,
-  setActiveTimer,
   type AlarmPreset,
-  type TimerPreset,
 } from "@/lib/scheduleReminders";
 import {
-  formatScheduleTimeLoose,
-  remainingUntil,
   resolveScheduleAllDayFlags,
   scheduleAllDayFieldsFromConfirm,
-  scheduleAllDayFieldsFromItem,
 } from "@/lib/scheduleTime";
-import {
-  groupSchedulesForUpcoming,
-  upcomingSectionLabel,
-  isMissed,
-  classifySchedule,
-} from "@/lib/scheduleGroups";
-import {
-  scheduleDisplayTitle,
-  rawPreview,
-} from "@/lib/thoughtProvenance";
-import { convertLaterInboxToSchedule } from "@/lib/convertLaterInboxToSchedule";
-import { isStructuredTimedRecord } from "@/lib/recordTemporal";
-import { findScheduleProjection, dedupeScheduleProjections } from "@/lib/scheduleProjection";
+import { classifySchedule, isMissed } from "@/lib/scheduleGroups";
 import {
   canonicalIdFromSchedule,
   completeRecord,
@@ -101,11 +44,11 @@ import {
   undoDeleteRecord,
   type CanonicalMutationOps,
 } from "@/lib/canonicalMutations";
+import {
+  dedupeScheduleProjections,
+  findScheduleProjection,
+} from "@/lib/scheduleProjection";
 import { showUndoToast } from "@/lib/undoToast";
-import { SPRING_SNAP_BACK, SHEET_BACKDROP_CLASS, SHEET_BACKDROP_FADE } from "@/lib/motion";
-import { useListStagger } from "@/lib/listStagger";
-import { toast } from "sonner";
-import { useT, useLang } from "@/lib/i18n";
 import {
   cancelScheduleReminders,
   syncScheduleReminderDetailed,
@@ -119,94 +62,54 @@ import {
   type PendingScheduleSave,
   type ScheduleSaveOutcome,
 } from "@/lib/push/scheduleNotificationSave";
-import { inferReminderKeyFromSchedule, scheduleHasSpecificTime } from "@/lib/push/scheduleNotificationDefaults";
-import { ScheduleNotificationOnboardingSheet } from "@/components/ScheduleNotificationOnboardingSheet";
-import { NotificationDeniedHelpSheet } from "@/components/NotificationDeniedHelpSheet";
-import { IosInstallHint } from "@/components/IosInstallHint";
+import {
+  inferReminderKeyFromSchedule,
+  scheduleHasSpecificTime,
+} from "@/lib/push/scheduleNotificationDefaults";
 import { isIosSafariTab } from "@/lib/alarmAvailability";
 import { executeDirectPushEnableFlow } from "@/lib/push/directPushEnableFlow";
 import {
   ensurePushSubscription,
   hasActivePushSubscription,
 } from "@/lib/push/pushSubscription";
+import { confirm as hapticConfirm } from "@/lib/haptics";
 import { track } from "@/lib/analytics";
-import { haptic, confirm as hapticConfirm } from "@/lib/haptics";
 
 export const Route = createFileRoute("/schedule")({
   component: Schedule,
 });
 
-const toastBtn =
-  "touch-target shrink-0 rounded-full bg-primary px-4 text-xs font-bold text-ink";
-
 const scheduleToast = {
   style: { marginTop: "calc(env(safe-area-inset-top, 0px) + 56px)" },
 } as const;
 
-function defaultStartForDay(y: number, m: number, d: number) {
-  const now = new Date();
-  const dt = new Date(y, m, d);
-  if (
-    y === now.getFullYear() &&
-    m === now.getMonth() &&
-    d === now.getDate()
-  ) {
-    dt.setHours(now.getHours() + 1, 0, 0, 0);
-  } else {
-    dt.setHours(9, 0, 0, 0);
-  }
-  return dt;
-}
-
-function startOfWeek(d: Date) {
-  const x = new Date(d);
-  x.setDate(d.getDate() - d.getDay());
-  x.setHours(0, 0, 0, 0);
-  return x;
-}
-
-function isSameWeek(a: Date, b: Date) {
-  return startOfWeek(a).getTime() === startOfWeek(b).getTime();
-}
-
-import { readSchedulePins, writeSchedulePins } from "@/lib/archiveMeta";
-
-function usePins() {
-  const [pins, setPins] = useState<Set<string>>(() => readSchedulePins());
-  useEffect(() => {
-    const refresh = () => setPins(readSchedulePins());
-    window.addEventListener("itjima:archive-meta", refresh);
-    return () => window.removeEventListener("itjima:archive-meta", refresh);
-  }, []);
-  const toggle = (id: string) => {
-    const next = new Set(pins);
-    if (next.has(id)) next.delete(id);
-    else next.add(id);
-    writeSchedulePins(next);
-  };
-  return { pins, toggle };
-}
-
-function useTimerTick() {
-  const [, setTick] = useState(0);
-  useEffect(() => {
-    const id = setInterval(() => setTick((n) => n + 1), 1000);
-    const h = () => setTick((n) => n + 1);
-    window.addEventListener("itjima:timers", h);
-    return () => {
-      clearInterval(id);
-      window.removeEventListener("itjima:timers", h);
-    };
-  }, []);
-}
+const OPEN_BROWSE = "itjima:open-browse";
 
 function Schedule() {
   const t = useT();
   const { lang } = useLang();
   const userId = useUserId();
   const { items, update, remove, add, syncState, retrySync } = useSchedules();
-  const archive = useArchive();
   const inbox = useInbox();
+  const archive = useArchive();
+
+  const [sheet, setSheet] = useState<{
+    open: boolean;
+    edit?: ScheduleItem;
+  }>({ open: false });
+  const [detailSchedule, setDetailSchedule] = useState<ScheduleItem | null>(
+    null,
+  );
+  const [reminderSheet, setReminderSheet] = useState<ScheduleItem | null>(null);
+  const [alarmSheet, setAlarmSheet] = useState<ScheduleItem | null>(null);
+  const [notificationOnboarding, setNotificationOnboarding] = useState<{
+    pending: PendingScheduleSave;
+    fireAt: Date;
+  } | null>(null);
+  const [onboardingBusy, setOnboardingBusy] = useState(false);
+  const [deniedHelpOpen, setDeniedHelpOpen] = useState(false);
+  const [iosInstallHintOpen, setIosInstallHintOpen] = useState(false);
+
   const mutationOps = useCallback((): CanonicalMutationOps => {
     return {
       getInboxById: (id) => inbox.allItems.find((it) => it.id === id),
@@ -225,70 +128,63 @@ function Schedule() {
       addSchedule: async (payload) => add(payload),
     };
   }, [inbox, items, update, remove, add, userId]);
-  const [tab, setTab] = useState<"today" | "list">("today");
-  const [sheet, setSheet] = useState<{
-    open: boolean;
-    edit?: ScheduleItem;
-    draftStart?: Date;
-  }>({
-    open: false,
-  });
-  const [focusScheduleSheet, setFocusScheduleSheet] = useState<{
-    open: boolean;
-    item?: InboxItem;
-  }>({ open: false });
-  const [detailSchedule, setDetailSchedule] = useState<ScheduleItem | null>(
-    null,
-  );
-  const [reminderSheet, setReminderSheet] = useState<ScheduleItem | null>(null);
-  const [alarmSheet, setAlarmSheet] = useState<ScheduleItem | null>(null);
-  const [timerSheet, setTimerSheet] = useState<ScheduleItem | null>(null);
-  const [notificationOnboarding, setNotificationOnboarding] = useState<{
-    pending: PendingScheduleSave;
-    fireAt: Date;
-  } | null>(null);
-  const [onboardingBusy, setOnboardingBusy] = useState(false);
-  const [deniedHelpOpen, setDeniedHelpOpen] = useState(false);
-  const [iosInstallHintOpen, setIosInstallHintOpen] = useState(false);
-  useTimerTick();
-  const { pins, toggle: togglePin } = usePins();
 
-  // Capture saved-feedback 「수정」 → open existing schedule editor (no create).
+  const activeItems = useMemo(
+    () =>
+      dedupeScheduleProjections(items.filter((item) => item.status !== "done"))
+        .slice()
+        .sort(
+          (a, b) =>
+            new Date(a.start_time).getTime() - new Date(b.start_time).getTime(),
+        ),
+    [items],
+  );
+
+  const doneItems = useMemo(
+    () =>
+      dedupeScheduleProjections(items.filter((item) => item.status === "done"))
+        .slice()
+        .sort(
+          (a, b) =>
+            new Date(b.end_time).getTime() - new Date(a.end_time).getTime(),
+        ),
+    [items],
+  );
+
+  const todayItems = useMemo(
+    () =>
+      activeItems.filter((item) => {
+        if (isMissed(item)) return false;
+        const bucket = classifySchedule(item.start_time);
+        return bucket === "now" || bucket === "today";
+      }),
+    [activeItems],
+  );
+
+  const upcomingItems = useMemo(
+    () =>
+      activeItems.filter((item) => {
+        if (isMissed(item)) return false;
+        const bucket = classifySchedule(item.start_time);
+        return bucket !== "now" && bucket !== "today";
+      }),
+    [activeItems],
+  );
+
+  const pastItems = useMemo(
+    () => activeItems.filter((item) => isMissed(item)),
+    [activeItems],
+  );
+
+  // Capture feedback → existing schedule edit. No tab selection is needed now.
   useEffect(() => {
     const id = sessionStorage.getItem("itjima.openScheduleEdit");
     if (!id) return;
     const target = findScheduleProjection(items, id);
     if (!target) return;
     sessionStorage.removeItem("itjima.openScheduleEdit");
-    setTab("list");
     setSheet({ open: true, edit: target });
   }, [items]);
-
-  const activeItems = useMemo(
-    () =>
-      dedupeScheduleProjections(items.filter((s) => s.status !== "done")),
-    [items],
-  );
-  const doneItems = useMemo(
-    () =>
-      dedupeScheduleProjections(items.filter((s) => s.status === "done")),
-    [items],
-  );
-
-  useEffect(() => {
-    return bindInAppReminders(items, (title, body) => {
-      if (Notification.permission === "granted") {
-        new Notification(title, { body });
-      }
-    });
-  }, [items]);
-
-  const closedAppReminderReady = async (): Promise<boolean> => {
-    if (!userId || Notification.permission !== "granted") return false;
-    const push = await ensurePushSubscription(userId);
-    if (!push.ok) return false;
-    return hasActivePushSubscription(userId);
-  };
 
   const persistScheduleItem = async (
     pending: PendingScheduleSave,
@@ -302,10 +198,9 @@ function Schedule() {
 
     if (pending.edit) {
       const recordId = canonicalIdFromSchedule(pending.edit);
-      const hasCanonical = inbox.allItems.some((it) => it.id === recordId);
+      const hasCanonical = inbox.allItems.some((item) => item.id === recordId);
 
       if (hasCanonical) {
-        // Canonical-first: mutate record, then sync projection fields.
         await syncRecordTemporal(
           recordId,
           {
@@ -326,7 +221,6 @@ function Schedule() {
           source_id: recordId,
         });
       } else {
-        // Schedule-only legacy row — no fake canonical.
         await update(pending.edit.id, {
           text: pending.text,
           start_time: pending.start.toISOString(),
@@ -336,6 +230,7 @@ function Schedule() {
           ...alarmPayload,
         });
       }
+
       return {
         ...pending.edit,
         text: pending.text,
@@ -365,41 +260,31 @@ function Schedule() {
   const applySaveOutcome = (outcome: ScheduleSaveOutcome, isEdit: boolean) => {
     if (!outcome.ok) {
       toast.error(
-        outcome.errorMessage ??
-          t("남기지 못했어요", "Couldn't keep it"),
+        outcome.errorMessage ?? t("남기지 못했어요", "Couldn't keep it"),
         scheduleToast,
       );
       return;
     }
 
     if (outcome.showDeniedGuide) {
-      const denied = buildDeniedSaveCopy(lang === "en" ? "en" : "ko");
-      toast.warning(denied.headline, {
+      const copy = buildDeniedSaveCopy(lang === "en" ? "en" : "ko");
+      toast.warning(copy.headline, {
         ...scheduleToast,
-        description: denied.detail,
+        description: copy.detail,
         action: {
           label: lang === "ko" ? "방법 보기" : "How to enable",
           onClick: () => setDeniedHelpOpen(true),
         },
       });
     } else if (outcome.showInstallGuide) {
-      const install = buildInstallGuideSaveCopy(lang === "en" ? "en" : "ko");
-      toast.message(install.headline, {
+      const copy = buildInstallGuideSaveCopy(lang === "en" ? "en" : "ko");
+      toast.message(copy.headline, {
         ...scheduleToast,
-        description: install.detail,
+        description: copy.detail,
         action: {
           label: lang === "ko" ? "추가 방법" : "How to add",
           onClick: () => setIosInstallHintOpen(true),
         },
-      });
-    } else if (
-      outcome.item?.alarm &&
-      !outcome.notificationReady &&
-      outcome.successCopy?.detail
-    ) {
-      toast.message(outcome.successCopy.headline, {
-        ...scheduleToast,
-        description: outcome.successCopy.detail,
       });
     } else if (outcome.successCopy?.detail) {
       toast.success(outcome.successCopy.headline, {
@@ -410,9 +295,7 @@ function Schedule() {
       toast.success(outcome.successCopy.headline, scheduleToast);
     } else {
       toast.success(
-        isEdit
-          ? t("수정했어요", "Updated")
-          : t("일정에 추가했어요", "Added to schedule"),
+        isEdit ? t("수정했어요", "Updated") : t("일정에 추가했어요", "Added to schedule"),
         scheduleToast,
       );
     }
@@ -442,7 +325,14 @@ function Schedule() {
     }
   };
 
-  const armAlarmAt = async (s: ScheduleItem, at: Date) => {
+  const closedAppReminderReady = async () => {
+    if (!userId || Notification.permission !== "granted") return false;
+    const push = await ensurePushSubscription(userId);
+    if (!push.ok) return false;
+    return hasActivePushSubscription(userId);
+  };
+
+  const armAlarmAt = async (schedule: ScheduleItem, at: Date) => {
     if (typeof window !== "undefined" && "Notification" in window) {
       if (Notification.permission !== "granted") {
         toast.error(
@@ -468,41 +358,29 @@ function Schedule() {
     }
 
     try {
-      clearReminderOffset(s.id);
-      await update(s.id, { alarm: true, alarm_at: at.toISOString() });
-      const updated: ScheduleItem = {
-        ...s,
+      clearReminderOffset(schedule.id);
+      await update(schedule.id, { alarm: true, alarm_at: at.toISOString() });
+      const updated = {
+        ...schedule,
         alarm: true,
         alarm_at: at.toISOString(),
       };
 
-      // Do not show a system notification here — only queue the due-time alarm.
       if (userId) {
         const sync = await syncScheduleReminderDetailed(userId, updated);
-        if (!sync.ok) {
+        if (!sync.ok || !sync.queued) {
           toast.error(
             t(
-              "알림 예약에 실패했어요. 알림 설정에서 다시 연결해 주세요.",
-              "Couldn't queue the reminder. Reconnect in notification settings.",
-            ),
-            scheduleToast,
-          );
-          return;
-        }
-        if (!sync.queued) {
-          toast.error(
-            t(
-              "알림 시간이 이미 지났어요. 다시 골라 주세요.",
-              "That reminder time already passed. Pick another.",
+              "알림 예약에 실패했어요. 다시 골라 주세요.",
+              "Couldn't queue the reminder. Pick another time.",
             ),
             scheduleToast,
           );
           return;
         }
 
-        const closedApp = await closedAppReminderReady();
         const when = formatAlarmLabel(at, lang === "en" ? "en" : "ko");
-        if (closedApp) {
+        if (await closedAppReminderReady()) {
           toast.success(
             t(`${when}에 알려드릴게요`, `I'll remind you ${when}`),
             scheduleToast,
@@ -520,10 +398,7 @@ function Schedule() {
       }
 
       toast.message(
-        t(
-          "앱을 열어두면 알려드릴게요",
-          "I'll notify you while the app is open",
-        ),
+        t("앱을 열어두면 알려드릴게요", "I'll notify you while the app is open"),
         scheduleToast,
       );
     } catch {
@@ -531,247 +406,34 @@ function Schedule() {
     }
   };
 
-  const armFromPreset = async (s: ScheduleItem, preset: AlarmPreset) => {
-    await armAlarmAt(s, presetToAlarmAt(preset));
+  const armFromPreset = async (schedule: ScheduleItem, preset: AlarmPreset) => {
+    await armAlarmAt(schedule, presetToAlarmAt(preset));
   };
 
-  const disarmReminder = async (s: ScheduleItem) => {
-    clearReminderOffset(s.id);
-    await update(s.id, { alarm: false, alarm_at: null });
-    if (userId) await cancelScheduleReminders(userId, s.id);
+  const disarmReminder = async (schedule: ScheduleItem) => {
+    clearReminderOffset(schedule.id);
+    await update(schedule.id, { alarm: false, alarm_at: null });
+    if (userId) await cancelScheduleReminders(userId, schedule.id);
   };
 
-  const startTimer = async (s: ScheduleItem, preset: TimerPreset) => {
+  const markDone = async (schedule: ScheduleItem) => {
     try {
-      if ("Notification" in window && Notification.permission === "default") {
-        await Notification.requestPermission();
-      }
-      setActiveTimer(s.id, presetToTimerEnd(preset));
-      toast.success(
-        t(
-          "앱을 열어두면 알려드릴게요",
-          "I'll notify you while the app is open",
-        ),
-        scheduleToast,
-      );
-    } catch {
-      toast.error(t("타이머를 시작하지 못했어요", "Couldn't start timer"));
-    }
-  };
-
-  const stopTimer = (s: ScheduleItem) => {
-    clearActiveTimer(s.id);
-    toast(t("타이머 종료", "Timer stopped"));
-  };
-
-  const upcomingSections = useMemo(
-    () => groupSchedulesForUpcoming(activeItems, pins),
-    [activeItems, pins],
-  );
-
-  const laterInboxItems = useMemo(
-    () =>
-      inbox.items.filter(
-        (it) => it.decision === "later" && !isStructuredTimedRecord(it),
-      ),
-    [inbox.items],
-  );
-
-  const { today: todayActive, flowed: flowedPast } = useMemo(
-    () => partitionTodaySchedules(activeItems, pins),
-    [activeItems, pins],
-  );
-
-  const todayTimerItems = useMemo(() => {
-    return todayActive.filter((s) => {
-      const k = classifySchedule(s.start_time);
-      return k === "now" || k === "today" || pins.has(s.id);
-    });
-  }, [todayActive, pins]);
-
-  const moveEventsToDate = async (
-    ids: string[],
-    day: number,
-    month: number,
-    year: number,
-  ) => {
-    if (!ids.length) return;
-    const snapshots: { id: string; prevStart: string; prevEnd: string }[] = [];
-    try {
-      for (const id of ids) {
-        const it = items.find((x) => x.id === id);
-        if (!it) continue;
-        snapshots.push({
-          id,
-          prevStart: it.start_time,
-          prevEnd: it.end_time,
-        });
-        const s = new Date(it.start_time);
-        const e = new Date(it.end_time);
-        const dur = e.getTime() - s.getTime();
-        const ns = new Date(year, month, day, s.getHours(), s.getMinutes());
-        const ne = new Date(ns.getTime() + dur);
-        await update(id, {
-          start_time: ns.toISOString(),
-          end_time: ne.toISOString(),
-        });
-      }
-      if (snapshots.length) {
-        const count = snapshots.length;
-        toast.custom(
-          (toastId) => (
-            <div className="flex items-center gap-3 rounded-[24px] bg-ink px-4 py-3 text-white shadow-float">
-              <span className="text-sm">
-                {count > 1
-                  ? t(
-                      `${count}개 일정이 옮겨졌어요`,
-                      `${count} schedules moved`,
-                    )
-                  : t("날짜가 옮겨졌어요", "Date moved")}
-              </span>
-              <button
-                type="button"
-                onClick={() => {
-                  for (const snap of snapshots) {
-                    void update(snap.id, {
-                      start_time: snap.prevStart,
-                      end_time: snap.prevEnd,
-                    });
-                  }
-                  toast.dismiss(toastId);
-                }}
-                className={toastBtn}
-              >
-                {t("되돌리기", "Undo")}
-              </button>
-            </div>
-          ),
-          { duration: 5000 },
-        );
-      }
-    } catch {
-      toast.error(t("날짜를 옮기지 못했어요", "Couldn't move date"));
-    }
-  };
-
-  const duplicateSchedule = async (s: ScheduleItem) => {
-    try {
-      await add({
-        text: s.text,
-        start_time: s.start_time,
-        end_time: s.end_time,
-        ...scheduleAllDayFieldsFromItem(s),
-        repeat: s.repeat,
-        raw_text: s.raw_text,
-        brain_mirror: s.brain_mirror,
-        source_id: s.source_id,
-        alarm: false,
-        status: "active",
-      });
-      toast.success(t("복사됐어요", "Copied here"));
-    } catch {
-      toast.error(t("복사하지 못했어요", "Couldn't copy"));
-    }
-  };
-
-  const openQuickAdd = (date: Date) => {
-    setSheet({ open: true, draftStart: date });
-  };
-
-  const openLaterInboxSchedule = (it: InboxItem) => {
-    setFocusScheduleSheet({ open: true, item: it });
-  };
-
-  const saveLaterInboxSchedule = async (
-    text: string,
-    start: Date,
-    end: Date,
-    options: ScheduleConfirmOptions,
-  ) => {
-    const it = focusScheduleSheet.item;
-    if (!it) return;
-
-    const result = await convertLaterInboxToSchedule(
-      it,
-      {
-        text,
-        start_time: start.toISOString(),
-        end_time: end.toISOString(),
-        alarm: options.reminderMinutes !== null,
-        all_day: options.allDay,
-        start_all_day: options.startAllDay,
-        end_all_day: options.endAllDay,
-        repeat: options.repeat,
-        ...(options.reminderMinutes !== null
-          ? {
-              alarm_at: new Date(
-                start.getTime() - options.reminderMinutes * 60 * 1000,
-              ).toISOString(),
-            }
-          : {}),
-      },
-      {
-        addSchedule: (payload) => add(payload, { confirmCloud: true }),
-        updateSchedule: (id, patch) => update(id, patch),
-        removeSchedule: (id) => remove(id),
-        getScheduleByRecordId: (recordId) =>
-          findScheduleProjection(items, recordId),
-        getInboxById: (recordId) =>
-          inbox.items.find((row) => row.id === recordId),
-        updateInbox: (id, patch) => inbox.update(id, patch),
-      },
-    );
-
-    if (result.status === "busy") return;
-
-    if (result.status === "create_failed") {
-      toast.error(
-        t("일정으로 옮기지 못했어요", "Couldn't move this to the schedule"),
-      );
-      return;
-    }
-
-    if (result.status === "attach_failed_rolled_back") {
-      toast.error(
-        t(
-          "저장을 끝까지 마치지 못했어요. 일정을 되돌렸어요.",
-          "Couldn't finish saving — rolled back the schedule.",
-        ),
-      );
-      return;
-    }
-
-    setFocusScheduleSheet({ open: false });
-    const whenLabel =
-      lang === "en"
-        ? start.toLocaleDateString("en-US", {
-            month: "long",
-            day: "numeric",
-          })
-        : `${start.getMonth() + 1}월 ${start.getDate()}일`;
-    toast.success(
-      t(`${whenLabel}에 추가했어요`, `Added to schedule for ${whenLabel}`),
-    );
-  };
-
-  const markDone = async (s: ScheduleItem) => {
-    try {
-      const recordId = canonicalIdFromSchedule(s);
-      if (inbox.allItems.some((it) => it.id === recordId)) {
+      const recordId = canonicalIdFromSchedule(schedule);
+      if (inbox.allItems.some((item) => item.id === recordId)) {
         await completeRecord(recordId, mutationOps());
       } else {
-        await update(s.id, { status: "done" });
+        await update(schedule.id, { status: "done" });
       }
-      if (userId) await cancelScheduleReminders(userId, s.id);
+      if (userId) await cancelScheduleReminders(userId, schedule.id);
       hapticConfirm();
-      track("schedule_completed", { text_length: s.text.length });
+      track("schedule_completed", { text_length: schedule.text.length });
       showUndoToast(
-        t("다녀온 기억이에요", "You can let this go"),
+        t("완료했어요", "Completed"),
         async () => {
-          if (inbox.allItems.some((it) => it.id === recordId)) {
+          if (inbox.allItems.some((item) => item.id === recordId)) {
             await undoCompleteRecord(recordId, mutationOps());
           } else {
-            await update(s.id, { status: "active" });
+            await update(schedule.id, { status: "active" });
           }
         },
         { undoLabel: t("되돌리기", "Undo") },
@@ -781,13 +443,13 @@ function Schedule() {
     }
   };
 
-  const undoDone = async (s: ScheduleItem) => {
+  const undoDone = async (schedule: ScheduleItem) => {
     try {
-      const recordId = canonicalIdFromSchedule(s);
-      if (inbox.allItems.some((it) => it.id === recordId)) {
+      const recordId = canonicalIdFromSchedule(schedule);
+      if (inbox.allItems.some((item) => item.id === recordId)) {
         await undoCompleteRecord(recordId, mutationOps());
       } else {
-        await update(s.id, { status: "active" });
+        await update(schedule.id, { status: "active" });
       }
       toast.success(t("다시 열어 뒀어요", "Marked active again"), scheduleToast);
     } catch {
@@ -795,13 +457,12 @@ function Schedule() {
     }
   };
 
-  const deleteScheduleRow = async (s: ScheduleItem) => {
+  const deleteSchedule = async (schedule: ScheduleItem) => {
     try {
-      if (userId) await cancelScheduleReminders(userId, s.id);
-      const recordId = canonicalIdFromSchedule(s);
-      if (inbox.allItems.some((it) => it.id === recordId)) {
+      if (userId) await cancelScheduleReminders(userId, schedule.id);
+      const recordId = canonicalIdFromSchedule(schedule);
+      if (inbox.allItems.some((item) => item.id === recordId)) {
         const snapshot = await deleteRecord(recordId, mutationOps());
-        if (pins.has(s.id)) togglePin(s.id);
         if (snapshot) {
           showUndoToast(t("삭제했어요", "Deleted"), async () => {
             await undoDeleteRecord(snapshot, mutationOps());
@@ -809,38 +470,41 @@ function Schedule() {
         }
         return;
       }
-      // Schedule-only legacy: remove projection only.
-      const deleted = await remove(s.id);
-      if (pins.has(s.id)) togglePin(s.id);
-      if (deleted) toast(t("삭제했어요", "Deleted"));
+      await remove(schedule.id);
+      toast(t("삭제했어요", "Deleted"));
     } catch {
       toast.error(t("삭제하지 못했어요", "Couldn't delete"));
     }
   };
 
-  const moveDoneToArchive = async (s: ScheduleItem) => {
+  const moveToArchive = async (schedule: ScheduleItem) => {
     try {
       const { cloudSynced: archiveSynced } = await archive.add({
-        text: s.raw_text ?? s.text,
+        text: schedule.raw_text ?? schedule.text,
         images: [],
-        source_id: s.source_id ?? s.id,
-        raw_text: s.raw_text ?? s.text,
-        brain_mirror: s.brain_mirror ?? null,
+        source_id: schedule.source_id ?? schedule.id,
+        raw_text: schedule.raw_text ?? schedule.text,
+        brain_mirror: schedule.brain_mirror ?? null,
       });
-      if (userId) await cancelScheduleReminders(userId, s.id);
-      const scheduleSynced = await remove(s.id);
-      const recordId = s.source_id || s.id;
-      if (inbox.items.some((it) => it.id === recordId)) {
+      if (userId) await cancelScheduleReminders(userId, schedule.id);
+      const scheduleSynced = await remove(schedule.id);
+      const recordId = schedule.source_id || schedule.id;
+      if (inbox.allItems.some((item) => item.id === recordId)) {
         await inbox.softDelete(recordId);
       }
-      if (pins.has(s.id)) togglePin(s.id);
       if (allCloudSynced(archiveSynced, scheduleSynced)) {
-        toast.success(t("생각 지도로 옮겼어요", "Moved to thought map"), scheduleToast);
+        toast.success(t("보관했어요", "Saved to vault"), scheduleToast);
       }
     } catch {
-      toast.error(t("옮기지 못했어요", "Couldn't move"));
+      toast.error(t("보관하지 못했어요", "Couldn't archive"));
     }
   };
+
+  const hasAnySchedule =
+    todayItems.length > 0 ||
+    upcomingItems.length > 0 ||
+    pastItems.length > 0 ||
+    doneItems.length > 0;
 
   return (
     <div className="flex h-full flex-col bg-[var(--canvas,#faf8f5)]">
@@ -849,134 +513,106 @@ function Schedule() {
         error={syncState === "error"}
         onRetry={retrySync}
       />
-      <div className="sticky top-0 z-10 shrink-0 bg-[var(--canvas,#faf8f5)]">
-        <div className="mx-auto w-full max-w-[680px] px-5 pb-3 pt-6">
+
+      <header className="sticky top-0 z-10 shrink-0 bg-[var(--canvas,#faf8f5)]">
+        <div className="mx-auto flex w-full max-w-[680px] items-center justify-between px-5 pb-4 pt-6">
           <h1 className="page-title inline-flex items-center gap-2">
             <span
               className="inline-block h-3 w-3 rounded-full bg-primary"
               aria-hidden
             />
-            {t("일정", "Schedule")}
+            {t("내 일정", "My schedule")}
           </h1>
-        </div>
-        <div className="mx-auto w-full max-w-[680px] px-5 pb-2">
-          <LayoutGroup>
-            <div className="segment-nav" role="tablist">
-              {(
-                [
-                  ["today", t("오늘", "Today"), "schedule-panel-today"],
-                  ["list", t("예정", "Upcoming"), "schedule-panel-list"],
-                ] as const
-              ).map(([k, label, panelId]) => (
-                <button
-                  key={k}
-                  type="button"
-                  role="tab"
-                  id={`schedule-tab-${k}`}
-                  aria-selected={tab === k}
-                  aria-controls={panelId}
-                  onClick={() => setTab(k)}
-                  className={`segment-nav-item ${
-                    tab === k ? "segment-nav-item-active" : "segment-nav-item-inactive"
-                  }`}
-                >
-                  {label}
-                </button>
-              ))}
-            </div>
-          </LayoutGroup>
-        </div>
-      </div>
-
-      <div className="mx-auto w-full max-w-[680px] flex-1 px-5 pb-24">
-        <AnimatePresence mode="wait">
-          <motion.div
-            key={tab}
-            id={tab === "list" ? "schedule-panel-list" : "schedule-panel-today"}
-            role="tabpanel"
-            aria-labelledby={`schedule-tab-${tab}`}
-            initial={{ opacity: 0, y: 6 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -4 }}
-            transition={{ duration: 0.2, ease: [0.32, 0.72, 0, 1] }}
+          <button
+            type="button"
+            data-testid="schedule-open-search"
+            onClick={() => window.dispatchEvent(new Event(OPEN_BROWSE))}
+            aria-label={t("기록 검색", "Search records")}
+            className="touch-press grid h-11 w-11 place-items-center rounded-full bg-ink/[0.035] text-ink"
           >
+            <Search size={20} strokeWidth={2.2} aria-hidden />
+          </button>
+        </div>
+      </header>
+
+      <main
+        className="mx-auto w-full max-w-[680px] flex-1 overflow-y-auto px-5 pb-28"
+        data-testid="schedule-unified-view"
+      >
         {syncState === "syncing" && items.length === 0 ? (
           <ScheduleListSkeleton />
-        ) : tab === "today" ? (
-          activeItems.length === 0 && doneItems.length === 0 ? (
-            <Empty />
-          ) : (
-            <ScheduleTodayPanel
-              todayItems={todayTimerItems}
-              flowedItems={flowedPast}
-              doneCount={doneItems.length}
-              doneItems={doneItems}
-              pins={pins}
-              onComplete={markDone}
-              onUndoComplete={undoDone}
-              onEdit={(s) => setSheet({ open: true, edit: s })}
-              onOpenDetail={(s) => setDetailSchedule(s)}
-              onAlarm={(s) => setAlarmSheet(s)}
-            />
-          )
+        ) : !hasAnySchedule ? (
+          <Empty />
         ) : (
-          upcomingSections.length === 0 &&
-          laterInboxItems.length === 0 &&
-          doneItems.length === 0 ? (
-            <Empty />
-          ) : (
-            <div className="flex flex-col gap-5 animate-fade-in pb-2">
-              {upcomingSections.map((sec) => (
-                <section key={sec.key} data-testid={`upcoming-section-${sec.key}`}>
-                  <h2 className="section-title mb-1.5 px-0.5">
-                    {upcomingSectionLabel(sec.key, lang)}
-                  </h2>
-                  <ul className="flex flex-col gap-2.5">
-                    {sec.items.map((s) => (
-                      <ScheduleCompactRow
-                        key={s.id}
-                        s={s}
-                        pinned={pins.has(s.id)}
-                        onComplete={() => markDone(s)}
-                        onEdit={() => setSheet({ open: true, edit: s })}
-                        onOpenDetail={() => setDetailSchedule(s)}
-                        onAlarm={() => setAlarmSheet(s)}
-                      />
-                    ))}
-                  </ul>
-                </section>
-              ))}
-              {laterInboxItems.length > 0 && (
-                <section data-testid="upcoming-section-noDate">
-                  <h2 className="section-title mb-1.5 px-0.5">
-                    {upcomingSectionLabel("noDate", lang)}
-                  </h2>
-                  <ul className="flex flex-col">
-                    {laterInboxItems.map((it) => (
-                      <LaterInboxRow
-                        key={it.id}
-                        text={it.text}
-                        onOpen={() => openLaterInboxSchedule(it)}
-                      />
-                    ))}
-                  </ul>
-                </section>
+          <div className="flex flex-col gap-7 pb-3">
+            <section data-testid="schedule-section-today">
+              <h2 className="section-title mb-2 px-0.5">{t("오늘", "Today")}</h2>
+              {todayItems.length > 0 ? (
+                <ul className="flex flex-col gap-2.5" data-testid="schedule-today-list">
+                  {todayItems.map((schedule) => (
+                    <ScheduleCompactRow
+                      key={schedule.id}
+                      s={schedule}
+                      onComplete={() => markDone(schedule)}
+                      onEdit={() => setSheet({ open: true, edit: schedule })}
+                      onOpenDetail={() => setDetailSchedule(schedule)}
+                      onAlarm={() => setAlarmSheet(schedule)}
+                    />
+                  ))}
+                </ul>
+              ) : (
+                <p className="px-1 py-3 text-[14px] text-ink-soft">
+                  {t("오늘 일정이 없어요", "Nothing on today")}
+                </p>
               )}
-              {doneItems.length > 0 && (
-                <DoneSection
-                  items={doneItems}
-                  onComplete={undoDone}
-                  onEdit={(s) => setSheet({ open: true, edit: s })}
-                  onOpenDetail={(s) => setDetailSchedule(s)}
-                  t={t}
-                />
+            </section>
+
+            <section data-testid="schedule-section-upcoming">
+              <h2 className="section-title mb-2 px-0.5">
+                {t("다가오는 일정", "Upcoming")}
+              </h2>
+              {upcomingItems.length > 0 ? (
+                <ul className="flex flex-col gap-2.5" data-testid="schedule-upcoming-list">
+                  {upcomingItems.map((schedule) => (
+                    <ScheduleCompactRow
+                      key={schedule.id}
+                      s={schedule}
+                      onComplete={() => markDone(schedule)}
+                      onEdit={() => setSheet({ open: true, edit: schedule })}
+                      onOpenDetail={() => setDetailSchedule(schedule)}
+                      onAlarm={() => setAlarmSheet(schedule)}
+                    />
+                  ))}
+                </ul>
+              ) : (
+                <p className="px-1 py-3 text-[14px] text-ink-soft">
+                  {t("다가오는 일정이 없어요", "Nothing upcoming")}
+                </p>
               )}
-            </div>
-          )
+            </section>
+
+            {pastItems.length > 0 && (
+              <CollapsibleSection
+                title={t("지난 일정", "Past")}
+                items={pastItems}
+                onComplete={markDone}
+                onOpenDetail={setDetailSchedule}
+                onEdit={(schedule) => setSheet({ open: true, edit: schedule })}
+              />
+            )}
+
+            {doneItems.length > 0 && (
+              <DoneSection
+                items={doneItems}
+                onUndo={undoDone}
+                onOpenDetail={setDetailSchedule}
+                onEdit={(schedule) => setSheet({ open: true, edit: schedule })}
+                t={t}
+              />
+            )}
+          </div>
         )}
-          </motion.div>
-        </AnimatePresence>
-      </div>
+      </main>
 
       {reminderSheet && (
         <ReminderSheet
@@ -984,16 +620,6 @@ function Schedule() {
           schedule={reminderSheet}
           onClose={() => setReminderSheet(null)}
           onConfirmAt={(iso) => {
-            if (Notification.permission !== "granted") {
-              toast.error(
-                t(
-                  "알림을 켠 뒤 시간을 정해 주세요.",
-                  "Turn on notifications before setting a time.",
-                ),
-                scheduleToast,
-              );
-              return;
-            }
             void armAlarmAt(reminderSheet, new Date(iso));
             setReminderSheet(null);
           }}
@@ -1002,7 +628,7 @@ function Schedule() {
 
       <ScheduleAlarmSheet
         schedule={alarmSheet}
-        open={!!alarmSheet}
+        open={Boolean(alarmSheet)}
         onClose={() => setAlarmSheet(null)}
         userId={userId}
         armed={alarmSheet?.alarm ?? false}
@@ -1018,28 +644,6 @@ function Schedule() {
         }}
       />
 
-      <ScheduleTimerSheet
-        schedule={timerSheet}
-        open={!!timerSheet}
-        onClose={() => setTimerSheet(null)}
-        active={timerSheet ? !!getActiveTimerEnd(timerSheet.id) : false}
-        onSelectPreset={(preset) => {
-          if (timerSheet) void startTimer(timerSheet, preset);
-        }}
-        onClear={() => {
-          if (timerSheet) stopTimer(timerSheet);
-        }}
-      />
-
-      <FocusScheduleSheet
-        item={focusScheduleSheet.item ?? null}
-        open={focusScheduleSheet.open}
-        onClose={() => setFocusScheduleSheet({ open: false })}
-        onConfirm={(text, start, end, options) => {
-          void saveLaterInboxSchedule(text, start, end, options);
-        }}
-      />
-
       <ThoughtDetailSheet
         item={
           detailSchedule
@@ -1048,8 +652,7 @@ function Schedule() {
                 text: detailSchedule.raw_text || detailSchedule.text,
                 images: [],
                 created_at: detailSchedule.created_at,
-                status:
-                  detailSchedule.status === "done" ? "done" : "active",
+                status: detailSchedule.status === "done" ? "done" : "active",
                 start_time: detailSchedule.start_time,
                 end_time: detailSchedule.end_time,
                 all_day: detailSchedule.all_day ?? null,
@@ -1061,66 +664,56 @@ function Schedule() {
         open={Boolean(detailSchedule)}
         onClose={() => setDetailSchedule(null)}
         onSchedule={() => {
-          const s = detailSchedule;
+          const schedule = detailSchedule;
           setDetailSchedule(null);
-          if (s) setSheet({ open: true, edit: s });
+          if (schedule) setSheet({ open: true, edit: schedule });
         }}
         onArchive={() => {
-          const s = detailSchedule;
+          const schedule = detailSchedule;
           setDetailSchedule(null);
-          if (s) void moveDoneToArchive(s);
+          if (schedule) void moveToArchive(schedule);
         }}
         onDelete={() => {
-          const s = detailSchedule;
+          const schedule = detailSchedule;
           setDetailSchedule(null);
-          if (s) void deleteScheduleRow(s);
+          if (schedule) void deleteSchedule(schedule);
         }}
         onSaveEdit={async (_item, text) => {
-          const s = detailSchedule;
-          if (!s) return;
-          await update(s.id, { text, raw_text: text });
-          const recordId = canonicalIdFromSchedule(s);
-          if (inbox.allItems.some((it) => it.id === recordId)) {
+          const schedule = detailSchedule;
+          if (!schedule) return;
+          await update(schedule.id, { text, raw_text: text });
+          const recordId = canonicalIdFromSchedule(schedule);
+          if (inbox.allItems.some((item) => item.id === recordId)) {
             await inbox.update(recordId, { text, raw_text: text });
           }
           toast.success(t("고쳤어요", "Saved your edit"));
         }}
         onClearTemporal={async () => {
-          const s = detailSchedule;
+          const schedule = detailSchedule;
           setDetailSchedule(null);
-          if (!s) return;
-          const recordId = canonicalIdFromSchedule(s);
-          if (inbox.allItems.some((it) => it.id === recordId)) {
+          if (!schedule) return;
+          const recordId = canonicalIdFromSchedule(schedule);
+          if (inbox.allItems.some((item) => item.id === recordId)) {
             await syncRecordTemporal(recordId, null, mutationOps());
           } else {
-            if (userId) await cancelScheduleReminders(userId, s.id);
-            await remove(s.id);
+            if (userId) await cancelScheduleReminders(userId, schedule.id);
+            await remove(schedule.id);
           }
-          toast.success(
-            t("날짜·시간을 지웠어요", "Removed date & time"),
-          );
+          toast.success(t("날짜·시간을 지웠어요", "Removed date & time"));
         }}
       />
 
       <ScheduleSheet
         open={sheet.open}
         initialText={sheet.edit?.text}
-        initialStart={
-          sheet.edit
-            ? new Date(sheet.edit.start_time)
-            : sheet.draftStart
-        }
+        initialStart={sheet.edit ? new Date(sheet.edit.start_time) : undefined}
         initialEnd={sheet.edit ? new Date(sheet.edit.end_time) : undefined}
         initialAllDay={sheet.edit?.all_day}
         initialStartAllDay={
-          sheet.edit
-            ? resolveScheduleAllDayFlags(sheet.edit).startAllDay
-            : undefined
+          sheet.edit ? resolveScheduleAllDayFlags(sheet.edit).startAllDay : undefined
         }
         initialEndAllDay={
-          sheet.edit
-            ? resolveScheduleAllDayFlags(sheet.edit).endAllDay
-            : undefined
+          sheet.edit ? resolveScheduleAllDayFlags(sheet.edit).endAllDay : undefined
         }
         initialRepeat={sheet.edit?.repeat}
         initialReminderKey={
@@ -1148,16 +741,15 @@ function Schedule() {
             edit: sheet.edit,
           };
 
-          const needsIosInstall = isIosSafariTab();
           if (
             shouldOfferNotificationOnboarding(wantsAlarm, hasTime, pending.isNew, {
-              needsIosInstall,
+              needsIosInstall: isIosSafariTab(),
             })
           ) {
-            const fireAt = new Date(
-              start.getTime() - reminderMin! * 60 * 1000,
-            );
-            setNotificationOnboarding({ pending, fireAt });
+            setNotificationOnboarding({
+              pending,
+              fireAt: new Date(start.getTime() - reminderMin! * 60 * 1000),
+            });
             setSheet({ open: false });
             return;
           }
@@ -1181,13 +773,11 @@ function Schedule() {
             try {
               if (isIosSafariTab()) {
                 setOnboardingBusy(true);
-                // Save with alarm intent; do not burn onboarding — user must reopen as PWA.
                 const outcome = await completeScheduleSaveWithNotifications(
                   userId,
                   notificationOnboarding.pending,
                   lang === "en" ? "en" : "ko",
-                  (alarm) =>
-                    persistScheduleItem(notificationOnboarding.pending, alarm),
+                  (alarm) => persistScheduleItem(notificationOnboarding.pending, alarm),
                   { skipNotificationPrep: true },
                 );
                 applySaveOutcome(
@@ -1197,7 +787,6 @@ function Schedule() {
                 return;
               }
 
-              // iOS: first await in this click must be permission / enable — no setState before it.
               if (userId) {
                 const enabled = await executeDirectPushEnableFlow(
                   userId,
@@ -1258,162 +847,30 @@ function Schedule() {
   );
 }
 
-function FlowedPastSection({
-  items,
-  onEdit,
-  t,
-}: {
-  items: ScheduleItem[];
-  onEdit: (s: ScheduleItem) => void;
-  t: ReturnType<typeof useT>;
-}) {
-  const [open, setOpen] = useState(false);
-  const { lang } = useLang();
-  if (!items.length) return null;
-
-  const locale = lang === "en" ? "en-US" : "ko-KR";
-  const visible = open ? items : items.slice(0, 2);
-
-  return (
-    <section className="mt-4 border-t border-ink/[0.06] pt-3">
-      <button
-        type="button"
-        onClick={() => setOpen((v) => !v)}
-        className="flex w-full items-center justify-between px-0.5 py-1.5 text-[13px] font-semibold text-ink-soft touch-press"
-      >
-        <span>{t("지난 일정", "Past")}</span>
-        <span className="text-[12px]">
-          {items.length} {open ? "▴" : "▾"}
-        </span>
-      </button>
-      <ul className="flex flex-col">
-        {visible.map((s) => (
-          <li
-            key={s.id}
-            className="flex items-center justify-between gap-3 border-b border-ink/[0.05] px-0.5 py-2.5 last:border-b-0"
-          >
-            <button
-              type="button"
-              onClick={() => onEdit(s)}
-              className="min-w-0 flex-1 truncate text-left text-[14px] text-ink/55 touch-press"
-            >
-              {scheduleDisplayTitle(s)}
-            </button>
-            <span className="shrink-0 text-[12px] text-ink-soft">
-              {new Date(s.end_time).toLocaleDateString(locale, {
-                month: "short",
-                day: "numeric",
-              })}
-            </span>
-          </li>
-        ))}
-      </ul>
-    </section>
-  );
-}
-
-function ScheduleTodayPanel({
-  todayItems,
-  flowedItems,
-  doneCount,
-  doneItems,
-  pins,
-  onComplete,
-  onUndoComplete,
-  onEdit,
-  onOpenDetail,
-  onAlarm,
-}: {
-  todayItems: ScheduleItem[];
-  flowedItems: ScheduleItem[];
-  doneCount: number;
-  doneItems: ScheduleItem[];
-  pins: Set<string>;
-  onComplete: (s: ScheduleItem) => void;
-  onUndoComplete: (s: ScheduleItem) => void;
-  onEdit: (s: ScheduleItem) => void;
-  onOpenDetail: (s: ScheduleItem) => void;
-  onAlarm: (s: ScheduleItem) => void;
-}) {
-  const t = useT();
-  const stagger = useListStagger("schedule-today");
-
-  return (
-    <div className="flex flex-col animate-fade-in pb-2 pt-1">
-      {todayItems.length > 0 ? (
-        <ul
-          className={`flex flex-col gap-2.5 ${stagger.className}`}
-          data-stagger={stagger["data-stagger"]}
-          data-testid="schedule-today-list"
-        >
-          {todayItems.map((s) => (
-            <ScheduleCompactRow
-              key={s.id}
-              s={s}
-              pinned={pins.has(s.id)}
-              onComplete={() => onComplete(s)}
-              onEdit={() => onEdit(s)}
-              onOpenDetail={() => onOpenDetail(s)}
-              onAlarm={() => onAlarm(s)}
-            />
-          ))}
-        </ul>
-      ) : (
-        doneCount === 0 &&
-        flowedItems.length === 0 && (
-          <p className="px-1 py-5 text-center text-secondary leading-relaxed">
-            {t(
-              "오늘 일정이 없어요",
-              "Nothing on today yet.",
-            )}
-          </p>
-        )
-      )}
-
-      <FlowedPastSection items={flowedItems} onEdit={onEdit} t={t} />
-
-      {doneItems.length > 0 && (
-        <DoneSection
-          items={doneItems}
-          onComplete={onUndoComplete}
-          onEdit={onEdit}
-          onOpenDetail={onOpenDetail}
-          t={t}
-        />
-      )}
-    </div>
-  );
-}
-
-function DoneSection({
+function CollapsibleSection({
+  title,
   items,
   onComplete,
-  onEdit,
   onOpenDetail,
-  t,
+  onEdit,
 }: {
+  title: string;
   items: ScheduleItem[];
-  onComplete: (s: ScheduleItem) => void;
-  onEdit: (s: ScheduleItem) => void;
-  onOpenDetail?: (s: ScheduleItem) => void;
-  t: ReturnType<typeof useT>;
+  onComplete: (schedule: ScheduleItem) => void;
+  onOpenDetail: (schedule: ScheduleItem) => void;
+  onEdit: (schedule: ScheduleItem) => void;
 }) {
   const [open, setOpen] = useState(false);
+
   return (
-    <section className="mt-4 border-t border-ink/[0.06] pt-3">
+    <section className="border-t border-ink/[0.06] pt-3">
       <button
         type="button"
-        onClick={() => setOpen((v) => !v)}
-        className="mb-2 w-full px-0.5 text-left text-[12px] font-semibold tracking-[-0.01em] text-ink-soft/80 touch-press"
+        onClick={() => setOpen((value) => !value)}
+        className="touch-press flex min-h-11 w-full items-center justify-between px-0.5 text-left text-[12px] font-semibold text-ink-soft"
       >
-        {t("완료", "Done")} · {items.length}{" "}
-        <motion.span
-          animate={{ rotate: open ? 0 : -90 }}
-          transition={{ duration: 0.2 }}
-          className="inline-block"
-        >
-          ▾
-        </motion.span>
+        <span>{title} · {items.length}</span>
+        <span aria-hidden>{open ? "▴" : "▾"}</span>
       </button>
       <AnimatePresence initial={false}>
         {open && (
@@ -1421,19 +878,16 @@ function DoneSection({
             initial={{ height: 0, opacity: 0 }}
             animate={{ height: "auto", opacity: 1 }}
             exit={{ height: 0, opacity: 0 }}
-            transition={{ duration: 0.28, ease: [0.32, 0.72, 0, 1] }}
-            className="flex flex-col overflow-hidden"
+            className="flex flex-col gap-2.5 overflow-hidden"
           >
-            {items.map((s) => (
+            {items.map((schedule) => (
               <ScheduleCompactRow
-                key={s.id}
-                s={s}
-                done
-                onComplete={() => onComplete(s)}
-                onEdit={() => onEdit(s)}
-                onOpenDetail={
-                  onOpenDetail ? () => onOpenDetail(s) : undefined
-                }
+                key={schedule.id}
+                s={schedule}
+                inPastSection
+                onComplete={() => onComplete(schedule)}
+                onEdit={() => onEdit(schedule)}
+                onOpenDetail={() => onOpenDetail(schedule)}
               />
             ))}
           </motion.ul>
@@ -1443,671 +897,53 @@ function DoneSection({
   );
 }
 
-function fmt(d: Date, locale: string) {
-  return d.toLocaleString(locale, {
-    month: "numeric",
-    day: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-    hour12: false,
-  });
-}
-
-function CalendarGrid({
+function DoneSection({
   items,
-  pins,
-  onTogglePin,
+  onUndo,
+  onOpenDetail,
   onEdit,
-  onQuickAdd,
-  onDelete,
-  onDuplicate,
-  onDropToDate,
-  onAlarm,
+  t,
 }: {
   items: ScheduleItem[];
-  pins: Set<string>;
-  onTogglePin: (id: string) => void;
-  onEdit: (s: ScheduleItem) => void;
-  onQuickAdd: (date: Date) => void;
-  onDelete: (s: ScheduleItem) => void;
-  onDuplicate: (s: ScheduleItem) => void;
-  onDropToDate: (
-    ids: string[],
-    day: number,
-    month: number,
-    year: number,
-  ) => void;
-  onAlarm: (s: ScheduleItem) => void;
+  onUndo: (schedule: ScheduleItem) => void;
+  onOpenDetail: (schedule: ScheduleItem) => void;
+  onEdit: (schedule: ScheduleItem) => void;
+  t: ReturnType<typeof useT>;
 }) {
-  const t = useT();
-  const { lang } = useLang();
-  const today = new Date();
-  const calendarRef = useRef<HTMLDivElement>(null);
-  const scrollParent = useCalendarScrollParent(calendarRef);
-  const [view, setView] = useState({
-    y: today.getFullYear(),
-    m: today.getMonth(),
-  });
-  const { y, m } = view;
-  const first = new Date(y, m, 1);
-  const startDay = first.getDay();
-  const days = new Date(y, m + 1, 0).getDate();
-  const cells: (number | null)[] = [
-    ...Array.from({ length: startDay }, () => null),
-    ...Array.from({ length: days }, (_, i) => i + 1),
-  ];
-  const weeks: (number | null)[][] = [];
-  for (let i = 0; i < cells.length; i += 7) {
-    const row = cells.slice(i, i + 7);
-    while (row.length < 7) row.push(null);
-    weeks.push(row);
-  }
-  const eventsOf = (day: number) =>
-    items.filter((s) => {
-      const dt = new Date(s.start_time);
-      return (
-        dt.getFullYear() === y && dt.getMonth() === m && dt.getDate() === day
-      );
-    });
-  const singleDayEventsOf = (day: number) =>
-    eventsOf(day).filter((s) => !isMultiDaySchedule(s));
-  const multiDayInMonth = items.filter(
-    (s) => scheduleRangeInMonth(s, y, m) != null && isMultiDaySchedule(s),
-  );
-  const [selected, setSelected] = useState<number | null>(today.getDate());
-  const [menuFor, setMenuFor] = useState<ScheduleItem | null>(null);
-  const [selectMode, setSelectMode] = useState(false);
-  const [picked, setPicked] = useState<Set<string>>(new Set());
-  const [monthDir, setMonthDir] = useState<1 | -1>(1);
-  const swipeRef = useRef({ x: 0, active: false, locked: false });
-  const monthLabel =
-    lang === "en"
-      ? new Date(y, m, 1).toLocaleString("en-US", {
-          month: "long",
-          year: "numeric",
-        })
-      : `${y}년 ${m + 1}월`;
-  const weekdays =
-    lang === "en"
-      ? ["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"]
-      : ["일", "월", "화", "수", "목", "금", "토"];
-
-  const selectedEvents = selected ? eventsOf(selected) : [];
-  const locale = lang === "en" ? "en-US" : "ko-KR";
-  const monthHasEvents = items.some((s) => scheduleRangeInMonth(s, y, m) != null);
-  const viewingTodayMonth =
-    y === today.getFullYear() && m === today.getMonth();
-  const selectedDate =
-    selected != null ? new Date(y, m, selected) : new Date(y, m, 1);
-  const showTodayBtn =
-    !viewingTodayMonth ||
-    (selected != null && !isSameWeek(selectedDate, today));
-
-  const goMonth = (dir: 1 | -1) => {
-    setMonthDir(dir);
-    setView((v) => ({
-      y: dir === 1 && v.m === 11 ? v.y + 1 : dir === -1 && v.m === 0 ? v.y - 1 : v.y,
-      m: (v.m + dir + 12) % 12,
-    }));
-    haptic(6);
-  };
-
-  const goToday = () => {
-    setView({ y: today.getFullYear(), m: today.getMonth() });
-    setSelected(today.getDate());
-    haptic(6);
-  };
-
-  const onSwipeDown = (e: ReactPointerEvent) => {
-    swipeRef.current = { x: e.clientX, active: true, locked: false };
-  };
-  const onSwipeMove = (e: ReactPointerEvent) => {
-    if (!swipeRef.current.active || swipeRef.current.locked) return;
-    const dx = e.clientX - swipeRef.current.x;
-    if (Math.abs(dx) > 52) {
-      swipeRef.current.locked = true;
-      goMonth(dx < 0 ? 1 : -1);
-    }
-  };
-  const onSwipeUp = () => {
-    swipeRef.current.active = false;
-  };
-
-  const exitSelectMode = () => {
-    setSelectMode(false);
-    setPicked(new Set());
-  };
-
-  const enterSelectMode = (initial?: ScheduleItem) => {
-    setSelectMode(true);
-    setPicked(initial ? new Set([initial.id]) : new Set());
-    haptic(6);
-  };
-
-  const togglePick = (id: string) => {
-    setPicked((prev) => {
-      const next = new Set(prev);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
-      return next;
-    });
-    haptic(6);
-  };
-
-  const resolveDragGroup = (item: ScheduleItem) => {
-    if (selectMode && picked.size > 0 && picked.has(item.id)) {
-      return [...picked];
-    }
-    return [item.id];
-  };
+  const [open, setOpen] = useState(false);
 
   return (
-    <CalendarDragLayer
-      month={m}
-      year={y}
-      pinned={(id) => pins.has(id)}
-      getDragGroup={resolveDragGroup}
-      scrollParent={scrollParent}
-      onEdgeMonth={(dir) => goMonth(dir === 1 ? 1 : -1)}
-      onDropToDate={(ids, day, month, year) => {
-        onDropToDate(ids, day, month, year);
-        exitSelectMode();
-      }}
-    >
-      {({ startDrag, hoverDay, draggingIds }) => (
-        <div ref={calendarRef} className="relative space-y-3">
-          <AnimatePresence mode="wait">
-            <motion.div
-              key={`${y}-${m}`}
-              initial={{ opacity: 0, x: monthDir * 28 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: monthDir * -28 }}
-              transition={{ duration: 0.22, ease: [0.32, 0.72, 0, 1] }}
-              onPointerDown={onSwipeDown}
-              onPointerMove={onSwipeMove}
-              onPointerUp={onSwipeUp}
-              onPointerCancel={onSwipeUp}
-              className="touch-pan-y rounded-[var(--radius-md)] border border-ink/[0.05] bg-ink/[0.015] p-3"
-            >
-              <div className="mb-3 flex items-center justify-between">
-                <button
-                  type="button"
-                  onClick={() => goMonth(-1)}
-                  className="touch-target flex h-11 w-11 items-center justify-center rounded-full text-[20px] text-ink-soft/70 hover:bg-ink/[0.04] hover:text-ink touch-press"
-                  aria-label={t("이전 달", "Previous month")}
-                >
-                  ‹
-                </button>
-                <div className="text-[15px] font-bold tracking-[-0.02em] text-ink">
-                  {monthLabel}
-                </div>
-                <button
-                  type="button"
-                  onClick={() => goMonth(1)}
-                  className="touch-target flex h-11 w-11 items-center justify-center rounded-full text-[20px] text-ink-soft/70 hover:bg-ink/[0.04] hover:text-ink touch-press"
-                  aria-label={t("다음 달", "Next month")}
-                >
-                  ›
-                </button>
-              </div>
-
-              {!monthHasEvents && (
-                <div className="mb-4 flex flex-col items-center py-4 text-center">
-                  <span className="text-[2.5rem]" aria-hidden>
-                    🌿
-                  </span>
-                  <p className="mt-3 text-[15px] font-semibold text-ink">
-                    {t("이 달은 한가해요.", "A quiet month.")}
-                  </p>
-                  <p className="mt-1 text-[12px] text-ink-soft/80">
-                    {t(
-                      "날짜를 길게 눌러 바로 추가해 보세요",
-                      "Long-press a day to add something",
-                    )}
-                  </p>
-                </div>
-              )}
-
-              <div className="grid grid-cols-7 gap-1 text-center text-[11px] font-semibold tracking-[-0.01em]">
-                {weekdays.map((d, i) => (
-                  <div
-                    key={i}
-                    className={
-                      i === 0 || i === 6 ? "text-ink-soft/45" : "text-ink-soft/70"
-                    }
-                  >
-                    {d}
-                  </div>
-                ))}
-              </div>
-              <div className="mt-1 space-y-0.5">
-                {weeks.map((week, wi) => {
-                  const spanSegments = computeWeekSpanSegments(
-                    week,
-                    multiDayInMonth,
-                    y,
-                    m,
-                  );
-                  return (
-                    <div key={wi}>
-                      <div className="grid grid-cols-7 gap-1">
-                        {week.map((c, i) => {
-                          if (!c) {
-                            return (
-                              <div key={`${wi}-${i}`} className="min-h-[44px]" />
-                            );
-                          }
-                          const evs = singleDayEventsOf(c);
-                          const weekday = (startDay + c - 1) % 7;
-                          const isToday =
-                            c === today.getDate() &&
-                            m === today.getMonth() &&
-                            y === today.getFullYear();
-                          const isSel = c === selected;
-                          const preview = evs.length
-                            ? scheduleDisplayTitle(evs[0])
-                            : undefined;
-                          return (
-                            <CalendarDayCell
-                              key={`${wi}-${i}`}
-                              day={c}
-                              weekday={weekday}
-                              hoverDay={hoverDay}
-                              dragging={draggingIds.length > 0}
-                              isToday={isToday}
-                              isSelected={isSel}
-                              eventCount={evs.length}
-                              preview={preview}
-                              firstEvent={evs[0]}
-                              onSelect={() => {
-                                setSelected(c);
-                                haptic(6);
-                              }}
-                              onLongPressEmpty={() =>
-                                onQuickAdd(defaultStartForDay(y, m, c))
-                              }
-                              onDragStart={startDrag}
-                            />
-                          );
-                        })}
-                      </div>
-                      <CalendarWeekSpanBars
-                        segments={spanSegments}
-                        titleFor={scheduleDisplayTitle}
-                        draggingIds={draggingIds}
-                        onDragStart={startDrag}
-                      />
-                    </div>
-                  );
-                })}
-              </div>
-              <p className="mt-2 px-1 text-[11px] text-ink-soft/70">
-                {t(
-                  "→ 노란 블록을 눌러 다른 날로 옮길 수 있어요",
-                  "→ Press and drag a yellow block to move it to another day",
-                )}
-              </p>
-            </motion.div>
-          </AnimatePresence>
-
-          {showTodayBtn && (
-            <motion.button
-              type="button"
-              initial={{ opacity: 0, y: 8 }}
-              animate={{ opacity: 1, y: 0 }}
-              onClick={goToday}
-              className="fixed left-1/2 z-20 -translate-x-1/2 rounded-full bg-ink px-4 py-2 text-[12px] font-bold text-white shadow-float touch-press"
-              style={{ bottom: "calc(env(safe-area-inset-bottom) + 5.5rem)" }}
-            >
-              {t("오늘", "Today")}
-            </motion.button>
-          )}
-
-          {selected !== null && (
-            <div className="space-y-3 border-t-2 border-primary/15 pt-3">
-              <motion.button
-                type="button"
-                whileTap={{ scale: 0.97 }}
-                onClick={() => onQuickAdd(defaultStartForDay(y, m, selected))}
-                className="flex w-full items-center justify-center gap-2 rounded-[16px] bg-primary/20 py-3 text-[14px] font-bold text-ink touch-press"
-              >
-                <Plus size={16} strokeWidth={2.5} />
-                {t("이 날짜에 추가", "Add on this day")}
-              </motion.button>
-
-              <div className="rounded-[var(--radius-md)] border border-ink/[0.05] bg-ink/[0.015] px-1 py-1">
-                <div className="mb-1.5 flex items-center justify-between gap-2 px-1.5 pt-0.5">
-                  <div className="text-[12px] font-semibold text-ink-soft">
-                    {new Date(y, m, selected).toLocaleDateString(locale, {
-                      month: "short",
-                      day: "numeric",
-                      weekday: "short",
-                    })}
-                    {selectedEvents.length > 0 && (
-                      <span className="ml-1 text-ink-soft/60">
-                        · {selectedEvents.length}
-                      </span>
-                    )}
-                  </div>
-                  {selectedEvents.length > 0 && (
-                    <button
-                      type="button"
-                      onClick={() =>
-                        selectMode ? exitSelectMode() : enterSelectMode()
-                      }
-                      className={`rounded-full px-2.5 py-1 text-[11px] font-bold touch-press ${
-                        selectMode
-                          ? "bg-ink text-white"
-                          : "bg-ink/[0.06] text-ink-soft"
-                      }`}
-                    >
-                      {selectMode
-                        ? t("닫기", "Close")
-                        : t("고르기", "Pick")}
-                    </button>
-                  )}
-                </div>
-                {selectMode && picked.size > 0 && (
-                  <motion.p
-                    initial={{ opacity: 0, y: -4 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    className="mb-2 text-[11px] font-semibold text-primary"
-                  >
-                    {t(
-                      `${picked.size}개 · 끌어서 함께 옮기기`,
-                      `${picked.size} picked · drag to move together`,
-                    )}
-                  </motion.p>
-                )}
-                {selectedEvents.length === 0 ? (
-                  <p className="min-h-[72px] py-3 text-[13px] text-ink-soft/70">
-                    {t("이 날은 비어 있어요.", "Nothing here yet.")}
-                  </p>
-                ) : (
-                  <ul className="space-y-1">
-                    {selectedEvents
-                      .slice()
-                      .sort(
-                        (a, b) =>
-                          +new Date(a.start_time) - +new Date(b.start_time),
-                      )
-                      .map((s) => (
-                        <DayEventChip
-                          key={s.id}
-                          s={s}
-                          pinned={pins.has(s.id)}
-                          dragging={draggingIds.includes(s.id)}
-                          selectMode={selectMode}
-                          selected={picked.has(s.id)}
-                          onToggleSelect={() => togglePick(s.id)}
-                          onClick={() => onEdit(s)}
-                          onLongPress={() => setMenuFor(s)}
-                          onDragStart={(e) => startDrag(e, s)}
-                        />
-                      ))}
-                  </ul>
-                )}
-              </div>
-            </div>
-          )}
-
-          <ScheduleEventMenu
-            item={menuFor}
-            onClose={() => setMenuFor(null)}
-            onEdit={() => {
-              if (menuFor) onEdit(menuFor);
-              setMenuFor(null);
-            }}
-            onAlarm={() => {
-              if (menuFor) onAlarm(menuFor);
-              setMenuFor(null);
-            }}
-            onMove={() => {
-              setMenuFor(null);
-              toast.message(
-                t("끌어 다른 날로 옮겨 보세요", "Drag to another day"),
-                { duration: 3000 },
-              );
-            }}
-            onMultiSelect={() => {
-              if (menuFor) enterSelectMode(menuFor);
-              setMenuFor(null);
-            }}
-            onDuplicate={() => {
-              if (menuFor) onDuplicate(menuFor);
-              setMenuFor(null);
-            }}
-            onDelete={() => {
-              if (menuFor) onDelete(menuFor);
-              setMenuFor(null);
-            }}
-            onPin={() => {
-              if (menuFor) onTogglePin(menuFor.id);
-              setMenuFor(null);
-            }}
-            pinned={menuFor ? pins.has(menuFor.id) : false}
-          />
-        </div>
-      )}
-    </CalendarDragLayer>
-  );
-}
-
-function ScheduleEventMenu({
-  item,
-  pinned,
-  onClose,
-  onEdit,
-  onAlarm,
-  onMove,
-  onMultiSelect,
-  onDuplicate,
-  onDelete,
-  onPin,
-}: {
-  item: ScheduleItem | null;
-  pinned: boolean;
-  onClose: () => void;
-  onEdit: () => void;
-  onAlarm: () => void;
-  onMove: () => void;
-  onMultiSelect: () => void;
-  onDuplicate: () => void;
-  onDelete: () => void;
-  onPin: () => void;
-}) {
-  const t = useT();
-  useScrollLock(!!item);
-  if (!item) return null;
-
-  const actions = [
-    { key: "edit", label: t("수정", "Edit"), icon: Pencil, onClick: onEdit },
-    {
-      key: "alarm",
-      label: t("빠른 알림", "Quick alarm"),
-      icon: Bell,
-      onClick: onAlarm,
-    },
-    { key: "move", label: t("옮기기", "Move"), icon: Move, onClick: onMove },
-    {
-      key: "multi",
-      label: t("여러 개 고르기", "Pick several"),
-      icon: CheckSquare,
-      onClick: onMultiSelect,
-    },
-    {
-      key: "dup",
-      label: t("복사", "Copy"),
-      icon: Copy,
-      onClick: onDuplicate,
-    },
-    {
-      key: "pin",
-      label: pinned ? t("핀 해제", "Unpin") : t("핀", "Pin"),
-      icon: Pin,
-      onClick: onPin,
-    },
-    {
-      key: "del",
-      label: t("삭제하기", "Delete"),
-      icon: Trash2,
-      onClick: onDelete,
-      danger: true,
-    },
-  ];
-
-  return (
-    <AnimatePresence>
-      {item && (
-        <>
-          <motion.button
-            type="button"
-            aria-label={t("닫기", "Close")}
-            className={`fixed inset-0 z-40 ${SHEET_BACKDROP_CLASS}`}
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={SHEET_BACKDROP_FADE}
-            onClick={onClose}
-          />
-          <motion.div
-            role="dialog"
-            aria-modal
-            className="fixed inset-x-4 z-50 rounded-[20px] bg-white p-2 shadow-float"
-            style={{ bottom: "calc(env(safe-area-inset-bottom) + 1rem)" }}
-            initial={{ opacity: 0, y: 24 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: 16 }}
-            transition={SPRING_SNAP_BACK}
+    <section className="border-t border-ink/[0.06] pt-3">
+      <button
+        type="button"
+        onClick={() => setOpen((value) => !value)}
+        className="touch-press flex min-h-11 w-full items-center justify-between px-0.5 text-left text-[12px] font-semibold text-ink-soft"
+      >
+        <span>{t("완료", "Done")} · {items.length}</span>
+        <span aria-hidden>{open ? "▴" : "▾"}</span>
+      </button>
+      <AnimatePresence initial={false}>
+        {open && (
+          <motion.ul
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: "auto", opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            className="flex flex-col gap-2.5 overflow-hidden"
           >
-            <p className="truncate px-3 py-2 text-[13px] font-semibold text-ink-soft">
-              {scheduleDisplayTitle(item)}
-            </p>
-            {actions.map((a) => (
-              <button
-                key={a.key}
-                type="button"
-                onClick={a.onClick}
-                className={`flex w-full items-center gap-3 rounded-[14px] px-3 py-3 text-left text-[15px] font-semibold touch-press active:bg-ink/[0.04] ${
-                  a.danger ? "text-red-600" : "text-ink"
-                }`}
-              >
-                <a.icon size={18} strokeWidth={2} />
-                {a.label}
-              </button>
+            {items.map((schedule) => (
+              <ScheduleCompactRow
+                key={schedule.id}
+                s={schedule}
+                done
+                onComplete={() => onUndo(schedule)}
+                onEdit={() => onEdit(schedule)}
+                onOpenDetail={() => onOpenDetail(schedule)}
+              />
             ))}
-          </motion.div>
-        </>
-      )}
-    </AnimatePresence>
-  );
-}
-
-function DayEventChip({
-  s,
-  pinned,
-  dragging,
-  selectMode,
-  selected,
-  onToggleSelect,
-  onClick,
-  onLongPress,
-  onDragStart,
-}: {
-  s: ScheduleItem;
-  pinned: boolean;
-  dragging?: boolean;
-  selectMode?: boolean;
-  selected?: boolean;
-  onToggleSelect?: () => void;
-  onClick: () => void;
-  onLongPress: () => void;
-  onDragStart: (e: ReactPointerEvent) => void;
-}) {
-  const st = new Date(s.start_time);
-  const timer = useRef<number | null>(null);
-  const fired = useRef(false);
-  const start = useRef<{ x: number; y: number } | null>(null);
-  const dragStarted = useRef(false);
-
-  const clearTimer = () => {
-    if (timer.current) {
-      clearTimeout(timer.current);
-      timer.current = null;
-    }
-  };
-
-  const onDown = (e: ReactPointerEvent) => {
-    fired.current = false;
-    dragStarted.current = false;
-    start.current = { x: e.clientX, y: e.clientY };
-    clearTimer();
-    if (!selectMode) {
-      timer.current = window.setTimeout(() => {
-        fired.current = true;
-        onLongPress();
-      }, 500);
-    }
-  };
-
-  const onMove = (e: ReactPointerEvent) => {
-    if (!start.current || dragStarted.current || fired.current) return;
-    const dx = e.clientX - start.current.x;
-    const dy = e.clientY - start.current.y;
-    if (Math.hypot(dx, dy) > 10) {
-      dragStarted.current = true;
-      clearTimer();
-      onDragStart(e);
-    }
-  };
-
-  const onUp = () => {
-    clearTimer();
-    if (!dragStarted.current && !fired.current) {
-      if (selectMode) onToggleSelect?.();
-      else onClick();
-    }
-    start.current = null;
-    dragStarted.current = false;
-  };
-
-  return (
-    <li
-      onPointerDown={onDown}
-      onPointerMove={onMove}
-      onPointerUp={onUp}
-      onPointerLeave={onUp}
-      className={`flex cursor-grab items-start gap-2 rounded-[var(--radius-sm)] border-b border-ink/[0.05] px-2 py-2.5 touch-none transition active:cursor-grabbing ${
-        dragging
-          ? "scale-[0.98] opacity-30"
-          : selected
-            ? "bg-primary/25 ring-1 ring-primary/50"
-            : pinned
-              ? "bg-primary/20"
-              : "hover:bg-ink/[0.03]"
-      }`}
-    >
-      {selectMode && (
-        <span
-          className={`mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full border-2 transition ${
-            selected
-              ? "border-primary bg-primary text-ink"
-              : "border-ink/20 bg-transparent"
-          }`}
-          aria-hidden
-        >
-          {selected && <Check size={11} strokeWidth={3} />}
-        </span>
-      )}
-      {pinned && <Pin size={11} className="mt-1 fill-primary text-primary" />}
-      <span className="mt-0.5 rounded-full bg-primary/30 px-1.5 py-0.5 text-[10px] font-bold text-ink">
-        {st.getHours().toString().padStart(2, "0")}:
-        {st.getMinutes().toString().padStart(2, "0")}
-      </span>
-      <span className="flex-1 break-words text-left text-[14px] font-medium leading-snug text-ink">
-        {scheduleDisplayTitle(s)}
-      </span>
-    </li>
+          </motion.ul>
+        )}
+      </AnimatePresence>
+    </section>
   );
 }
 
@@ -2115,17 +951,11 @@ function Empty() {
   const t = useT();
   return (
     <div
-      className="flex min-h-[36dvh] flex-col items-center justify-center px-8 text-center"
+      className="flex min-h-[46dvh] flex-col items-center justify-center px-8 text-center"
       role="status"
       data-testid="schedule-empty"
     >
-      <div
-        className="mb-5 grid h-20 w-20 place-items-center rounded-full bg-white shadow-card"
-        aria-hidden
-      >
-        <CalendarDays className="text-primary" size={32} strokeWidth={1.8} />
-      </div>
-      <p className="text-[19px] font-semibold tracking-[-0.025em] text-ink">
+      <p className="text-[18px] font-semibold tracking-[-0.02em] text-ink">
         {t("아직 일정이 없어요.", "No schedules yet.")}
       </p>
       <p className="mt-2 max-w-[280px] text-[14px] leading-relaxed text-ink-soft">
@@ -2137,7 +967,7 @@ function Empty() {
       <Link
         to="/app"
         data-testid="schedule-empty-capture"
-        className="touch-press mt-5 inline-flex min-h-11 items-center justify-center rounded-full bg-primary px-5 text-[14px] font-bold text-ink shadow-card"
+        className="touch-press mt-5 inline-flex min-h-11 items-center justify-center rounded-full bg-primary px-5 text-[14px] font-bold text-ink"
       >
         {t("남기러 가기", "Go capture")}
       </Link>
