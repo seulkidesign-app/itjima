@@ -24,9 +24,10 @@ test.describe("responsive UI safeguards", () => {
     test("schedule stays aligned at " + viewport.width + "px", async ({ page }) => {
       await page.setViewportSize(viewport);
       await page.goto("/schedule?lang=en");
-      for (const id of ["schedule-tab-today", "schedule-tab-list"]) {
-        await expect(page.locator("#" + id)).toBeVisible();
-      }
+      await expect(page.getByTestId("schedule-unified-view")).toBeVisible();
+      await expect(page.getByRole("heading", { name: "My schedule" })).toBeVisible();
+      await expect(page.locator("#schedule-tab-today")).toHaveCount(0);
+      await expect(page.locator("#schedule-tab-list")).toHaveCount(0);
       await expect(page.locator("#schedule-tab-cal")).toHaveCount(0);
       await expectNoHorizontalOverflow(page);
 
