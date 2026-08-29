@@ -16,12 +16,20 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="default" />
     <meta name="format-detection" content="telephone=no" />
     <meta
+      name="robots"
+      content="index,follow,max-image-preview:large,max-snippet:-1,max-video-preview:-1"
+    />
+    <meta
+      name="googlebot"
+      content="index,follow,max-image-preview:large,max-snippet:-1,max-video-preview:-1"
+    />
+    <meta
       name="description"
-      content="‘내일 3시 치과’처럼 말하거나 적어보세요. 잊지마가 날짜와 시간을 정리하고, 애매한 부분만 확인해 일정과 할 일로 만들어 줍니다. 설치 없이 무료로 시작하세요."
+      content="잊지마(Itjima)는 메모·할 일·일정을 먼저 분류하지 않아도 되는 자연어 AI 일정관리 앱입니다. ‘내일 3시 치과’처럼 한 문장으로 남기면 날짜와 행동을 읽고, 애매한 부분만 확인해 필요한 곳에 정리합니다."
     />
     <meta
       name="keywords"
-      content="잊지마, 잊지마 앱, Itjima, 일정 관리, 일정 관리 앱, 할 일 관리, 자연어 일정, 음성 일정, 캘린더, 리마인더"
+      content="잊지마, 잊지마 앱, Itjima, AI 일정관리, 일정관리, 일정 관리 앱, 할 일 관리, 메모 앱, 자연어 일정, 음성 일정, 캘린더, 리마인더"
     />
     <meta name="author" content="잊지마 (Itjima)" />
     <meta name="application-name" content="잊지마" />
@@ -30,12 +38,13 @@
 
     <meta property="og:type" content="website" />
     <meta property="og:locale" content="ko_KR" />
+    <meta property="og:locale:alternate" content="en_US" />
     <meta property="og:url" content="https://itjima.app/" />
     <meta property="og:site_name" content="잊지마" />
-    <meta property="og:title" content="대충 말해도 일정이 돼요 | 잊지마" />
+    <meta property="og:title" content="잊지마 앱 | 한 문장으로 시작하는 AI 일정관리" />
     <meta
       property="og:description"
-      content="말하거나 적으면 날짜와 시간을 정리하고, 애매한 부분만 물어보는 일정 관리 앱."
+      content="메모·할 일·일정을 먼저 고르지 마세요. 잊지마가 자연어에서 날짜와 행동을 읽고 필요한 곳에 정리합니다."
     />
     <meta
       property="og:image"
@@ -50,14 +59,14 @@
     <meta property="og:image:height" content="630" />
     <meta
       property="og:image:alt"
-      content="잊지마에서 ‘내일 3시 치과’를 일정으로 정리하고 오전·오후만 확인하는 예시"
+      content="잊지마 AI 일정관리 앱에서 자연어 문장을 일정과 할 일로 정리하는 예시"
     />
 
     <meta name="twitter:card" content="summary_large_image" />
-    <meta name="twitter:title" content="대충 말해도 일정이 돼요 | 잊지마" />
+    <meta name="twitter:title" content="잊지마 앱 | 한 문장으로 시작하는 AI 일정관리" />
     <meta
       name="twitter:description"
-      content="말하거나 적으면 날짜와 시간을 정리하고, 애매한 부분만 물어보는 일정 관리 앱."
+      content="메모·할 일·일정을 먼저 고르지 않아도 되는 자연어 AI 일정관리 앱."
     />
     <meta
       name="twitter:image"
@@ -65,7 +74,7 @@
     />
     <meta
       name="twitter:image:alt"
-      content="잊지마에서 ‘내일 3시 치과’를 일정으로 정리하고 오전·오후만 확인하는 예시"
+      content="잊지마 AI 일정관리 앱 자연어 입력 화면"
     />
 
     <link rel="canonical" href="https://itjima.app/" />
@@ -77,6 +86,7 @@
     <link rel="manifest" href="/manifest.webmanifest" />
     <link rel="stylesheet" href="/landing-brand-fix.css" />
     <link rel="stylesheet" href="/landing-spacing-fix.css" />
+    <link rel="stylesheet" href="/landing-final-ux.css" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin />
@@ -101,6 +111,7 @@
             "name": "잊지마",
             "alternateName": ["Itjima", "ItJima", "잊지마 앱", "Itjima app"],
             "url": "https://itjima.app/",
+            "description": "한 문장으로 시작하는 자연어 AI 일정관리 브랜드",
             "logo": {
               "@type": "ImageObject",
               "url": "https://itjima.app/favicon.svg",
@@ -111,8 +122,9 @@
             "@type": "Organization",
             "@id": "https://itjima.app/#organization",
             "name": "잊지마",
-            "alternateName": ["Itjima", "ItJima"],
+            "alternateName": ["Itjima", "ItJima", "잊지마 앱"],
             "url": "https://itjima.app/",
+            "description": "메모·할 일·일정을 자연어 한 문장으로 기록하는 AI 일정관리 서비스",
             "foundingDate": "2026",
             "sameAs": [
               "https://github.com/seulkidesign-app/itjima",
@@ -130,9 +142,10 @@
             "@type": "WebSite",
             "@id": "https://itjima.app/#website",
             "name": "잊지마",
-            "alternateName": ["Itjima", "ItJima", "itjima.app"],
+            "alternateName": ["Itjima", "ItJima", "잊지마 앱", "itjima.app"],
             "url": "https://itjima.app/",
-            "inLanguage": "ko-KR",
+            "description": "잊지마 공식 웹사이트 — 자연어 AI 일정관리, 할 일, 메모 기록",
+            "inLanguage": ["ko-KR", "en"],
             "publisher": { "@id": "https://itjima.app/#organization" },
             "about": { "@id": "https://itjima.app/#software" }
           },
@@ -145,26 +158,31 @@
             "applicationSubCategory": "CalendarApplication",
             "operatingSystem": "Web, iOS PWA, Android PWA",
             "url": "https://itjima.app/",
-            "downloadUrl": "https://itjima.app/",
+            "downloadUrl": "https://itjima.app/app",
             "softwareVersion": "Beta",
-            "description": "잊지마는 자연어·음성 입력을 일정과 할 일로 정리하고, 애매한 날짜와 시간만 확인하는 일정 관리 웹앱입니다.",
+            "description": "잊지마는 메모·할 일·일정을 먼저 분류하지 않고 자연어 한 문장으로 남기면 날짜와 행동을 읽어 필요한 곳에 정리하는 AI 일정관리 앱입니다.",
+            "keywords": "잊지마, 잊지마 앱, AI 일정관리, 일정관리 앱, 할 일 관리, 메모 앱, 자연어 일정, 음성 일정",
             "featureList": [
-              "텍스트와 음성으로 일정 남기기",
-              "한국어와 영어 일정 표현 해석하기",
+              "텍스트와 음성으로 일정과 할 일 남기기",
+              "한국어와 영어 자연어 일정 표현 해석하기",
               "날짜와 시간 자동 정리",
               "애매한 일정 정보만 확인하기",
-              "스와이프로 일정·유지·보관 결정하기"
+              "메모·할 일·일정을 먼저 분류하지 않고 기록하기"
             ],
             "isAccessibleForFree": true,
             "brand": { "@id": "https://itjima.app/#brand" },
             "creator": { "@id": "https://itjima.app/#organization" },
             "publisher": { "@id": "https://itjima.app/#organization" },
-            "offers": { "@type": "Offer", "price": "0", "priceCurrency": "KRW" }
+            "offers": { "@type": "Offer", "price": "0", "priceCurrency": "KRW" },
+            "potentialAction": {
+              "@type": "UseAction",
+              "target": "https://itjima.app/app"
+            }
           }
         ]
       }
     </script>
-    <title>잊지마 | 말로 쓰는 일정 관리 앱</title>
+    <title>잊지마 앱 | AI 일정관리 · 할 일 · 메모를 한 문장으로</title>
   </head>
   <body>
     <noscript>
@@ -177,15 +195,16 @@
           font-family: system-ui, sans-serif;
         "
       >
-        <h1>잊지마</h1>
+        <h1>잊지마 앱 — 자연어 AI 일정관리</h1>
         <p>
-          ‘내일 3시 치과’처럼 말하거나 적으면 날짜와 시간을 정리하고, 애매한
-          부분만 확인해 일정과 할 일로 만들어 주는 일정 관리 앱입니다.
+          잊지마(Itjima)는 메모, 할 일, 일정을 먼저 분류하지 않아도 되는 AI 일정관리 앱입니다.
+          ‘내일 3시 치과’처럼 한 문장으로 남기면 날짜와 시간을 읽고 필요한 곳에 정리하며,
+          애매한 정보만 다시 확인합니다.
         </p>
         <p>
-          잊지마 앱 · 일정 관리 · 할 일 관리 · 자연어 일정 · 음성 일정 · 캘린더
+          잊지마 앱 · AI 일정관리 · 일정 관리 앱 · 할 일 관리 · 메모 앱 · 자연어 일정 · 음성 일정
         </p>
-        <p><a href="/">잊지마 시작하기</a></p>
+        <p><a href="/app">잊지마 무료로 시작하기</a></p>
       </main>
     </noscript>
     <div id="root"></div>
