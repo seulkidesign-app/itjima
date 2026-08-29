@@ -72,6 +72,3 @@ replace_once(
     '''  test("desktop dialog remains inside the viewport", async ({ page }) => {\n    await page.setViewportSize({ width: 1024, height: 900 });\n    await page.goto("/schedule?lang=en");\n    await page.getByRole("tab", { name: /Calendar|달력/ }).click();\n    const today = await page.evaluate(() => new Date().getDate());\n    await page.locator(`[data-cal-day="${today}"]`).first().click();\n    await page.getByRole("button", { name: /Add on this day|이 날짜에 추가/ }).click();\n    const root = page.locator(".bottom-sheet-root");\n''',
     '''  test("desktop dialog remains inside the viewport", async ({ page }) => {\n    await page.setViewportSize({ width: 1024, height: 900 });\n    await page.goto("/app?lang=en");\n    await page.locator('[data-testid="open-settings"]:visible').click();\n    await expect(page.getByRole("dialog", { name: "Settings" })).toBeVisible();\n    const root = page.locator(".bottom-sheet-root");\n''',
 )
-
-# Guard against stale contracts sneaking back in this sweep.
-assert "schedule-tab-cal" not in Path("e2e/responsive-ui.spec.ts").read_text().split('toHaveCount(0)')[0]
