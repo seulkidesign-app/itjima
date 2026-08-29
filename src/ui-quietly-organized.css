@@ -103,7 +103,7 @@
   }
 
   .itjima-app-stage[data-route="home"]
-    .home-chat-lane:has([data-testid="home-empty-hero"])
+    .home-chat-lane:not([data-has-history="true"]):has([data-testid="home-empty-hero"])
     [data-testid="open-all-records"] {
     display: none !important;
   }
