@@ -1,0 +1,27 @@
+name: NL P0 Check
+
+on:
+  push:
+    branches:
+      - fix/nl-schedule-p0-20260829
+
+permissions:
+  contents: read
+
+jobs:
+  nl-p0:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - name: Install
+        run: npm ci
+      - name: Run focused NL tests
+        run: npm test -- tests/natural-schedule-draft.test.ts tests/nl-schedule-safety.test.ts tests/nl-auto-commit.test.ts
+      - name: Build
+        run: npm run build
