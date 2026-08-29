@@ -118,17 +118,10 @@ test("[critical] primary navigation and layout follow the 319 breakpoint contrac
 
   await page.getByRole("link", { name: TASKS_SCHEDULE_LINK_NAME }).click();
   await expect(page).toHaveURL(/\/schedule/);
-  await expect(page.getByRole("heading", { name: "Schedule", exact: true })).toBeVisible();
-  await expect(page.getByRole("tab", { name: "Today", exact: true })).toHaveAttribute(
-    "aria-selected",
-    "true",
-  );
-  await page.getByRole("tab", { name: "Upcoming", exact: true }).click();
-  await expect(page.getByRole("tab", { name: "Upcoming", exact: true })).toHaveAttribute(
-    "aria-selected",
-    "true",
-  );
-  await expect(page.getByRole("tab", { name: "Calendar", exact: true })).toHaveCount(0);
+  await expect(page.getByRole("heading", { name: "My schedule", exact: true })).toBeVisible();
+  await expect(page.getByTestId("schedule-unified-view")).toBeVisible();
+  await expect(page.getByRole("tab")).toHaveCount(0);
+  await expect(page.getByText("Calendar", { exact: true })).toHaveCount(0);
   await expectNoHorizontalOverflow(page);
 
   await expect(page.getByRole("link", { name: "Archive", exact: true })).toHaveCount(0);
@@ -161,8 +154,9 @@ test("[critical] clear natural-language schedule becomes a saved schedule", asyn
   await expect(page.getByTestId("inline-promise")).toHaveCount(0);
 
   await page.getByRole("link", { name: TASKS_SCHEDULE_LINK_NAME }).click();
-  await page.getByRole("tab", { name: "Upcoming", exact: true }).click();
-  // Title may sit in an overflow clip inside the phone frame; storage is the source of truth.
+  await expect(page.getByTestId("schedule-unified-view")).toBeVisible();
+  await expect(page.getByTestId("schedule-section-upcoming")).toBeVisible();
+  // Storage remains the source of truth for the canonical schedule projection.
   await expect
     .poll(async () => {
       const list = await page.evaluate(
@@ -189,7 +183,8 @@ test("[critical] an ambiguous weekend plan is resolved inline without a dead end
   await page.getByTestId("promise-confirm-saturday").click();
 
   await page.getByRole("link", { name: TASKS_SCHEDULE_LINK_NAME }).click();
-  await page.getByRole("tab", { name: "Upcoming", exact: true }).click();
+  await expect(page.getByTestId("schedule-unified-view")).toBeVisible();
+  await expect(page.getByTestId("schedule-section-upcoming")).toBeVisible();
   await expect(page.getByText(/Meet Maya/i).first()).toBeVisible();
 
   expect(errors).toEqual([]);
@@ -209,14 +204,15 @@ test("[critical] home capture creates a schedule that can be marked done", async
   await expect(page.getByRole("button", { name: "Add task", exact: true })).toHaveCount(
     0,
   );
-  await page.getByRole("tab", { name: "Upcoming", exact: true }).click();
+  await expect(page.getByTestId("schedule-unified-view")).toBeVisible();
+  await expect(page.getByTestId("schedule-section-upcoming")).toBeVisible();
   const reviewRow = page.getByText("Product review").first();
   await reviewRow.scrollIntoViewIfNeeded();
   // Phone-frame overflow can clip rows; force-complete still exercises the action.
   await page.getByRole("button", { name: "Complete", exact: true }).first().click({
     force: true,
   });
-  await expect(page.getByText("You can let this go", { exact: true })).toBeVisible();
+  await expect(page.getByText("Completed", { exact: true })).toBeVisible();
   await expect
     .poll(async () => {
       const list = await page.evaluate(

@@ -69,12 +69,15 @@ test.describe("POST-P0 product quality", () => {
     await expect(organize.getByText("확인 필요", { exact: true })).toHaveCount(0);
   });
 
-  test("schedule row is content-first and completion affordance remains accessible", async ({ page }) => {
+  test("schedule is unified and row completion stays accessible", async ({ page }) => {
     const frame = phone(page);
     await submit(page, "내일 오후 3시 치과");
 
     await frame.getByRole("link", { name: /^(일정|Schedule)$/ }).click();
-    await frame.getByRole("tab", { name: /예정|Upcoming/i }).click();
+    await expect(frame.getByRole("heading", { name: "내 일정" })).toBeVisible();
+    await expect(frame.getByTestId("schedule-section-today")).toBeVisible();
+    await expect(frame.getByTestId("schedule-section-upcoming")).toBeVisible();
+    await expect(frame.getByRole("tab")).toHaveCount(0);
 
     const row = frame.getByTestId("schedule-compact-row").filter({ hasText: "치과" });
     await expect(row).toBeVisible();
