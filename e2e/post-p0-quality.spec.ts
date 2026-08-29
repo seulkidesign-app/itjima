@@ -61,10 +61,10 @@ test.describe("POST-P0 product quality", () => {
 
     const organize = page.getByTestId("organize-summary-sheet");
     await expect(organize).toBeVisible();
-    await expect(organize.getByText("일정", { exact: true })).toBeVisible();
-    await expect(organize.getByText("날짜 없음", { exact: true })).toBeVisible();
-    await expect(organize.getByText("완료", { exact: true })).toBeVisible();
-    await expect(organize.getByText("전체", { exact: true })).toBeVisible();
+    await expect(organize.getByTestId("organize-tile-schedule")).toContainText("일정");
+    await expect(organize.getByTestId("organize-tile-undated")).toContainText("날짜 없음");
+    await expect(organize.getByTestId("organize-tile-done")).toContainText("완료");
+    await expect(organize.getByTestId("organize-tile-all")).toContainText("전체");
     await expect(organize.getByText("할 일", { exact: true })).toHaveCount(0);
     await expect(organize.getByText("확인 필요", { exact: true })).toHaveCount(0);
   });
