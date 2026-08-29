@@ -1,0 +1,49 @@
+name: Temporary Nanoid Lock Refresh
+
+on:
+  push:
+    branches: [fix/security-nanoid]
+
+permissions:
+  contents: write
+
+jobs:
+  refresh-lock:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install current lock
+        run: npm ci
+
+      - name: Refresh runtime vulnerable transitive dependencies
+        run: npm audit fix --omit=dev --package-lock-only || true
+
+      - name: Reinstall refreshed lock
+        run: npm ci
+
+      - name: Verify runtime audit
+        run: npm audit --omit=dev --audit-level=high
+
+      - name: Verify release build
+        run: npm run build
+
+      - name: Commit lock refresh
+        shell: bash
+        run: |
+          if git diff --quiet -- package-lock.json; then
+            echo "No lockfile change was needed"
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add package-lock.json
+          git commit -m "fix: refresh vulnerable runtime transitive dependency"
+          git push origin HEAD:fix/security-nanoid
