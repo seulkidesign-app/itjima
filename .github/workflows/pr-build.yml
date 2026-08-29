@@ -114,8 +114,8 @@ jobs:
             html="$(curl -fsSL --max-time 20 https://itjima.app/ || true)"
             manifest="$(curl -fsSL --max-time 20 https://itjima.app/manifest.webmanifest || true)"
 
-            if grep -Fq "말하듯 남기는 일정 캡처" <<<"$html" \
-              && grep -Fq "애매한 부분만 확인" <<<"$manifest"; then
+            if grep -Fq "애매한 부분만 확인" <<<"$html" \
+              && grep -Fq "말하듯 남기는 일정 캡처" <<<"$manifest"; then
               echo "Production smoke check passed"
               exit 0
             fi
