@@ -22,6 +22,6 @@ jobs:
       - name: Install
         run: npm ci
       - name: Run focused NL tests
-        run: npm test -- tests/natural-schedule-draft.test.ts tests/nl-schedule-safety.test.ts tests/nl-auto-commit.test.ts
+        run: npm test -- tests/natural-schedule-draft.test.ts tests/nl-schedule-safety.test.ts tests/nl-auto-commit.test.ts tests/inbox-chat-visibility.test.tsx
       - name: Build
         run: npm run build
