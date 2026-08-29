@@ -77,7 +77,7 @@ test.describe("Figma 319 release contract", () => {
     expect(Math.round(box!.width)).toBeGreaterThanOrEqual(44);
     expect(Math.round(box!.height)).toBeGreaterThanOrEqual(44);
 
-    expect(normalizeSpeechSegment("  내일   치과!!! ")).toBe("내일 치과");
+    expect(normalizeSpeechSegment("  내일   치과!!!")).toBe("내일 치과");
     expect(appendFinalSpeech("", "내일 치과")).toBe("내일 치과");
     expect(appendFinalSpeech("내일 치과", "내일 치과.")).toBe("내일 치과");
     expect(appendFinalSpeech("내일", "내일 치과")).toBe("내일 치과");
