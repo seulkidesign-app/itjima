@@ -8,31 +8,22 @@ test.beforeEach(async ({ page }) => {
   );
 });
 
-test("landing and app use the pre-brand UI while Home motion stays active", async ({
+test("Landing V2 and app keep the intended UI while Home motion stays active", async ({
   page,
 }) => {
   await page.setViewportSize({ width: 390, height: 844 });
-  // /about redirects to marketing landing at /
   await page.goto("/?lang=ko");
 
   await expect(
-    page.getByRole("heading", { name: /대충 말해도.*일정이 됩니다/ }),
+    page.getByRole("heading", { name: /메모·할 일·일정.*구분하지 말고 한 문장으로/ }),
   ).toBeVisible();
-  // Pre-brand landing uses ITJIMA wordmark (CSS may clip the mark box); assert structure only.
-  await expect(page.locator(".landing-motion-wordmark")).toHaveCount(1);
+  await expect(page.locator(".landing-v2")).toHaveAttribute(
+    "data-landing-version",
+    "2",
+  );
   await expect(page.locator(".marketing-landing")).toHaveCount(0);
   await expect(page.locator(".itjima-brand-mark")).toHaveCount(0);
-  await expect(page.locator(".landing-motion")).toHaveAttribute(
-    "data-motion",
-    "ready",
-  );
-  await expect
-    .poll(() =>
-      page
-        .locator(".landing-motion-message")
-        .evaluate((element) => getComputedStyle(element).animationName),
-    )
-    .toContain("landing-message-pop");
+  await expect(page.locator(".lv2-hero-demo-wrap")).toBeVisible();
 
   await page
     .getByRole("banner")
@@ -53,25 +44,22 @@ test("landing and app use the pre-brand UI while Home motion stays active", asyn
   await expect(newestRow).toBeVisible();
 });
 
-test("landing motion respects reduced-motion preference", async ({
-  browser,
-}) => {
+test("Landing V2 respects reduced-motion preference", async ({ browser }) => {
   const context = await browser.newContext({ reducedMotion: "reduce" });
   const page = await context.newPage();
   await page.goto("/?lang=ko");
 
-  await expect(page.locator(".landing-motion")).toHaveAttribute(
-    "data-motion",
-    "reduced",
-  );
-  await expect
-    .poll(() =>
-      page
-        .locator(".landing-motion-message")
-        .evaluate((element) => getComputedStyle(element).animationName),
-    )
-    .toBe("none");
-  await expect(page.locator("[data-landing-reveal]").first()).toBeVisible();
+  const landing = page.locator(".landing-v2");
+  await expect(landing).toHaveAttribute("data-landing-version", "2");
+  await expect(page.locator(".lv2-hero-copy")).toBeVisible();
+
+  const transitionDurationMs = await page.locator(".lv2-nav-cta").evaluate((element) => {
+    const raw = getComputedStyle(element).transitionDuration.split(",")[0]?.trim() ?? "0s";
+    if (raw.endsWith("ms")) return Number.parseFloat(raw);
+    if (raw.endsWith("s")) return Number.parseFloat(raw) * 1000;
+    return Number.parseFloat(raw) || 0;
+  });
+  expect(transitionDurationMs).toBeLessThanOrEqual(1);
 
   await context.close();
 });
