@@ -2,6 +2,7 @@ User-agent: *
 Allow: /
 Allow: /about
 
+Disallow: /app
 Disallow: /admin
 Disallow: /auth
 Disallow: /auth/callback
