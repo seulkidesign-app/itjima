@@ -3,8 +3,10 @@ import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 
 /**
- * Schedule-only rows (no source_id, no matching inbox) remain reachable via
- * Schedule Quick Add / calendar add — keep legacy path, do not invent canonicals.
+ * Existing schedule-only legacy rows (no source_id, no matching inbox) must stay
+ * reachable after the unified Schedule IA. New schedule creation no longer
+ * depends on the removed Schedule Quick Add, and legacy rows must never gain a
+ * fabricated canonical source just because they are edited.
  */
 describe("M2 schedule-only row reachability", () => {
   const scheduleSource = readFileSync(
@@ -12,14 +14,30 @@ describe("M2 schedule-only row reachability", () => {
     "utf8",
   );
 
-  it("Quick Add still creates schedule without requiring inbox canonical", () => {
-    expect(scheduleSource).toContain("openQuickAdd");
-    expect(scheduleSource).toContain("Schedule-only legacy");
-    expect(scheduleSource).toContain("no fake canonical");
+  it("keeps legacy schedule-only rows reachable through the detail-first row flow", () => {
+    expect(scheduleSource).not.toContain("openQuickAdd");
+    expect(scheduleSource).toContain(
+      "onOpenDetail={() => setDetailSchedule(schedule)}",
+    );
+    expect(scheduleSource).toContain("canonicalIdFromSchedule(detailSchedule)");
   });
 
-  it("edit path branches when no matching canonical exists", () => {
-    expect(scheduleSource).toContain("hasCanonical");
-    expect(scheduleSource).toContain("Schedule-only legacy row");
+  it("edits schedule-only rows in place when no matching canonical exists", () => {
+    const branchStart = scheduleSource.indexOf(
+      "const hasCanonical = inbox.allItems.some",
+    );
+    expect(branchStart).toBeGreaterThan(-1);
+
+    const branchEnd = scheduleSource.indexOf("return {", branchStart);
+    expect(branchEnd).toBeGreaterThan(branchStart);
+
+    const editBranch = scheduleSource.slice(branchStart, branchEnd);
+    expect(editBranch).toContain("if (hasCanonical)");
+    expect(editBranch).toContain("syncRecordTemporal(");
+    expect(editBranch).toContain("} else {");
+
+    const fallbackBranch = editBranch.slice(editBranch.indexOf("} else {"));
+    expect(fallbackBranch).toContain("await update(pending.edit.id");
+    expect(fallbackBranch).not.toContain("source_id:");
   });
 });
