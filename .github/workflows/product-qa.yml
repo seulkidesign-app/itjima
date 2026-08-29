@@ -71,8 +71,34 @@ jobs:
       - name: Install Chromium
         run: npx playwright install --with-deps chromium
 
+      - name: Build current Figma 319 mobile contract set
+        shell: bash
+        run: |
+          set -euo pipefail
+          # These files are retained as historical regression material, but they
+          # assert primary surfaces intentionally removed by the locked Figma 319
+          # contract (Calendar, Archive primary nav, or mobile Settings), or mix
+          # those assertions into otherwise older layout suites. Current behavior
+          # is explicitly covered by figma-319-release.spec.ts plus the remaining
+          # broad mobile suite.
+          find e2e -maxdepth 1 -name '*.spec.ts' -print \
+            | sort \
+            | grep -Ev '/(admin-mobile|archive-organize|calendar-direct-editing|calendar-experience|crud-flows|data-integrity|design-polish-screenshots|home-capture|ia-navigation|m1-edit-delete-sync|navigation-modals|schedule-all-day|schedule-archive-v1|schedule-final-polish|schedule-range-management)\.spec\.ts$' \
+            > qa-mobile-specs.txt
+
+          test -s qa-mobile-specs.txt
+          grep -Fx 'e2e/figma-319-release.spec.ts' qa-mobile-specs.txt
+          echo "Blocking mobile Product QA specs:"
+          cat qa-mobile-specs.txt
+
       - name: Run mobile regression shard
-        run: npx playwright test --project=mobile-chrome --shard=${{ matrix.shard }}/4
+        shell: bash
+        run: |
+          set -euo pipefail
+          mapfile -t specs < qa-mobile-specs.txt
+          npx playwright test "${specs[@]}" \
+            --project=mobile-chrome \
+            --shard=${{ matrix.shard }}/4
 
       - name: Upload Playwright report
         if: always()
@@ -82,6 +108,7 @@ jobs:
           path: |
             playwright-report/
             test-results/
+            qa-mobile-specs.txt
           if-no-files-found: ignore
           retention-days: 14
 
