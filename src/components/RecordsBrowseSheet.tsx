@@ -82,13 +82,20 @@ export function RecordsBrowseSheet({
   if (!open) return null;
 
   return (
-    <>
-      <BottomSheet
-        open={open}
-        onClose={onClose}
-        maxHeight="78dvh"
-        title={t("전체 기록", "All records")}
-      >
+    <BottomSheet
+      open={open}
+      onClose={onClose}
+      maxHeight={organizeOpen ? "84dvh" : "78dvh"}
+      title={organizeOpen ? t("정리하기", "Organize") : t("전체 기록", "All records")}
+    >
+      {organizeOpen ? (
+        <OrganizeSummarySheet
+          items={items}
+          open
+          embedded
+          onClose={() => setOrganizeOpen(false)}
+        />
+      ) : (
         <div
           className="sheet-scroll flex min-h-0 flex-1 flex-col overflow-y-auto px-5 pb-[calc(env(safe-area-inset-bottom)+1rem)]"
           data-testid="records-browse-sheet"
@@ -206,13 +213,7 @@ export function RecordsBrowseSheet({
             </ul>
           )}
         </div>
-      </BottomSheet>
-
-      <OrganizeSummarySheet
-        items={items}
-        open={organizeOpen}
-        onClose={() => setOrganizeOpen(false)}
-      />
-    </>
+      )}
+    </BottomSheet>
   );
 }
