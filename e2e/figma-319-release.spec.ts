@@ -64,7 +64,7 @@ test.describe("Figma 319 release contract", () => {
   test("brand-new Empty Home stays quiet", async ({ page }) => {
     const frame = phone(page);
     await expect(frame.getByTestId("home-empty-hero")).toBeVisible();
-    await expect(frame.getByTestId("open-all-records-history")).toHaveCount(0);
+    await expect(frame.getByTestId("open-all-records")).toHaveCount(0);
   });
 
   test("history remains reachable when no active records remain", async ({ page }) => {
@@ -91,7 +91,7 @@ test.describe("Figma 319 release contract", () => {
 
     const frame = phone(page);
     await expect(frame.getByTestId("home-empty-hero")).toBeVisible();
-    const history = frame.getByTestId("open-all-records-history");
+    const history = frame.getByTestId("open-all-records");
     await expect(history).toBeVisible();
     await history.click();
 
