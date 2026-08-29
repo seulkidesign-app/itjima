@@ -11,8 +11,32 @@ permissions:
 jobs:
   refactor:
     runs-on: ubuntu-latest
+    env:
+      VITE_E2E: "true"
+      VITE_SUPABASE_URL: "http://127.0.0.1:54321"
+      VITE_SUPABASE_PUBLISHABLE_KEY: "e2e-placeholder"
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-      - name: Parser check
-        run: echo "schedule refactor workflow is valid"
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - name: Apply validate and commit
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ "$GITHUB_ACTOR" = "github-actions[bot]" ]; then
+            echo "source refactor already committed"
+            exit 0
+          fi
+          python scripts/tmp-schedule-319-refactor.py
+          grep -Fq 'useState<"today" | "list">("today")' src/routes/schedule.tsx
+          npm ci
+          npm run build
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/routes/schedule.tsx
+          git commit -m "refactor: align Schedule primary UI with 319"
+          git push origin HEAD:fix/figma-319-schedule
