@@ -9,7 +9,7 @@ permissions:
 
 jobs:
   refactor:
-    if: github.actor != 'github-actions[bot]'
+    if: ${{ github.actor != 'github-actions[bot]' }}
     runs-on: ubuntu-latest
     env:
       VITE_E2E: "true"
