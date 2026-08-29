@@ -142,6 +142,28 @@ describe("inline ambiguity resolution", () => {
       scheduleConfirmationReasons("내일 3시 반 치과", now),
     ).not.toContain("multiple_clocks");
   });
+
+  it("treats a from-to clock range as one event", () => {
+    expect(
+      scheduleConfirmationReasons("내일 오후 5시부터 6시까지 운동", now),
+    ).not.toContain("multiple_clocks");
+  });
+
+  it("still asks AM or PM for a bare from-to range", () => {
+    expect(
+      scheduleConfirmationReasons("내일 5시부터 6시까지 운동", now),
+    ).toEqual(["assumed_meridiem"]);
+
+    const choices = scheduleConfirmationChoices(
+      "내일 5시부터 6시까지 운동",
+      "assumed_meridiem",
+      "ko",
+      now,
+    );
+    expect(choices[0].resolvedText).toBe("내일 오전 5시부터 6시까지 운동");
+    expect(choices[1].resolvedText).toBe("내일 오후 5시부터 6시까지 운동");
+    expect(choices[2].resolvedText).toBe("내일 운동");
+  });
 });
 
 describe("focused inline understanding", () => {
