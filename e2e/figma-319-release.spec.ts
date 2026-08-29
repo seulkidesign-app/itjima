@@ -55,17 +55,19 @@ test.describe("Figma 319 release contract", () => {
     await expect(row).toHaveAttribute("data-status", "done");
   });
 
-  test("primary navigation is Capture and Schedule; Schedule is Today and Upcoming", async ({ page }) => {
+  test("primary navigation is Capture and Schedule; Schedule is one Today + Upcoming surface", async ({ page }) => {
     const frame = phone(page);
     await expect(frame.getByRole("link", { name: CAPTURE_LINK_NAME })).toBeVisible();
     await expect(frame.getByRole("link", { name: /^Schedule/ })).toBeVisible();
     await expect(frame.getByRole("link", { name: /^Archive/ })).toHaveCount(0);
 
     await frame.getByRole("link", { name: /^Schedule/ }).click();
-    await expect(frame.getByRole("heading", { name: "Schedule" })).toBeVisible();
-    await expect(frame.getByRole("tab", { name: "Today" })).toBeVisible();
-    await expect(frame.getByRole("tab", { name: "Upcoming" })).toBeVisible();
-    await expect(frame.getByRole("tab", { name: "Calendar" })).toHaveCount(0);
+    await expect(frame.getByRole("heading", { name: "My schedule" })).toBeVisible();
+    await expect(frame.getByTestId("schedule-unified-view")).toBeVisible();
+    await expect(frame.getByTestId("schedule-section-today")).toBeVisible();
+    await expect(frame.getByTestId("schedule-section-upcoming")).toBeVisible();
+    await expect(frame.getByRole("tab")).toHaveCount(0);
+    await expect(frame.getByText("Calendar", { exact: true })).toHaveCount(0);
   });
 
   test("voice affordance meets the mobile touch target and transcript logic stays stable", async ({ page }) => {
