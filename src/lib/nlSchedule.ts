@@ -248,8 +248,8 @@ export function understandNaturalLanguage(
   }
 
   if (dateHit && !isClarifySchedule(trimmed) && !isTimeOnlyPhrase(trimmed)) {
-    const moment = formatSuggestedMoment(dateHit.start, lang);
     const explicit = hasExplicitTime(trimmed);
+    const moment = formatSuggestedMoment(dateHit.start, lang, !explicit);
     return {
       intent: "schedule_exact",
       confidence: "high",
