@@ -314,6 +314,8 @@ export function cleanScheduleTitle(text: string): string {
     title = title
       .replace(/(?:오늘|내일|모레|글피|주말)/g, " ")
       .replace(/\b(?:today|tomorrow|weekend)\b/gi, " ")
+      .replace(/^\s*(?:에|에서|까지|부터)\s+/g, "")
+      .replace(/\s+(?:에|에서|까지|부터)\s*$/g, "")
       .replace(/\s+/g, " ")
       .trim();
   }
