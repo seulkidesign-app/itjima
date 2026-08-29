@@ -7,7 +7,7 @@ import {
 } from "./helpers";
 
 async function installSpeechMock(page: Page) {
-  await page.addInitScript(() => {
+  await page.evaluate(() => {
     class MockSpeechRecognition {
       static last: MockSpeechRecognition | null = null;
       lang = "ko-KR";
@@ -43,14 +43,17 @@ async function installSpeechMock(page: Page) {
 
     Object.defineProperty(window, "SpeechRecognition", {
       configurable: true,
+      writable: true,
       value: MockSpeechRecognition,
     });
     Object.defineProperty(window, "webkitSpeechRecognition", {
       configurable: true,
+      writable: true,
       value: MockSpeechRecognition,
     });
     Object.defineProperty(window, "__figma319Speech", {
       configurable: true,
+      writable: true,
       value: MockSpeechRecognition,
     });
   });
@@ -119,7 +122,6 @@ test.describe("Figma 319 release contract", () => {
 
   test("voice capture remains usable and meets the mobile touch target", async ({ page }) => {
     await installSpeechMock(page);
-    await page.reload();
 
     const frame = phone(page);
     const voice = frame.getByRole("button", { name: "Voice input" });
@@ -130,6 +132,7 @@ test.describe("Figma 319 release contract", () => {
     expect(Math.round(box!.height)).toBeGreaterThanOrEqual(44);
 
     await voice.click();
+    await expect(frame.getByRole("button", { name: "Stop voice input" })).toBeVisible();
     await page.waitForFunction(() => {
       const ctor = (
         window as unknown as {
