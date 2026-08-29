@@ -1,9 +1,11 @@
 import { Link } from "@tanstack/react-router";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
-import { ArrowRight, Check, ChevronDown, Sparkles } from "lucide-react";
+import { ArrowRight, Check, ChevronDown, Instagram, Linkedin, Sparkles } from "lucide-react";
 import { FormEvent, useEffect, useMemo, useState } from "react";
+import { BRAND } from "@/lib/brand";
 import { LanguageToggle, useT } from "@/lib/i18n";
 import "@/ui-landing-v2.css";
+import "@/ui-landing-v2-polish.css";
 
 type Demo = {
   input: string;
@@ -446,12 +448,35 @@ export function LandingV2() {
         </section>
       </main>
 
+      <section className="lv2-brand-band" aria-label={t("잊지마 브랜드", "Itjima brand")}>
+        <div className="lv2-container lv2-brand-band-inner">
+          <p className="lv2-brand-band-kicker">ITJIMA · AI NOTES</p>
+          <p className="lv2-brand-masthead">잊지마</p>
+          <p className="lv2-brand-band-copy">
+            {t("정리하려 애쓰기보다, 생각난 문장을 먼저 남기는 기록 도구.", "A place to capture the thought first, before you have to organize it.")}
+          </p>
+        </div>
+      </section>
+
       <footer className="lv2-footer">
         <div className="lv2-container">
           <SectionRule label="ITJIMA" />
           <div className="lv2-footer-row">
             <strong>{t("한 문장으로 시작하는 AI 기록", "AI notes that start with one sentence")}</strong>
-            <div><a href="#how">{t("서비스 소개", "How it works")}</a><a href="#product">{t("주요 기능", "Product")}</a><a href="#trust">{t("사용 방법", "AI behavior")}</a></div>
+            <div className="lv2-footer-links">
+              <a href="#how">{t("서비스 소개", "How it works")}</a>
+              <a href="#product">{t("주요 기능", "Product")}</a>
+              <a href={BRAND.privacyUrl}>{t("개인정보", "Privacy")}</a>
+              <a href={BRAND.termsUrl}>{t("약관", "Terms")}</a>
+              <div className="lv2-social-links" aria-label={t("소셜 링크", "Social links")}>
+                <a className="lv2-social-link" href={BRAND.instagramUrl} target="_blank" rel="noopener noreferrer" aria-label="Instagram">
+                  <Instagram size={15} aria-hidden="true" /><span>Instagram</span>
+                </a>
+                <a className="lv2-social-link" href={BRAND.linkedinUrl} target="_blank" rel="noopener noreferrer" aria-label="LinkedIn">
+                  <Linkedin size={15} aria-hidden="true" /><span>LinkedIn</span>
+                </a>
+              </div>
+            </div>
           </div>
           <p>© 2026 ITJIMA. {t("기록은 가볍게.", "Keep recording light.")}</p>
         </div>
