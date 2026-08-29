@@ -7,6 +7,7 @@ import { SideNav } from "@/components/SideNav";
 import { TopNav } from "@/components/TopNav";
 import { DesktopAppNav } from "@/components/DesktopAppNav";
 import { UsLaunchLanding } from "@/components/UsLaunchLanding";
+import { LandingV2 } from "@/components/LandingV2";
 import { PageTransition } from "@/components/PageTransition";
 import { GlobalInteractions } from "@/components/GlobalInteractions";
 import { AppBrowseHost } from "@/components/AppBrowseHost";
@@ -47,14 +48,17 @@ function AppRuntimeServices() {
 
 function RootLanding() {
   const { lang } = useLang();
+  // V1 remains untouched in UsLaunchLanding. Set VITE_LANDING_VERSION=v1 for
+  // a landing-only rollback without reverting app/QA commits.
+  const useLandingV1 = import.meta.env.VITE_LANDING_VERSION === "v1";
 
   useEffect(() => {
     applyLandingSeo({ canonicalPath: "/", locale: lang });
   }, [lang]);
 
   return (
-    <div className="itjima-launch-page">
-      <UsLaunchLanding />
+    <div className="itjima-launch-page" data-landing-release={useLandingV1 ? "v1" : "v2"}>
+      {useLandingV1 ? <UsLaunchLanding /> : <LandingV2 />}
     </div>
   );
 }
