@@ -1,32 +1,46 @@
 import { expect, test } from "@playwright/test";
 
 test.describe("Landing V2 editorial system", () => {
-  test("uses English Playpen Sans wordmarks and removes decorative circles", async ({ page }) => {
+  test("uses uppercase English Playpen Sans wordmarks with generous hero clearance", async ({ page }) => {
     await page.goto("/?lang=en");
 
+    const nav = page.locator(".lv2-nav");
     const navBrand = page.locator(".lv2-brand");
+    const brandDot = page.locator(".lv2-brand-dot");
+    const heroHeading = page.locator(".lv2-hero h1");
     const masthead = page.locator(".lv2-brand-masthead");
+
     await expect(navBrand).toBeVisible();
-    await masthead.scrollIntoViewIfNeeded();
+    await expect(brandDot).toBeVisible();
 
     const visualBrand = await navBrand.evaluate((node) => {
       const style = getComputedStyle(node, "::after");
-      return { content: style.content, family: style.fontFamily };
+      return { content: style.content, family: style.fontFamily, weight: style.fontWeight };
     });
-    expect(visualBrand.content).toContain("Itjima");
+    expect(visualBrand.content).toContain("ITJIMA");
     expect(visualBrand.family).toContain("Playpen Sans");
+    expect(visualBrand.weight).toBe("600");
 
+    const clearance = await page.evaluate(() => {
+      const nav = document.querySelector<HTMLElement>(".lv2-nav")!.getBoundingClientRect();
+      const heading = document.querySelector<HTMLElement>(".lv2-hero h1")!.getBoundingClientRect();
+      return heading.top - nav.bottom;
+    });
+    expect(clearance).toBeGreaterThanOrEqual(48);
+
+    await masthead.scrollIntoViewIfNeeded();
     const visualMasthead = await masthead.evaluate((node) => {
       const style = getComputedStyle(node, "::after");
-      return { content: style.content, color: style.color, family: style.fontFamily };
+      return { content: style.content, color: style.color, family: style.fontFamily, weight: style.fontWeight };
     });
-    expect(visualMasthead.content).toContain("Itjima");
+    expect(visualMasthead.content).toContain("ITJIMA");
     expect(visualMasthead.color).toBe("rgb(255, 255, 255)");
     expect(visualMasthead.family).toContain("Playpen Sans");
+    expect(visualMasthead.weight).toBe("600");
 
-    await expect(page.locator(".lv2-brand-dot")).toBeHidden();
     await expect(page.locator(".lv2-rule-dot").first()).toBeHidden();
     await expect(page.locator(".lv2-hero-glow").first()).toBeHidden();
+    await expect(page.locator(".lv2-footer .lv2-rule-label")).toHaveText("ITJIMA");
 
     const footerBottom = await page.locator(".lv2-footer").evaluate((node) => node.getBoundingClientRect().bottom + window.scrollY);
     const brandTop = await page.locator(".lv2-brand-band").evaluate((node) => node.getBoundingClientRect().top + window.scrollY);
