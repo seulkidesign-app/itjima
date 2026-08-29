@@ -96,4 +96,28 @@
     background: linear-gradient(155deg, #fffbe8, #fff3b9) !important;
     color: #111113 !important;
   }
+
+  /* Alarm / reminder sheets — never inherit dark glass black blocks on iOS. */
+  .bottom-sheet-panel,
+  .bottom-sheet-root .bottom-sheet-panel {
+    color-scheme: light !important;
+    background: #fafaf8 !important;
+    color: #1a1a1f !important;
+  }
+
+  .bottom-sheet-panel .alarm-preset-row,
+  .bottom-sheet-panel [data-testid^="alarm-preset-"] {
+    background: #ffffff !important;
+    color: #1a1a1f !important;
+    border-color: #e8e8e5 !important;
+    -webkit-text-fill-color: #1a1a1f !important;
+  }
+
+  .bottom-sheet-panel .alarm-preset-row:disabled,
+  .bottom-sheet-panel [data-testid^="alarm-preset-"]:disabled {
+    background: #f3f3f5 !important;
+    color: #8a8a94 !important;
+    -webkit-text-fill-color: #8a8a94 !important;
+    opacity: 1 !important;
+  }
 }
