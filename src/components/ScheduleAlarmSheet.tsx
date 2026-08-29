@@ -457,7 +457,10 @@ export function ScheduleAlarmSheet({
 
   return (
     <BottomSheet open={open} onClose={onClose} maxHeight="78dvh">
-      <div className="px-5 pb-[calc(env(safe-area-inset-bottom)+1.25rem)]">
+      <div
+        className="schedule-alarm-sheet px-5 pb-[calc(env(safe-area-inset-bottom)+1.25rem)]"
+        data-testid="schedule-alarm-sheet"
+      >
         <h2 className="text-[17px] font-bold text-ink">{titleForView()}</h2>
         <p className="mt-1 line-clamp-2 text-[14px] text-ink-soft">
           {scheduleDisplayTitle(schedule)}

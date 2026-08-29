@@ -40,9 +40,29 @@ async function submit(page: Page, text: string) {
   await page.waitForTimeout(280);
 }
 
+async function homeScrollMetrics(page: Page) {
+  // Canonical Home stream scroller (fixed composer keeps overflow on the lane).
+  return phone(page)
+    .locator(".home-chat-lane.chat-scroll")
+    .evaluate((el) => ({
+      scrollHeight: el.scrollHeight,
+      clientHeight: el.clientHeight,
+      scrollTop: el.scrollTop,
+    }));
+}
+
+async function scrollHomeLane(page: Page, top: number) {
+  // iOS-emulated Chromium ignores direct scrollTop assignment; scrollTo works.
+  await phone(page)
+    .locator(".home-chat-lane.chat-scroll")
+    .evaluate((el, nextTop) => {
+      el.scrollTo({ top: nextTop, behavior: "instant" });
+    }, top);
+}
+
 test.describe("POST-319 Manual QA · P0 screenshots", () => {
   test.use({ viewport: { width: 390, height: 844 } });
-  test.setTimeout(90_000);
+  test.setTimeout(120_000);
 
   test("capture P0 acceptance states", async ({ page }) => {
     mkdirSync(OUT_DIR, { recursive: true });
@@ -64,23 +84,57 @@ test.describe("POST-319 Manual QA · P0 screenshots", () => {
       phone(page).getByTestId("records-browse-sheet"),
     ).toBeHidden({ timeout: 5000 });
 
-    // 2) Six+ records → scrollable Home stream (P0-3)
-    for (const text of [
+    // 2) Enough records for a real Home scroll stream (P0-3)
+    const streamTexts = [
       "기록 하나",
       "기록 둘",
       "기록 셋",
       "기록 넷",
       "기록 다섯",
       "기록 여섯",
-    ]) {
+      "기록 일곱",
+      "기록 여덟",
+      "기록 아홉",
+      "기록 열",
+    ];
+    for (const text of streamTexts) {
       await submit(page, text);
     }
-    await expect(phone(page).getByTestId("left-item-row")).toHaveCount(6);
+    await expect(phone(page).getByTestId("left-item-row")).toHaveCount(
+      streamTexts.length,
+    );
+
+    await expect
+      .poll(async () => {
+        const m = await homeScrollMetrics(page);
+        return m.scrollHeight > m.clientHeight;
+      })
+      .toBe(true);
+
+    const metrics = await homeScrollMetrics(page);
+    await scrollHomeLane(page, metrics.scrollHeight);
+    await expect
+      .poll(async () => (await homeScrollMetrics(page)).scrollTop)
+      .toBeGreaterThan(0);
+    await expect(phone(page).getByText("기록 열")).toBeVisible();
+
+    await scrollHomeLane(page, 0);
+    await expect
+      .poll(async () => (await homeScrollMetrics(page)).scrollTop)
+      .toBe(0);
+    await expect(phone(page).getByText("기록 하나")).toBeVisible();
+
+    await scrollHomeLane(page, metrics.scrollHeight);
+    await expect
+      .poll(async () => (await homeScrollMetrics(page)).scrollTop)
+      .toBeGreaterThan(0);
+    await expect(phone(page).getByText("기록 열")).toBeVisible();
+
     await phone(page).screenshot({
       path: join(OUT_DIR, "02-six-records-home.png"),
     });
 
-    // 3) Clear schedule stays on Home + Schedule (P0-2)
+    // 3) Clear schedule stays on Home + linked projection (P0-2)
     await submit(page, "내일 오후 3시 치과");
     await expect(
       phone(page).getByTestId("saved-schedule-feedback"),
@@ -89,13 +143,32 @@ test.describe("POST-319 Manual QA · P0 screenshots", () => {
     await phone(page)
       .getByText("내일 오후 3시 치과")
       .scrollIntoViewIfNeeded();
+
     const inbox = (await readGuestList(page, GUEST_INBOX_KEY)) as Array<{
+      id?: string;
       text?: string;
       start_time?: string | null;
     }>;
-    const dental = inbox.filter((r) => r.text?.includes("치과"));
-    expect(dental.length).toBe(1);
-    expect(dental[0]?.start_time).toBeTruthy();
+    const dentalInbox = inbox.filter((r) => r.text?.includes("치과"));
+    expect(dentalInbox.length).toBe(1);
+    expect(dentalInbox[0]?.id).toBeTruthy();
+    expect(dentalInbox[0]?.start_time).toBeTruthy();
+
+    const schedulesAfterDental = (await readGuestList(
+      page,
+      GUEST_SCHEDULE_KEY,
+    )) as Array<{
+      id?: string;
+      text?: string;
+      source_id?: string | null;
+    }>;
+    const dentalSched = schedulesAfterDental.filter(
+      (s) =>
+        s.text?.includes("치과") || s.source_id === dentalInbox[0]?.id,
+    );
+    expect(dentalSched.length).toBe(1);
+    expect(dentalSched[0]?.source_id).toBe(dentalInbox[0]?.id);
+
     await phone(page).screenshot({
       path: join(OUT_DIR, "03-clear-schedule-home.png"),
     });
@@ -109,6 +182,38 @@ test.describe("POST-319 Manual QA · P0 screenshots", () => {
     await phone(page).screenshot({
       path: join(OUT_DIR, "04-clarify-내일-8시.png"),
     });
+
+    // 4b) Case B UI: 8시에 걷기 운동 — clock sensed, no auto schedule
+    const scheduleCountBeforeB = (
+      (await readGuestList(page, GUEST_SCHEDULE_KEY)) as Array<unknown>
+    ).length;
+    await submit(page, "8시에 걷기 운동");
+    const caseBPromise = phone(page)
+      .getByTestId("inline-promise")
+      .filter({ hasText: /걷기|8시/ });
+    await expect(caseBPromise).toBeVisible();
+    await expect(caseBPromise).toHaveAttribute(
+      "data-confirmation-reason",
+      "assumed_meridiem",
+    );
+    await expect(
+      caseBPromise.getByTestId("promise-confirm-morning"),
+    ).toBeVisible();
+    await expect(
+      caseBPromise.getByTestId("promise-confirm-afternoon"),
+    ).toBeVisible();
+    const scheduleCountAfterB = (
+      (await readGuestList(page, GUEST_SCHEDULE_KEY)) as Array<unknown>
+    ).length;
+    expect(scheduleCountAfterB).toBe(scheduleCountBeforeB);
+    const walkInbox = (
+      (await readGuestList(page, GUEST_INBOX_KEY)) as Array<{
+        text?: string;
+        start_time?: string | null;
+      }>
+    ).filter((r) => r.text?.includes("걷기 운동"));
+    expect(walkInbox.length).toBe(1);
+    expect(walkInbox[0]?.start_time).toBeFalsy();
 
     // 5) Schedule Upcoming
     await phone(page).getByRole("link", { name: /^(일정|Schedule)/ }).click();
@@ -139,13 +244,15 @@ test.describe("POST-319 Manual QA · P0 screenshots", () => {
       .filter({ hasText: /치과/ })
       .getByRole("button", { name: /알림|Reminder/i })
       .click();
-    await expect(page.getByTestId("alarm-preset-list")).toBeVisible({
+    await expect(page.getByTestId("schedule-alarm-sheet")).toBeVisible({
       timeout: 8000,
     });
-    const presets = page.locator('[data-testid^="alarm-preset-"]');
+    await expect(page.getByTestId("alarm-preset-list")).toBeVisible();
+    const presets = page.locator(
+      '[data-testid="schedule-alarm-sheet"] [data-testid^="alarm-preset-"]',
+    );
     await expect(presets.first()).toBeVisible();
     await page.getByTestId("alarm-preset-list").scrollIntoViewIfNeeded();
-    // Contrast smoke: presets must not render as solid black blocks
     const bg = await presets.first().evaluate((el) => {
       const s = getComputedStyle(el);
       return { bg: s.backgroundColor, color: s.color };
@@ -157,12 +264,25 @@ test.describe("POST-319 Manual QA · P0 screenshots", () => {
       fullPage: false,
     });
 
-    // Sanity: schedule projection linked, not duplicated inbox for dental
-    const schedules = (await readGuestList(page, GUEST_SCHEDULE_KEY)) as Array<{
+    // Final projection contract: still exactly one dental schedule linked
+    const finalInbox = (await readGuestList(page, GUEST_INBOX_KEY)) as Array<{
+      id?: string;
+      text?: string;
+    }>;
+    const finalDental = finalInbox.filter((r) => r.text?.includes("치과"));
+    expect(finalDental.length).toBe(1);
+    const finalSchedules = (await readGuestList(
+      page,
+      GUEST_SCHEDULE_KEY,
+    )) as Array<{
       text?: string;
       source_id?: string | null;
     }>;
-    const dentalSched = schedules.filter((s) => s.text?.includes("치과"));
-    expect(dentalSched.length).toBeGreaterThanOrEqual(1);
+    const finalDentalSched = finalSchedules.filter(
+      (s) =>
+        s.text?.includes("치과") || s.source_id === finalDental[0]?.id,
+    );
+    expect(finalDentalSched.length).toBe(1);
+    expect(finalDentalSched[0]?.source_id).toBe(finalDental[0]?.id);
   });
 });
