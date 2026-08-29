@@ -40,9 +40,23 @@ function SectionRule({ label }: { label: string }) {
   );
 }
 
-function PillLink({ children, dark = false, className = "" }: { children: React.ReactNode; dark?: boolean; className?: string }) {
+function PillLink({
+  children,
+  dark = false,
+  className = "",
+  ariaLabel,
+}: {
+  children: React.ReactNode;
+  dark?: boolean;
+  className?: string;
+  ariaLabel?: string;
+}) {
   return (
-    <Link to="/app" className={`lv2-pill ${dark ? "lv2-pill-dark" : ""} ${className}`}>
+    <Link
+      to="/app"
+      aria-label={ariaLabel}
+      className={`lv2-pill ${dark ? "lv2-pill-dark" : ""} ${className}`}
+    >
       <span>{children}</span>
       <ArrowRight size={15} strokeWidth={2.2} aria-hidden="true" />
     </Link>
@@ -50,6 +64,7 @@ function PillLink({ children, dark = false, className = "" }: { children: React.
 }
 
 function HeroDemo({ demos }: { demos: Demo[] }) {
+  const t = useT();
   const reduced = useReducedMotion();
   const [index, setIndex] = useState(0);
   const active = demos[index];
@@ -63,7 +78,7 @@ function HeroDemo({ demos }: { demos: Demo[] }) {
   return (
     <div className="lv2-hero-stage">
       <div className="lv2-demo-main">
-        <p className="lv2-demo-kicker">오늘 무엇을 기억할까요?</p>
+        <p className="lv2-demo-kicker">{t("오늘 무엇을 기억할까요?", "What do you want to remember today?")}</p>
         <div className="lv2-input-shell" aria-live="polite">
           <AnimatePresence mode="wait" initial={false}>
             <motion.span
@@ -80,13 +95,14 @@ function HeroDemo({ demos }: { demos: Demo[] }) {
           <span className="lv2-send" aria-hidden="true">↑</span>
         </div>
 
-        <div className="lv2-demo-tabs" aria-label="데모 예시 선택">
+        <div className="lv2-demo-tabs" aria-label={t("데모 예시 선택", "Choose a demo example")}>
           {demos.map((demo, demoIndex) => (
             <button
               key={demo.input}
               type="button"
               className={demoIndex === index ? "is-active" : ""}
               aria-pressed={demoIndex === index}
+              aria-label={t(`예시 ${demoIndex + 1}`, `Example ${demoIndex + 1}`)}
               onClick={() => setIndex(demoIndex)}
             >
               {demoIndex + 1}
@@ -94,7 +110,7 @@ function HeroDemo({ demos }: { demos: Demo[] }) {
           ))}
         </div>
 
-        <p className="lv2-result-kicker">AI가 이해한 결과</p>
+        <p className="lv2-result-kicker">{t("AI가 이해한 결과", "What AI understood")}</p>
         <AnimatePresence mode="wait" initial={false}>
           <motion.div
             key={`${active.title}-${active.meta}`}
@@ -117,9 +133,9 @@ function HeroDemo({ demos }: { demos: Demo[] }) {
         transition={{ type: "spring", stiffness: 260, damping: 22 }}
       >
         <span className="lv2-spark"><Sparkles size={18} aria-hidden="true" /></span>
-        <h3>한 문장만<br />남기면 돼요.</h3>
-        <p>메모인지, 할 일인지,<br />일정인지 먼저 고르지 않아요.</p>
-        <PillLink>그냥 남기기</PillLink>
+        <h3>{t("한 문장만", "Just one sentence")}<br />{t("남기면 돼요.", "is enough.")}</h3>
+        <p>{t("메모인지, 할 일인지,", "No need to decide whether it's a note,")}<br />{t("일정인지 먼저 고르지 않아요.", "a task, or a schedule first.")}</p>
+        <PillLink ariaLabel={t("첫 일정 남기기", "Drop your first plan")}>{t("그냥 남기기", "Just drop it")}</PillLink>
       </motion.aside>
     </div>
   );
@@ -152,15 +168,16 @@ function WorkflowCard({ index, title, label, tone, rows }: { index: number; titl
 }
 
 function TrustDemo() {
+  const t = useT();
   const reduced = useReducedMotion();
   const [mode, setMode] = useState<"clear" | "ambiguous">("clear");
   const isClear = mode === "clear";
 
   return (
     <div className="lv2-trust-demo">
-      <div className="lv2-trust-switch" role="group" aria-label="AI 판단 예시">
-        <button type="button" className={isClear ? "is-active" : ""} onClick={() => setMode("clear")}>명확한 입력</button>
-        <button type="button" className={!isClear ? "is-active" : ""} onClick={() => setMode("ambiguous")}>애매한 입력</button>
+      <div className="lv2-trust-switch" role="group" aria-label={t("AI 판단 예시", "AI decision example")}>
+        <button type="button" className={isClear ? "is-active" : ""} onClick={() => setMode("clear")}>{t("명확한 입력", "Clear input")}</button>
+        <button type="button" className={!isClear ? "is-active" : ""} onClick={() => setMode("ambiguous")}>{t("애매한 입력", "Ambiguous input")}</button>
       </div>
 
       <AnimatePresence mode="wait" initial={false}>
@@ -172,27 +189,27 @@ function TrustDemo() {
           exit={reduced ? undefined : { opacity: 0, x: isClear ? 12 : -12 }}
           transition={{ duration: 0.32, ease: sectionEase }}
         >
-          <span className="lv2-decision-label">입력</span>
+          <span className="lv2-decision-label">{t("입력", "Input")}</span>
           <div className="lv2-decision-input">
-            <strong>{isClear ? "내일 오후 3시 치과" : "내일 3시 치과"}</strong>
-            <span>{isClear ? "명확한 시간" : "오전/오후가 애매함"}</span>
+            <strong>{isClear ? t("내일 오후 3시 치과", "Dentist tomorrow at 3 PM") : t("내일 3시 치과", "Dentist tomorrow at 3")}</strong>
+            <span>{isClear ? t("명확한 시간", "Clear time") : t("오전/오후가 애매함", "AM or PM is unclear")}</span>
           </div>
 
-          <span className="lv2-decision-label">잊지마의 판단</span>
+          <span className="lv2-decision-label">{t("잊지마의 판단", "Itjima's decision")}</span>
           <div className="lv2-decision-dark">
-            <span className="lv2-decision-status">{isClear ? "저장됨" : "확인 필요"}</span>
+            <span className="lv2-decision-status">{isClear ? t("저장됨", "Saved") : t("확인 필요", "Needs confirmation")}</span>
             {isClear ? (
               <div className="lv2-confirmed-copy">
-                <strong>치과</strong>
-                <span>내일 · 오후 3:00</span>
+                <strong>{t("치과", "Dentist")}</strong>
+                <span>{t("내일 · 오후 3:00", "Tomorrow · 3:00 PM")}</span>
               </div>
             ) : (
               <div className="lv2-clarify">
-                <strong>오전인가요, 오후인가요?</strong>
+                <strong>{t("오전인가요, 오후인가요?", "Is that 3 AM or 3 PM?")}</strong>
                 <div>
-                  <button type="button">오전 3시</button>
-                  <button type="button" className="is-primary" onClick={() => setMode("clear")}>오후 3시</button>
-                  <button type="button">시간 없이</button>
+                  <button type="button">{t("오전 3시", "3 AM")}</button>
+                  <button type="button" className="is-primary" onClick={() => setMode("clear")}>{t("오후 3시", "3 PM")}</button>
+                  <button type="button">{t("시간 없이", "No time")}</button>
                 </div>
               </div>
             )}
@@ -222,8 +239,14 @@ function ProductCard({ title, eyebrow, tone, children, delay = 0 }: { title: str
 }
 
 function FinalMiniDemo() {
-  const [value, setValue] = useState("퇴근하고 세탁소");
+  const t = useT();
+  const [value, setValue] = useState(() => t("퇴근하고 세탁소", "Dry cleaner after work"));
   const [submitted, setSubmitted] = useState(false);
+
+  useEffect(() => {
+    setValue(t("퇴근하고 세탁소", "Dry cleaner after work"));
+    setSubmitted(false);
+  }, [t]);
 
   function submit(event: FormEvent) {
     event.preventDefault();
@@ -233,7 +256,7 @@ function FinalMiniDemo() {
 
   return (
     <form className={`lv2-final-demo ${submitted ? "is-submitted" : ""}`} onSubmit={submit}>
-      <label className="sr-only" htmlFor="lv2-final-input">떠오른 문장 입력</label>
+      <label className="sr-only" htmlFor="lv2-final-input">{t("떠오른 문장 입력", "Enter a thought")}</label>
       <input
         id="lv2-final-input"
         value={value}
@@ -242,7 +265,7 @@ function FinalMiniDemo() {
           setSubmitted(false);
         }}
       />
-      <button type="submit" aria-label="데모 입력 확인">↑</button>
+      <button type="submit" aria-label={t("데모 입력 확인", "Submit demo input")}>↑</button>
       <AnimatePresence>
         {submitted && (
           <motion.span
@@ -252,7 +275,7 @@ function FinalMiniDemo() {
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -4 }}
           >
-            <Check size={15} aria-hidden="true" /> 이렇게 시작하면 돼요
+            <Check size={15} aria-hidden="true" /> {t("이렇게 시작하면 돼요", "That's all it takes")}
           </motion.span>
         )}
       </AnimatePresence>
@@ -291,19 +314,19 @@ export function LandingV2() {
 
   return (
     <div className="landing-v2" data-landing-version="2">
-      <a className="lv2-skip" href="#lv2-main">본문으로 이동</a>
+      <a className="lv2-skip" href="#lv2-main">{t("본문으로 이동", "Skip to content")}</a>
 
       <header className="lv2-nav-wrap">
-        <nav className="lv2-nav" aria-label="랜딩 페이지">
-          <a className="lv2-brand" href="#lv2-main" aria-label="잊지마 홈"><span className="lv2-brand-dot" />잊지마</a>
+        <nav className="lv2-nav" aria-label={t("랜딩 페이지", "Landing page")}>
+          <a className="lv2-brand" href="#lv2-main" aria-label={t("잊지마 홈", "Itjima home")}><span className="lv2-brand-dot" />잊지마</a>
           <div className="lv2-nav-links">
-            <a href="#how">서비스 소개</a>
-            <a href="#trust">작동 방식</a>
-            <a href="#why">제품 원칙</a>
+            <a href="#how">{t("서비스 소개", "How it works")}</a>
+            <a href="#trust">{t("작동 방식", "AI behavior")}</a>
+            <a href="#why">{t("제품 원칙", "Product principles")}</a>
           </div>
           <div className="lv2-nav-actions">
             <LanguageToggle />
-            <Link to="/app" className="lv2-nav-cta">무료로 시작하기</Link>
+            <Link to="/app" className="lv2-nav-cta" aria-label={t("앱 열기", "Open app")}>{t("무료로 시작하기", "Start free")}</Link>
           </div>
         </nav>
       </header>
@@ -313,14 +336,14 @@ export function LandingV2() {
           <div className="lv2-hero-glow lv2-glow-a" aria-hidden="true" />
           <div className="lv2-hero-glow lv2-glow-b" aria-hidden="true" />
           <Reveal className="lv2-hero-copy">
-            <p className="lv2-eyebrow">분류 없는 AI 기록</p>
-            <h1>메모·할 일·일정,<br /><span>구분하지 말고 한 문장으로.</span></h1>
-            <p className="lv2-lead">생각난 순간 그냥 남기세요. 잊지마가 날짜와 행동을 읽고 필요한 곳에 정리해요.</p>
+            <p className="lv2-eyebrow">{t("분류 없는 AI 기록", "AI notes without categories")}</p>
+            <h1>{t("메모·할 일·일정,", "Say it roughly.")}<br /><span>{t("구분하지 말고 한 문장으로.", "It becomes a schedule.")}</span></h1>
+            <p className="lv2-lead">{t("생각난 순간 그냥 남기세요. 잊지마가 날짜와 행동을 읽고 필요한 곳에 정리해요.", "Drop the thought as it comes. Itjima reads dates and actions, then puts them where you'll need them.")}</p>
             <div className="lv2-hero-cta-row">
-              <PillLink dark>무료로 시작하기</PillLink>
-              <a className="lv2-secondary-pill" href="#demo">10초 데모 보기 <ChevronDown size={15} aria-hidden="true" /></a>
+              <PillLink dark ariaLabel={t("첫 일정 남기기", "Drop your first plan")}>{t("무료로 시작하기", "Start free")}</PillLink>
+              <a className="lv2-secondary-pill" href="#how">{t("10초 데모 보기", "See the 10-second flow")} <ChevronDown size={15} aria-hidden="true" /></a>
             </div>
-            <p className="lv2-no-setup">폴더 · 제목 · 카테고리 선택 없이</p>
+            <p className="lv2-no-setup">{t("폴더 · 제목 · 카테고리 선택 없이", "No folders · titles · category picking")}</p>
           </Reveal>
           <Reveal className="lv2-hero-demo-wrap" delay={0.12}>
             <div id="demo"><HeroDemo demos={demos} /></div>
@@ -331,13 +354,13 @@ export function LandingV2() {
           <div className="lv2-container">
             <SectionRule label="HOW IT WORKS" />
             <Reveal className="lv2-centered-head">
-              <h2>기록 전에도, 기록 후에도<br />정리할 필요 없어요.</h2>
-              <p>입력 형식을 고르는 단계부터 기록을 다시 분류하는 일까지 줄였습니다.</p>
+              <h2>{t("기록 전에도, 기록 후에도", "No organizing before.")}<br />{t("정리할 필요 없어요.", "No organizing after.")}</h2>
+              <p>{t("입력 형식을 고르는 단계부터 기록을 다시 분류하는 일까지 줄였습니다.", "We removed the work of choosing a format first and sorting everything again later.")}</p>
             </Reveal>
             <div className="lv2-workflow">
-              <WorkflowCard index={0} title="그냥 남기기" label="Capture" tone="paper" rows={[["금요일까지 포폴 수정", "한 문장 그대로"], ["엄마 선물 알아보기", "날짜 없이 그대로"]]} />
-              <WorkflowCard index={1} title="AI가 의미 이해" label="Interpret" tone="yellow" rows={[["포트폴리오 수정", "할 일 · 금요일까지"], ["치과", "일정 · 내일 오후 3:00"]]} />
-              <WorkflowCard index={2} title="필요할 때 다시 보기" label="Resurface" tone="blue" rows={[["오늘 오후 3:00 · 치과", "오늘 필요한 것만"], ["금요일까지 · 포폴 수정", "다가오는 할 일"]]} />
+              <WorkflowCard index={0} title={t("그냥 남기기", "Just drop it")} label="Capture" tone="paper" rows={[[t("금요일까지 포폴 수정", "Revise portfolio by Friday"), t("한 문장 그대로", "Kept as one sentence")], [t("엄마 선물 알아보기", "Look for a gift for mom"), t("날짜 없이 그대로", "Kept without a date")]]} />
+              <WorkflowCard index={1} title={t("AI가 의미 이해", "AI understands meaning")} label="Interpret" tone="yellow" rows={[[t("포트폴리오 수정", "Revise portfolio"), t("할 일 · 금요일까지", "Task · by Friday")], [t("치과", "Dentist"), t("일정 · 내일 오후 3:00", "Schedule · tomorrow 3:00 PM")]]} />
+              <WorkflowCard index={2} title={t("필요할 때 다시 보기", "See it when it matters")} label="Resurface" tone="blue" rows={[[t("오늘 오후 3:00 · 치과", "Today 3:00 PM · Dentist"), t("오늘 필요한 것만", "Only what matters today")], [t("금요일까지 · 포폴 수정", "By Friday · Revise portfolio"), t("다가오는 할 일", "Upcoming task")]]} />
             </div>
           </div>
         </section>
@@ -348,14 +371,14 @@ export function LandingV2() {
             <div className="lv2-trust-grid">
               <Reveal><TrustDemo /></Reveal>
               <Reveal className="lv2-trust-copy" delay={0.08}>
-                <p className="lv2-eyebrow dark">AI가 멋대로 채우지 않도록</p>
-                <h2>확실하면 바로 저장하고,<br />애매할 때만 물어봐요.</h2>
-                <p>임의의 시간을 만들어내지 않고, 문장 안의 단서만 읽고 필요한 확인만 요청합니다.</p>
+                <p className="lv2-eyebrow dark">{t("AI가 멋대로 채우지 않도록", "Designed not to invent details")}</p>
+                <h2>{t("확실하면 바로 저장하고,", "Clear things save right away.")}<br />{t("애매할 때만 물어봐요.", "Only ambiguity gets a question.")}</h2>
+                <p>{t("임의의 시간을 만들어내지 않고, 문장 안의 단서만 읽고 필요한 확인만 요청합니다.", "It doesn't invent a time. It reads only the clues you gave and asks only for what is missing.")}</p>
                 <div className="lv2-principles">
-                  <div><span>01</span><strong>확실한 건 바로 저장</strong><p>이미 말한 내용을 다시 묻지 않아요.</p></div>
-                  <div><span>02</span><strong>애매한 건 최소 확인</strong><p>추측보다 한 번의 정확한 질문을 택해요.</p></div>
+                  <div><span>01</span><strong>{t("확실한 건 바로 저장", "Save what's clear")}</strong><p>{t("이미 말한 내용을 다시 묻지 않아요.", "It doesn't ask you to repeat what you already said.")}</p></div>
+                  <div><span>02</span><strong>{t("애매한 건 최소 확인", "Confirm only ambiguity")}</strong><p>{t("추측보다 한 번의 정확한 질문을 택해요.", "One precise question is better than a guess.")}</p></div>
                 </div>
-                <p className="lv2-trust-quote">AI가 더 많이 묻는 게 아니라,<br />덜 귀찮게 정확해지는 방식.</p>
+                <p className="lv2-trust-quote">{t("AI가 더 많이 묻는 게 아니라,", "Not AI that asks you for more—")}<br />{t("덜 귀찮게 정확해지는 방식.", "AI that gets accurate with less friction.")}</p>
               </Reveal>
             </div>
           </div>
@@ -366,15 +389,15 @@ export function LandingV2() {
             <SectionRule label="WHY ITJIMA" />
             <div className="lv2-why-grid">
               <Reveal className="lv2-thought-collage">
-                <p className="lv2-collage-title">정리되지 않은 문장도<br />그대로 시작점이 돼요.</p>
-                <motion.div className="lv2-note note-a" whileHover={{ rotate: -2.5, y: -7 }}><strong>엄마 생일 선물 뭐사지</strong><span>날짜 없이 그대로 기록</span></motion.div>
-                <motion.div className="lv2-note note-b" whileHover={{ rotate: 3, y: -7 }}><strong>내일 치과<br />아 맞다 3시</strong></motion.div>
+                <p className="lv2-collage-title">{t("정리되지 않은 문장도", "Even an unorganized thought")}<br />{t("그대로 시작점이 돼요.", "can be the starting point.")}</p>
+                <motion.div className="lv2-note note-a" whileHover={{ rotate: -2.5, y: -7 }}><strong>{t("엄마 생일 선물 뭐사지", "What should I get mom for her birthday?")}</strong><span>{t("날짜 없이 그대로 기록", "Saved without forcing a date")}</span></motion.div>
+                <motion.div className="lv2-note note-b" whileHover={{ rotate: 3, y: -7 }}><strong>{t("내일 치과", "Dentist tomorrow")}<br />{t("아 맞다 3시", "oh right, 3 PM")}</strong></motion.div>
               </Reveal>
               <Reveal className="lv2-why-copy" delay={0.08}>
-                <h2>생각은 원래<br />정리되기 전에 떠오르니까.</h2>
-                <p>정돈된 사람만 기록할 수 있는 도구가 되지 않도록 만들었습니다.</p>
-                <blockquote>“아무렇게나 적어도 돼.<br />필요한 건 내가 기억할게.”</blockquote>
-                <strong className="lv2-manifesto">기록은 쌓여도, 관리할 일은 쌓이지 않게.</strong>
+                <h2>{t("생각은 원래", "Thoughts arrive")}<br />{t("정리되기 전에 떠오르니까.", "before they're organized.")}</h2>
+                <p>{t("정돈된 사람만 기록할 수 있는 도구가 되지 않도록 만들었습니다.", "Itjima is designed so recording isn't reserved for people who already have everything organized.")}</p>
+                <blockquote>{t("“아무렇게나 적어도 돼.", "“Write it however it comes.")}<br />{t("필요한 건 내가 기억할게.”", "I'll remember what matters.”")}</blockquote>
+                <strong className="lv2-manifesto">{t("기록은 쌓여도, 관리할 일은 쌓이지 않게.", "Let records pile up—not maintenance work.")}</strong>
               </Reveal>
             </div>
           </div>
@@ -384,27 +407,27 @@ export function LandingV2() {
           <div className="lv2-container">
             <SectionRule label="THE PRODUCT" />
             <Reveal className="lv2-product-head">
-              <h2>입력하고,<br />필요할 때 확인하면 끝.</h2>
-              <p>복잡한 관리 화면 대신 입력·일정·요약의 세 장면만 남겼습니다.</p>
+              <h2>{t("입력하고,", "Drop it in.")}<br />{t("필요할 때 확인하면 끝.", "Check it when you need it.")}</h2>
+              <p>{t("복잡한 관리 화면 대신 입력·일정·요약의 세 장면만 남겼습니다.", "Instead of a complex management screen, the product centers on capture, schedule, and a light summary.")}</p>
             </Reveal>
             <div className="lv2-product-track">
-              <ProductCard title="그냥 남기기" eyebrow="Capture · 자연어 입력" tone="paper">
-                <div className="lv2-product-input"><strong>엄마 선물 알아보기</strong><span>말하듯 아무렇게나 남겨보세요</span></div>
-                <div className="lv2-mini-row"><strong>금요일까지 포트폴리오 수정</strong><span>할 일 · 금요일까지</span></div>
-                <div className="lv2-mini-row"><strong>제주도에서 가고 싶은 카페</strong><span>생각 · 날짜 없이 그대로</span></div>
+              <ProductCard title={t("그냥 남기기", "Just drop it")} eyebrow={t("Capture · 자연어 입력", "Capture · natural language")} tone="paper">
+                <div className="lv2-product-input"><strong>{t("엄마 선물 알아보기", "Look for a gift for mom")}</strong><span>{t("말하듯 아무렇게나 남겨보세요", "Write it the way you'd say it")}</span></div>
+                <div className="lv2-mini-row"><strong>{t("금요일까지 포트폴리오 수정", "Revise portfolio by Friday")}</strong><span>{t("할 일 · 금요일까지", "Task · by Friday")}</span></div>
+                <div className="lv2-mini-row"><strong>{t("제주도에서 가고 싶은 카페", "Cafes I want to visit in Jeju")}</strong><span>{t("생각 · 날짜 없이 그대로", "Thought · kept without a date")}</span></div>
               </ProductCard>
-              <ProductCard title="오늘 보기" eyebrow="Schedule · 필요한 일정" tone="blue" delay={0.08}>
-                <div className="lv2-today"><span>8월 29일 · 토요일</span><strong>오늘은 두 가지만 보면 돼요</strong></div>
-                <div className="lv2-event"><span>오후 3:00</span><strong>치과 예약</strong><small>출발 전에 한 번 확인</small></div>
-                <div className="lv2-mini-row"><strong>포트폴리오 수정</strong><span>금요일까지 · 할 일</span></div>
+              <ProductCard title={t("오늘 보기", "Today")} eyebrow={t("Schedule · 필요한 일정", "Schedule · what matters now")} tone="blue" delay={0.08}>
+                <div className="lv2-today"><span>{t("8월 29일 · 토요일", "August 29 · Saturday")}</span><strong>{t("오늘은 두 가지만 보면 돼요", "Only two things need your attention today")}</strong></div>
+                <div className="lv2-event"><span>{t("오후 3:00", "3:00 PM")}</span><strong>{t("치과 예약", "Dentist appointment")}</strong><small>{t("출발 전에 한 번 확인", "One check before you leave")}</small></div>
+                <div className="lv2-mini-row"><strong>{t("포트폴리오 수정", "Revise portfolio")}</strong><span>{t("금요일까지 · 할 일", "By Friday · task")}</span></div>
               </ProductCard>
-              <ProductCard title="가볍게 요약" eyebrow="Summary · 한눈에 보기" tone="yellow" delay={0.16}>
-                <p className="lv2-summary-label">지금 기록은 이렇게 보여요</p>
+              <ProductCard title={t("가볍게 요약", "Light summary")} eyebrow={t("Summary · 한눈에 보기", "Summary · at a glance")} tone="yellow" delay={0.16}>
+                <p className="lv2-summary-label">{t("지금 기록은 이렇게 보여요", "Here's what your records look like now")}</p>
                 <div className="lv2-stats">
-                  <div><span>일정</span><strong>4</strong></div><div><span>할 일</span><strong>3</strong></div>
-                  <div><span>생각</span><strong>7</strong></div><div><span>확인 필요</span><strong>2</strong></div>
+                  <div><span>{t("일정", "Schedule")}</span><strong>4</strong></div><div><span>{t("할 일", "Tasks")}</span><strong>3</strong></div>
+                  <div><span>{t("생각", "Thoughts")}</span><strong>7</strong></div><div><span>{t("확인 필요", "Check")}</span><strong>2</strong></div>
                 </div>
-                <div className="lv2-summary-note"><strong>정리할 필요는 없어요</strong><span>현재 기록을 이해하기 위한 가벼운 요약이에요.</span></div>
+                <div className="lv2-summary-note"><strong>{t("정리할 필요는 없어요", "Nothing to organize")}</strong><span>{t("현재 기록을 이해하기 위한 가벼운 요약이에요.", "Just a lightweight way to understand what's already here.")}</span></div>
               </ProductCard>
             </div>
           </div>
@@ -413,10 +436,10 @@ export function LandingV2() {
         <section className="lv2-final">
           <div className="lv2-container lv2-final-inner">
             <Reveal className="lv2-centered-head">
-              <p className="lv2-eyebrow">정리부터 하지 마세요.</p>
-              <h2>떠오른 문장부터<br />남겨보세요.</h2>
-              <p>메모인지 일정인지 고민하는 일은 잊지마에 맡겨두세요.</p>
-              <div className="lv2-final-cta"><PillLink dark>무료로 시작하기</PillLink></div>
+              <p className="lv2-eyebrow">{t("정리부터 하지 마세요.", "Don't organize first.")}</p>
+              <h2>{t("떠오른 문장부터", "Start with the sentence")}<br />{t("남겨보세요.", "that just came to mind.")}</h2>
+              <p>{t("메모인지 일정인지 고민하는 일은 잊지마에 맡겨두세요.", "Leave the question of note versus schedule to Itjima.")}</p>
+              <div className="lv2-final-cta"><PillLink dark ariaLabel={t("첫 일정 남기기", "Drop your first plan")}>{t("무료로 시작하기", "Start free")}</PillLink></div>
               <FinalMiniDemo />
             </Reveal>
           </div>
@@ -427,10 +450,10 @@ export function LandingV2() {
         <div className="lv2-container">
           <SectionRule label="ITJIMA" />
           <div className="lv2-footer-row">
-            <strong>한 문장으로 시작하는 AI 기록</strong>
-            <div><a href="#how">서비스 소개</a><a href="#product">주요 기능</a><a href="#trust">사용 방법</a></div>
+            <strong>{t("한 문장으로 시작하는 AI 기록", "AI notes that start with one sentence")}</strong>
+            <div><a href="#how">{t("서비스 소개", "How it works")}</a><a href="#product">{t("주요 기능", "Product")}</a><a href="#trust">{t("사용 방법", "AI behavior")}</a></div>
           </div>
-          <p>© 2026 ITJIMA. 기록은 가볍게.</p>
+          <p>© 2026 ITJIMA. {t("기록은 가볍게.", "Keep recording light.")}</p>
         </div>
       </footer>
     </div>
