@@ -18,7 +18,8 @@ for (const viewport of [
     await page.setViewportSize({ width: viewport.width, height: viewport.height });
     await useEnglish(page);
 
-    await page.goto("/schedule");
+    // FINAL 319 keeps the product brand on Capture. Compact Schedule owns its
+    // page header and intentionally does not repeat the global brand/search row.
     const brand = page.getByRole("link", {
       name: "Open Itjima introduction",
     });
@@ -41,7 +42,17 @@ for (const viewport of [
     }).click();
     await expect(page).toHaveURL(/\/schedule$/);
 
+    if (viewport.name === "touch") {
+      await expect(
+        page.locator(".mobile-app-header"),
+        "compact Schedule should not repeat the global brand header",
+      ).toBeHidden();
+    }
+
     await page.getByRole("link", { name: "Capture", exact: true }).click();
     await expect(page).toHaveURL(/\/app\/?$/);
+    await expect(
+      page.getByRole("link", { name: "Open Itjima introduction" }),
+    ).toBeVisible();
   });
 }
