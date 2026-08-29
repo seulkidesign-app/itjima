@@ -57,6 +57,13 @@ type ItemSurface =
       recovery: boolean;
     };
 
+/**
+ * Home recent stream — scrollable chat-like history.
+ * Structured timed records stay visible (record = original; schedule = projection).
+ * Soft recent window only — not a hard 3-item cut.
+ */
+const HOME_RECENT_LIMIT = 40;
+
 export function InboxChat({
   itemsAsc,
   newestId,
@@ -89,41 +96,45 @@ export function InboxChat({
   );
   const uiLang = lang === "en" ? "en" : "ko";
 
-  const surfaces: ItemSurface[] = itemsAsc
-    .filter((it) => !isStructuredTimedRecord(it))
-    .map((it) => {
-      const isNewest = it.id === newestId;
-      const inFlight = autoCommitInFlightIds.has(it.id);
-      const autoEligible = canAutoCommitTimedCapture(it.text, uiLang);
-      const basePromise =
-        featureEnabled("INLINE_PROMISE") &&
-        !acknowledgedIds.has(it.id) &&
-        !inFlight &&
-        shouldShowInlinePromise(it.text, uiLang);
-      const understanding = basePromise
-        ? understandNaturalLanguage(it.text, uiLang)
-        : null;
-      const confirmationReason = basePromise
-        ? scheduleConfirmationReason(it.text)
-        : null;
-      const showCommitmentRecovery =
-        basePromise && autoEligible && !confirmationReason;
-      const showAmbiguity =
-        basePromise &&
-        !autoEligible &&
-        (confirmationReason !== null ||
-          understanding?.intent === "schedule_clarify");
-
-      if (showAmbiguity || showCommitmentRecovery) {
-        return {
-          kind: "ambiguity" as const,
-          item: it,
-          isNewest,
-          recovery: Boolean(showCommitmentRecovery),
-        };
-      }
+  const surfaces: ItemSurface[] = itemsAsc.map((it) => {
+    const isNewest = it.id === newestId;
+    const timed = isStructuredTimedRecord(it);
+    // Timed projections already resolved — never re-ask NL ambiguity on Home.
+    if (timed) {
       return { kind: "quiet" as const, item: it, isNewest };
-    });
+    }
+
+    const inFlight = autoCommitInFlightIds.has(it.id);
+    const autoEligible = canAutoCommitTimedCapture(it.text, uiLang);
+    const basePromise =
+      featureEnabled("INLINE_PROMISE") &&
+      !acknowledgedIds.has(it.id) &&
+      !inFlight &&
+      shouldShowInlinePromise(it.text, uiLang);
+    const understanding = basePromise
+      ? understandNaturalLanguage(it.text, uiLang)
+      : null;
+    const confirmationReason = basePromise
+      ? scheduleConfirmationReason(it.text)
+      : null;
+    const showCommitmentRecovery =
+      basePromise && autoEligible && !confirmationReason;
+    const showAmbiguity =
+      basePromise &&
+      !autoEligible &&
+      (confirmationReason !== null ||
+        understanding?.intent === "schedule_clarify");
+
+    if (showAmbiguity || showCommitmentRecovery) {
+      return {
+        kind: "ambiguity" as const,
+        item: it,
+        isNewest,
+        recovery: Boolean(showCommitmentRecovery),
+      };
+    }
+    return { kind: "quiet" as const, item: it, isNewest };
+  });
 
   const quietItems = surfaces.filter(
     (s): s is Extract<ItemSurface, { kind: "quiet" }> => s.kind === "quiet",
@@ -133,9 +144,6 @@ export function InboxChat({
       s.kind === "ambiguity",
   );
   const isEmpty = surfaces.length === 0 && !savedFeedback;
-  // Many Records: keep Home sparse — show a short recent slice only.
-  // Keep ascending order (newest at bottom) for Capture chat scroll semantics.
-  const HOME_RECENT_LIMIT = 3;
   const recentQuiet = quietItems.slice(-HOME_RECENT_LIMIT);
   const olderQuietCount = Math.max(0, quietItems.length - recentQuiet.length);
 
@@ -177,25 +185,24 @@ export function InboxChat({
                     key={it.id}
                     item={it}
                     isNewest={isNewest}
+                    showSetTime={!isStructuredTimedRecord(it)}
                     onSetTime={() => onOpenPromiseSchedule(it)}
                     onOpenMenu={() => onOpenContextMenu(it.id)}
                     onOpenDetail={() => onOpenDetail(it)}
                   />
                 ))}
               </ul>
-              {onOpenAllRecords && (
+              {onOpenAllRecords && olderQuietCount > 0 && (
                 <button
                   type="button"
                   data-testid="open-all-records"
                   onClick={onOpenAllRecords}
                   className="touch-press mx-auto mt-3 min-h-11 px-2 text-center text-[13px] font-semibold text-ink-soft underline-offset-2 hover:underline"
                 >
-                  {olderQuietCount > 0
-                    ? t(
-                        `이전 기록 보기 ${olderQuietCount} →`,
-                        `View ${olderQuietCount} earlier →`,
-                      )
-                    : t("이전 기록 보기 →", "View earlier records →")}
+                  {t(
+                    `이전 기록 보기 ${olderQuietCount} →`,
+                    `View ${olderQuietCount} earlier →`,
+                  )}
                 </button>
               )}
             </section>

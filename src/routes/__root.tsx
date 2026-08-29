@@ -9,6 +9,7 @@ import { DesktopAppNav } from "@/components/DesktopAppNav";
 import { UsLaunchLanding } from "@/components/UsLaunchLanding";
 import { PageTransition } from "@/components/PageTransition";
 import { GlobalInteractions } from "@/components/GlobalInteractions";
+import { AppBrowseHost } from "@/components/AppBrowseHost";
 import { ScheduleDeepLinkBridge } from "@/components/ScheduleDeepLinkBridge";
 import { PwaInstallExperience } from "@/components/PwaInstallExperience";
 import { PwaInstallHomeBar } from "@/components/PwaInstallHomeBar";
@@ -109,6 +110,7 @@ function AdaptiveAppShell({ routeKey }: { routeKey: string }) {
               <AppRouteOutlet routeKey={routeKey} />
             </main>
           </div>
+          <AppBrowseHost />
         </div>
         <Toaster
           position="top-center"
@@ -137,6 +139,7 @@ function AdaptiveAppShell({ routeKey }: { routeKey: string }) {
             <AppRouteOutlet routeKey={routeKey} />
           </main>
         </div>
+        <AppBrowseHost />
       </div>
       <Toaster
         position="top-center"

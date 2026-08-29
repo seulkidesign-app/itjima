@@ -457,7 +457,10 @@ export function ScheduleAlarmSheet({
 
   return (
     <BottomSheet open={open} onClose={onClose} maxHeight="78dvh">
-      <div className="px-5 pb-[calc(env(safe-area-inset-bottom)+1.25rem)]">
+      <div
+        className="schedule-alarm-sheet px-5 pb-[calc(env(safe-area-inset-bottom)+1.25rem)]"
+        data-testid="schedule-alarm-sheet"
+      >
         <h2 className="text-[17px] font-bold text-ink">{titleForView()}</h2>
         <p className="mt-1 line-clamp-2 text-[14px] text-ink-soft">
           {scheduleDisplayTitle(schedule)}
@@ -637,7 +640,7 @@ export function ScheduleAlarmSheet({
           </div>
         )}
 
-        <div className="mt-4 flex flex-col gap-2">
+        <div className="mt-4 flex flex-col gap-2" data-testid="alarm-preset-list">
           {presets.map(({ id, label }) => (
             <button
               key={id}
@@ -648,7 +651,7 @@ export function ScheduleAlarmSheet({
                 if (!presetsEnabled) return;
                 void onSelectPreset(schedule, id).then(() => onClose());
               }}
-              className="itjima-card touch-press w-full px-4 py-3.5 text-left text-[15px] font-semibold text-ink disabled:opacity-40"
+              className="alarm-preset-row touch-press w-full rounded-[16px] border border-[var(--quietly-border,#e8e8e5)] bg-white px-4 py-3.5 text-left text-[15px] font-semibold text-ink disabled:cursor-not-allowed disabled:border-[var(--quietly-border,#e8e8e5)] disabled:bg-[#f3f3f5] disabled:text-ink-soft disabled:opacity-100"
             >
               {label}
             </button>
@@ -661,7 +664,7 @@ export function ScheduleAlarmSheet({
               if (!presetsEnabled) return;
               onCustom(schedule);
             }}
-            className="itjima-card touch-press w-full px-4 py-3.5 text-left text-[15px] font-semibold text-ink disabled:opacity-40"
+            className="alarm-preset-row touch-press w-full rounded-[16px] border border-[var(--quietly-border,#e8e8e5)] bg-white px-4 py-3.5 text-left text-[15px] font-semibold text-ink disabled:cursor-not-allowed disabled:border-[var(--quietly-border,#e8e8e5)] disabled:bg-[#f3f3f5] disabled:text-ink-soft disabled:opacity-100"
           >
             {t("직접 설정", "Custom time")}
           </button>

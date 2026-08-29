@@ -53,7 +53,7 @@ async function schedules(page: Page): Promise<ScheduleRow[]> {
 async function openAllRecords(page: Page) {
   const frame = phone(page);
   await frame.getByRole("link", { name: /^Capture$/ }).click();
-  await frame.getByTestId("open-all-records").click();
+  await frame.getByTestId("open-browse-search").click();
   await expect(frame.getByTestId("records-browse-sheet")).toBeVisible();
 }
 

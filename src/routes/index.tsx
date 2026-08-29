@@ -76,7 +76,6 @@ import {
   type ScheduleItem,
 } from "@/lib/store";
 import { ThoughtDetailSheet } from "@/components/ThoughtDetailSheet";
-import { RecordsBrowseSheet } from "@/components/RecordsBrowseSheet";
 import {
   deleteRecord,
   syncRecordTemporal,
@@ -132,13 +131,16 @@ function Inbox() {
     null,
   );
   const [cleanupReviewOpen, setCleanupReviewOpen] = useState(false);
-  const [recordsBrowseOpen, setRecordsBrowseOpen] = useState(false);
   const [detailItem, setDetailItem] = useState<InboxItem | null>(null);
 
   useEffect(() => {
-    const openBrowse = () => setRecordsBrowseOpen(true);
-    window.addEventListener("itjima:open-browse", openBrowse);
-    return () => window.removeEventListener("itjima:open-browse", openBrowse);
+    const onOpenDetail = (event: Event) => {
+      const detail = (event as CustomEvent<InboxItem>).detail;
+      if (detail?.id) setDetailItem(detail);
+    };
+    window.addEventListener("itjima:open-record-detail", onOpenDetail);
+    return () =>
+      window.removeEventListener("itjima:open-record-detail", onOpenDetail);
   }, []);
   const [menuFor, setMenuFor] = useState<string | null>(null);
   const [pasteSheet, setPasteSheet] = useState<{
@@ -1017,7 +1019,9 @@ function Inbox() {
           }
           void navigate({ to: "/schedule" });
         }}
-        onOpenAllRecords={() => setRecordsBrowseOpen(true)}
+        onOpenAllRecords={() => {
+          window.dispatchEvent(new Event("itjima:open-browse"));
+        }}
       />
 
       <div className="composer-hero relative sticky bottom-0 z-20 shrink-0">
@@ -1064,19 +1068,14 @@ function Inbox() {
         }}
       />
 
-      <RecordsBrowseSheet
-        open={recordsBrowseOpen}
-        items={allInboxItems}
-        onClose={() => setRecordsBrowseOpen(false)}
-        onOpenRecord={setDetailItem}
-      />
-
       {menuItem && (
         <ContextMenu
           menuItem={menuItem}
           onClose={() => setMenuFor(null)}
           onOpenCleanup={() => setCleanupReviewOpen(true)}
-          onOpenAllRecords={() => setRecordsBrowseOpen(true)}
+          onOpenAllRecords={() => {
+            window.dispatchEvent(new Event("itjima:open-browse"));
+          }}
           onUnderstandAgain={handleUnderstandAgain}
           onOpenHomeSchedule={openHomeSchedule}
           onMoveToArchive={moveToArchive}

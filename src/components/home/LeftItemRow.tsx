@@ -1,6 +1,8 @@
 import { MoreHorizontal } from "lucide-react";
 import type { InboxItem } from "@/lib/store";
 import { useLang, useT } from "@/lib/i18n";
+import { formatCaptureWhenLabel } from "@/lib/naturalScheduleDraft";
+import { isStructuredTimedRecord } from "@/lib/recordTemporal";
 
 type Props = {
   item: InboxItem;
@@ -33,7 +35,7 @@ function relativeMeta(createdAt: string, lang: "ko" | "en"): string {
   return lang === "ko" ? `${n}일 전` : `${n}d ago`;
 }
 
-/** Quiet flat record row — yellow dot + title + temporal typography (Figma 301:2). */
+/** Quiet flat record row — yellow dot + title + temporal typography. */
 export function LeftItemRow({
   item,
   onSetTime,
@@ -47,13 +49,22 @@ export function LeftItemRow({
   const { lang } = useLang();
   const uiLang = lang === "en" ? "en" : "ko";
   const title = item.text.trim() || t("(내용 없음)", "(No text)");
-  const meta = relativeMeta(item.created_at, uiLang);
+  const timed = isStructuredTimedRecord(item);
+  const meta =
+    timed && item.start_time
+      ? formatCaptureWhenLabel(
+          new Date(item.start_time),
+          Boolean(item.all_day),
+          uiLang,
+        )
+      : relativeMeta(item.created_at, uiLang);
   const done = item.status === "done";
 
   return (
     <li
       data-testid="left-item-row"
       data-chat-turn=""
+      data-timed={timed ? "true" : "false"}
       className="quietly-record-row home-chat-turn flex items-start gap-2 py-3 last:border-b-0"
       data-newest={isNewest ? "true" : "false"}
       data-has-promise="false"
@@ -92,10 +103,14 @@ export function LeftItemRow({
             </span>
           ) : null}
         </div>
-        <p className="mt-1 text-[13px] font-medium tabular-nums text-ink-soft">
+        <p
+          className={`mt-1 text-[13px] font-medium tabular-nums tracking-[-0.01em] ${
+            timed ? "text-primary" : "text-ink-soft"
+          }`}
+        >
           {meta}
         </p>
-        {showSetTime && !done && (
+        {showSetTime && !done && !timed && (
           <button
             type="button"
             data-testid="left-item-set-time"

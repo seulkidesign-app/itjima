@@ -96,4 +96,26 @@
     background: linear-gradient(155deg, #fffbe8, #fff3b9) !important;
     color: #111113 !important;
   }
+
+  /* ScheduleAlarmSheet presets only — do not restyle other BottomSheets. */
+  .schedule-alarm-sheet {
+    color-scheme: light !important;
+    color: #1a1a1f !important;
+  }
+
+  .schedule-alarm-sheet .alarm-preset-row,
+  .schedule-alarm-sheet [data-testid^="alarm-preset-"] {
+    background: #ffffff !important;
+    color: #1a1a1f !important;
+    border-color: #e8e8e5 !important;
+    -webkit-text-fill-color: #1a1a1f !important;
+  }
+
+  .schedule-alarm-sheet .alarm-preset-row:disabled,
+  .schedule-alarm-sheet [data-testid^="alarm-preset-"]:disabled {
+    background: #f3f3f5 !important;
+    color: #8a8a94 !important;
+    -webkit-text-fill-color: #8a8a94 !important;
+    opacity: 1 !important;
+  }
 }
