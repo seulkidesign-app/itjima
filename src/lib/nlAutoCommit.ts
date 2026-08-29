@@ -8,6 +8,7 @@ import {
 import { understandNaturalLanguage } from "@/lib/nlSchedule";
 import {
   countDistinctClockMentions,
+  isSingleClockRange,
   scheduleConfirmationReasons,
   type ScheduleConfirmationReason,
 } from "@/lib/nlScheduleSafety";
@@ -51,7 +52,9 @@ export function evaluateTimedAutoCommit(
   }
 
   const clockCount = countDistinctClockMentions(trimmed);
-  if (clockCount >= 2) return { ok: false, reason: "multiple_clocks" };
+  if (clockCount >= 2 && !isSingleClockRange(trimmed)) {
+    return { ok: false, reason: "multiple_clocks" };
+  }
 
   if (!hasNaturalScheduleTime(trimmed)) {
     return { ok: false, reason: "no_clock" };

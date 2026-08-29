@@ -1,7 +1,9 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   buildNaturalScheduleDraft,
+  cleanScheduleTitle,
   hasNaturalRepeatIntent,
+  hasNaturalScheduleTime,
   inferNaturalReminderMinutes,
   resolveNaturalScheduleStart,
 } from "@/lib/naturalScheduleDraft";
@@ -111,6 +113,18 @@ describe("natural schedule commitment parsing", () => {
     expect(draft.options.reminderMinutes).toBeNull();
   });
 
+  it("does not turn standalone dayparts into fake exact clocks", () => {
+    expect(hasNaturalScheduleTime("내일 오전에 청소")).toBe(false);
+    expect(hasNaturalScheduleTime("내일 오후에 청소")).toBe(false);
+
+    const morning = buildNaturalScheduleDraft(thought("내일 오전에 청소"));
+    const afternoon = buildNaturalScheduleDraft(thought("내일 오후에 청소"));
+    expect(morning.options.allDay).toBe(true);
+    expect(afternoon.options.allDay).toBe(true);
+    expect(morning.options.reminderMinutes).toBeNull();
+    expect(afternoon.options.reminderMinutes).toBeNull();
+  });
+
   it("understands conversational relative offsets without a model call", () => {
     const korean = buildNaturalScheduleDraft(thought("두 시간 뒤 엄마한테 전화"));
     expect(korean.start.getTime()).toBe(
@@ -153,5 +167,20 @@ describe("natural schedule commitment parsing", () => {
     const draft = buildNaturalScheduleDraft(thought("내일 3시 30분 치과"));
     expect(draft.options.allDay).toBe(true);
     expect(draft.text).toBe("치과");
+  });
+
+  it("keeps a resolved from-to range as one schedule with a real end", () => {
+    const draft = buildNaturalScheduleDraft(
+      thought("내일 오후 5시부터 6시까지 운동"),
+    );
+    expect(draft.options.allDay).toBe(false);
+    expect(draft.start.getHours()).toBe(17);
+    expect(draft.end.getHours()).toBe(18);
+    expect(draft.text).toBe("운동");
+  });
+
+  it("cleans Korean clock particles from the semantic title", () => {
+    expect(cleanScheduleTitle("5시에 청소")).toBe("청소");
+    expect(cleanScheduleTitle("내일 오후 5시에 청소")).toBe("청소");
   });
 });

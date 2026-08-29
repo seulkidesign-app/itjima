@@ -24,6 +24,21 @@ export type ScheduleConfirmationChoice = {
 type MentionedTime = { hour: number; minute: number };
 type BareClock = { hour: number; minute: number | null };
 
+const KO_CLOCK_RANGE_RE =
+  /(?:(오전|오후)\s*)?(\d{1,2})\s*시(?:\s*(반)|(?:\s*(\d{1,2})\s*분))?\s*부터\s*(?:(오전|오후)\s*)?(\d{1,2})\s*시(?:\s*(반)|(?:\s*(\d{1,2})\s*분))?\s*까지/;
+
+function inheritRangeMeridiem(text: string): string {
+  return text.replace(
+    KO_CLOCK_RANGE_RE,
+    (match, startPeriod: string | undefined, startHour: string, startHalf: string | undefined, startMinute: string | undefined, endPeriod: string | undefined, endHour: string, endHalf: string | undefined, endMinute: string | undefined) => {
+      if (!startPeriod || endPeriod) return match;
+      const startMinuteLabel = startHalf === "반" ? " 반" : startMinute ? ` ${startMinute}분` : "";
+      const endMinuteLabel = endHalf === "반" ? " 반" : endMinute ? ` ${endMinute}분` : "";
+      return `${startPeriod} ${startHour}시${startMinuteLabel}부터 ${startPeriod} ${endHour}시${endMinuteLabel}까지`;
+    },
+  );
+}
+
 function parseMentionedTime(text: string): MentionedTime | null {
   const ko = text.match(
     /(오전|오후)?\s*(\d{1,2})\s*시(?:\s*(반)|(?:\s*(\d{1,2})\s*분))?/,
@@ -54,13 +69,14 @@ function parseMentionedTime(text: string): MentionedTime | null {
 }
 
 function extractBareClock(text: string): BareClock | null {
-  for (const match of text.matchAll(
+  const normalized = inheritRangeMeridiem(text);
+  for (const match of normalized.matchAll(
     /(\d{1,2})\s*시(?:\s*(반)|(?:\s*(\d{1,2})\s*분))?/g,
   )) {
     const hour = Number(match[1]);
     // 1–12 without meridiem is ambiguous; 13–23 is 24h-style and resolved.
     if (hour < 1 || hour > 12) continue;
-    const prefix = text.slice(Math.max(0, (match.index ?? 0) - 4), match.index);
+    const prefix = normalized.slice(Math.max(0, (match.index ?? 0) - 4), match.index);
     if (/(오전|오후)\s*$/.test(prefix)) continue;
     return {
       hour,
@@ -68,7 +84,7 @@ function extractBareClock(text: string): BareClock | null {
     };
   }
 
-  const en = text.match(
+  const en = normalized.match(
     /\bat\s+(1[0-2]|[1-9])(?::([0-5]\d))?(?!\s*(?:am|pm)\b)/i,
   );
   return en
@@ -95,6 +111,14 @@ export function countDistinctClockMentions(text: string): number {
   ];
   // Prefer Korean tokens when present; English am/pm is a separate count.
   return Math.max(ko.length, enAmPm.length);
+}
+
+/** A from–to clock range is one event, not two separate schedule items. */
+export function isSingleClockRange(text: string): boolean {
+  const match = text.match(KO_CLOCK_RANGE_RE);
+  if (!match) return false;
+  const withoutRange = text.replace(KO_CLOCK_RANGE_RE, " ");
+  return countDistinctClockMentions(withoutRange) === 0;
 }
 
 /** Rough per-clock lines for multi-clock honesty UI (display only). */
@@ -172,6 +196,11 @@ function replaceBareMeridiem(text: string, period: "am" | "pm"): string {
 
 /** Drop an ambiguous bare clock so the remaining date can stay as all-day. */
 function stripBareClock(text: string): string {
+  const rangeResolved = text.replace(KO_CLOCK_RANGE_RE, " ");
+  if (rangeResolved !== text) {
+    return rangeResolved.replace(/\s+/g, " ").trim();
+  }
+
   const koResolved = text.replace(
     /(^|[\s(])(\d{1,2})\s*시(?:\s*(반)|(?:\s*(\d{1,2})\s*분))?/,
     "$1",
@@ -233,8 +262,8 @@ export function scheduleConfirmationReasons(
   const reasons: ScheduleConfirmationReason[] = [];
   const bareMeridiem = hasBareMeridiemGuess(trimmed);
 
-  // Two+ distinct clocks cannot become one silent event without a multi-event model.
-  if (countDistinctClockMentions(trimmed) >= 2) {
+  // Two independent clocks stay blocked, but a from–to range is one event.
+  if (countDistinctClockMentions(trimmed) >= 2 && !isSingleClockRange(trimmed)) {
     reasons.push("multiple_clocks");
   }
 
@@ -242,7 +271,7 @@ export function scheduleConfirmationReasons(
   if (bareMeridiem) reasons.push("assumed_meridiem");
 
   if (!bareMeridiem && /(오늘|\btoday\b)/i.test(trimmed)) {
-    const time = parseMentionedTime(trimmed);
+    const time = parseMentionedTime(inheritRangeMeridiem(trimmed));
     if (time) {
       const mentioned = new Date(now);
       mentioned.setHours(time.hour, time.minute, 0, 0);

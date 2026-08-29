@@ -3,6 +3,7 @@ import {
   hasExplicitScheduleTime,
   inboxScheduleDefaults,
 } from "@/lib/inboxScheduleDefaults";
+import { understandNaturalLanguage } from "@/lib/nlSchedule";
 import type { InboxItem } from "@/lib/store";
 
 function thought(text: string): InboxItem {
@@ -61,10 +62,25 @@ describe("inbox schedule defaults", () => {
     expect(result.start.getHours()).toBe(0);
   });
 
-  it("recognizes common Korean and English time phrases", () => {
-    expect(hasExplicitScheduleTime("내일 저녁 치과")).toBe(true);
+  it("treats dayparts as fuzzy, not exact clocks", () => {
+    expect(hasExplicitScheduleTime("내일 오전 치과")).toBe(false);
+    expect(hasExplicitScheduleTime("내일 오후 치과")).toBe(false);
+    expect(hasExplicitScheduleTime("내일 저녁 치과")).toBe(false);
+    expect(hasExplicitScheduleTime("tomorrow morning dentist")).toBe(false);
+    expect(hasExplicitScheduleTime("tomorrow afternoon dentist")).toBe(false);
     expect(hasExplicitScheduleTime("tomorrow at 3pm dentist")).toBe(true);
     expect(hasExplicitScheduleTime("내일 치과")).toBe(false);
+  });
+
+  it("does not expose the internal 9am anchor for date-only suggestions", () => {
+    const dateOnly = understandNaturalLanguage("내일 청소", "ko");
+    expect(dateOnly.hasExplicitTime).toBe(false);
+    expect(dateOnly.mirrorLine).toContain("하루 종일");
+    expect(dateOnly.mirrorLine).not.toContain("오전 9");
+
+    const afternoonOnly = understandNaturalLanguage("내일 오후에 청소", "ko");
+    expect(afternoonOnly.hasExplicitTime).toBe(false);
+    expect(afternoonOnly.mirrorLine).not.toContain("오전 9");
   });
 
   it("uses a future working-hour default only when no date was supplied", () => {
