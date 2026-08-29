@@ -887,14 +887,6 @@ function Inbox() {
         });
         // Undated / non-timed: durable raw only — no taxonomy confirmation.
         // Ambiguous timed stays in inbox for InlinePromise (AM/PM, multi-clock, …).
-        if (
-          decision.reason === "no_clock" ||
-          decision.reason === "date_only" ||
-          decision.reason === "quiet" ||
-          decision.reason === "empty_title"
-        ) {
-          toast.message(t("남겨뒀어요", "Left it here"), { duration: 2000 });
-        }
       }
 
       notifyThoughtSubmitted();
