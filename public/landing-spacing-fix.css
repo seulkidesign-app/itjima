@@ -193,6 +193,15 @@
   margin-top: 32px !important;
 }
 
+/* Lock the desktop card rhythm against older component-level overrides. */
+@media (min-width: 821px) {
+  .landing-v2 section.lv2-how .lv2-workflow > article.lv2-work-card,
+  .landing-v2 section.lv2-product .lv2-product-track > article.lv2-product-card,
+  .landing-v2 section.lv2-trust .lv2-trust-demo {
+    padding: 32px !important;
+  }
+}
+
 @media (max-width: 1050px) {
   .landing-v2 .lv2-container,
   .landing-v2 main#lv2-main .lv2-hero-demo-wrap {
