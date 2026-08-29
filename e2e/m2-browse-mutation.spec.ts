@@ -57,10 +57,9 @@ async function openAllRecords(page: Page) {
   await expect(frame.getByTestId("records-browse-sheet")).toBeVisible();
 }
 
-async function openScheduleEditFromUpcoming(page: Page, title: string) {
+async function openScheduleEdit(page: Page, title: string) {
   const frame = phone(page);
   await frame.getByRole("link", { name: /^Schedule/ }).click();
-  await frame.getByRole("tab", { name: "Upcoming" }).click();
   const row = frame
     .getByTestId("schedule-compact-row")
     .filter({ hasText: title });
@@ -103,9 +102,7 @@ async function saveScheduleSheet(page: Page) {
       .getByRole("button", { name: "Save without notifications" })
       .click();
   }
-  await expect(page.getByRole("dialog", { name: "Edit schedule" })).toHaveCount(
-    0,
-  );
+  await expect(page.getByRole("dialog", { name: "Edit schedule" })).toHaveCount(0);
 }
 
 test.describe("M2 browse & mutation trust", () => {
@@ -113,9 +110,7 @@ test.describe("M2 browse & mutation trust", () => {
     await resetAppState(page);
   });
 
-  test("1 undated record appears in All records and search", async ({
-    page,
-  }) => {
+  test("1 undated record appears in All records and search", async ({ page }) => {
     const marker = `Undated note ${Date.now()}`;
     await submitText(page, marker);
     await expect(phone(page).getByText(marker).first()).toBeVisible();
@@ -128,17 +123,13 @@ test.describe("M2 browse & mutation trust", () => {
     ).toHaveCount(1);
 
     await frame.getByTestId("records-browse-search").fill("Undated note");
-    await expect(
-      frame.getByTestId("records-browse-search-results"),
-    ).toBeVisible();
+    await expect(frame.getByTestId("records-browse-search-results")).toBeVisible();
     await expect(
       frame.getByTestId("records-browse-row").filter({ hasText: marker }),
     ).toHaveCount(1);
   });
 
-  test("2 timed record is one browse row and also on schedule", async ({
-    page,
-  }) => {
+  test("2 timed record is one browse row and also on schedule", async ({ page }) => {
     await submitExactTimed(page, "Dentist tomorrow at 3pm");
     const inbox = await activeInbox(page);
     const sched = await schedules(page);
@@ -163,13 +154,11 @@ test.describe("M2 browse & mutation trust", () => {
     }
 
     await frame.getByRole("link", { name: /^Schedule/ }).click();
-    await frame.getByRole("tab", { name: "Upcoming" }).click();
+    await expect(frame.getByTestId("schedule-section-upcoming")).toBeVisible();
     await expect(frame.getByText(title).first()).toBeVisible();
   });
 
-  test("3 timed detail text edit syncs browse and schedule", async ({
-    page,
-  }) => {
+  test("3 timed detail text edit syncs browse and schedule", async ({ page }) => {
     await submitExactTimed(page, "Dentist tomorrow at 3pm");
     const before = await schedules(page);
     const original = before[0]!.text!;
@@ -177,15 +166,10 @@ test.describe("M2 browse & mutation trust", () => {
 
     await openAllRecords(page);
     const frame = phone(page);
-    await frame
-      .getByTestId("records-browse-row")
-      .filter({ hasText: original })
-      .click();
+    await frame.getByTestId("records-browse-row").filter({ hasText: original }).click();
     const detail = page.getByRole("dialog", { name: /Record detail|기록 상세|This thought|이 생각/i });
     await expect(detail).toBeVisible();
-    await detail
-      .getByRole("button", { name: /Edit|수정하기/i })
-      .click();
+    await detail.getByRole("button", { name: /Edit|수정하기/i }).click();
     await detail.getByLabel(/Edit thought|생각 수정/i).fill(edited);
     await detail.getByRole("button", { name: /Save changes|반영하기/i }).click();
 
@@ -207,7 +191,7 @@ test.describe("M2 browse & mutation trust", () => {
     const title = before[0]!.text!;
     const beforeStart = before[0]!.start_time!;
 
-    await openScheduleEditFromUpcoming(page, title);
+    await openScheduleEdit(page, title);
     await advanceManagerToRangeStep(page);
     const sheet = page.getByRole("dialog", { name: "Edit schedule" });
     const startTime = sheet.getByLabel("Start time");
@@ -216,9 +200,7 @@ test.describe("M2 browse & mutation trust", () => {
       await startAllDay.click();
     }
     await startTime.click();
-    await startTime.press(
-      process.platform === "darwin" ? "Meta+a" : "Control+a",
-    );
+    await startTime.press(process.platform === "darwin" ? "Meta+a" : "Control+a");
     await startTime.pressSequentially("16:30");
     await saveScheduleSheet(page);
 
@@ -228,66 +210,46 @@ test.describe("M2 browse & mutation trust", () => {
     expect(afterInbox[0]?.start_time).toBe(afterSched[0]?.start_time);
   });
 
-  test("5 datetime remove keeps record and drops schedule only", async ({
-    page,
-  }) => {
+  test("5 datetime remove keeps record and drops schedule only", async ({ page }) => {
     await submitExactTimed(page, "Dentist tomorrow at 3pm");
     const title = (await schedules(page))[0]!.text!;
 
     await openAllRecords(page);
     const frame = phone(page);
-    await frame
-      .getByTestId("records-browse-row")
-      .filter({ hasText: title })
-      .click();
-    await page
-      .getByRole("button", { name: /Remove date & time|날짜·시간 지우기/i })
-      .click();
+    await frame.getByTestId("records-browse-row").filter({ hasText: title }).click();
+    await page.getByRole("button", { name: /Remove date & time|날짜·시간 지우기/i }).click();
 
     const inbox = await allInbox(page);
     const sched = await schedules(page);
     expect(inbox).toHaveLength(1);
     expect(inbox[0]?.status).not.toBe("deleted");
-    expect(inbox[0]?.start_time == null || inbox[0]?.start_time === null).toBe(
-      true,
-    );
+    expect(inbox[0]?.start_time == null || inbox[0]?.start_time === null).toBe(true);
     expect(inbox[0]?.temporal_state).toBe("no_time");
     expect(sched).toHaveLength(0);
   });
 
-  test("6 complete hides from Capture but searchable as done", async ({
-    page,
-  }) => {
+  test("6 complete hides from Capture but searchable as done", async ({ page }) => {
     await submitExactTimed(page, "Dentist tomorrow at 3pm");
     const title = (await schedules(page))[0]!.text!;
 
     const frame = phone(page);
     await frame.getByRole("link", { name: /^Schedule/ }).click();
-    await frame.getByRole("tab", { name: "Upcoming" }).click();
     await frame
       .getByTestId("schedule-compact-row")
       .filter({ hasText: title })
       .getByTestId("schedule-row-complete")
       .click();
 
-    await expect
-      .poll(async () => (await allInbox(page))[0]?.status)
-      .toBe("done");
+    await expect.poll(async () => (await allInbox(page))[0]?.status).toBe("done");
     expect(await activeInbox(page)).toHaveLength(0);
 
     await openAllRecords(page);
-    await expect(
-      frame
-        .getByTestId("records-browse-row")
-        .filter({ hasText: title })
-        .first(),
-    ).toBeVisible();
-    await expect(
-      frame
-        .getByTestId("records-browse-row")
-        .filter({ hasText: title })
-        .first(),
-    ).toHaveAttribute("data-status", "done");
+    const browseRow = frame
+      .getByTestId("records-browse-row")
+      .filter({ hasText: title })
+      .first();
+    await expect(browseRow).toBeVisible();
+    await expect(browseRow).toHaveAttribute("data-status", "done");
 
     await frame.getByTestId("records-browse-search").fill(title.slice(0, 6));
     await expect(
@@ -300,16 +262,13 @@ test.describe("M2 browse & mutation trust", () => {
     const title = (await schedules(page))[0]!.text!;
     const frame = phone(page);
     await frame.getByRole("link", { name: /^Schedule/ }).click();
-    await frame.getByRole("tab", { name: "Upcoming" }).click();
     await frame
       .getByTestId("schedule-compact-row")
       .filter({ hasText: title })
       .getByTestId("schedule-row-complete")
       .click();
 
-    await expect
-      .poll(async () => (await allInbox(page))[0]?.status)
-      .toBe("done");
+    await expect.poll(async () => (await allInbox(page))[0]?.status).toBe("done");
 
     await frame.getByRole("button", { name: /Done ·|완료 ·/i }).click();
     await frame
@@ -318,17 +277,11 @@ test.describe("M2 browse & mutation trust", () => {
       .getByTestId("schedule-row-complete")
       .click();
 
-    await expect
-      .poll(async () => (await allInbox(page))[0]?.status)
-      .toBe("active");
-    await expect
-      .poll(async () => (await schedules(page))[0]?.status)
-      .not.toBe("done");
+    await expect.poll(async () => (await allInbox(page))[0]?.status).toBe("active");
+    await expect.poll(async () => (await schedules(page))[0]?.status).not.toBe("done");
   });
 
-  test("8 timed delete + undo restores text/time/status/projection", async ({
-    page,
-  }) => {
+  test("8 timed delete + undo restores text/time/status/projection", async ({ page }) => {
     await submitExactTimed(page, "Dentist tomorrow at 3pm");
     const beforeInbox = (await allInbox(page))[0]!;
     const beforeSched = (await schedules(page))[0]!;
@@ -336,18 +289,13 @@ test.describe("M2 browse & mutation trust", () => {
 
     await openAllRecords(page);
     const frame = phone(page);
-    await frame
-      .getByTestId("records-browse-row")
-      .filter({ hasText: title })
-      .click();
+    await frame.getByTestId("records-browse-row").filter({ hasText: title }).click();
     const detail = page.getByRole("dialog", { name: /Record detail|기록 상세|This thought|이 생각/i });
     await expect(detail).toBeVisible();
     await detail.getByRole("button", { name: /Delete|삭제하기/i }).click();
 
     await expect.poll(async () => (await schedules(page)).length).toBe(0);
-    await expect
-      .poll(async () => (await allInbox(page))[0]?.status)
-      .toBe("deleted");
+    await expect.poll(async () => (await allInbox(page))[0]?.status).toBe("deleted");
 
     await page
       .getByRole("status")
@@ -355,12 +303,8 @@ test.describe("M2 browse & mutation trust", () => {
       .getByRole("button", { name: /Undo|되돌리기/i })
       .click();
 
-    await expect
-      .poll(async () => (await allInbox(page))[0]?.status)
-      .toBe(beforeInbox.status ?? "active");
-    await expect
-      .poll(async () => (await schedules(page)).length)
-      .toBe(1);
+    await expect.poll(async () => (await allInbox(page))[0]?.status).toBe(beforeInbox.status ?? "active");
+    await expect.poll(async () => (await schedules(page)).length).toBe(1);
     const restoredInbox = (await allInbox(page))[0]!;
     const restoredSched = (await schedules(page))[0]!;
     expect(restoredInbox.text).toBe(beforeInbox.text);
@@ -375,9 +319,7 @@ test.describe("M2 browse & mutation trust", () => {
     ).toHaveCount(1);
   });
 
-  test("9 legacy source_id schedule deep link / edit works", async ({
-    page,
-  }) => {
+  test("9 legacy source_id schedule deep link / edit works", async ({ page }) => {
     const canonicalId = "canonical-legacy-m2";
     const start = new Date();
     start.setDate(start.getDate() + 1);
@@ -388,9 +330,7 @@ test.describe("M2 browse & mutation trust", () => {
       ({ inboxKey, scheduleKey, inbox, schedule }) => {
         localStorage.setItem(inboxKey, JSON.stringify([inbox]));
         localStorage.setItem(scheduleKey, JSON.stringify([schedule]));
-        window.dispatchEvent(
-          new CustomEvent("itjima:update", { detail: scheduleKey }),
-        );
+        window.dispatchEvent(new CustomEvent("itjima:update", { detail: scheduleKey }));
       },
       {
         inboxKey: GUEST_INBOX_KEY,
@@ -420,30 +360,22 @@ test.describe("M2 browse & mutation trust", () => {
       },
     );
     await page.reload();
-    await phone(page).getByRole("link", { name: /^Capture$/ }).waitFor({
-      state: "visible",
-    });
+    await phone(page).getByRole("link", { name: /^Capture$/ }).waitFor({ state: "visible" });
 
     await page.evaluate((id) => {
       sessionStorage.setItem("itjima.openScheduleEdit", id);
     }, canonicalId);
     await phone(page).getByRole("link", { name: /^Schedule/ }).click();
-    await expect(
-      page.getByRole("dialog", { name: "Edit schedule" }),
-    ).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByRole("dialog", { name: "Edit schedule" })).toBeVisible({ timeout: 15_000 });
   });
 
-  test("10 DecisionDeck one-by-one archive is unreachable in V0.2 UI", async ({
-    page,
-  }) => {
+  test("10 DecisionDeck one-by-one archive is unreachable in V0.2 UI", async ({ page }) => {
     await submitText(page, `Stay undated ${Date.now()}`);
     const frame = phone(page);
     await frame.getByTestId("left-item-more").last().click();
     const menu = frame.getByTestId("inbox-context-menu");
     await expect(menu).toBeVisible();
-    await expect(menu.getByText(/Sort one by one|하나씩 정리하기/i)).toHaveCount(
-      0,
-    );
+    await expect(menu.getByText(/Sort one by one|하나씩 정리하기/i)).toHaveCount(0);
     await expect(menu.getByText(/All records|전체 기록/i)).toBeVisible();
   });
 });
