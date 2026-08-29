@@ -178,6 +178,36 @@
     -webkit-backdrop-filter: none !important;
     padding-bottom: 10px !important;
   }
+
+  /* Mobile capture focus should read as one rounded control, not an inner
+     yellow rectangle. Preserve a keyboard-visible ring without the double glow. */
+  .itjima-app-stage[data-route="home"] form.composer-hero .input-shell:focus-within,
+  .itjima-app-stage[data-route="home"] form.composer-hero .input-shell.input-shell-focused {
+    border-color: var(--quietly-border, #e8e8e5) !important;
+    box-shadow: var(--shadow-input, 0 10px 13px rgba(26, 26, 31, 0.08)) !important;
+  }
+
+  .itjima-app-stage[data-route="home"] form.composer-hero .input-shell:has(textarea:focus-visible) {
+    border-color: #d2b400 !important;
+    box-shadow:
+      0 0 0 2px rgba(255, 224, 51, 0.32),
+      var(--shadow-input, 0 10px 13px rgba(26, 26, 31, 0.08)) !important;
+  }
+
+  /* Routine success/undo feedback should not dominate the app chrome. Errors
+     still use Sonner's semantic treatment; this only quiets size and elevation. */
+  [data-sonner-toaster] [data-sonner-toast] {
+    border-radius: 16px !important;
+    box-shadow: 0 8px 24px -14px rgba(26, 26, 31, 0.22) !important;
+    padding: 10px 12px !important;
+    font-size: 13px !important;
+  }
+
+  [data-sonner-toaster] [data-sonner-toast] [data-button] {
+    min-height: 36px !important;
+    padding-inline: 12px !important;
+    font-size: 12px !important;
+  }
 }
 
 /* Tablet segmented nav — yellow active */
