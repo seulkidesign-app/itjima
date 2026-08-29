@@ -29,14 +29,16 @@ test("[critical] installed mobile UI stays consistently light when the OS reques
   );
   expect(colorScheme).toBe("light");
 
+  // The FINAL 319 empty composer intentionally has a transparent outer
+  // wrapper; the visible input pill is the light product surface.
   const surfaces = [
     ["mobile header", ".mobile-app-header"],
-    ["capture composer", "form.composer-hero"],
+    ["capture input pill", "form.composer-hero .input-shell"],
     ["bottom navigation", ".mobile-bottom-nav"],
   ] as const;
 
   for (const [label, selector] of surfaces) {
-    const locator = page.locator(selector);
+    const locator = page.locator(selector).first();
     await expect(locator, `${label} should be visible`).toBeVisible();
     const background = await locator.evaluate(
       (element) => getComputedStyle(element).backgroundColor,
