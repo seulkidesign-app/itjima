@@ -127,14 +127,18 @@ for (const viewport of viewports) {
     }
 
     const settings = page.locator('[data-testid="open-settings"]:visible');
-    await expect(settings).toHaveCount(1);
-    await settings.click();
-    const dialog = page.getByRole("dialog", { name: "Settings" });
-    await expect(dialog).toBeVisible();
-    await page.waitForTimeout(450);
-    await expectInsideViewport(page, '.bottom-sheet-panel[role="dialog"]');
-    await page.keyboard.press("Escape");
-    await expect(dialog).toBeHidden();
+    if (viewport.width < 640) {
+      await expect(settings).toHaveCount(0);
+    } else {
+      await expect(settings).toHaveCount(1);
+      await settings.click();
+      const dialog = page.getByRole("dialog", { name: "Settings" });
+      await expect(dialog).toBeVisible();
+      await page.waitForTimeout(450);
+      await expectInsideViewport(page, '.bottom-sheet-panel[role="dialog"]');
+      await page.keyboard.press("Escape");
+      await expect(dialog).toBeHidden();
+    }
 
     await page
       .getByRole("link", { name: /^(Schedule|일정)$/ })
@@ -144,10 +148,6 @@ for (const viewport of viewports) {
     ).toBeVisible();
     await expectNoHorizontalOverflow(page);
 
-    await page.getByRole("link", { name: "Archive", exact: true }).click();
-    await expect(
-      page.getByRole("heading", { name: "Archive", exact: true }),
-    ).toBeVisible();
-    await expectNoHorizontalOverflow(page);
+    await expect(page.getByRole("link", { name: "Archive", exact: true })).toHaveCount(0);
   });
 }

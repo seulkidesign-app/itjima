@@ -102,7 +102,7 @@ test.beforeEach(async ({ page }) => {
   });
 });
 
-test("[critical] primary navigation, layout, and settings work at every breakpoint", async ({
+test("[critical] primary navigation and layout follow the 319 breakpoint contract", async ({
   page,
 }) => {
   const errors = collectPageErrors(page);
@@ -134,11 +134,16 @@ test("[critical] primary navigation, layout, and settings work at every breakpoi
   await expect(page.getByRole("link", { name: "Archive", exact: true })).toHaveCount(0);
 
   await page.getByRole("link", { name: "Capture", exact: true }).click();
-  const settingsButton = await openSettings(page);
-  await page.keyboard.press("Escape");
-  await expect(page.getByRole("dialog", { name: "Settings" })).toBeHidden();
-  await expect(settingsButton).toBeFocused();
-  await expect(settingsButton).toHaveAttribute("aria-expanded", "false");
+  const viewportWidth = page.viewportSize()?.width ?? 0;
+  if (viewportWidth < 640) {
+    await expect(page.locator('[data-testid="open-settings"]:visible')).toHaveCount(0);
+  } else {
+    const settingsButton = await openSettings(page);
+    await page.keyboard.press("Escape");
+    await expect(page.getByRole("dialog", { name: "Settings" })).toBeHidden();
+    await expect(settingsButton).toBeFocused();
+    await expect(settingsButton).toHaveAttribute("aria-expanded", "false");
+  }
 
   expect(errors).toEqual([]);
 });
@@ -230,6 +235,7 @@ test("[critical] settings language and data controls are reachable and reversibl
   page,
 }) => {
   const errors = collectPageErrors(page);
+  await page.setViewportSize({ width: 768, height: 1024 });
   await page.goto("/app?lang=en");
 
   await openSettings(page);
@@ -259,7 +265,9 @@ test("[critical] attachment menu is keyboard-dismissible and returns to capture"
   const errors = collectPageErrors(page);
   await page.goto("/app?lang=en");
 
+  await page.locator("#capture-input").click();
   const tools = page.getByRole("button", { name: "Attachment tools" });
+  await expect(tools).toBeVisible();
   await tools.click();
   await expect(tools).toHaveAttribute("aria-expanded", "true");
   await expect(page.getByRole("menu", { name: "Attachment tools" })).toBeVisible();
