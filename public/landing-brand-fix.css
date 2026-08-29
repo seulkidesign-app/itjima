@@ -27,9 +27,9 @@
   letter-spacing: -0.025em !important;
 }
 
-/* The floating nav must never visually collide with the hero headline. */
+/* Keep comfortable air below the floating nav without pushing the hero too far down. */
 .landing-v2 main#lv2-main section.lv2-hero {
-  padding-top: 252px !important;
+  padding-top: 218px !important;
 }
 
 /* Glass navigation: lower opacity, no stroke, stronger background blur. */
@@ -39,6 +39,58 @@
   box-shadow: 0 14px 38px rgba(24, 27, 28, 0.075) !important;
   backdrop-filter: blur(26px) saturate(1.14) !important;
   -webkit-backdrop-filter: blur(26px) saturate(1.14) !important;
+}
+
+/* Hero copy: one visual axis from eyebrow through CTA. */
+.landing-v2 main#lv2-main .lv2-hero-copy {
+  width: min(1120px, calc(100% - 48px)) !important;
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+  margin-inline: auto !important;
+  text-align: center !important;
+}
+
+.landing-v2 main#lv2-main .lv2-hero-copy .lv2-eyebrow {
+  margin-bottom: 26px !important;
+}
+
+.landing-v2 main#lv2-main .lv2-hero h1 {
+  width: 100% !important;
+  max-width: 1120px !important;
+  margin-inline: auto !important;
+  font-size: clamp(50px, 4.6vw, 72px) !important;
+  line-height: 1.08 !important;
+  letter-spacing: -0.06em !important;
+  text-align: center !important;
+}
+
+.landing-v2 main#lv2-main .lv2-lead {
+  width: min(720px, 100%) !important;
+  margin: 32px auto 0 !important;
+  text-align: center !important;
+}
+
+.landing-v2 main#lv2-main .lv2-hero-cta-row {
+  width: 100% !important;
+  margin-top: 28px !important;
+  justify-content: center !important;
+}
+
+.landing-v2 main#lv2-main .lv2-no-setup {
+  width: 100% !important;
+  margin-top: 18px !important;
+  text-align: center !important;
+}
+
+.landing-v2 main#lv2-main .lv2-hero-demo-wrap {
+  margin-top: 64px !important;
+}
+
+@media (min-width: 1051px) {
+  .landing-v2 main#lv2-main .lv2-hero h1 span {
+    white-space: nowrap !important;
+  }
 }
 
 /* Hero demo: bring the yellow in earlier and add depth so it separates from the white page. */
@@ -110,6 +162,17 @@
   background-image: none !important;
 }
 
+@media (max-width: 1050px) {
+  .landing-v2 main#lv2-main .lv2-hero-copy {
+    width: min(900px, calc(100% - 40px)) !important;
+  }
+
+  .landing-v2 main#lv2-main .lv2-hero h1 {
+    max-width: 880px !important;
+    font-size: clamp(46px, 6.2vw, 64px) !important;
+  }
+}
+
 @media (max-width: 820px) {
   .landing-v2 main#lv2-main section.lv2-hero {
     padding-top: 180px !important;
@@ -129,6 +192,25 @@
     font-size: 18px !important;
   }
 
+  .landing-v2 main#lv2-main .lv2-hero-copy {
+    width: min(680px, calc(100% - 32px)) !important;
+  }
+
+  .landing-v2 main#lv2-main .lv2-hero h1 {
+    max-width: 650px !important;
+    font-size: clamp(42px, 8.4vw, 58px) !important;
+    line-height: 1.1 !important;
+  }
+
+  .landing-v2 main#lv2-main .lv2-lead {
+    width: min(560px, 100%) !important;
+    margin-top: 28px !important;
+  }
+
+  .landing-v2 main#lv2-main .lv2-hero-demo-wrap {
+    margin-top: 52px !important;
+  }
+
   .landing-v2 section.lv2-brand-band .lv2-brand-masthead::after {
     font-size: clamp(150px, 35vw, 270px) !important;
   }
@@ -137,6 +219,21 @@
 @media (max-width: 560px) {
   .landing-v2 main#lv2-main section.lv2-hero {
     padding-top: 168px !important;
+  }
+
+  .landing-v2 main#lv2-main .lv2-hero-copy {
+    width: calc(100% - 28px) !important;
+  }
+
+  .landing-v2 main#lv2-main .lv2-hero h1 {
+    font-size: clamp(38px, 11.5vw, 50px) !important;
+    line-height: 1.12 !important;
+  }
+
+  .landing-v2 main#lv2-main .lv2-lead {
+    width: 100% !important;
+    font-size: 15px !important;
+    line-height: 1.65 !important;
   }
 
   .landing-v2 section.lv2-brand-band .lv2-brand-masthead::after {
