@@ -61,8 +61,16 @@ async function openScheduleEditFromUpcoming(page: Page, title: string) {
   const frame = phone(page);
   await frame.getByRole("link", { name: /^Schedule/ }).click();
   await frame.getByRole("tab", { name: "Upcoming" }).click();
-  await expect(frame.getByText(title).first()).toBeVisible();
-  await frame.getByRole("button", { name: `Edit ${title}` }).click();
+  const row = frame
+    .getByTestId("schedule-compact-row")
+    .filter({ hasText: title });
+  await expect(row).toBeVisible();
+  await row.getByTestId("schedule-row-open-detail").click();
+  const detail = page.getByRole("dialog", {
+    name: /Record detail|기록 상세/i,
+  });
+  await expect(detail).toBeVisible();
+  await detail.getByRole("button", { name: /Change time|시간 수정/i }).click();
   await expect(page.getByRole("dialog", { name: "Edit schedule" })).toBeVisible();
 }
 
@@ -150,7 +158,6 @@ test.describe("M2 browse & mutation trust", () => {
     ).toHaveCount(1);
 
     await frame.getByRole("button", { name: /Close|닫기/i }).first().click().catch(() => {});
-    // Close via backdrop / sheet close if needed
     if (await frame.getByTestId("records-browse-sheet").isVisible().catch(() => false)) {
       await page.keyboard.press("Escape");
     }
@@ -304,7 +311,6 @@ test.describe("M2 browse & mutation trust", () => {
       .poll(async () => (await allInbox(page))[0]?.status)
       .toBe("done");
 
-    // Expand Done section and tap check to undo.
     await frame.getByRole("button", { name: /Done ·|완료 ·/i }).click();
     await frame
       .getByTestId("schedule-compact-row")
@@ -343,7 +349,6 @@ test.describe("M2 browse & mutation trust", () => {
       .poll(async () => (await allInbox(page))[0]?.status)
       .toBe("deleted");
 
-    // Undo before opening other sheets so the snackbar stays actionable.
     await page
       .getByRole("status")
       .filter({ hasText: /Deleted|삭제했어요/i })
