@@ -82,31 +82,43 @@ test("desktop capture controls finish at the bottom of the workspace", async ({
   await expectNoHorizontalOverflow(page);
 });
 
-test("mobile schedule keeps only the compact tabs sticky", async ({ page }) => {
+test("mobile schedule keeps the unified header sticky and content scrollable", async ({
+  page,
+}) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await resetAppState(page);
   await page.getByRole("link", { name: /^Schedule/ }).click();
   await expect(
-    page.getByRole("heading", { name: "Schedule", exact: true }),
+    page.getByRole("heading", { name: "My schedule", exact: true }),
   ).toBeVisible();
+  await expect(page.getByTestId("schedule-unified-view")).toBeVisible();
+  await expect(page.locator("#schedule-tab-today")).toHaveCount(0);
+  await expect(page.locator("#schedule-tab-list")).toHaveCount(0);
+  await expect(page.locator("#schedule-tab-cal")).toHaveCount(0);
 
   const metrics = await page.evaluate(() => {
-    const wrapper = document.querySelector<HTMLElement>(
-      ".itjima-app-stage[data-route='schedule'] .sticky:has(#schedule-tab-today)",
+    const header = document.querySelector<HTMLElement>(
+      ".itjima-app-stage[data-route='schedule'] header.sticky.top-0",
     );
-    const tabs = wrapper?.children.item(1) as HTMLElement | null;
-    if (!wrapper || !tabs) throw new Error("schedule header not found");
+    const content = document.querySelector<HTMLElement>(
+      ".itjima-app-stage[data-route='schedule'] [data-testid='schedule-unified-view']",
+    );
+    if (!header || !content) throw new Error("unified schedule layout not found");
 
     return {
-      wrapperDisplay: getComputedStyle(wrapper).display,
-      tabsPosition: getComputedStyle(tabs).position,
-      tabsHeight: tabs.getBoundingClientRect().height,
+      headerPosition: getComputedStyle(header).position,
+      headerTop: getComputedStyle(header).top,
+      headerHeight: header.getBoundingClientRect().height,
+      contentOverflowY: getComputedStyle(content).overflowY,
+      contentHeight: content.getBoundingClientRect().height,
     };
   });
 
-  expect(metrics.wrapperDisplay).toBe("contents");
-  expect(metrics.tabsPosition).toBe("sticky");
-  expect(metrics.tabsHeight).toBeLessThanOrEqual(68);
+  expect(metrics.headerPosition).toBe("sticky");
+  expect(metrics.headerTop).toBe("0px");
+  expect(metrics.headerHeight).toBeLessThanOrEqual(100);
+  expect(["auto", "scroll"]).toContain(metrics.contentOverflowY);
+  expect(metrics.contentHeight).toBeGreaterThan(0);
   await expectNoHorizontalOverflow(page);
 });
 
