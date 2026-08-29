@@ -1,6 +1,5 @@
 import { Link, useRouterState } from "@tanstack/react-router";
 import {
-  Archive,
   CalendarDays,
   MessageSquareText,
   Settings,
@@ -12,7 +11,7 @@ import { useT } from "@/lib/i18n";
 import { useUserId } from "@/lib/store";
 import { tap } from "@/lib/haptics";
 
-/** Desktop primary nav — same IA as mobile, Quietly yellow language (Figma 319:2). */
+/** Desktop primary nav — same locked IA as mobile, Quietly yellow language (Figma 319:2). */
 export function DesktopAppNav() {
   const t = useT();
   const pathname = useRouterState({ select: (state) => state.location.pathname });
@@ -30,12 +29,6 @@ export function DesktopAppNav() {
       label: t("일정", "Schedule"),
       ariaLabel: t("일정", "Schedule"),
       Icon: CalendarDays,
-    },
-    {
-      to: "/archive" as const,
-      label: t("보관함", "Archive"),
-      ariaLabel: t("보관함", "Archive"),
-      Icon: Archive,
     },
   ];
 

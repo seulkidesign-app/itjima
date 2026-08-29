@@ -68,7 +68,7 @@ async function seedGuestData(page: Page) {
   );
 }
 
-test.describe("IA navigation (Capture / Tasks & schedule / Archive)", () => {
+test.describe("IA navigation (Figma 319 locked primary nav)", () => {
   test.beforeEach(async ({ page }) => {
     await resetForIa(page);
     await seedGuestData(page);
@@ -76,12 +76,12 @@ test.describe("IA navigation (Capture / Tasks & schedule / Archive)", () => {
     await page.getByRole("link", { name: CAPTURE_LINK_NAME }).waitFor({ state: "visible" });
   });
 
-  test("tabs, route labels, and guest data persist across navigation", async ({
+  test("primary nav stays Capture / Schedule while stored data remains reachable", async ({
     page,
   }) => {
     await expect(page.getByRole("link", { name: CAPTURE_LINK_NAME })).toBeVisible();
     await expect(page.getByRole("link", { name: TASKS_SCHEDULE_LINK_NAME })).toBeVisible();
-    await expect(page.getByRole("link", { name: /^Archive$/ })).toBeVisible();
+    await expect(page.getByRole("link", { name: /^Archive$/ })).toHaveCount(0);
 
     await page.screenshot({ path: "qa-ia/01-capture.png" });
 
@@ -104,7 +104,8 @@ test.describe("IA navigation (Capture / Tasks & schedule / Archive)", () => {
 
     await page.screenshot({ path: "qa-ia/02-schedule.png" });
 
-    await page.getByRole("link", { name: /^Archive$/ }).click();
+    // Archive is no longer primary navigation, but its existing data route stays intact.
+    await page.goto("/archive");
     await expect(page).toHaveURL(/\/archive$/);
     await expect(
       page.getByRole("heading", { name: "Archive", exact: true }),
@@ -118,7 +119,7 @@ test.describe("IA navigation (Capture / Tasks & schedule / Archive)", () => {
 
     await page.screenshot({ path: "qa-ia/03-archive-shell.png" });
 
-    await page.getByRole("link", { name: CAPTURE_LINK_NAME }).click();
+    await page.goto("/app");
     await expect(page).toHaveURL(/\/app\/?$/);
 
     const schedules = await readGuestList(page, GUEST_SCHEDULE_KEY);
@@ -149,7 +150,7 @@ test.describe("IA visual QA viewports", () => {
       await expect(
         phone(page).getByRole("link", { name: TASKS_SCHEDULE_LINK_NAME_KO }),
       ).toBeVisible();
-      await expect(phone(page).getByRole("link", { name: /^보관함$/ })).toBeVisible();
+      await expect(phone(page).getByRole("link", { name: /^보관함$/ })).toHaveCount(0);
 
       const metrics = await page.evaluate(() => ({
         scrollWidth: document.documentElement.scrollWidth,

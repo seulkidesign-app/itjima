@@ -1,5 +1,5 @@
 import { Link, useRouterState } from "@tanstack/react-router";
-import { Archive, CalendarDays, MessageSquareText, Search, User } from "lucide-react";
+import { CalendarDays, MessageSquareText, Search, User } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { motion, LayoutGroup } from "framer-motion";
 import { useT } from "@/lib/i18n";
@@ -25,15 +25,8 @@ export function TopNav() {
       ariaLabel: t("일정", "Schedule"),
       Icon: CalendarDays,
     },
-    {
-      to: "/archive",
-      label: t("보관함", "Archive"),
-      ariaLabel: t("보관함", "Archive"),
-      Icon: Archive,
-    },
   ] as const;
 
-  const mobileSettingsRef = useRef<HTMLButtonElement | null>(null);
   const tabletSettingsRef = useRef<HTMLButtonElement | null>(null);
   const [scrolled, setScrolled] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
@@ -54,10 +47,10 @@ export function TopNav() {
   const closeSettings = () => {
     setSettingsOpen(false);
     const restoreFocus = () => {
-      const trigger = [mobileSettingsRef.current, tabletSettingsRef.current].find(
-        (element) => element && element.getClientRects().length > 0,
-      );
-      trigger?.focus({ preventScroll: true });
+      const trigger = tabletSettingsRef.current;
+      if (trigger && trigger.getClientRects().length > 0) {
+        trigger.focus({ preventScroll: true });
+      }
     };
     queueMicrotask(restoreFocus);
     window.requestAnimationFrame(() => {
@@ -96,35 +89,18 @@ export function TopNav() {
             {renderBrand(
               "app-brand-trigger rounded-[12px] px-1 py-1 leading-none text-ink",
             )}
-            <div className="flex items-center gap-1">
-              <button
-                type="button"
-                data-testid="open-browse-search"
-                aria-label={t("기록 검색", "Search records")}
-                onClick={() => {
-                  tap();
-                  window.dispatchEvent(new Event("itjima:open-browse"));
-                }}
-                className="touch-press grid h-11 w-11 place-items-center rounded-full text-ink"
-              >
-                <Search size={18} strokeWidth={2.2} aria-hidden />
-              </button>
-              <button
-                ref={mobileSettingsRef}
-                type="button"
-                data-testid="open-settings"
-                aria-label={t("설정 열기", "Open settings")}
-                aria-haspopup="dialog"
-                aria-expanded={settingsOpen}
-                onClick={openSettings}
-                className="mobile-account-button touch-target flex min-h-11 items-center gap-1.5 rounded-full border border-ink/10 bg-white/88 px-3 text-ink-soft shadow-card"
-              >
-                <User size={16} strokeWidth={2.1} aria-hidden />
-                <span className="max-w-[4.5rem] truncate text-[11px] font-semibold">
-                  {userId ? t("계정", "Account") : t("로그인", "Sign in")}
-                </span>
-              </button>
-            </div>
+            <button
+              type="button"
+              data-testid="open-browse-search"
+              aria-label={t("기록 검색", "Search records")}
+              onClick={() => {
+                tap();
+                window.dispatchEvent(new Event("itjima:open-browse"));
+              }}
+              className="touch-press grid h-11 w-11 place-items-center rounded-full text-ink"
+            >
+              <Search size={18} strokeWidth={2.2} aria-hidden />
+            </button>
           </div>
         </header>
 
