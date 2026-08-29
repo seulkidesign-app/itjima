@@ -10,6 +10,10 @@ permissions:
 jobs:
   capture:
     runs-on: ubuntu-latest
+    env:
+      VITE_E2E: "true"
+      VITE_SUPABASE_URL: "http://127.0.0.1:54321"
+      VITE_SUPABASE_PUBLISHABLE_KEY: "e2e-placeholder"
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -48,31 +52,38 @@ jobs:
           mkdir -p qa-app-319
           node --input-type=module <<'NODE'
           import { chromium } from '@playwright/test';
-          const browser = await chromium.launch();
+          const browser = await chromium.launch({ headless: true });
           const context = await browser.newContext({
             viewport: { width: 390, height: 844 },
             locale: 'ko-KR',
             deviceScaleFactor: 1,
+            reducedMotion: 'reduce',
           });
           const page = await context.newPage();
-          await page.goto('http://127.0.0.1:4173/app');
-          await page.evaluate(() => {
-            for (const key of Object.keys(localStorage)) {
-              if (key.startsWith('itjima.')) localStorage.removeItem(key);
-            }
-            localStorage.setItem('itjima_lang', 'ko');
-            sessionStorage.clear();
+          await page.goto('http://127.0.0.1:4173/app', {
+            waitUntil: 'domcontentloaded',
+            timeout: 20_000,
           });
-          await page.reload();
-          await page.waitForLoadState('networkidle');
-          await page.screenshot({ path: 'qa-app-319/app-empty-mobile-ko.png', fullPage: false });
+          await page.evaluate(() => {
+            localStorage.clear();
+            sessionStorage.clear();
+            localStorage.setItem('itjima_lang', 'ko');
+          });
+          await page.reload({ waitUntil: 'domcontentloaded' });
+          await page.locator('body').waitFor({ state: 'visible', timeout: 10_000 });
+          await page.waitForTimeout(800);
+          await page.screenshot({
+            path: 'qa-app-319/app-empty-mobile-ko.png',
+            animations: 'disabled',
+            fullPage: false,
+          });
           await browser.close();
           NODE
 
       - name: Upload app screenshot
         uses: actions/upload-artifact@v4
         with:
-          name: qa-app-319
+          name: qa-app-319-${{ github.run_number }}
           path: qa-app-319/app-empty-mobile-ko.png
           if-no-files-found: error
           retention-days: 7
