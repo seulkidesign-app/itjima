@@ -9,7 +9,7 @@ import { scheduleDisplayTitle } from "@/lib/thoughtProvenance";
 import { cleanScheduleTitle } from "@/lib/naturalScheduleDraft";
 import { isMissed } from "@/lib/scheduleGroups";
 import { useT, useLang } from "@/lib/i18n";
-import { haptic, confirm as hapticConfirm } from "@/lib/haptics";
+import { confirm as hapticConfirm } from "@/lib/haptics";
 import { SPRING_ROW, SPRING_SNAP_BACK } from "@/lib/motion";
 import {
   effectiveAlarmAt,
@@ -149,24 +149,27 @@ export function ScheduleCompactRow({
         }}
         className="touch-press grid h-11 w-11 shrink-0 place-items-center rounded-full"
         aria-label={done ? t("완료 취소", "Undo complete") : t("완료", "Complete")}
+        aria-pressed={done ? "true" : "false"}
         data-testid="schedule-row-complete"
       >
         <span
-          className={`grid h-[18px] w-[18px] place-items-center rounded-full border-2 ${
+          className={`grid h-[22px] w-[22px] place-items-center rounded-full border-2 transition-all duration-150 ${
             done
               ? "border-ink bg-ink text-white"
-              : "border-ink/25 bg-white"
+              : "border-ink/35 bg-white shadow-[inset_0_0_0_1px_rgba(26,26,31,0.02)]"
           }`}
           aria-hidden
         >
-          {done && <Check size={11} strokeWidth={3} />}
+          {done && <Check size={13} strokeWidth={3} />}
         </span>
       </button>
 
-      {/* Non-button hit target — avoids nesting ReminderMeta's button */}
+      {/* The row itself is the detail/edit affordance. Keep the surface quiet;
+          do not show an always-on “수정” action beside every schedule. */}
       <div
         role="button"
         tabIndex={0}
+        aria-label={t(`${title} 상세 열기`, `Open ${title}`)}
         onPointerDown={(event) => {
           if ((event.target as HTMLElement).closest("button")) return;
           event.stopPropagation();
@@ -220,23 +223,6 @@ export function ScheduleCompactRow({
           aria-label={`${t("알림", "Reminder")} · ${alarmLabel}`}
         >
           <Bell size={16} strokeWidth={2.2} aria-hidden />
-        </button>
-      )}
-
-      {!done && (
-        <button
-          type="button"
-          onPointerDown={(event) => event.stopPropagation()}
-          onClick={(event) => {
-            event.stopPropagation();
-            haptic(6);
-            onEdit();
-          }}
-          className="touch-press mt-0.5 inline-flex h-11 min-w-11 shrink-0 items-center justify-center px-2 text-[13px] font-medium text-ink-soft"
-          aria-label={t(`${title} 수정`, `Edit ${title}`)}
-          data-testid="schedule-row-edit"
-        >
-          {t("수정", "Edit")}
         </button>
       )}
     </li>

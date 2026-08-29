@@ -31,6 +31,13 @@ export type DirectPushEnableResult = {
   errorMessage?: string;
 };
 
+type ActiveEnableFlow = {
+  userId: string;
+  promise: Promise<DirectPushEnableResult>;
+};
+
+let activeEnableFlow: ActiveEnableFlow | null = null;
+
 function step(
   id: string,
   label: string,
@@ -71,11 +78,30 @@ function standaloneDetail(): string {
 }
 
 /**
+ * Public, de-duplicated enable entry point. A fast double tap must share the
+ * same permission/subscription transaction instead of starting two Web Push
+ * flows. The underlying run still preserves the iOS requirement that its first
+ * await is Notification.requestPermission() when permission is default.
+ */
+export function executeDirectPushEnableFlow(
+  userId: string,
+  lang: "ko" | "en",
+): Promise<DirectPushEnableResult> {
+  if (activeEnableFlow?.userId === userId) return activeEnableFlow.promise;
+
+  const promise = executeDirectPushEnableFlowOnce(userId, lang).finally(() => {
+    if (activeEnableFlow?.promise === promise) activeEnableFlow = null;
+  });
+  activeEnableFlow = { userId, promise };
+  return promise;
+}
+
+/**
  * Runs inside a button click handler.
  * The first await MUST be Notification.requestPermission() when permission is default.
  * Do not setState, navigate, or open modals before that call on iOS.
  */
-export async function executeDirectPushEnableFlow(
+async function executeDirectPushEnableFlowOnce(
   userId: string,
   lang: "ko" | "en",
 ): Promise<DirectPushEnableResult> {
