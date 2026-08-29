@@ -45,6 +45,33 @@ test.describe("Landing V2 editorial system", () => {
     expect(brandTop).toBeGreaterThanOrEqual(footerBottom - 2);
   });
 
+  test("glass nav and yellow hero stage stay visually separated without strokes", async ({ page }) => {
+    await page.goto("/?lang=ko");
+
+    const nav = page.locator(".lv2-nav");
+    const heroStage = page.locator(".lv2-hero-stage");
+
+    const navStyle = await nav.evaluate((node) => {
+      const style = getComputedStyle(node);
+      return {
+        borderTopWidth: style.borderTopWidth,
+        background: style.backgroundColor,
+        backdrop: style.backdropFilter || (style as CSSStyleDeclaration & { webkitBackdropFilter?: string }).webkitBackdropFilter || "",
+      };
+    });
+    expect(navStyle.borderTopWidth).toBe("0px");
+    expect(navStyle.background).toContain("0.76");
+    expect(navStyle.backdrop).toContain("blur(26px)");
+
+    const stageStyle = await heroStage.evaluate((node) => {
+      const style = getComputedStyle(node);
+      return { backgroundImage: style.backgroundImage, boxShadow: style.boxShadow, borderTopWidth: style.borderTopWidth };
+    });
+    expect(stageStyle.backgroundImage).toContain("linear-gradient");
+    expect(stageStyle.boxShadow).not.toBe("none");
+    expect(stageStyle.borderTopWidth).toBe("0px");
+  });
+
   test("trust and information surfaces stay white and avoid nested cards", async ({ page }) => {
     await page.goto("/?lang=ko");
 
@@ -69,6 +96,20 @@ test.describe("Landing V2 editorial system", () => {
 
     const secondRowBorder = await workRows.nth(1).evaluate((node) => getComputedStyle(node).borderTopWidth);
     expect(parseFloat(secondRowBorder)).toBeGreaterThan(0);
+  });
+
+  test("summary todo tile uses a solid yellow rather than a gradient", async ({ page }) => {
+    await page.goto("/?lang=ko");
+
+    const todoTile = page.locator(".lv2-product-card.yellow .lv2-stats > div").nth(1);
+    await todoTile.scrollIntoViewIfNeeded();
+
+    const style = await todoTile.evaluate((node) => {
+      const computed = getComputedStyle(node);
+      return { backgroundColor: computed.backgroundColor, backgroundImage: computed.backgroundImage };
+    });
+    expect(style.backgroundColor).toBe("rgb(255, 243, 168)");
+    expect(style.backgroundImage).toBe("none");
   });
 
   test("mobile product carousel stays inside a bright section and scrolls internally", async ({ page }) => {
