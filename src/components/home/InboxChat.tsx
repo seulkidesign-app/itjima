@@ -15,7 +15,7 @@ import {
 } from "@/lib/nlSchedule";
 import { scheduleConfirmationReason } from "@/lib/nlScheduleSafety";
 import { shouldShowInlinePromise } from "@/lib/promiseCard";
-import type { InboxItem } from "@/lib/store";
+import { useInbox, type InboxItem } from "@/lib/store";
 import type { RevivalHint } from "@/lib/memoryRevival";
 import { HomeEmptyHero } from "@/components/home/HomeEmptyHero";
 
@@ -84,6 +84,9 @@ export function InboxChat({
 }: Props) {
   const t = useT();
   const { lang } = useLang();
+  const hasStoredRecords = useInbox().allItems.some(
+    (item) => item.status !== "deleted",
+  );
   const uiLang = lang === "en" ? "en" : "ko";
 
   const surfaces: ItemSurface[] = itemsAsc
@@ -137,11 +140,14 @@ export function InboxChat({
   const olderQuietCount = Math.max(0, quietItems.length - recentQuiet.length);
 
   return (
-    <div className="home-chat-lane chat-scroll flex min-h-0 flex-1 flex-col gap-3 px-5 pb-[calc(5.75rem+env(safe-area-inset-bottom))] pt-2">
+    <div
+      className="home-chat-lane chat-scroll flex min-h-0 flex-1 flex-col gap-3 px-5 pb-[calc(5.75rem+env(safe-area-inset-bottom))] pt-2"
+      data-has-history={hasStoredRecords ? "true" : "false"}
+    >
       {isEmpty ? (
         <>
           <HomeEmptyHero />
-          {onOpenAllRecords && (
+          {onOpenAllRecords && hasStoredRecords && (
             <div className="flex justify-center">
               <button
                 type="button"

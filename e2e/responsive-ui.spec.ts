@@ -24,9 +24,10 @@ test.describe("responsive UI safeguards", () => {
     test("schedule stays aligned at " + viewport.width + "px", async ({ page }) => {
       await page.setViewportSize(viewport);
       await page.goto("/schedule?lang=en");
-      for (const id of ["schedule-tab-today", "schedule-tab-list", "schedule-tab-cal"]) {
+      for (const id of ["schedule-tab-today", "schedule-tab-list"]) {
         await expect(page.locator("#" + id)).toBeVisible();
       }
+      await expect(page.locator("#schedule-tab-cal")).toHaveCount(0);
       await expectNoHorizontalOverflow(page);
 
       if (viewport.width < 640) {
@@ -116,11 +117,9 @@ test.describe("responsive UI safeguards", () => {
 
   test("desktop dialog remains inside the viewport", async ({ page }) => {
     await page.setViewportSize({ width: 1024, height: 900 });
-    await page.goto("/schedule?lang=en");
-    await page.getByRole("tab", { name: /Calendar|달력/ }).click();
-    const today = await page.evaluate(() => new Date().getDate());
-    await page.locator(`[data-cal-day="${today}"]`).first().click();
-    await page.getByRole("button", { name: /Add on this day|이 날짜에 추가/ }).click();
+    await page.goto("/app?lang=en");
+    await page.locator('[data-testid="open-settings"]:visible').click();
+    await expect(page.getByRole("dialog", { name: "Settings" })).toBeVisible();
     const root = page.locator(".bottom-sheet-root");
     const panel = page.locator('.bottom-sheet-panel[role="dialog"]');
     await expect(panel).toBeVisible();

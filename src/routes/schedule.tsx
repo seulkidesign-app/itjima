@@ -225,7 +225,7 @@ function Schedule() {
       addSchedule: async (payload) => add(payload),
     };
   }, [inbox, items, update, remove, add, userId]);
-  const [tab, setTab] = useState<"today" | "list" | "cal">("today");
+  const [tab, setTab] = useState<"today" | "list">("today");
   const [sheet, setSheet] = useState<{
     open: boolean;
     edit?: ScheduleItem;
@@ -850,22 +850,16 @@ function Schedule() {
         onRetry={retrySync}
       />
       <div className="sticky top-0 z-10 shrink-0 bg-[var(--canvas,#faf8f5)]">
-        <div className="px-5 pb-3 pt-6">
+        <div className="mx-auto w-full max-w-[680px] px-5 pb-3 pt-6">
           <h1 className="page-title inline-flex items-center gap-2">
             <span
               className="inline-block h-3 w-3 rounded-full bg-primary"
               aria-hidden
             />
-            {t("내 일정", "Schedule")}
+            {t("일정", "Schedule")}
           </h1>
-          <p className="page-eyebrow mt-2.5 max-w-[22rem] leading-relaxed text-ink-soft">
-            {t(
-              "시간이 포함된 기록은 여기에 자동으로 나타나요.",
-              "Timed records show up here automatically.",
-            )}
-          </p>
         </div>
-        <div className="px-5 pb-2">
+        <div className="mx-auto w-full max-w-[680px] px-5 pb-2">
           <LayoutGroup>
             <div className="segment-nav" role="tablist">
               {(
@@ -889,35 +883,16 @@ function Schedule() {
                   {label}
                 </button>
               ))}
-              <button
-                type="button"
-                role="tab"
-                id="schedule-tab-cal"
-                aria-selected={tab === "cal"}
-                aria-controls="schedule-panel-cal"
-                onClick={() => setTab("cal")}
-                className={`segment-nav-item shrink-0 flex-none px-3 ${
-                  tab === "cal" ? "segment-nav-item-active" : "segment-nav-item-inactive"
-                }`}
-              >
-                {t("달력", "Calendar")}
-              </button>
             </div>
           </LayoutGroup>
         </div>
       </div>
 
-      <div className="flex-1 px-5 pb-24">
+      <div className="mx-auto w-full max-w-[680px] flex-1 px-5 pb-24">
         <AnimatePresence mode="wait">
           <motion.div
             key={tab}
-            id={
-              tab === "list"
-                ? "schedule-panel-list"
-                : tab === "today"
-                  ? "schedule-panel-today"
-                  : "schedule-panel-cal"
-            }
+            id={tab === "list" ? "schedule-panel-list" : "schedule-panel-today"}
             role="tabpanel"
             aria-labelledby={`schedule-tab-${tab}`}
             initial={{ opacity: 0, y: 6 }}
@@ -944,7 +919,7 @@ function Schedule() {
               onAlarm={(s) => setAlarmSheet(s)}
             />
           )
-        ) : tab === "list" ? (
+        ) : (
           upcomingSections.length === 0 &&
           laterInboxItems.length === 0 &&
           doneItems.length === 0 ? (
@@ -998,23 +973,6 @@ function Schedule() {
               )}
             </div>
           )
-        ) : (
-          <CalendarGrid
-            items={activeItems}
-            pins={pins}
-            onTogglePin={(id) => {
-              togglePin(id);
-              haptic(8);
-            }}
-            onEdit={(s) => setSheet({ open: true, edit: s })}
-            onQuickAdd={openQuickAdd}
-            onDelete={async (s) => {
-              await deleteScheduleRow(s);
-            }}
-            onDuplicate={duplicateSchedule}
-            onDropToDate={moveEventsToDate}
-            onAlarm={(s) => setAlarmSheet(s)}
-          />
         )}
           </motion.div>
         </AnimatePresence>

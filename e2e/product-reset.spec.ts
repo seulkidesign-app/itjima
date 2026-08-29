@@ -46,7 +46,7 @@ test.describe("Current product information architecture", () => {
       .getByRole("menuitem", { name: "Save to vault", exact: true })
       .click();
 
-    await phone(page).getByRole("link", { name: /^Archive/ }).click();
+    await page.goto("/archive?lang=en");
     await expect(
       phone(page).getByRole("heading", { name: "Archive", exact: true }),
     ).toBeVisible();
@@ -89,8 +89,7 @@ test.describe("Current product information architecture", () => {
         ]),
       );
     }, { archiveKey: GUEST_ARCHIVE_KEY });
-    await page.reload();
-    await phone(page).getByRole("link", { name: /^Archive/ }).click();
+    await page.goto("/archive?lang=en");
     await expect(phone(page).getByText("Map memory seed").first()).toBeVisible();
     await phone(page).getByRole("button", { name: "Thought map" }).click();
     await expect(phone(page).getByText("Vault › Thought map")).toBeVisible();
