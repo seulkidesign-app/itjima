@@ -90,6 +90,94 @@
     box-shadow: none !important;
     backdrop-filter: none !important;
   }
+
+  /* Screen 01 · Empty Home — Figma 319 is the canonical mobile surface. */
+  .itjima-app-stage[data-route="home"] [data-testid="pwa-install-home-bar"] {
+    display: none !important;
+  }
+
+  .itjima-app-stage[data-route="home"]
+    .home-chat-lane:has([data-testid="home-empty-hero"]) {
+    padding-left: 0 !important;
+    padding-right: 0 !important;
+  }
+
+  .itjima-app-stage[data-route="home"]
+    .home-chat-lane:has([data-testid="home-empty-hero"])
+    [data-testid="open-all-records"] {
+    display: none !important;
+  }
+
+  /* The locked design has no suggestion chips above the capture field. */
+  .itjima-app-stage[data-route="home"] form.composer-hero > .flex.flex-wrap {
+    display: none !important;
+  }
+
+  /* Empty, unfocused capture collapses to the single-line pill from Screen 01.
+     Focus/content restores the existing full composer so capture behavior stays intact. */
+  .itjima-app-stage[data-route="home"]
+    form.composer-hero:has(textarea:placeholder-shown):not(:focus-within)
+    .input-shell {
+    min-height: 56px !important;
+    padding: 0 14px 0 50px !important;
+    border-radius: 999px !important;
+  }
+
+  .itjima-app-stage[data-route="home"]
+    form.composer-hero:has(textarea:placeholder-shown):not(:focus-within)
+    textarea {
+    min-height: 54px !important;
+    height: 54px !important;
+    max-height: 54px !important;
+    overflow: hidden !important;
+    padding: 0 !important;
+    font-size: 14px !important;
+    line-height: 54px !important;
+    white-space: nowrap !important;
+  }
+
+  .itjima-app-stage[data-route="home"]
+    form.composer-hero:has(textarea:placeholder-shown):not(:focus-within)
+    > div:has(> [data-testid="capture-submit"]) {
+    min-height: 0 !important;
+    height: 0 !important;
+    padding: 0 !important;
+  }
+
+  .itjima-app-stage[data-route="home"]
+    form.composer-hero:has(textarea:placeholder-shown):not(:focus-within)
+    > div:has(> [data-testid="capture-submit"])
+    > :not(button[aria-pressed]) {
+    display: none !important;
+  }
+
+  .itjima-app-stage[data-route="home"]
+    form.composer-hero:has(textarea:placeholder-shown):not(:focus-within)
+    > div:has(> [data-testid="capture-submit"])
+    > button[aria-pressed] {
+    position: absolute !important;
+    z-index: 3;
+    left: 29px;
+    top: 14px;
+    width: 32px !important;
+    min-width: 32px !important;
+    height: 32px !important;
+    min-height: 32px !important;
+    background: #f3f2ef !important;
+    color: var(--ink-soft, #8a8a94) !important;
+  }
+
+  .itjima-app-stage[data-route="home"]
+    .page-shell
+    > div:first-child
+    > div.composer-hero:has(form textarea:placeholder-shown):not(:focus-within) {
+    border-top-color: transparent !important;
+    background: transparent !important;
+    box-shadow: none !important;
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+    padding-bottom: 10px !important;
+  }
 }
 
 /* Tablet segmented nav — yellow active */
