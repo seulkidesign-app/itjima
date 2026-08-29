@@ -33,7 +33,7 @@ test.describe("Landing V2 editorial system", () => {
     expect(brandTop).toBeGreaterThanOrEqual(footerBottom - 2);
   });
 
-  test("mobile product carousel stays inside a white section and scrolls internally", async ({ page }) => {
+  test("mobile product carousel stays inside a bright section and scrolls internally", async ({ page }) => {
     await page.setViewportSize({ width: 390, height: 844 });
     await page.goto("/?lang=ko");
 
@@ -41,7 +41,13 @@ test.describe("Landing V2 editorial system", () => {
     const track = page.locator(".lv2-product-track");
     await product.scrollIntoViewIfNeeded();
 
-    await expect(product).toHaveCSS("background-color", "rgb(255, 255, 255)");
+    const productBg = await product.evaluate((node) => getComputedStyle(node).backgroundColor);
+    const channels = productBg.match(/[\d.]+/g)?.map(Number) ?? [];
+    expect(channels.length).toBeGreaterThanOrEqual(3);
+    expect(channels[0]).toBeGreaterThanOrEqual(245);
+    expect(channels[1]).toBeGreaterThanOrEqual(245);
+    expect(channels[2]).toBeGreaterThanOrEqual(245);
+    await expect(track).toHaveCSS("background-color", "rgb(255, 255, 255)");
 
     const geometry = await page.evaluate(() => {
       const track = document.querySelector<HTMLElement>(".lv2-product-track")!;
