@@ -1,0 +1,160 @@
+/* Final UX pass: polish without changing the landing visual language. */
+
+/* 1) Bring the desktop hero composition slightly upward while preserving nav clearance. */
+@media (min-width: 821px) {
+  .landing-v2 main#lv2-main .lv2-hero-copy {
+    margin-top: -24px !important;
+  }
+}
+
+/* 2) Summary card: keep the card itself a flat pale yellow instead of a gradient. */
+.landing-v2 .lv2-product-card.yellow {
+  background: #fff8c9 !important;
+  background-color: #fff8c9 !important;
+  background-image: none !important;
+}
+
+.landing-v2 section.lv2-product .lv2-product-card.yellow .lv2-stats > div:nth-child(2) {
+  background: #fff3a8 !important;
+  background-color: #fff3a8 !important;
+  background-image: none !important;
+}
+
+/* 3) Final demo input: focus the rounded input surface, not a square browser outline. */
+.landing-v2 .lv2-final-demo {
+  overflow: visible;
+}
+
+.landing-v2 .lv2-final-demo:focus-within {
+  transform: none !important;
+  box-shadow:
+    0 0 0 3px rgba(255, 212, 59, 0.24),
+    0 14px 30px rgba(0, 0, 0, 0.06) !important;
+}
+
+.landing-v2 .lv2-final-demo input:focus,
+.landing-v2 .lv2-final-demo input:focus-visible {
+  outline: none !important;
+  box-shadow: none !important;
+}
+
+/* Turn the generic success chip into useful product feedback under the input. */
+.landing-v2 .lv2-final-demo.is-submitted {
+  flex-wrap: wrap;
+}
+
+.landing-v2 .lv2-final-confirm {
+  position: relative !important;
+  order: 3;
+  left: auto !important;
+  top: auto !important;
+  transform: none !important;
+  width: 100%;
+  margin-top: 6px;
+  padding: 16px 18px !important;
+  border: 1px solid rgba(37, 40, 42, 0.08);
+  border-radius: 18px !important;
+  background: #f8f6ef !important;
+  color: var(--lv2-ink) !important;
+  display: grid !important;
+  grid-template-columns: auto 1fr;
+  grid-template-rows: auto auto;
+  column-gap: 10px;
+  row-gap: 3px;
+  text-align: left;
+  white-space: normal !important;
+  font-size: 0 !important;
+}
+
+.landing-v2 .lv2-final-confirm svg {
+  grid-row: 1 / span 2;
+  align-self: center;
+  color: #796200;
+}
+
+.landing-v2 .lv2-final-confirm::before {
+  content: "문장을 남겼어요";
+  font-size: 13px;
+  line-height: 1.35;
+  font-weight: 750;
+  color: var(--lv2-ink);
+}
+
+.landing-v2 .lv2-final-confirm::after {
+  content: "앱에서는 날짜와 시간을 읽고, 필요한 곳에 정리해요.";
+  font-size: 12px;
+  line-height: 1.5;
+  font-weight: 550;
+  color: #6d7075;
+}
+
+html[lang="en"] .landing-v2 .lv2-final-confirm::before {
+  content: "Your sentence is captured";
+}
+
+html[lang="en"] .landing-v2 .lv2-final-confirm::after {
+  content: "In the app, Itjima reads dates and times and organizes it where needed.";
+}
+
+/* 4) Lift the final brand/footer copy closer to the top of the blue band. */
+.landing-v2 .lv2-brand-band {
+  padding-top: clamp(42px, 4.5vw, 68px) !important;
+}
+
+.landing-v2 .lv2-brand-band-kicker {
+  margin-bottom: 12px !important;
+}
+
+.landing-v2 .lv2-brand-band-copy {
+  margin-bottom: clamp(42px, 4vw, 58px) !important;
+}
+
+/* 5) Restore comfortable insets without bringing back nested cards. */
+.landing-v2 section.lv2-how .lv2-work-card .lv2-mini-row {
+  padding: 22px 20px !important;
+  margin: 0 !important;
+  background: transparent !important;
+  border-radius: 0 !important;
+}
+
+.landing-v2 section.lv2-how .lv2-work-card .lv2-mini-row + .lv2-mini-row {
+  margin-top: 0 !important;
+  padding-top: 22px !important;
+  border-top: 1px solid rgba(37, 40, 42, 0.09) !important;
+}
+
+.landing-v2 section.lv2-product .lv2-product-card > .lv2-product-input,
+.landing-v2 section.lv2-product .lv2-product-card > .lv2-mini-row,
+.landing-v2 section.lv2-product .lv2-product-card > .lv2-today,
+.landing-v2 section.lv2-product .lv2-product-card > .lv2-event,
+.landing-v2 section.lv2-product .lv2-product-card > .lv2-summary-note {
+  padding-left: 20px !important;
+  padding-right: 20px !important;
+}
+
+@media (max-width: 820px) {
+  .landing-v2 main#lv2-main .lv2-hero-copy {
+    margin-top: -8px !important;
+  }
+
+  .landing-v2 .lv2-final-confirm {
+    padding: 14px 15px !important;
+  }
+
+  .landing-v2 .lv2-brand-band {
+    padding-top: 40px !important;
+  }
+
+  .landing-v2 section.lv2-how .lv2-work-card .lv2-mini-row {
+    padding: 18px 16px !important;
+  }
+
+  .landing-v2 section.lv2-product .lv2-product-card > .lv2-product-input,
+  .landing-v2 section.lv2-product .lv2-product-card > .lv2-mini-row,
+  .landing-v2 section.lv2-product .lv2-product-card > .lv2-today,
+  .landing-v2 section.lv2-product .lv2-product-card > .lv2-event,
+  .landing-v2 section.lv2-product .lv2-product-card > .lv2-summary-note {
+    padding-left: 16px !important;
+    padding-right: 16px !important;
+  }
+}
