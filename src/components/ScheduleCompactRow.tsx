@@ -169,6 +169,7 @@ export function ScheduleCompactRow({
       <div
         role="button"
         tabIndex={0}
+        aria-label={t(`${title} 수정`, `Edit ${title}`)}
         onPointerDown={(event) => {
           if ((event.target as HTMLElement).closest("button")) return;
           event.stopPropagation();
