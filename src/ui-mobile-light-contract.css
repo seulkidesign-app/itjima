@@ -75,19 +75,22 @@
     opacity: 1 !important;
   }
 
+  /* One track + one yellow active pill. The active Link itself must stay
+     transparent so it does not create the grey/yellow double-plate seen on iOS. */
   .mobile-bottom-nav {
-    border-color: rgba(60, 60, 67, 0.12) !important;
-    background: rgba(248, 248, 250, 0.97) !important;
+    border-color: transparent !important;
+    background: var(--tab-track, #edebe6) !important;
     color: #111113 !important;
-    box-shadow: 0 12px 36px -16px rgba(0, 0, 0, 0.24) !important;
+    box-shadow: none !important;
   }
 
   .mobile-bottom-nav-item {
+    background: transparent !important;
     color: rgba(60, 60, 67, 0.62) !important;
   }
 
   .mobile-bottom-nav-item[aria-current="page"] {
-    background: rgba(118, 118, 128, 0.12) !important;
+    background: transparent !important;
     color: #111113 !important;
   }
 
