@@ -176,7 +176,6 @@ function Schedule() {
     [activeItems],
   );
 
-  // Capture feedback → existing schedule edit. No tab selection is needed now.
   useEffect(() => {
     const id = sessionStorage.getItem("itjima.openScheduleEdit");
     if (!id) return;
@@ -360,8 +359,10 @@ function Schedule() {
     try {
       clearReminderOffset(schedule.id);
       await update(schedule.id, { alarm: true, alarm_at: at.toISOString() });
-      const updated = {
+      const updated: ScheduleItem = {
         ...schedule,
+        created_at: schedule.created_at,
+        status: schedule.status ?? "active",
         alarm: true,
         alarm_at: at.toISOString(),
       };
