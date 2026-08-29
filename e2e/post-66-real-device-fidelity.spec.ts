@@ -107,7 +107,8 @@ test.describe("POST-66 real-device Figma 319 fidelity", () => {
       .count();
     expect(visibleSearchCount).toBe(1);
 
-    const header = frame.locator('.itjima-app-stage[data-route="schedule"] header.sticky');
+    const header = page.locator('.itjima-app-stage[data-route="schedule"] header.sticky');
+    await expect(header).toBeVisible();
     const headerBackground = await header.evaluate(
       (element) => getComputedStyle(element).backgroundColor,
     );
