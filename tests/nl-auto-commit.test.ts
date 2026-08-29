@@ -40,11 +40,53 @@ describe("V02-08C timed auto-commit gate", () => {
     if (!decision.ok) expect(decision.reason).toBe("multiple_clocks");
   });
 
+  it("allows one resolved from-to clock range", () => {
+    const decision = evaluateTimedAutoCommit(
+      "내일 오후 5시부터 6시까지 운동",
+      "ko",
+      now,
+    );
+    expect(decision.ok).toBe(true);
+    if (decision.ok) {
+      expect(decision.draft.text).toBe("운동");
+      expect(decision.draft.start.getHours()).toBe(17);
+      expect(decision.draft.end.getHours()).toBe(18);
+    }
+  });
+
+  it("keeps a bare from-to range behind AM/PM clarification", () => {
+    const decision = evaluateTimedAutoCommit(
+      "내일 5시부터 6시까지 운동",
+      "ko",
+      now,
+    );
+    expect(decision.ok).toBe(false);
+    if (!decision.ok) expect(decision.reason).toBe("assumed_meridiem");
+  });
+
+  it("does not auto-commit standalone dayparts as fake exact times", () => {
+    for (const text of ["내일 오전에 청소", "내일 오후에 청소"]) {
+      const decision = evaluateTimedAutoCommit(text, "ko", now);
+      expect(decision.ok).toBe(false);
+      if (!decision.ok) expect(decision.reason).toBe("no_clock");
+    }
+  });
+
   it("blocks undated notes (left item, not schedule)", () => {
     const decision = evaluateTimedAutoCommit("에어팟 소독", "ko", now);
     expect(decision.ok).toBe(false);
     if (!decision.ok) {
       expect(["no_clock", "quiet", "empty_title"]).toContain(decision.reason);
+    }
+  });
+
+  it("keeps vague user text durable instead of inventing a clock", () => {
+    for (const text of ["밥 먹고 청소", "나중에 청소"]) {
+      const decision = evaluateTimedAutoCommit(text, "ko", now);
+      expect(decision.ok).toBe(false);
+      if (!decision.ok) {
+        expect(["no_clock", "quiet"]).toContain(decision.reason);
+      }
     }
   });
 
