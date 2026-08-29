@@ -15,7 +15,7 @@ import {
 } from "@/lib/nlSchedule";
 import { scheduleConfirmationReason } from "@/lib/nlScheduleSafety";
 import { shouldShowInlinePromise } from "@/lib/promiseCard";
-import type { InboxItem } from "@/lib/store";
+import { useInbox, type InboxItem } from "@/lib/store";
 import type { RevivalHint } from "@/lib/memoryRevival";
 import { HomeEmptyHero } from "@/components/home/HomeEmptyHero";
 
@@ -84,6 +84,9 @@ export function InboxChat({
 }: Props) {
   const t = useT();
   const { lang } = useLang();
+  const hasStoredRecords = useInbox().allItems.some(
+    (item) => item.status !== "deleted",
+  );
   const uiLang = lang === "en" ? "en" : "ko";
 
   const surfaces: ItemSurface[] = itemsAsc
@@ -141,11 +144,11 @@ export function InboxChat({
       {isEmpty ? (
         <>
           <HomeEmptyHero />
-          {onOpenAllRecords && (
+          {onOpenAllRecords && hasStoredRecords && (
             <div className="flex justify-center">
               <button
                 type="button"
-                data-testid="open-all-records"
+                data-testid="open-all-records-history"
                 onClick={onOpenAllRecords}
                 className="touch-press min-h-11 px-2 text-center text-[13px] font-semibold text-ink-soft underline-offset-2 hover:underline"
               >
