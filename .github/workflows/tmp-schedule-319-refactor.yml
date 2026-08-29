@@ -27,10 +27,8 @@ jobs:
           from pathlib import Path
           p = Path('src/routes/schedule.tsx')
           s = p.read_text()
-
           replacements = [
-            ('const [tab, setTab] = useState<"today" | "list" | "cal">("today");',
-             'const [tab, setTab] = useState<"today" | "list">("today");'),
+            ('const [tab, setTab] = useState<"today" | "list" | "cal">("today");', 'const [tab, setTab] = useState<"today" | "list">("today");'),
             ('{t("내 일정", "Schedule")}', '{t("일정", "Schedule")}'),
             ('<div className="px-5 pb-3 pt-6">', '<div className="mx-auto w-full max-w-[680px] px-5 pb-3 pt-6">'),
             ('<div className="px-5 pb-2">', '<div className="mx-auto w-full max-w-[680px] px-5 pb-2">'),
@@ -40,18 +38,16 @@ jobs:
             if old not in s:
               raise SystemExit(f'missing expected text: {old}')
             s = s.replace(old, new, 1)
-
           subtitle = '''          <p className="page-eyebrow mt-2.5 max-w-[22rem] leading-relaxed text-ink-soft">
             {t(
               "시간이 포함된 기록은 여기에 자동으로 나타나요.",
               "Timed records show up here automatically.",
             )}
           </p>
-'''
+          '''
           if subtitle not in s:
             raise SystemExit('schedule subtitle block not found')
           s = s.replace(subtitle, '', 1)
-
           cal_button = '''              <button
                 type="button"
                 role="tab"
@@ -65,11 +61,10 @@ jobs:
               >
                 {t("달력", "Calendar")}
               </button>
-'''
+          '''
           if cal_button not in s:
             raise SystemExit('calendar tab block not found')
           s = s.replace(cal_button, '', 1)
-
           panel_id = '''            id={
               tab === "list"
                 ? "schedule-panel-list"
@@ -77,13 +72,11 @@ jobs:
                   ? "schedule-panel-today"
                   : "schedule-panel-cal"
             }
-'''
-          panel_id_new = '''            id={tab === "list" ? "schedule-panel-list" : "schedule-panel-today"}
-'''
+          '''
+          panel_id_new = '            id={tab === "list" ? "schedule-panel-list" : "schedule-panel-today"}\n'
           if panel_id not in s:
             raise SystemExit('tabpanel id block not found')
           s = s.replace(panel_id, panel_id_new, 1)
-
           calendar_branch = '''        ) : (
           <CalendarGrid
             items={activeItems}
@@ -102,11 +95,10 @@ jobs:
             onAlarm={(s) => setAlarmSheet(s)}
           />
         )}
-'''
+          '''
           if calendar_branch not in s:
             raise SystemExit('calendar render branch not found')
           s = s.replace(calendar_branch, '        )}\n', 1)
-
           p.write_text(s)
           PY
       - name: Verify primary Schedule contract
