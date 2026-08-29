@@ -128,11 +128,7 @@ test("[critical] primary navigation, layout, and settings work at every breakpoi
     "aria-selected",
     "true",
   );
-  await page.getByRole("tab", { name: "Calendar", exact: true }).click();
-  await expect(page.getByRole("tab", { name: "Calendar", exact: true })).toHaveAttribute(
-    "aria-selected",
-    "true",
-  );
+  await expect(page.getByRole("tab", { name: "Calendar", exact: true })).toHaveCount(0);
   await expectNoHorizontalOverflow(page);
 
   await page.getByRole("link", { name: "Archive", exact: true }).click();
