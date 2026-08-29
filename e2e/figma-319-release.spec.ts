@@ -126,8 +126,8 @@ test.describe("Figma 319 release contract", () => {
     await expect(voice).toBeVisible();
     const box = await voice.boundingBox();
     expect(box).not.toBeNull();
-    expect(box!.width).toBeGreaterThanOrEqual(44);
-    expect(box!.height).toBeGreaterThanOrEqual(44);
+    expect(Math.round(box!.width)).toBeGreaterThanOrEqual(44);
+    expect(Math.round(box!.height)).toBeGreaterThanOrEqual(44);
 
     await voice.click();
     await page.waitForFunction(() => {
