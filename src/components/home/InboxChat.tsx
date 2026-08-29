@@ -140,7 +140,10 @@ export function InboxChat({
   const olderQuietCount = Math.max(0, quietItems.length - recentQuiet.length);
 
   return (
-    <div className="home-chat-lane chat-scroll flex min-h-0 flex-1 flex-col gap-3 px-5 pb-[calc(5.75rem+env(safe-area-inset-bottom))] pt-2">
+    <div
+      className="home-chat-lane chat-scroll flex min-h-0 flex-1 flex-col gap-3 px-5 pb-[calc(5.75rem+env(safe-area-inset-bottom))] pt-2"
+      data-has-history={hasStoredRecords ? "true" : "false"}
+    >
       {isEmpty ? (
         <>
           <HomeEmptyHero />
@@ -148,7 +151,7 @@ export function InboxChat({
             <div className="flex justify-center">
               <button
                 type="button"
-                data-testid="open-all-records-history"
+                data-testid="open-all-records"
                 onClick={onOpenAllRecords}
                 className="touch-press min-h-11 px-2 text-center text-[13px] font-semibold text-ink-soft underline-offset-2 hover:underline"
               >
