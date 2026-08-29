@@ -89,38 +89,38 @@ export function InboxChat({
   const surfaces: ItemSurface[] = itemsAsc
     .filter((it) => !isStructuredTimedRecord(it))
     .map((it) => {
-    const isNewest = it.id === newestId;
-    const inFlight = autoCommitInFlightIds.has(it.id);
-    const autoEligible = canAutoCommitTimedCapture(it.text, uiLang);
-    const basePromise =
-      featureEnabled("INLINE_PROMISE") &&
-      !acknowledgedIds.has(it.id) &&
-      !inFlight &&
-      shouldShowInlinePromise(it.text, uiLang);
-    const understanding = basePromise
-      ? understandNaturalLanguage(it.text, uiLang)
-      : null;
-    const confirmationReason = basePromise
-      ? scheduleConfirmationReason(it.text)
-      : null;
-    const showCommitmentRecovery =
-      basePromise && autoEligible && !confirmationReason;
-    const showAmbiguity =
-      basePromise &&
-      !autoEligible &&
-      (confirmationReason !== null ||
-        understanding?.intent === "schedule_clarify");
+      const isNewest = it.id === newestId;
+      const inFlight = autoCommitInFlightIds.has(it.id);
+      const autoEligible = canAutoCommitTimedCapture(it.text, uiLang);
+      const basePromise =
+        featureEnabled("INLINE_PROMISE") &&
+        !acknowledgedIds.has(it.id) &&
+        !inFlight &&
+        shouldShowInlinePromise(it.text, uiLang);
+      const understanding = basePromise
+        ? understandNaturalLanguage(it.text, uiLang)
+        : null;
+      const confirmationReason = basePromise
+        ? scheduleConfirmationReason(it.text)
+        : null;
+      const showCommitmentRecovery =
+        basePromise && autoEligible && !confirmationReason;
+      const showAmbiguity =
+        basePromise &&
+        !autoEligible &&
+        (confirmationReason !== null ||
+          understanding?.intent === "schedule_clarify");
 
-    if (showAmbiguity || showCommitmentRecovery) {
-      return {
-        kind: "ambiguity" as const,
-        item: it,
-        isNewest,
-        recovery: Boolean(showCommitmentRecovery),
-      };
-    }
-    return { kind: "quiet" as const, item: it, isNewest };
-  });
+      if (showAmbiguity || showCommitmentRecovery) {
+        return {
+          kind: "ambiguity" as const,
+          item: it,
+          isNewest,
+          recovery: Boolean(showCommitmentRecovery),
+        };
+      }
+      return { kind: "quiet" as const, item: it, isNewest };
+    });
 
   const quietItems = surfaces.filter(
     (s): s is Extract<ItemSurface, { kind: "quiet" }> => s.kind === "quiet",
@@ -156,6 +156,60 @@ export function InboxChat({
         </>
       ) : (
         <>
+          {recentQuiet.length > 0 && (
+            <section
+              className="flex flex-col"
+              data-testid="left-items-section"
+              aria-label={t("방금 남긴 것", "Just left")}
+            >
+              <h2 className="quietly-section-label mb-1">
+                {t("방금 남긴 것", "Just left")}
+              </h2>
+              <ul className="flex flex-col">
+                {recentQuiet.map(({ item: it, isNewest }) => (
+                  <LeftItemRow
+                    key={it.id}
+                    item={it}
+                    isNewest={isNewest}
+                    onSetTime={() => onOpenPromiseSchedule(it)}
+                    onOpenMenu={() => onOpenContextMenu(it.id)}
+                    onOpenDetail={() => onOpenDetail(it)}
+                  />
+                ))}
+              </ul>
+              {onOpenAllRecords && (
+                <button
+                  type="button"
+                  data-testid="open-all-records"
+                  onClick={onOpenAllRecords}
+                  className="touch-press mx-auto mt-3 min-h-11 px-2 text-center text-[13px] font-semibold text-ink-soft underline-offset-2 hover:underline"
+                >
+                  {olderQuietCount > 0
+                    ? t(
+                        `이전 기록 보기 ${olderQuietCount} →`,
+                        `View ${olderQuietCount} earlier →`,
+                      )
+                    : t("이전 기록 보기 →", "View earlier records →")}
+                </button>
+              )}
+            </section>
+          )}
+
+          {!recentQuiet.length && onOpenAllRecords && (
+            <div className="flex justify-end">
+              <button
+                type="button"
+                data-testid="open-all-records"
+                onClick={onOpenAllRecords}
+                className="touch-press min-h-11 px-1 text-[13px] font-semibold text-ink-soft underline-offset-2 hover:underline"
+              >
+                {t("전체 기록", "All records")}
+              </button>
+            </div>
+          )}
+
+          {/* Clarification/recovery stays after existing records so a new
+              capture response remains at the bottom of the conversation. */}
           {questionSurfaces.map(({ item: it, isNewest, recovery }) => (
             <div
               key={it.id}
@@ -221,58 +275,6 @@ export function InboxChat({
                 )}
             </div>
           ))}
-
-          {recentQuiet.length > 0 && (
-            <section
-              className="flex flex-col"
-              data-testid="left-items-section"
-              aria-label={t("방금 남긴 것", "Just left")}
-            >
-              <h2 className="quietly-section-label mb-1">
-                {t("방금 남긴 것", "Just left")}
-              </h2>
-              <ul className="flex flex-col">
-                {recentQuiet.map(({ item: it, isNewest }) => (
-                  <LeftItemRow
-                    key={it.id}
-                    item={it}
-                    isNewest={isNewest}
-                    onSetTime={() => onOpenPromiseSchedule(it)}
-                    onOpenMenu={() => onOpenContextMenu(it.id)}
-                    onOpenDetail={() => onOpenDetail(it)}
-                  />
-                ))}
-              </ul>
-              {onOpenAllRecords && (
-                <button
-                  type="button"
-                  data-testid="open-all-records"
-                  onClick={onOpenAllRecords}
-                  className="touch-press mx-auto mt-3 min-h-11 px-2 text-center text-[13px] font-semibold text-ink-soft underline-offset-2 hover:underline"
-                >
-                  {olderQuietCount > 0
-                    ? t(
-                        `이전 기록 보기 ${olderQuietCount} →`,
-                        `View ${olderQuietCount} earlier →`,
-                      )
-                    : t("이전 기록 보기 →", "View earlier records →")}
-                </button>
-              )}
-            </section>
-          )}
-
-          {!recentQuiet.length && onOpenAllRecords && (
-            <div className="flex justify-end">
-              <button
-                type="button"
-                data-testid="open-all-records"
-                onClick={onOpenAllRecords}
-                className="touch-press min-h-11 px-1 text-[13px] font-semibold text-ink-soft underline-offset-2 hover:underline"
-              >
-                {t("전체 기록", "All records")}
-              </button>
-            </div>
-          )}
         </>
       )}
 
