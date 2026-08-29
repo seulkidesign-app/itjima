@@ -56,6 +56,28 @@ test.describe("POST-66 real-device Figma 319 fidelity", () => {
     expect(shellBox).toBeTruthy();
     expect(shellBox!.height).toBeLessThanOrEqual(58);
 
+    const shellStyle = await shell.evaluate((element) => {
+      const style = getComputedStyle(element);
+      return {
+        backgroundColor: style.backgroundColor,
+        borderTopWidth: style.borderTopWidth,
+        borderTopColor: style.borderTopColor,
+        boxShadow: style.boxShadow,
+      };
+    });
+    expect(shellStyle.backgroundColor).toBe("rgb(255, 255, 255)");
+    expect(shellStyle.borderTopWidth).toBe("1px");
+    expect(shellStyle.borderTopColor).not.toBe("rgba(0, 0, 0, 0)");
+    expect(shellStyle.boxShadow).not.toBe("none");
+
+    const activeSurface = frame.locator(
+      '.mobile-bottom-nav-item[aria-current="page"] > span[aria-hidden="true"]',
+    );
+    const activeShadow = await activeSurface.evaluate(
+      (element) => getComputedStyle(element).boxShadow,
+    );
+    expect(activeShadow).not.toContain("255, 224, 51");
+
     const form = frame.locator("form.composer-hero").first();
     const formStyle = await form.evaluate((element) => {
       const style = getComputedStyle(element);
@@ -75,7 +97,8 @@ test.describe("POST-66 real-device Figma 319 fidelity", () => {
 
     await expect(frame.getByRole("heading", { name: "내 일정" })).toBeVisible();
     await expect(frame.locator(".mobile-app-header")).toBeHidden();
-    await expect(frame.getByTestId("schedule-open-search")).toBeVisible();
+    const scheduleSearch = frame.getByTestId("schedule-open-search");
+    await expect(scheduleSearch).toBeVisible();
 
     const visibleSearchCount = await frame
       .locator(
@@ -83,6 +106,18 @@ test.describe("POST-66 real-device Figma 319 fidelity", () => {
       )
       .count();
     expect(visibleSearchCount).toBe(1);
+
+    const header = page.locator('.itjima-app-stage[data-route="schedule"] header.sticky');
+    await expect(header).toBeVisible();
+    const headerBackground = await header.evaluate(
+      (element) => getComputedStyle(element).backgroundColor,
+    );
+    expect(headerBackground).toBe("rgb(255, 255, 255)");
+
+    const searchBackgroundImage = await scheduleSearch.evaluate(
+      (element) => getComputedStyle(element).backgroundImage,
+    );
+    expect(searchBackgroundImage).toContain("radial-gradient");
 
     const view = frame.getByTestId("schedule-unified-view");
     const viewBackground = await view.evaluate(
