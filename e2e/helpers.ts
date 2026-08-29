@@ -129,7 +129,7 @@ export async function gotoArchiveListView(page: Page) {
 
 export async function gotoScheduleUpcoming(page: Page) {
   await phone(page).getByRole("link", { name: /^Schedule/ }).click();
-  await phone(page).getByRole("tab", { name: "Upcoming" }).click();
+  await phone(page).getByTestId("schedule-unified-view").waitFor({ state: "visible" });
 }
 
 export async function openArchiveEditDialog(page: Page, thoughtText: string) {
