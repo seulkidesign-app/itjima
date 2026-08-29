@@ -131,10 +131,7 @@ test("[critical] primary navigation, layout, and settings work at every breakpoi
   await expect(page.getByRole("tab", { name: "Calendar", exact: true })).toHaveCount(0);
   await expectNoHorizontalOverflow(page);
 
-  await page.getByRole("link", { name: "Archive", exact: true }).click();
-  await expect(page).toHaveURL(/\/archive/);
-  await expect(page.getByRole("heading", { name: "Archive", exact: true })).toBeVisible();
-  await expectNoHorizontalOverflow(page);
+  await expect(page.getByRole("link", { name: "Archive", exact: true })).toHaveCount(0);
 
   await page.getByRole("link", { name: "Capture", exact: true }).click();
   const settingsButton = await openSettings(page);
