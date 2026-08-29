@@ -108,6 +108,15 @@
     display: none !important;
   }
 
+  /* FINAL 319 has a plain white empty canvas. Remove the legacy WWDC glow. */
+  .itjima-app-stage[data-route="home"] .itjima-empty-hero::before,
+  .itjima-app-stage[data-route="home"] [data-testid="home-empty-hero"]::before {
+    display: none !important;
+    content: none !important;
+    background: none !important;
+    filter: none !important;
+  }
+
   /* The locked design has no suggestion chips above the capture field. */
   .itjima-app-stage[data-route="home"] form.composer-hero > .flex.flex-wrap {
     display: none !important;
@@ -116,9 +125,26 @@
   /* Empty, unfocused capture collapses to the single-line pill from Screen 01.
      Focus/content restores the existing full composer so capture behavior stays intact. */
   .itjima-app-stage[data-route="home"]
+    form.composer-hero:has(textarea:placeholder-shown):not(:focus-within) {
+    border: 0 !important;
+    background: transparent !important;
+    box-shadow: none !important;
+    overflow: visible !important;
+  }
+
+  .itjima-app-stage[data-route="home"]
+    form.composer-hero:has(textarea:placeholder-shown):not(:focus-within)
+    > div:has(> .input-shell) {
+    margin-top: 0 !important;
+    padding: 0 10px !important;
+  }
+
+  .itjima-app-stage[data-route="home"]
     form.composer-hero:has(textarea:placeholder-shown):not(:focus-within)
     .input-shell {
     min-height: 56px !important;
+    height: 56px !important;
+    max-height: 56px !important;
     padding: 0 14px 0 50px !important;
     border-radius: 999px !important;
   }
@@ -157,8 +183,8 @@
     > button[aria-pressed] {
     position: absolute !important;
     z-index: 3;
-    left: 23px;
-    top: 8px;
+    left: 13px;
+    top: 6px;
     width: 44px !important;
     min-width: 44px !important;
     height: 44px !important;
@@ -192,6 +218,43 @@
     box-shadow:
       0 0 0 2px rgba(255, 224, 51, 0.32),
       var(--shadow-input, 0 10px 13px rgba(26, 26, 31, 0.08)) !important;
+  }
+
+  /* Schedule owns its own page header in FINAL 319. Keep the bottom nav but
+     remove the duplicate brand/search chrome on compact screens. */
+  .itjima-app-stage[data-route="schedule"] .mobile-app-header {
+    display: none !important;
+  }
+
+  .itjima-app-stage[data-route="schedule"],
+  .itjima-app-stage[data-route="schedule"] .phone-frame.itjima-app-workspace,
+  .itjima-app-stage[data-route="schedule"] .itjima-app-content,
+  .itjima-app-stage[data-route="schedule"] .itjima-app-scroll,
+  .itjima-app-stage[data-route="schedule"] .page-shell {
+    background: #ffffff !important;
+  }
+
+  .itjima-app-stage[data-route="schedule"] .page-title {
+    font-size: 24px !important;
+    line-height: 1.2 !important;
+    letter-spacing: -0.035em !important;
+  }
+
+  .itjima-app-stage[data-route="schedule"] .section-title {
+    font-size: 13px !important;
+    line-height: 1.4 !important;
+    font-weight: 650 !important;
+    color: var(--ink-soft, #8a8a94) !important;
+  }
+
+  .itjima-app-stage[data-route="schedule"] [data-testid="schedule-unified-view"] {
+    background: #ffffff !important;
+  }
+
+  .itjima-app-stage[data-route="schedule"] .quietly-schedule-card {
+    border-radius: 16px !important;
+    padding: 7px 10px 7px 4px !important;
+    box-shadow: 0 3px 12px -10px rgba(26, 26, 31, 0.22) !important;
   }
 
   /* Routine success/undo feedback should not dominate the app chrome. Errors

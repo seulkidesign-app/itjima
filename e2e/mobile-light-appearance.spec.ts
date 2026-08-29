@@ -29,21 +29,32 @@ test("[critical] installed mobile UI stays consistently light when the OS reques
   );
   expect(colorScheme).toBe("light");
 
+  // FINAL 319 intentionally uses transparent wrappers in places. Measure the
+  // first non-transparent ancestor because that is the surface users actually
+  // see after browser compositing.
   const surfaces = [
     ["mobile header", ".mobile-app-header"],
-    ["capture composer", "form.composer-hero"],
+    ["capture input pill", "form.composer-hero .input-shell"],
     ["bottom navigation", ".mobile-bottom-nav"],
   ] as const;
 
   for (const [label, selector] of surfaces) {
-    const locator = page.locator(selector);
+    const locator = page.locator(selector).first();
     await expect(locator, `${label} should be visible`).toBeVisible();
-    const background = await locator.evaluate(
-      (element) => getComputedStyle(element).backgroundColor,
-    );
+    const background = await locator.evaluate((element) => {
+      let current: Element | null = element;
+      while (current) {
+        const value = getComputedStyle(current).backgroundColor;
+        if (value !== "transparent" && !/^rgba\([^)]*,\s*0(?:\.0+)?\)$/.test(value)) {
+          return value;
+        }
+        current = current.parentElement;
+      }
+      return getComputedStyle(document.documentElement).backgroundColor;
+    });
     expect(
       rgbBrightness(background),
-      `${label} unexpectedly rendered as ${background}`,
+      `${label} unexpectedly rendered over ${background}`,
     ).toBeGreaterThan(225);
   }
 

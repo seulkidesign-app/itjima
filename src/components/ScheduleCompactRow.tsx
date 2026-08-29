@@ -185,27 +185,27 @@ export function ScheduleCompactRow({
             openDetail();
           }
         }}
-        className="min-w-0 flex-1 cursor-pointer pt-2.5 text-left touch-press"
+        className="schedule-row-content min-w-0 flex-1 cursor-pointer pt-1.5 text-left touch-press"
         data-testid="schedule-row-open-detail"
       >
         {/* Time-first hierarchy (Figma 24) — yellow metadata owns the clock */}
-        <span className="block text-[14px] font-semibold tabular-nums leading-snug tracking-[-0.01em] text-primary">
+        <span className="schedule-row-meta block text-[12px] font-semibold tabular-nums leading-snug tracking-[-0.01em] text-primary">
           {displayTime}
         </span>
         <span
-          className={`mt-0.5 block text-[16px] font-semibold leading-snug tracking-[-0.01em] text-ink ${
+          className={`schedule-row-title mt-0.5 block text-[14px] font-semibold leading-snug tracking-[-0.01em] text-ink ${
             done ? "line-through decoration-ink/20 text-ink-soft" : ""
           }`}
         >
           {title}
         </span>
         {missed && (
-          <span className="mt-0.5 block text-[12px] font-medium text-ink-soft/80">
+          <span className="mt-0.5 block text-[11px] font-medium text-ink-soft/80">
             {t("지남", "Past")}
           </span>
         )}
         {pinned && !done && (
-          <span className="mt-0.5 block text-[12px] font-medium text-ink-soft/70">
+          <span className="mt-0.5 block text-[11px] font-medium text-ink-soft/70">
             {t("고정", "Pinned")}
           </span>
         )}

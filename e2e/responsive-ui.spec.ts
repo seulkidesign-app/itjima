@@ -32,7 +32,10 @@ test.describe("responsive UI safeguards", () => {
       await expectNoHorizontalOverflow(page);
 
       if (viewport.width < 640) {
-        await expect(page.locator(".mobile-app-header")).toBeVisible();
+        // Compact Schedule owns its own title/search header. The global
+        // brand/search row is intentionally hidden to avoid duplicate chrome.
+        await expect(page.locator(".mobile-app-header")).toBeHidden();
+        await expect(page.getByTestId("schedule-open-search")).toBeVisible();
         await expect(page.locator(".mobile-bottom-nav")).toBeVisible();
         await expect(page.locator(".tablet-app-nav")).toBeHidden();
         await expect(page.locator(".itjima-desktop-shell")).toHaveCount(0);
