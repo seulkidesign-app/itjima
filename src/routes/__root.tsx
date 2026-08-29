@@ -11,6 +11,7 @@ import { PageTransition } from "@/components/PageTransition";
 import { GlobalInteractions } from "@/components/GlobalInteractions";
 import { AppBrowseHost } from "@/components/AppBrowseHost";
 import { ScheduleDeepLinkBridge } from "@/components/ScheduleDeepLinkBridge";
+import { ScheduleInAppReminderHost } from "@/components/ScheduleInAppReminderHost";
 import { PwaInstallExperience } from "@/components/PwaInstallExperience";
 import { PwaInstallHomeBar } from "@/components/PwaInstallHomeBar";
 import { LanguageProvider, useLang } from "@/lib/i18n";
@@ -41,6 +42,7 @@ function AppRuntimeServices() {
     <>
       <GlobalInteractions />
       <ScheduleDeepLinkBridge />
+      <ScheduleInAppReminderHost />
     </>
   );
 }
