@@ -136,6 +136,15 @@ export function InboxChat({
     return { kind: "quiet" as const, item: it, isNewest };
   });
 
+  /** Generic notes should stay quiet. Offer “시간 정하기” only when the text
+   * actually contains unresolved temporal intent; detail remains the fallback
+   * place to add a date to any note. */
+  const shouldOfferSetTime = (item: InboxItem) => {
+    if (item.status === "done" || isStructuredTimedRecord(item)) return false;
+    if (scheduleConfirmationReason(item.text) !== null) return true;
+    return understandNaturalLanguage(item.text, uiLang)?.intent === "schedule_clarify";
+  };
+
   const quietItems = surfaces.filter(
     (s): s is Extract<ItemSurface, { kind: "quiet" }> => s.kind === "quiet",
   );
@@ -185,7 +194,7 @@ export function InboxChat({
                     key={it.id}
                     item={it}
                     isNewest={isNewest}
-                    showSetTime={!isStructuredTimedRecord(it)}
+                    showSetTime={shouldOfferSetTime(it)}
                     onSetTime={() => onOpenPromiseSchedule(it)}
                     onOpenMenu={() => onOpenContextMenu(it.id)}
                     onOpenDetail={() => onOpenDetail(it)}
