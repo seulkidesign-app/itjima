@@ -144,8 +144,9 @@ for (const viewport of viewports) {
       .getByRole("link", { name: /^(Schedule|일정)$/ })
       .click();
     await expect(
-      page.getByRole("heading", { name: "Schedule", exact: true }),
+      page.getByRole("heading", { name: "My schedule", exact: true }),
     ).toBeVisible();
+    await expect(page.getByTestId("schedule-unified-view")).toBeVisible();
     await expectNoHorizontalOverflow(page);
 
     await expect(page.getByRole("link", { name: "Archive", exact: true })).toHaveCount(0);
