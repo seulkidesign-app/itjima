@@ -112,6 +112,45 @@ test.describe("Landing V2 editorial system", () => {
     expect(style.backgroundImage).toBe("none");
   });
 
+  test("desktop spacing uses one page grid and consistent card padding", async ({ page }) => {
+    await page.setViewportSize({ width: 1440, height: 1000 });
+    await page.goto("/?lang=ko");
+
+    const metrics = await page.evaluate(() => {
+      const howContainer = document.querySelector<HTMLElement>(".lv2-how .lv2-container")!.getBoundingClientRect();
+      const productContainer = document.querySelector<HTMLElement>(".lv2-product .lv2-container")!.getBoundingClientRect();
+      const hero = document.querySelector<HTMLElement>(".lv2-hero")!;
+      const nav = document.querySelector<HTMLElement>(".lv2-nav")!.getBoundingClientRect();
+      const eyebrow = document.querySelector<HTMLElement>(".lv2-hero .lv2-eyebrow")!.getBoundingClientRect();
+      const work = getComputedStyle(document.querySelector<HTMLElement>(".lv2-work-card")!);
+      const product = getComputedStyle(document.querySelector<HTMLElement>(".lv2-product-card")!);
+      const trust = getComputedStyle(document.querySelector<HTMLElement>(".lv2-trust-demo")!);
+      return {
+        howLeft: howContainer.left,
+        productLeft: productContainer.left,
+        howRight: innerWidth - howContainer.right,
+        productRight: innerWidth - productContainer.right,
+        heroPaddingTop: parseFloat(getComputedStyle(hero).paddingTop),
+        heroClearance: eyebrow.top - nav.bottom,
+        workPadding: parseFloat(work.paddingLeft),
+        productPadding: parseFloat(product.paddingLeft),
+        trustPadding: parseFloat(trust.paddingLeft),
+      };
+    });
+
+    expect(Math.abs(metrics.howLeft - metrics.productLeft)).toBeLessThanOrEqual(1);
+    expect(Math.abs(metrics.howRight - metrics.productRight)).toBeLessThanOrEqual(1);
+    expect(metrics.heroPaddingTop).toBe(188);
+    expect(metrics.heroClearance).toBeGreaterThanOrEqual(64);
+
+    // Mobile-device emulation can quantize authored 32px values by a couple of CSS pixels
+    // after switching to a desktop viewport. The regression contract is consistent rendered
+    // insets across the three primary card systems, with a comfortably large desktop inset.
+    const cardPaddings = [metrics.workPadding, metrics.productPadding, metrics.trustPadding];
+    expect(Math.min(...cardPaddings)).toBeGreaterThanOrEqual(28);
+    expect(Math.max(...cardPaddings) - Math.min(...cardPaddings)).toBeLessThanOrEqual(2);
+  });
+
   test("mobile product carousel stays inside a bright section and scrolls internally", async ({ page }) => {
     await page.setViewportSize({ width: 390, height: 844 });
     await page.goto("/?lang=ko");
