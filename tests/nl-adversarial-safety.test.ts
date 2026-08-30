@@ -1,13 +1,10 @@
+import { mkdirSync, writeFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import { evaluateTimedAutoCommit } from "@/lib/nlAutoCommit";
 
 const NOW = new Date(2026, 7, 30, 10, 0, 0, 0);
 
-type AttackCase = {
-  category: string;
-  input: string;
-};
-
+type AttackCase = { category: string; input: string };
 const attacks: AttackCase[] = [];
 const add = (category: string, inputs: string[]) => {
   for (const input of inputs) attacks.push({ category, input });
@@ -16,18 +13,10 @@ const add = (category: string, inputs: string[]) => {
 const actions = ["회의", "병원", "전화", "청소", "영화 보기"];
 const datePrefixes = ["", "오늘 ", "내일 ", "모레 "];
 
-// Invalid / contradictory clock values must never be normalized into a plausible time.
 for (const date of datePrefixes) {
   for (const clock of [
-    "오후 25시",
-    "오후 99시",
-    "오전 13시",
-    "오전 24시",
-    "오후 0시",
-    "오전 0시",
-    "24시",
-    "25시",
-    "99시",
+    "오후 25시", "오후 99시", "오전 13시", "오전 24시", "오후 0시",
+    "오전 0시", "24시", "25시", "99시",
   ]) {
     add("invalid_clock_ko", actions.slice(0, 2).map((action) => `${date}${clock} ${action}`));
   }
@@ -39,18 +28,12 @@ for (const date of ["", "today ", "tomorrow "]) {
   }
 }
 
-// Durations are not wall clocks. In particular, 오후/오전 before N시간 must not
-// make N시간 look like N시.
 for (const date of ["", "오늘 ", "내일 "]) {
   for (const duration of ["오후 2시간", "오후 3시간", "오전 4시간", "오전 10시간"]) {
-    add("duration_not_clock", [
-      `${date}${duration} 영화 보기`,
-      `${date}${duration} 공부하기`,
-    ]);
+    add("duration_not_clock", [`${date}${duration} 영화 보기`, `${date}${duration} 공부하기`]);
   }
 }
 
-// Multiple competing date/time anchors must not be collapsed to one arbitrary choice.
 add("contradictory_time", [
   "내일 오후 3시 아니 4시 병원",
   "내일 오후 3시 또는 오후 4시 병원",
@@ -71,7 +54,6 @@ add("contradictory_date", [
   "Monday Tuesday at 3pm meeting",
 ]);
 
-// Unsupported or self-conflicting ranges should remain raw / require clarification.
 add("range_attack", [
   "오후 5시부터 4시까지 운동",
   "오전 11시부터 10시까지 회의",
@@ -83,7 +65,6 @@ add("range_attack", [
   "15:00~14:00 meeting",
 ]);
 
-// Deadline/repeat/approximate semantics must not become one exact start.
 add("deadline_repeat_approx", [
   "내일까지 오후 3시 보고서 제출",
   "오후 3시까지 회의 준비",
@@ -99,7 +80,6 @@ add("deadline_repeat_approx", [
   "tomorrow 3pm-ish hospital",
 ]);
 
-// Semantic quiet: a clock token does not override negation/question/edit/condition.
 add("semantic_quiet", [
   "내일 오후 3시에 병원 안 가",
   "내일 오후 3시에 병원 가야 하나?",
@@ -113,7 +93,6 @@ add("semantic_quiet", [
   "Don't schedule tomorrow at 3pm",
 ]);
 
-// Unicode / malformed paste should fail closed rather than invent a normalized clock.
 add("unicode_malformed", [
   "내일 오후 ３시 병원",
   "내일 오후 3：00 병원",
@@ -125,8 +104,6 @@ add("unicode_malformed", [
   "tomorrow 3：00 pm meeting",
 ]);
 
-// Multi-clause attachment: the parser cannot safely assume a clock in one clause
-// belongs to a different action in the same sentence.
 add("multi_clause_attachment", [
   "오후 3시 드라마 보고 청소하기",
   "내일 오후 3시 엄마 만나고 저녁에 운동",
@@ -136,7 +113,6 @@ add("multi_clause_attachment", [
   "Watch a movie at 3pm and call mom later",
 ]);
 
-// Long / pasted contradictory input should remain safe.
 const longTail = " 메모".repeat(80);
 add("long_input", [
   `내일 오후 3시 아니 오후 4시 병원${longTail}`,
@@ -148,25 +124,46 @@ add("long_input", [
 function languageFor(input: string): "ko" | "en" {
   return /[가-힣]/.test(input) ? "ko" : "en";
 }
-
 function shortName(input: string): string {
   return input.replace(/\s+/g, " ").slice(0, 96);
 }
 
-// Corpus-size floor: this test is intentionally generated as a matrix so new
-// invalid-clock/action/date combinations cannot silently disappear.
+const audited = attacks.map((c) => {
+  const decision = evaluateTimedAutoCommit(c.input, languageFor(c.input), NOW);
+  return {
+    category: c.category,
+    input: c.input,
+    unsafeAutoCommit: decision.ok,
+    decision: decision.ok
+      ? { ok: true as const, start: decision.draft.start.toISOString(), end: decision.draft.end.toISOString(), title: decision.draft.text }
+      : { ok: false as const, reason: decision.reason },
+  };
+});
+
+mkdirSync("artifacts", { recursive: true });
+writeFileSync(
+  "artifacts/nl-adversarial-report.json",
+  JSON.stringify({
+    total: audited.length,
+    unsafeAutoCommits: audited.filter((r) => r.unsafeAutoCommit).length,
+    categoryCounts: Object.fromEntries(
+      [...new Set(audited.map((r) => r.category))].map((category) => [category, {
+        total: audited.filter((r) => r.category === category).length,
+        unsafe: audited.filter((r) => r.category === category && r.unsafeAutoCommit).length,
+      }]),
+    ),
+    failures: audited.filter((r) => r.unsafeAutoCommit),
+  }, null, 2),
+);
+
 describe("P0-D adversarial natural-language schedule safety", () => {
   it("keeps the adversarial corpus floor", () => {
     expect(attacks.length).toBeGreaterThanOrEqual(150);
   });
 
-  attacks.forEach((c, index) => {
-    it(`[${c.category}] #${index + 1} ${shortName(c.input)}`, () => {
-      const decision = evaluateTimedAutoCommit(c.input, languageFor(c.input), NOW);
-      expect(
-        decision.ok,
-        JSON.stringify({ category: c.category, input: c.input, decision }, null, 2),
-      ).toBe(false);
+  audited.forEach((result, index) => {
+    it(`[${result.category}] #${index + 1} ${shortName(result.input)}`, () => {
+      expect(result.unsafeAutoCommit, JSON.stringify(result, null, 2)).toBe(false);
     });
   });
 
@@ -179,7 +176,6 @@ describe("P0-D adversarial natural-language schedule safety", () => {
       ["오후 5시부터 6시까지 운동", "ko"],
       ["tomorrow at 3pm meeting", "en"],
     ] as const;
-
     for (const [input, lang] of happy) {
       expect(evaluateTimedAutoCommit(input, lang, NOW).ok, input).toBe(true);
     }
