@@ -1,0 +1,37 @@
+name: Brand Assets V4 Branch Check
+
+on:
+  push:
+    branches:
+      - chore/brand-assets-v4-v02-20260830
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    env:
+      VITE_SUPABASE_URL: https://example.supabase.co
+      VITE_SUPABASE_PUBLISHABLE_KEY: e2e-placeholder-key
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Clean install
+        run: npm ci
+
+      - name: Release build
+        run: npm run build
+
+      - name: Install Chromium
+        run: npx playwright install --with-deps chromium
+
+      - name: Brand pixel E2E
+        run: npx playwright test e2e/brand-visual-contract.spec.ts --project=mobile-chrome
