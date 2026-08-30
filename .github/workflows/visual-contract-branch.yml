@@ -31,4 +31,4 @@ jobs:
         run: npx playwright install --with-deps chromium
 
       - name: Brand pixel E2E
-        run: npx playwright test e2e/brand-visual-contract.spec.ts --project=chromium
+        run: npx playwright test e2e/brand-visual-contract.spec.ts --project=mobile-chrome
