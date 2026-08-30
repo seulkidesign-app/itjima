@@ -28,6 +28,13 @@ export function CleanupReviewSheet({
   if (!open) return null;
 
   const deleteCopy = async (item: InboxItem) => {
+    const ok = window.confirm(
+      t(
+        "이 기록 한 개만 삭제할까요? 다른 중복 기록은 그대로 남아요.",
+        "Delete only this copy? The other matching note will stay.",
+      ),
+    );
+    if (!ok) return;
     confirmHaptic();
     await onConfirmDelete([item.id]);
   };
