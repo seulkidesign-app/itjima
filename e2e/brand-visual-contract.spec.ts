@@ -9,9 +9,11 @@ test.describe("locked landing brand visual contract", () => {
     await page.goto("/app");
 
     const header = page.locator(".mobile-app-header-bar");
-    const logo = page.getByTestId("brand-logo");
+    const logo = page.locator(
+      '.mobile-app-header-bar [data-testid="brand-logo"]',
+    );
     const search = page.getByTestId("open-browse-search");
-    const settings = page.getByTestId("open-settings");
+    const settings = page.getByTestId("open-settings").first();
 
     await expect(header).toBeVisible();
     await expect(logo).toBeVisible();
