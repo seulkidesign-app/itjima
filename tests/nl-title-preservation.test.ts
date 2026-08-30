@@ -6,7 +6,7 @@ const expectTitle = (input: string, expected: string) => {
 };
 
 describe("NL title preservation P0-B", () => {
-  describe("SUPPORTED CLEAN — metadata-owned temporal spans are removed atomically", () => {
+  describe("SUPPORTED CLEAN — metadata/clarification-owned temporal spans are removed atomically", () => {
     const cases: Array<[string, string]> = [
       ["오전 10시에 청소", "청소"],
       ["오후 3시에 청소", "청소"],
@@ -29,6 +29,10 @@ describe("NL title preservation P0-B", () => {
       ["오후 3시부터 오후 5시까지 회의", "회의"],
       ["월요일 오전 10시부터 11시까지 회의", "회의"],
       ["9월 3일 14시부터 16시까지 교육", "교육"],
+      // Bare AM/PM is a supported clarification path, not an unsupported syntax.
+      ["내일 3시 병원", "병원"],
+      ["5시부터 6시까지 운동", "운동"],
+      ["내일 5시부터 6시까지 운동", "운동"],
       ["Dentist tomorrow at 3pm", "Dentist"],
       ["Meet at the clinic tomorrow 3pm", "Meet at the clinic"],
       ["Call mom in 2 hours", "Call mom"],
@@ -39,7 +43,7 @@ describe("NL title preservation P0-B", () => {
     }
   });
 
-  describe("RAW PRESERVE — unresolved/unsafe temporal language is never partially deleted", () => {
+  describe("RAW PRESERVE — unsupported/unsafe temporal language is never partially deleted", () => {
     const cases = [
       "다다음 주 월요일 청소",
       "2026년 9월 3일 청소",
@@ -64,9 +68,6 @@ describe("NL title preservation P0-B", () => {
       "3일마다 오후 3시 약 먹기",
       "14:00~15:30 미팅",
       "2시-3시 병원",
-      "5시부터 6시까지 운동",
-      "내일 5시부터 6시까지 운동",
-      "내일 3시 병원",
       "내일 오후에 청소",
       "어제 오후 3시 병원",
       "오후 03:00 병원",
