@@ -25,6 +25,13 @@ export type HomeRediscoveryState = {
   items: Record<string, HomeRediscoveryItemState>;
 };
 
+export type HomeRediscoverySelectionOptions = {
+  /** Exact records already rendered in Home's recent-record section. */
+  visibleItemIds?: ReadonlySet<string>;
+  /** Records currently rendered as clarification/recovery instead of quiet notes. */
+  excludedItemIds?: ReadonlySet<string>;
+};
+
 const EMPTY_STATE: HomeRediscoveryState = { items: {} };
 const GUEST = "guest";
 
@@ -115,7 +122,7 @@ export function keepHomeRediscoveryQuiet(
 /**
  * P1 contract:
  * - Home resurfaces existing active, non-scheduled records only.
- * - Never duplicate one of the three records Home already shows.
+ * - Never duplicate records Home already renders as recent/clarification UI.
  * - Normal trigger: at least 3 days old.
  * - High-volume trigger: at least 2 days old with 6+ newer records.
  * - At most one rediscovery per 24h and the same passively shown item rests 3 days.
@@ -125,6 +132,7 @@ export function selectHomeRediscoveryCandidate(
   items: InboxItem[],
   state: HomeRediscoveryState = EMPTY_STATE,
   now = Date.now(),
+  options: HomeRediscoverySelectionOptions = {},
 ): HomeRediscoveryCandidate | null {
   if (
     state.lastPresentedAt &&
@@ -133,21 +141,24 @@ export function selectHomeRediscoveryCandidate(
     return null;
   }
 
+  const excludedItemIds = options.excludedItemIds ?? new Set<string>();
   const eligible = items
-    .filter(isEligibleRecord)
+    .filter((item) => !excludedItemIds.has(item.id) && isEligibleRecord(item))
     .map((item) => ({ item, created: parseTime(item.created_at) }))
     .filter(
       (row): row is { item: InboxItem; created: number } => row.created !== null,
     )
     .sort((a, b) => b.created - a.created);
 
-  if (eligible.length <= 3) return null;
+  const alreadyVisible =
+    options.visibleItemIds ??
+    new Set(eligible.slice(0, 3).map((row) => row.item.id));
 
-  const alreadyVisible = new Set(eligible.slice(0, 3).map((row) => row.item.id));
+  if (eligible.every((row) => alreadyVisible.has(row.item.id))) return null;
+
   const candidates: HomeRediscoveryCandidate[] = [];
 
-  for (let i = 0; i < eligible.length; i++) {
-    const { item, created } = eligible[i];
+  for (const { item, created } of eligible) {
     if (alreadyVisible.has(item.id)) continue;
 
     const itemState = state.items[item.id];
