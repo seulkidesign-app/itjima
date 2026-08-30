@@ -54,11 +54,11 @@ function countDateAnchors(text: string): number {
   const value = text.trim();
   if (!value) return 0;
 
+  // Composite absolute-date spans are intentionally deferred to the temporal
+  // model so a single `2026년 9월 3일` can never be double-counted as two dates.
   const anchors = [
     ...value.matchAll(/오늘|내일|모레|글피/g),
     ...value.matchAll(/(?:일|월|화|수|목|금|토)요일/g),
-    ...value.matchAll(/\d{4}\s*년\s*\d{1,2}\s*월\s*\d{1,2}\s*일/g),
-    ...value.matchAll(/(?<!\d{4}\s*년\s*)\d{1,2}\s*월\s*\d{1,2}\s*일/g),
     ...value.matchAll(/\b(?:today|tomorrow|yesterday)\b/gi),
     ...value.matchAll(/\b(?:sunday|monday|tuesday|wednesday|thursday|friday|saturday)\b/gi),
   ];
@@ -99,8 +99,7 @@ export function hasUnsafeCanonicalClockRange(text: string): boolean {
   const startPeriod = match[1];
   const startHour = Number(match[2]);
   const startMinute = match[3] === "반" ? 30 : match[4] ? Number(match[4]) : 0;
-  const explicitEndPeriod = match[5];
-  const endPeriod = explicitEndPeriod ?? startPeriod;
+  const endPeriod = match[5] ?? startPeriod;
   const endHour = Number(match[6]);
   const endMinute = match[7] === "반" ? 30 : match[8] ? Number(match[8]) : 0;
 
