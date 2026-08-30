@@ -4,12 +4,13 @@ import { describe, expect, it } from "vitest";
 import { BrandLogo } from "@/components/BrandLogo";
 
 describe("canonical Itjima brand visual contract", () => {
-  it("keeps the locked landing source attached to the reusable logo", () => {
+  it("keeps the locked landing source attached to the reusable lowercase logo", () => {
     const html = renderToStaticMarkup(<BrandLogo size="app" />);
 
     expect(html).toContain('data-brand-source="figma-455-33"');
     expect(html).toContain("itjima-brand-logo--app");
-    expect(html).toContain("ITJIMA");
+    expect(html).toContain(">itjima<");
+    expect(html).not.toContain(">ITJIMA<");
   });
 
   it("locks the Figma 455:33 geometry and colors in one final stylesheet", () => {
@@ -22,6 +23,8 @@ describe("canonical Itjima brand visual contract", () => {
     expect(css).toContain("gap: 10px");
     expect(css).toContain("font-size: 21.582px");
     expect(css).toContain("letter-spacing: 0.1434px");
+    expect(css).toContain('content: "itjima"');
+    expect(css).toContain("text-transform: lowercase");
   });
 
   it("keeps product chrome on the 20px / 56px mobile baseline", () => {
