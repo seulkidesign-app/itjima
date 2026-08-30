@@ -12,14 +12,14 @@ type Props = {
   items: InboxItem[];
   open: boolean;
   onClose: () => void;
-  onDelete: (item: InboxItem) => void | Promise<void>;
+  onConfirmDelete: (ids: string[]) => void | Promise<void>;
 };
 
 export function CleanupReviewSheet({
   items,
   open,
   onClose,
-  onDelete,
+  onConfirmDelete,
 }: Props) {
   const t = useT();
   const { lang } = useLang();
@@ -29,7 +29,7 @@ export function CleanupReviewSheet({
 
   const deleteCopy = async (item: InboxItem) => {
     confirmHaptic();
-    await onDelete(item);
+    await onConfirmDelete([item.id]);
   };
 
   return (
