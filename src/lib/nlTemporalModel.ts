@@ -16,6 +16,11 @@ export type TemporalDateKind =
   | "tomorrow"
   | "day_after_tomorrow"
   | "three_days_later"
+  | "yesterday"
+  | "day_before_yesterday"
+  | "last_week"
+  | "last_month"
+  | "last_year"
   | "weekday"
   | "month_day"
   | "full_date"
@@ -155,6 +160,20 @@ function parseDate(text: string): TemporalDate | null {
 
   const monthDay = text.match(/\d{1,2}\s*월\s*\d{1,2}\s*일|\b\d{1,2}[/-]\d{1,2}\b/);
   if (monthDay) return { kind: "month_day", raw: monthDay[0] };
+
+  const lastWeek = text.match(/지난\s*주|지난주|\blast\s+week\b/i);
+  if (lastWeek) return { kind: "last_week", raw: lastWeek[0] };
+  const lastMonth = text.match(/지난\s*달|지난달|\blast\s+month\b/i);
+  if (lastMonth) return { kind: "last_month", raw: lastMonth[0] };
+  const lastYear = text.match(/작년|\blast\s+year\b/i);
+  if (lastYear) return { kind: "last_year", raw: lastYear[0] };
+
+  const yesterday = text.match(/어제|\byesterday\b/i);
+  if (yesterday) return { kind: "yesterday", raw: yesterday[0] };
+  const dayBeforeYesterday = text.match(/그제/);
+  if (dayBeforeYesterday) {
+    return { kind: "day_before_yesterday", raw: dayBeforeYesterday[0] };
+  }
 
   const koWeekday = text.match(/(?:일|월|화|수|목|금|토)요일/);
   if (koWeekday) return { kind: "weekday", raw: koWeekday[0] };
@@ -367,12 +386,10 @@ export function parseNlTemporalModel(text: string, now = new Date()): NlTemporal
   const mixed = hasMixedKoreanMeridiemColon(rawText);
   const unsupportedRelative = /(?:\d+|한|두|세|네)\s*시간\s*반\s*(?:뒤|후)/.test(rawText);
 
-  const exactClock = range || deadline || recurrence || relativeOffset || approximate || mixed
-    ? null
-    : parseExactClock(rawText);
-  const bareClock = range || deadline || recurrence || relativeOffset || approximate || mixed || exactClock
-    ? null
-    : parseBareClock(rawText);
+  // Clock mentions stay orthogonal to deadline / recurrence semantics.
+  // They are observations, not permission to use the clock as a start time.
+  const exactClock = range || relativeOffset || approximate || mixed ? null : parseExactClock(rawText);
+  const bareClock = range || relativeOffset || approximate || mixed || exactClock ? null : parseBareClock(rawText);
 
   const ambiguities: TemporalAmbiguity[] = [];
   if (bareClock) addAmbiguity(ambiguities, "missing_meridiem");
