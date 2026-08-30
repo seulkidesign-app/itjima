@@ -38,6 +38,16 @@ async function openCleanup(page: Page) {
   await frame.getByTestId("cleanup-review-sheet").waitFor({ state: "visible" });
 }
 
+async function readStatuses(page: Page) {
+  return page.evaluate((key) => {
+    const items = JSON.parse(localStorage.getItem(key) || "[]") as Array<{
+      id: string;
+      status?: string;
+    }>;
+    return Object.fromEntries(items.map((item) => [item.id, item.status]));
+  }, GUEST_INBOX_KEY);
+}
+
 test.describe("P2 safe cleanup", () => {
   test.beforeEach(async ({ page }) => {
     await resetAppState(page);
@@ -56,40 +66,47 @@ test.describe("P2 safe cleanup", () => {
     await expect(sheet.getByText("몇 달 뒤에도 기억할 생각", { exact: true })).toHaveCount(0);
     await expect(frame.getByRole("button", { name: /delete all|let go/i })).toHaveCount(0);
 
-    const statuses = await page.evaluate((key) => {
-      const items = JSON.parse(localStorage.getItem(key) || "[]") as Array<{
-        id: string;
-        status?: string;
-      }>;
-      return Object.fromEntries(items.map((item) => [item.id, item.status]));
-    }, GUEST_INBOX_KEY);
+    const statuses = await readStatuses(page);
     expect(statuses["dup-new"]).toBe("active");
     expect(statuses["dup-old"]).toBe("active");
     expect(statuses["old-important"]).toBe("active");
   });
 
-  test("explicit delete removes only the chosen duplicate copy", async ({ page }) => {
+  test("cancelling delete confirmation keeps every record", async ({ page }) => {
     await openCleanup(page);
     const frame = phone(page);
 
+    page.once("dialog", async (dialog) => {
+      expect(dialog.message()).toContain("Delete only this copy");
+      await dialog.dismiss();
+    });
     await frame.getByTestId("cleanup-delete-dup-old").click();
 
-    await expect
-      .poll(async () => {
-        return page.evaluate((key) => {
-          const items = JSON.parse(localStorage.getItem(key) || "[]") as Array<{
-            id: string;
-            status?: string;
-          }>;
-          return Object.fromEntries(items.map((item) => [item.id, item.status]));
-        }, GUEST_INBOX_KEY);
-      })
-      .toMatchObject({
-        "dup-new": "active",
-        "dup-old": "deleted",
-        "short-note": "active",
-        "old-important": "active",
-      });
+    await expect.poll(() => readStatuses(page)).toMatchObject({
+      "dup-new": "active",
+      "dup-old": "active",
+      "short-note": "active",
+      "old-important": "active",
+    });
+    await expect(frame.getByTestId("cleanup-duplicate-group")).toHaveCount(1);
+  });
+
+  test("confirmed delete removes only the chosen duplicate copy", async ({ page }) => {
+    await openCleanup(page);
+    const frame = phone(page);
+
+    page.once("dialog", async (dialog) => {
+      expect(dialog.message()).toContain("Delete only this copy");
+      await dialog.accept();
+    });
+    await frame.getByTestId("cleanup-delete-dup-old").click();
+
+    await expect.poll(() => readStatuses(page)).toMatchObject({
+      "dup-new": "active",
+      "dup-old": "deleted",
+      "short-note": "active",
+      "old-important": "active",
+    });
 
     await expect(frame.getByTestId("cleanup-empty")).toBeVisible();
     await expect(frame.getByTestId("cleanup-duplicate-group")).toHaveCount(0);
