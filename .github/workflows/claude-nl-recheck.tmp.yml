@@ -1,0 +1,25 @@
+name: Claude NL Recheck
+
+on:
+  push:
+    branches:
+      - audit/claude-nl-recheck-20260830
+
+permissions:
+  contents: read
+
+jobs:
+  recheck:
+    runs-on: ubuntu-latest
+    env:
+      VITE_SUPABASE_URL: https://example.supabase.co
+      VITE_SUPABASE_PUBLISHABLE_KEY: e2e-placeholder-key
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Run current parser recheck
+        run: npx vitest run tests/claude-nl-recheck.tmp.test.ts --reporter=verbose
