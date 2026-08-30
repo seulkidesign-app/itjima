@@ -1,3 +1,4 @@
+import { useEffect, useMemo, useState } from "react";
 import { InlinePromise } from "@/components/InlinePromise";
 import { MemoryRevivalHint } from "@/components/MemoryRevivalHint";
 import {
@@ -5,7 +6,14 @@ import {
   type SavedScheduleFeedbackModel,
 } from "@/components/home/SavedScheduleFeedback";
 import { LeftItemRow } from "@/components/home/LeftItemRow";
+import { HomeRediscoveryCard } from "@/components/home/HomeRediscoveryCard";
 import { featureEnabled } from "@/lib/features";
+import {
+  keepHomeRediscoveryQuiet,
+  markHomeRediscoveryPresented,
+  readHomeRediscoveryState,
+  selectHomeRediscoveryCandidate,
+} from "@/lib/homeRediscovery";
 import { useLang, useT } from "@/lib/i18n";
 import { canAutoCommitTimedCapture } from "@/lib/nlAutoCommit";
 import { isStructuredTimedRecord } from "@/lib/recordTemporal";
@@ -15,7 +23,7 @@ import {
 } from "@/lib/nlSchedule";
 import { scheduleConfirmationReason } from "@/lib/nlScheduleSafety";
 import { shouldShowInlinePromise } from "@/lib/promiseCard";
-import type { InboxItem } from "@/lib/store";
+import { useUserId, type InboxItem } from "@/lib/store";
 import type { RevivalHint } from "@/lib/memoryRevival";
 import { HomeEmptyHero } from "@/components/home/HomeEmptyHero";
 
@@ -84,7 +92,11 @@ export function InboxChat({
 }: Props) {
   const t = useT();
   const { lang } = useLang();
+  const userId = useUserId();
   const uiLang = lang === "en" ? "en" : "ko";
+  const [rediscoveryHiddenId, setRediscoveryHiddenId] = useState<string | null>(
+    null,
+  );
 
   const surfaces: ItemSurface[] = itemsAsc
     .filter((it) => !isStructuredTimedRecord(it))
@@ -135,6 +147,46 @@ export function InboxChat({
   const HOME_RECENT_LIMIT = 3;
   const recentQuiet = quietItems.slice(-HOME_RECENT_LIMIT);
   const olderQuietCount = Math.max(0, quietItems.length - recentQuiet.length);
+  const recentQuietIds = recentQuiet.map(({ item }) => item.id);
+  const questionSurfaceIds = questionSurfaces.map(({ item }) => item.id);
+  const rediscoverySurfaceKey = `${recentQuietIds.join("|")}::${questionSurfaceIds.join("|")}`;
+
+  const homeRediscovery = useMemo(() => {
+    if (!featureEnabled("HOME_REDISCOVERY")) return null;
+    const candidate = selectHomeRediscoveryCandidate(
+      itemsAsc,
+      readHomeRediscoveryState(userId),
+      Date.now(),
+      {
+        visibleItemIds: new Set(recentQuietIds),
+        excludedItemIds: new Set(questionSurfaceIds),
+      },
+    );
+    if (candidate?.item.id === rediscoveryHiddenId) return null;
+    return candidate;
+    // The primitive key tracks the actual Home surface membership without
+    // depending on newly-created arrays/sets on every render.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [itemsAsc, rediscoveryHiddenId, userId, rediscoverySurfaceKey]);
+
+  const homeRediscoveryId = homeRediscovery?.item.id ?? null;
+  useEffect(() => {
+    if (!homeRediscoveryId) return;
+    markHomeRediscoveryPresented(userId, homeRediscoveryId);
+  }, [homeRediscoveryId, userId]);
+
+  const keepRediscoveryHere = () => {
+    if (!homeRediscovery) return;
+    keepHomeRediscoveryQuiet(userId, homeRediscovery.item.id);
+    setRediscoveryHiddenId(homeRediscovery.item.id);
+  };
+
+  const openRediscovery = () => {
+    if (!homeRediscovery) return;
+    keepHomeRediscoveryQuiet(userId, homeRediscovery.item.id);
+    setRediscoveryHiddenId(homeRediscovery.item.id);
+    onOpenDetail(homeRediscovery.item);
+  };
 
   return (
     <div className="home-chat-lane chat-scroll flex min-h-0 flex-1 flex-col gap-3 px-5 pb-[calc(5.75rem+env(safe-area-inset-bottom))] pt-2">
@@ -206,6 +258,14 @@ export function InboxChat({
                 {t("전체 기록", "All records")}
               </button>
             </div>
+          )}
+
+          {homeRediscovery && (
+            <HomeRediscoveryCard
+              candidate={homeRediscovery}
+              onOpen={openRediscovery}
+              onKeep={keepRediscoveryHere}
+            />
           )}
 
           {/* Clarification/recovery stays after existing records so a new

@@ -1,6 +1,9 @@
 export const FEATURES = {
   BRAIN_MIRROR: false,
+  /** Legacy archive/similarity rediscovery surfaces stay off. */
   REDISCOVERY: false,
+  /** P1: one quiet resurfaced record inside Home. */
+  HOME_REDISCOVERY: true,
   CLEANUP: false,
   INLINE_PROMISE: true,
   PASTE_SPLIT: false,
