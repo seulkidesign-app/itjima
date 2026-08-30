@@ -70,7 +70,7 @@ if (typeof window !== "undefined") {
     .querySelectorAll('link[rel="apple-touch-icon"], link[rel="apple-touch-icon-precomposed"]')
     .forEach((node) => node.remove());
   const manifestLink = document.querySelector<HTMLLinkElement>('link[rel="manifest"]');
-  if (manifestLink) manifestLink.href = "/manifest-v3.webmanifest";
+  if (manifestLink) manifestLink.href = "/manifest-v4.webmanifest";
 
   if (import.meta.env.DEV && import.meta.env.VITE_E2E !== "true") {
     installAuthDebugInstrumentation(router);
