@@ -33,7 +33,7 @@
   font-family: "Playpen Sans", cursive;
   font-weight: 400;
   color: var(--itjima-logo-ink);
-  text-transform: uppercase;
+  text-transform: none;
   white-space: nowrap;
 }
 
@@ -91,10 +91,36 @@
   letter-spacing: 0.0695px;
 }
 
+/* Landing V2 contains a legacy Korean text node. Visually normalize it to the
+ * locked lowercase wordmark without changing landing behavior. */
+.landing-v2 .lv2-brand {
+  gap: 10px !important;
+  font-size: 0 !important;
+  font-weight: 400 !important;
+  letter-spacing: 0 !important;
+}
+
+.landing-v2 .lv2-brand-dot {
+  width: 14px !important;
+  height: 14px !important;
+  background: var(--itjima-logo-dot) !important;
+  box-shadow: none !important;
+}
+
+.landing-v2 .lv2-brand::after {
+  content: "itjima";
+  font-family: "Playpen Sans", cursive;
+  font-size: 21.582px;
+  font-weight: 400;
+  line-height: 33px;
+  letter-spacing: 0.1434px;
+  color: var(--itjima-logo-ink);
+  text-transform: none;
+}
+
 /*
- * The production landing still contains legacy Fugaz One inline styling.
- * This final canonical rule makes the rendered header match the locked Figma
- * logo without changing landing behavior or copy.
+ * The legacy landing still contains Fugaz One inline styling and uppercase
+ * source text. Render it as the same locked lowercase Figma logo.
  */
 .itjima-launch-page .landing-motion-wordmark {
   gap: 10px !important;
@@ -118,7 +144,7 @@
   line-height: 33px !important;
   letter-spacing: 0.1434px !important;
   color: var(--itjima-logo-ink) !important;
-  text-transform: uppercase !important;
+  text-transform: lowercase !important;
 }
 
 /* Auth header: normalize the existing ItJima text into the same app-scale lockup. */
@@ -134,7 +160,7 @@
   line-height: 24px !important;
   letter-spacing: 0.1043px !important;
   color: var(--itjima-logo-ink) !important;
-  text-transform: uppercase;
+  text-transform: lowercase;
 }
 
 .phone-frame [aria-label="Itjima"]::before {
