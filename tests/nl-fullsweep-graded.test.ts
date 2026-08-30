@@ -1,4 +1,3 @@
-import "./nl-adversarial-safety.test";
 import { describe, expect, it } from "vitest";
 import { evaluateTimedAutoCommit } from "@/lib/nlAutoCommit";
 import {
