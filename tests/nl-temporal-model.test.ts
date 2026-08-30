@@ -1,8 +1,8 @@
 import { describe, expect, it } from "vitest";
 import { parseNlTemporalModel } from "@/lib/nlTemporalModel";
 
-// Fixed audit clock keeps past/future expectations deterministic.
-const NOW = new Date("2026-08-30T10:00:00+09:00");
+// Fixed local audit clock keeps past/future expectations deterministic.
+const NOW = new Date(2026, 7, 30, 10, 0, 0);
 
 const parse = (text: string) => parseNlTemporalModel(text, NOW);
 
