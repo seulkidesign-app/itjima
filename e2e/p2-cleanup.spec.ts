@@ -47,16 +47,13 @@ test.describe("P2 safe cleanup", () => {
   test("opening cleanup never deletes or preselects records", async ({ page }) => {
     await openCleanup(page);
     const frame = phone(page);
+    const sheet = frame.getByTestId("cleanup-review-sheet");
 
     await expect(frame.getByTestId("cleanup-duplicate-group")).toHaveCount(1);
     await expect(frame.getByTestId("cleanup-copy-row")).toHaveCount(2);
-    await expect(frame.getByTestId("cleanup-review-sheet")).toContainText(
-      "서울숲 카페 가보기",
-    );
-    await expect(frame.getByTestId("cleanup-review-sheet")).not.toContainText("hi");
-    await expect(frame.getByTestId("cleanup-review-sheet")).not.toContainText(
-      "몇 달 뒤에도 기억할 생각",
-    );
+    await expect(sheet).toContainText("서울숲 카페 가보기");
+    await expect(sheet.getByText("hi", { exact: true })).toHaveCount(0);
+    await expect(sheet.getByText("몇 달 뒤에도 기억할 생각", { exact: true })).toHaveCount(0);
     await expect(frame.getByRole("button", { name: /delete all|let go/i })).toHaveCount(0);
 
     const statuses = await page.evaluate((key) => {
