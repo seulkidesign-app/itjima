@@ -1,0 +1,125 @@
+@import url("https://fonts.googleapis.com/css2?family=Playpen+Sans:wght@400&display=swap");
+
+/* Canonical Itjima brand lockup. Source: Figma landing node 455:33. */
+:root {
+  --itjima-logo-dot: #ffe658;
+  --itjima-logo-ink: #2e2e2e;
+}
+
+.itjima-brand-logo {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  white-space: nowrap;
+  color: var(--itjima-logo-ink);
+}
+
+.itjima-brand-logo-dot {
+  flex: 0 0 auto;
+  border-radius: 999px;
+  background: var(--itjima-logo-dot);
+}
+
+.itjima-brand-logo-wordmark {
+  flex: 0 0 auto;
+  overflow: hidden;
+  font-family: "Playpen Sans", cursive;
+  font-weight: 400;
+  color: var(--itjima-logo-ink);
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.itjima-brand-logo--app {
+  width: 71.273px;
+  height: 24px;
+  gap: 7.273px;
+}
+.itjima-brand-logo--app .itjima-brand-logo-dot {
+  width: 10.182px;
+  height: 10.182px;
+}
+.itjima-brand-logo--app .itjima-brand-logo-wordmark {
+  font-size: 15.696px;
+  line-height: 24px;
+  letter-spacing: 0.1043px;
+}
+
+.itjima-brand-logo--native {
+  width: 98px;
+  height: 33px;
+  gap: 10px;
+}
+.itjima-brand-logo--native .itjima-brand-logo-dot {
+  width: 14px;
+  height: 14px;
+}
+.itjima-brand-logo--native .itjima-brand-logo-wordmark {
+  font-size: 21.582px;
+  line-height: 33px;
+  letter-spacing: 0.1434px;
+}
+
+.itjima-brand-logo--micro {
+  width: 47.515px;
+  height: 16px;
+  gap: 4.848px;
+}
+.itjima-brand-logo--micro .itjima-brand-logo-dot {
+  width: 6.788px;
+  height: 6.788px;
+}
+.itjima-brand-logo--micro .itjima-brand-logo-wordmark {
+  font-size: 10.464px;
+  line-height: 16px;
+  letter-spacing: 0.0695px;
+}
+
+.itjima-launch-page .landing-motion-wordmark {
+  gap: 10px !important;
+}
+.itjima-launch-page .landing-motion-wordmark::before {
+  width: 14px;
+  height: 14px;
+  flex: 0 0 auto;
+  border-radius: 999px;
+  background: var(--itjima-logo-dot);
+  content: "";
+}
+.itjima-launch-page .landing-motion-wordmark > span:first-child {
+  background: transparent !important;
+  box-shadow: none !important;
+  font-family: "Playpen Sans", cursive !important;
+  font-size: 21.582px !important;
+  font-weight: 400 !important;
+  line-height: 33px !important;
+  letter-spacing: 0.1434px !important;
+  color: var(--itjima-logo-ink) !important;
+  text-transform: uppercase !important;
+}
+
+.phone-frame [aria-label="Itjima"] {
+  display: inline-flex;
+  min-width: 71.273px;
+  height: 24px;
+  align-items: center;
+  gap: 7.273px;
+  font-family: "Playpen Sans", cursive !important;
+  font-size: 15.696px !important;
+  font-weight: 400 !important;
+  line-height: 24px !important;
+  letter-spacing: 0.1043px !important;
+  color: var(--itjima-logo-ink) !important;
+  text-transform: uppercase;
+}
+.phone-frame [aria-label="Itjima"]::before {
+  width: 10.182px;
+  height: 10.182px;
+  flex: 0 0 auto;
+  border-radius: 999px;
+  background: var(--itjima-logo-dot);
+  content: "";
+}
+.phone-frame [aria-label="Itjima"] span {
+  color: var(--itjima-logo-ink) !important;
+}

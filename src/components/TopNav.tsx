@@ -7,6 +7,7 @@ import { SPRING_TAB } from "@/lib/motion";
 import { useUserId } from "@/lib/store";
 import { tap } from "@/lib/haptics";
 import { SettingsSheet } from "./SettingsSheet";
+import { BrandLogo } from "./BrandLogo";
 
 export function TopNav() {
   const t = useT();
@@ -64,15 +65,9 @@ export function TopNav() {
       to="/"
       onClick={tap}
       aria-label={t("잊지마 소개로 이동", "Open Itjima introduction")}
-      className={`${className} inline-flex items-center gap-2`}
+      className={`${className} inline-flex min-h-11 items-center`}
     >
-      <span
-        className="inline-block h-3 w-3 shrink-0 rounded-full bg-primary"
-        aria-hidden
-      />
-      <span className="font-sans text-[18px] font-extrabold tracking-[-0.02em] text-ink normal-case">
-        {t("잊지마", "Itjima")}
-      </span>
+      <BrandLogo size="app" />
     </Link>
   );
 
@@ -85,9 +80,9 @@ export function TopNav() {
           }`}
           style={{ paddingTop: "env(safe-area-inset-top)" }}
         >
-          <div className="mobile-app-header-bar flex min-h-[52px] items-center justify-between gap-3 px-4 py-1.5">
+          <div className="mobile-app-header-bar flex min-h-14 items-center justify-between gap-3 px-5 py-0">
             {renderBrand(
-              "app-brand-trigger rounded-[12px] px-1 py-1 leading-none text-ink",
+              "app-brand-trigger rounded-[12px] leading-none text-ink",
             )}
             <button
               type="button"
@@ -145,7 +140,7 @@ export function TopNav() {
         }`}
       >
         {renderBrand(
-          "app-brand-trigger shrink-0 rounded-[12px] px-1 py-1 font-display text-[19px] uppercase leading-none tracking-wide text-ink",
+          "app-brand-trigger shrink-0 rounded-[12px] leading-none text-ink",
         )}
 
         <LayoutGroup id="tablet-primary-navigation">
