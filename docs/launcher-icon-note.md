@@ -1,0 +1,1 @@
+The launcher icon source is the approved ij mark on #FFF986. Runtime icon paths use v4 filenames to force fresh PWA metadata fetches.
