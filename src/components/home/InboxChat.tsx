@@ -147,21 +147,33 @@ export function InboxChat({
   const HOME_RECENT_LIMIT = 3;
   const recentQuiet = quietItems.slice(-HOME_RECENT_LIMIT);
   const olderQuietCount = Math.max(0, quietItems.length - recentQuiet.length);
+  const recentQuietIds = recentQuiet.map(({ item }) => item.id);
+  const questionSurfaceIds = questionSurfaces.map(({ item }) => item.id);
+  const rediscoverySurfaceKey = `${recentQuietIds.join("|")}::${questionSurfaceIds.join("|")}`;
 
   const homeRediscovery = useMemo(() => {
     if (!featureEnabled("HOME_REDISCOVERY")) return null;
     const candidate = selectHomeRediscoveryCandidate(
       itemsAsc,
       readHomeRediscoveryState(userId),
+      Date.now(),
+      {
+        visibleItemIds: new Set(recentQuietIds),
+        excludedItemIds: new Set(questionSurfaceIds),
+      },
     );
     if (candidate?.item.id === rediscoveryHiddenId) return null;
     return candidate;
-  }, [itemsAsc, rediscoveryHiddenId, userId]);
+    // The primitive key tracks the actual Home surface membership without
+    // depending on newly-created arrays/sets on every render.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [itemsAsc, rediscoveryHiddenId, userId, rediscoverySurfaceKey]);
 
+  const homeRediscoveryId = homeRediscovery?.item.id ?? null;
   useEffect(() => {
-    if (!homeRediscovery) return;
-    markHomeRediscoveryPresented(userId, homeRediscovery.item.id);
-  }, [homeRediscovery?.item.id, userId]);
+    if (!homeRediscoveryId) return;
+    markHomeRediscoveryPresented(userId, homeRediscoveryId);
+  }, [homeRediscoveryId, userId]);
 
   const keepRediscoveryHere = () => {
     if (!homeRediscovery) return;
