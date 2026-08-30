@@ -42,7 +42,7 @@ for (const date of ["", "today ", "tomorrow "]) {
 // Durations are not wall clocks. In particular, 오후/오전 before N시간 must not
 // make N시간 look like N시.
 for (const date of ["", "오늘 ", "내일 "]) {
-  for (const duration of ["오후 2시간", "오후 3시간", "오전 4시간", "오전 10시간"] ) {
+  for (const duration of ["오후 2시간", "오후 3시간", "오전 4시간", "오전 10시간"]) {
     add("duration_not_clock", [
       `${date}${duration} 영화 보기`,
       `${date}${duration} 공부하기`,
@@ -145,22 +145,29 @@ add("long_input", [
   `내일 오후 2시간 영화 보기${longTail}`,
 ]);
 
+function languageFor(input: string): "ko" | "en" {
+  return /[가-힣]/.test(input) ? "ko" : "en";
+}
+
+function shortName(input: string): string {
+  return input.replace(/\s+/g, " ").slice(0, 96);
+}
+
 // Corpus-size floor: this test is intentionally generated as a matrix so new
 // invalid-clock/action/date combinations cannot silently disappear.
 describe("P0-D adversarial natural-language schedule safety", () => {
-  it("keeps every adversarial case out of timed auto-commit", () => {
-    const failures = attacks
-      .map((c) => ({ ...c, decision: evaluateTimedAutoCommit(c.input, /[가-힣]/.test(c.input) ? "ko" : "en", NOW) }))
-      .filter((r) => r.decision.ok);
-
-    console.log(JSON.stringify({
-      total: attacks.length,
-      unsafeAutoCommits: failures.length,
-      failures: failures.map((f) => ({ category: f.category, input: f.input, decision: f.decision })),
-    }));
-
+  it("keeps the adversarial corpus floor", () => {
     expect(attacks.length).toBeGreaterThanOrEqual(150);
-    expect(failures).toEqual([]);
+  });
+
+  attacks.forEach((c, index) => {
+    it(`[${c.category}] #${index + 1} ${shortName(c.input)}`, () => {
+      const decision = evaluateTimedAutoCommit(c.input, languageFor(c.input), NOW);
+      expect(
+        decision.ok,
+        JSON.stringify({ category: c.category, input: c.input, decision }, null, 2),
+      ).toBe(false);
+    });
   });
 
   it("does not achieve safety by blocking canonical happy paths", () => {
