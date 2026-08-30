@@ -5,6 +5,7 @@ import {
   hasExpandedRepeatIntent,
   hasMixedKoreanMeridiemColon,
   hasPastDateReference,
+  hasPastTimeOnlyClock,
   hasUnsupportedColonClockRange,
   hasUnsupportedDateRange,
 } from "@/lib/nlSemanticSafety";
@@ -51,13 +52,20 @@ export type TemporalBareClock = {
   raw: string;
 };
 
+export type TemporalRelativeOffset = {
+  amount: number;
+  unit: "minute" | "hour" | "day";
+  raw: string;
+};
+
 export type TemporalRangeClock =
   | { kind: "exact"; hour24: number; minute: number; raw: string }
   | { kind: "bare"; hour: number; minute: number; raw: string };
 
 export type TemporalRange = {
   raw: string;
-  supported: boolean;
+  supportedSyntax: boolean;
+  resolved: boolean;
   start: TemporalRangeClock | null;
   end: TemporalRangeClock | null;
   inheritedEndMeridiem: boolean;
@@ -78,6 +86,7 @@ export type TemporalAmbiguity =
   | "weekend_day"
   | "approximate_time"
   | "unsupported_range"
+  | "unsupported_relative"
   | "mixed_meridiem_colon"
   | "past_reference";
 
@@ -86,6 +95,7 @@ export type TemporalPrecision =
   | "date"
   | "daypart"
   | "exact_clock"
+  | "relative_offset"
   | "range"
   | "deadline"
   | "recurrence"
@@ -97,6 +107,7 @@ export type NlTemporalModel = {
   daypart: TemporalDaypart | null;
   exactClock: TemporalExactClock | null;
   bareClock: TemporalBareClock | null;
+  relativeOffset: TemporalRelativeOffset | null;
   range: TemporalRange | null;
   deadline: TemporalDeadline | null;
   recurrence: TemporalRecurrence | null;
@@ -107,10 +118,32 @@ export type NlTemporalModel = {
 const KO_RANGE_RE =
   /(?:(오전|오후)\s*)?(\d{1,2})\s*시(?:\s*(반)|(?:\s*(\d{1,2})\s*분))?\s*부터\s*(?:(오전|오후)\s*)?(\d{1,2})\s*시(?:\s*(반)|(?:\s*(\d{1,2})\s*분))?\s*까지/;
 
+const KO_SMALL_NUMBER: Record<string, number> = {
+  한: 1,
+  두: 2,
+  세: 3,
+  네: 4,
+};
+
+const EN_SMALL_NUMBER: Record<string, number> = {
+  a: 1,
+  an: 1,
+  one: 1,
+  two: 2,
+  three: 3,
+  four: 4,
+};
+
 function toHour24(period: "오전" | "오후", hour: number): number {
   if (period === "오후" && hour < 12) return hour + 12;
   if (period === "오전" && hour === 12) return 0;
   return hour;
+}
+
+function numericValue(raw: string, words: Record<string, number>): number | null {
+  const numeric = Number(raw);
+  if (Number.isFinite(numeric) && numeric > 0) return numeric;
+  return words[raw.toLowerCase()] ?? null;
 }
 
 function parseDate(text: string): TemporalDate | null {
@@ -177,6 +210,30 @@ function parseDaypart(text: string): TemporalDaypart | null {
   if (/오전/.test(text)) return "morning";
   if (/오후|\bafternoon\b/i.test(text)) return "afternoon";
   return null;
+}
+
+function parseRelativeOffset(text: string): TemporalRelativeOffset | null {
+  const koHalf = text.match(/반\s*시간\s*(?:뒤|후)/);
+  if (koHalf) return { amount: 30, unit: "minute", raw: koHalf[0] };
+
+  const ko = text.match(/(\d+|한|두|세|네)\s*(분|시간|일)\s*(?:뒤|후)/);
+  if (ko) {
+    const amount = numericValue(ko[1], KO_SMALL_NUMBER);
+    if (!amount) return null;
+    const unit = ko[2] === "분" ? "minute" : ko[2] === "시간" ? "hour" : "day";
+    return { amount, unit, raw: ko[0] };
+  }
+
+  const enHalf = text.match(/\bin\s+half(?:\s+an?)?\s+hour\b/i);
+  if (enHalf) return { amount: 30, unit: "minute", raw: enHalf[0] };
+
+  const en = text.match(/\bin\s+(\d+|an?|one|two|three|four)\s*(minutes?|mins?|hours?|hrs?|days?)\b/i);
+  if (!en) return null;
+  const amount = numericValue(en[1], EN_SMALL_NUMBER);
+  if (!amount) return null;
+  const unitRaw = en[2].toLowerCase();
+  const unit = unitRaw.startsWith("min") ? "minute" : unitRaw.startsWith("h") ? "hour" : "day";
+  return { amount, unit, raw: en[0] };
 }
 
 function parseExactClock(text: string): TemporalExactClock | null {
@@ -255,7 +312,8 @@ function parseRange(text: string): TemporalRange | null {
 
     return {
       raw: ko[0],
-      supported: start.kind === "exact" && end.kind === "exact",
+      supportedSyntax: true,
+      resolved: start.kind === "exact" && end.kind === "exact",
       start,
       end,
       inheritedEndMeridiem: inherited,
@@ -268,7 +326,14 @@ function parseRange(text: string): TemporalRange | null {
     /\d{1,2}\s*시(?!\s*간)\s*[-~]\s*\d{1,2}\s*시(?!\s*간)/.test(text) ||
     /\b\d{1,2}:\d{2}\s*[-~]\s*\d{1,2}:\d{2}\b/.test(text)
   ) {
-    return { raw: text.trim(), supported: false, start: null, end: null, inheritedEndMeridiem: false };
+    return {
+      raw: text.trim(),
+      supportedSyntax: false,
+      resolved: false,
+      start: null,
+      end: null,
+      inheritedEndMeridiem: false,
+    };
   }
 
   return null;
@@ -297,26 +362,40 @@ export function parseNlTemporalModel(text: string, now = new Date()): NlTemporal
   const range = parseRange(rawText);
   const deadline = hasDeadlineExpression(rawText) ? { raw: rawText } : null;
   const recurrence = parseRecurrence(rawText);
+  const relativeOffset = parseRelativeOffset(rawText);
   const approximate = hasApproximateTimeExpression(rawText);
   const mixed = hasMixedKoreanMeridiemColon(rawText);
+  const unsupportedRelative = /(?:\d+|한|두|세|네)\s*시간\s*반\s*(?:뒤|후)/.test(rawText);
 
-  const exactClock = range || deadline || approximate || mixed ? null : parseExactClock(rawText);
-  const bareClock = range || deadline || approximate || mixed || exactClock ? null : parseBareClock(rawText);
+  const exactClock = range || deadline || recurrence || relativeOffset || approximate || mixed
+    ? null
+    : parseExactClock(rawText);
+  const bareClock = range || deadline || recurrence || relativeOffset || approximate || mixed || exactClock
+    ? null
+    : parseBareClock(rawText);
 
   const ambiguities: TemporalAmbiguity[] = [];
   if (bareClock) addAmbiguity(ambiguities, "missing_meridiem");
+  if (range && range.supportedSyntax && !range.resolved) {
+    addAmbiguity(ambiguities, "missing_meridiem");
+  } else if (range && !range.supportedSyntax) {
+    addAmbiguity(ambiguities, "unsupported_range");
+  }
   if (hasBroadUnresolvedDatePeriod(rawText)) addAmbiguity(ambiguities, "broad_date");
   if (date?.kind === "weekend") addAmbiguity(ambiguities, "weekend_day");
   if (approximate) addAmbiguity(ambiguities, "approximate_time");
-  if (range && !range.supported) addAmbiguity(ambiguities, "unsupported_range");
+  if (unsupportedRelative) addAmbiguity(ambiguities, "unsupported_relative");
   if (mixed) addAmbiguity(ambiguities, "mixed_meridiem_colon");
-  if (hasPastDateReference(rawText, now)) addAmbiguity(ambiguities, "past_reference");
+  if (hasPastDateReference(rawText, now) || hasPastTimeOnlyClock(rawText, now)) {
+    addAmbiguity(ambiguities, "past_reference");
+  }
 
   let precision: TemporalPrecision = "none";
   if (ambiguities.length > 0) precision = "ambiguous";
   else if (recurrence) precision = "recurrence";
   else if (deadline) precision = "deadline";
   else if (range) precision = "range";
+  else if (relativeOffset) precision = "relative_offset";
   else if (exactClock) precision = "exact_clock";
   else if (daypart) precision = "daypart";
   else if (date) precision = "date";
@@ -327,6 +406,7 @@ export function parseNlTemporalModel(text: string, now = new Date()): NlTemporal
     daypart,
     exactClock,
     bareClock,
+    relativeOffset,
     range,
     deadline,
     recurrence,
