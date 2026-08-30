@@ -4,6 +4,7 @@ import {
   cleanScheduleTitle,
   hasNaturalScheduleTime,
 } from "@/lib/naturalScheduleDraft";
+import { understandNaturalLanguage } from "@/lib/nlSchedule";
 import { shouldShowInlinePromise } from "@/lib/promiseCard";
 import { scheduleConfirmationReasons } from "@/lib/nlScheduleSafety";
 import {
@@ -31,6 +32,10 @@ export type FullsweepResult = {
   category: string;
   grade: FullsweepGrade;
   detail?: string;
+  /** Audit-only observations — does not affect grading. */
+  intent?: string;
+  confidence?: string;
+  detectedStart?: string | null;
 };
 
 export function gradeFullsweepCase(c: FullsweepCase): FullsweepResult {
@@ -45,6 +50,15 @@ export function gradeFullsweepCase(c: FullsweepCase): FullsweepResult {
       : shouldShowInlinePromise(c.input, lang);
   const reasons = scheduleConfirmationReasons(c.input, now);
   const title = cleanScheduleTitle(c.input);
+  const nl = understandNaturalLanguage(c.input, lang);
+  const detectedStart =
+    nl.detectedDate?.start?.toISOString() ??
+    (decision.ok ? decision.draft.start.toISOString() : null);
+  const audit = {
+    intent: nl.intent,
+    confidence: nl.confidence,
+    detectedStart,
+  };
 
   const failReasons: string[] = [];
 
@@ -109,6 +123,7 @@ export function gradeFullsweepCase(c: FullsweepCase): FullsweepResult {
       category: c.category,
       grade: "FAIL",
       detail: failReasons.join("; "),
+      ...audit,
     };
   }
 
@@ -125,6 +140,7 @@ export function gradeFullsweepCase(c: FullsweepCase): FullsweepResult {
       detail: titleMissing
         ? `title missing ${c.titleMustContain?.filter((n) => !title.includes(n)).join(",")}`
         : "titleDebt",
+      ...audit,
     };
   }
 
@@ -132,6 +148,7 @@ export function gradeFullsweepCase(c: FullsweepCase): FullsweepResult {
     input: c.input,
     category: c.category,
     grade: c.auto ? "FULL_PASS" : "SAFE",
+    ...audit,
   };
 }
 
@@ -158,6 +175,17 @@ describe("NL fullsweep graded corpus (P0-A)", () => {
         FAIL_details: fails.map((r) => ({
           input: r.input,
           detail: r.detail,
+          intent: r.intent,
+          confidence: r.confidence,
+          detectedStart: r.detectedStart,
+        })),
+        // Compact audit sample for QA debt triage (observation only).
+        audit_sample: results.slice(0, 12).map((r) => ({
+          input: r.input,
+          grade: r.grade,
+          intent: r.intent,
+          confidence: r.confidence,
+          detectedStart: r.detectedStart,
         })),
       }),
     );
