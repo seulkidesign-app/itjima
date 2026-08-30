@@ -74,7 +74,7 @@ test.describe("locked landing brand visual contract", () => {
       expect(metrics.content.replace(/[\"']/g, "")).toBe("itjima");
       expect(metrics.fontFamily).toContain("Playpen Sans");
       expect(metrics.fontSize).toBe("21.582px");
-      expect(metrics.fontWeight).toBe("400");
+      expect(metrics.fontWeight).toBe("500");
       expect(parseFloat(metrics.letterSpacing)).toBeCloseTo(0.1434, 2);
       expect(metrics.color).toBe("rgb(46, 46, 46)");
       expect(metrics.textTransform).toBe("none");
@@ -108,7 +108,7 @@ test.describe("locked landing brand visual contract", () => {
     expect(metrics.gap).toBe("10px");
     expect(metrics.fontFamily).toContain("Playpen Sans");
     expect(metrics.fontSize).toBe("21.582px");
-    expect(metrics.fontWeight).toBe("400");
+    expect(metrics.fontWeight).toBe("500");
     expect(parseFloat(metrics.letterSpacing)).toBeCloseTo(0.1434, 2);
     expect(metrics.color).toBe("rgb(46, 46, 46)");
     expect(metrics.textTransform).toBe("lowercase");

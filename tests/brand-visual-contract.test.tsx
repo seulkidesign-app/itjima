@@ -13,9 +13,11 @@ describe("canonical Itjima brand visual contract", () => {
     expect(html).not.toContain(">ITJIMA<");
   });
 
-  it("locks the Figma 455:33 geometry and colors in one final stylesheet", () => {
+  it("locks the Figma 455:33 geometry, Medium weight, and colors in one final stylesheet", () => {
     const css = readFileSync("src/ui-brand-canonical.css", "utf8");
 
+    expect(css).toContain("Playpen+Sans:wght@500");
+    expect(css).toContain("font-weight: 500");
     expect(css).toContain("--itjima-logo-dot: #ffe658");
     expect(css).toContain("--itjima-logo-ink: #2e2e2e");
     expect(css).toContain("width: 98px");

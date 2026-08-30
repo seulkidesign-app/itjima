@@ -7,7 +7,7 @@ function read(path: string) {
 }
 
 describe("PWA product metadata safety", () => {
-  const manifestSource = read("public/manifest.webmanifest");
+  const manifestSource = read("public/manifest-v4.webmanifest");
   const manifest = JSON.parse(manifestSource) as {
     name: string;
     description: string;
@@ -15,18 +15,18 @@ describe("PWA product metadata safety", () => {
     orientation?: string;
     lang?: string;
     shortcuts?: Array<{ url: string }>;
+    icons?: Array<{ src: string; sizes: string; purpose?: string }>;
   };
   const html = read("index.html");
-  const icon = read("public/favicon.svg");
+  const brandCss = read("src/ui-brand-canonical.css");
   const shareImage = readFileSync(
-    resolve(process.cwd(), "public/og-itjima-schedule-v2.png"),
+    resolve(process.cwd(), "public/og-itjima-brand-v3.png"),
   );
 
-  it("describes the released product as natural-language schedule capture without AI promises", () => {
-    const publicMetadata = `${manifestSource}\n${html}\n${icon}`;
+  it("describes the released product without adding a new AI promise", () => {
+    const publicMetadata = `${manifestSource}\n${html}`;
     expect(publicMetadata).not.toMatch(/AI\s*(기억|메모|일정|관리)/i);
-    expect(manifest.name).toContain("일정 캡처");
-    expect(manifest.description).toContain("자연어");
+    expect(manifest.name).toBe("잊지마");
     expect(manifest.description).toContain("애매한 부분만 확인");
   });
 
@@ -35,7 +35,7 @@ describe("PWA product metadata safety", () => {
     expect(manifest.lang).toBe("ko-KR");
   });
 
-  it("launches the installed PWA into the product while keeping three v1 shortcuts", () => {
+  it("launches the installed PWA into the product while keeping three shortcuts", () => {
     expect(manifest.start_url).toBe("/app");
     const urls = manifest.shortcuts?.map((shortcut) => shortcut.url) ?? [];
     expect(urls).toEqual(
@@ -43,13 +43,29 @@ describe("PWA product metadata safety", () => {
     );
   });
 
-  it("includes the iOS standalone app metadata", () => {
-    expect(html).toContain('name="apple-mobile-web-app-capable" content="yes"');
-    expect(html).toContain(
-      'name="apple-mobile-web-app-title" content="잊지마"',
+  it("uses the approved ij launcher assets with fresh v4 URLs", () => {
+    expect(manifest.icons).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          src: "/icons/itjima-192-v4.png",
+          sizes: "192x192",
+        }),
+        expect.objectContaining({
+          src: "/icons/itjima-512-v4.png",
+          sizes: "512x512",
+        }),
+      ]),
     );
-    expect(html).toContain('name="apple-mobile-web-app-status-bar-style"');
-    expect(html).toContain('rel="manifest" href="/manifest.webmanifest"');
+    expect(html).toContain('rel="manifest" href="/manifest-v4.webmanifest"');
+    expect(html).toContain('href="/favicon-32-v4.png"');
+    expect(html).toContain('href="/apple-touch-icon.png?v=4"');
+  });
+
+  it("keeps the lowercase wordmark on Playpen Sans Medium", () => {
+    expect(brandCss).toContain("Playpen+Sans:wght@500");
+    expect(brandCss).toContain('font-family: "Playpen Sans", cursive');
+    expect(brandCss).toContain("font-weight: 500");
+    expect(brandCss).toContain('content: "itjima"');
   });
 
   it("keeps search and share descriptions aligned with the focused promise", () => {
@@ -57,11 +73,10 @@ describe("PWA product metadata safety", () => {
     expect(html).toContain("애매한 부분만 확인");
     expect(html).toContain("말로 쓰는 일정 관리 앱");
     expect(html).toContain("대충 말해도 일정이 돼요");
-    expect(html).toContain("og-itjima-schedule-v2.png");
+    expect(html).toContain("og-itjima-brand-v3.png");
     expect(html).toContain('property="og:image:type" content="image/png"');
     expect(html).toContain('property="og:image:width" content="1200"');
     expect(html).toContain('property="og:image:height" content="630"');
-    expect(icon).toContain("자연어 일정 캡처 도구");
   });
 
   it("ships the social preview as a crawler-safe 1200 by 630 PNG", () => {
