@@ -21,5 +21,9 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
-      - name: Run NL semantic safety regression
-        run: npx vitest run tests/nl-semantic-safety.test.ts --reporter=verbose
+      - name: Full release build
+        run: npm run build
+      - name: Install Chromium
+        run: npx playwright install --with-deps chromium
+      - name: P0 natural-language user contract
+        run: npx playwright test e2e/nl-p0-user-contract.spec.ts --project=mobile-chrome
