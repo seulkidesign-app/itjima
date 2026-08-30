@@ -4,7 +4,8 @@ export const FEATURES = {
   REDISCOVERY: false,
   /** P1: one quiet resurfaced record inside Home. */
   HOME_REDISCOVERY: true,
-  CLEANUP: false,
+  /** P2: explicit review of exact duplicate captures only. */
+  CLEANUP: true,
   INLINE_PROMISE: true,
   PASTE_SPLIT: false,
   /** Archive: 생각 지도 / Thought map layout */
