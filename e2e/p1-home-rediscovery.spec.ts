@@ -1,11 +1,9 @@
-import { test, expect } from "@playwright/test";
+import { test, expect, type Page } from "@playwright/test";
 import { GUEST_INBOX_KEY, phone, resetAppState } from "./helpers";
 
 const DAY = 24 * 60 * 60 * 1000;
 
-async function seedHomeRecords(
-  page: Parameters<typeof test>[0] extends never ? never : import("@playwright/test").Page,
-) {
+async function seedHomeRecords(page: Page) {
   await page.evaluate(
     ({ key, day }) => {
       const now = Date.now();
