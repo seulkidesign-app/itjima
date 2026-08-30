@@ -72,16 +72,58 @@ export function shouldKeepScheduleSemanticsQuiet(text: string): boolean {
   return quietScheduleSemanticReason(text) !== null;
 }
 
-/** A period word plus a clock still does not identify a calendar day. */
+/**
+ * A period word plus a clock still does not identify a calendar day.
+ * Weekend / 주말 stay out of this gate — existing weekend ambiguity owns them.
+ * "this week" must not match inside "this weekend"; "이번 주" must not swallow "이번 주말".
+ */
 export function hasBroadUnresolvedDatePeriod(text: string): boolean {
   const value = text.trim();
 
   if (/다다음\s*주|week\s+after\s+next/i.test(value)) return true;
 
-  const broadWeek = /(?:이번\s*주|다음\s*주|this\s+week|next\s+week)/i.test(value);
+  // Negative lookahead keeps 주말 / weekend under the weekend clarification flow.
+  const broadWeek =
+    /(?:이번|다음)\s*주(?!\s*말)/i.test(value) ||
+    /\b(?:this|next)\s+week(?!\s*end\b)/i.test(value);
   if (broadWeek && !SPECIFIC_WEEKDAY_RE.test(value)) return true;
 
   if (BROAD_MONTH_RE.test(value) && !SPECIFIC_MONTH_DAY_RE.test(value)) return true;
+  return false;
+}
+
+/**
+ * Fuzzy / approximate clock language. Production has no approximate-time model,
+ * so these must never promote to an exact start (or an exact-looking promise).
+ * Only time-bound hedges — bare "정도" alone is not enough.
+ */
+export function hasApproximateTimeExpression(text: string): boolean {
+  const value = text.trim();
+  if (!value) return false;
+
+  if (
+    /(?:오전|오후)?\s*\d{1,2}\s*시(?:\s*반|(?:\s*\d{1,2}\s*분))?\s*(?:쯤|경|무렵)/.test(
+      value,
+    )
+  ) {
+    return true;
+  }
+  if (
+    /(?:한|두|세|네)\s*시(?:\s*반)?\s*(?:쯤|경|무렵|정도(?:에)?)/.test(value)
+  ) {
+    return true;
+  }
+  if (/\d{1,2}\s*시(?:\s*반|(?:\s*\d{1,2}\s*분))?\s*정도(?:에)?/.test(value)) {
+    return true;
+  }
+  if (
+    /\b(?:around|about)\s+\d{1,2}(?::\d{2})?\s*(?:am|pm)?\b/i.test(value)
+  ) {
+    return true;
+  }
+  if (/\b\d{1,2}(?::\d{2})?\s*(?:am|pm)?-ish\b/i.test(value)) {
+    return true;
+  }
   return false;
 }
 

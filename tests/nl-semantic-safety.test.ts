@@ -4,6 +4,8 @@ import { hasNaturalScheduleTime } from "@/lib/naturalScheduleDraft";
 import { shouldShowInlinePromise } from "@/lib/promiseCard";
 import { scheduleConfirmationReasons } from "@/lib/nlScheduleSafety";
 import {
+  hasApproximateTimeExpression,
+  hasBroadUnresolvedDatePeriod,
   hasDeadlineExpression,
   hasExpandedRepeatIntent,
   hasPastDateReference,
@@ -234,6 +236,46 @@ describe("natural-language semantic schedule safety", () => {
   it("allows relative offsets", () => {
     const decision = evaluateTimedAutoCommit("10분 뒤에 전화", "ko", MORNING);
     expect(decision.ok).toBe(true);
+  });
+
+  it("does not treat weekend as a broad unresolved week", () => {
+    expect(hasBroadUnresolvedDatePeriod("Meet Maya this weekend")).toBe(false);
+    expect(hasBroadUnresolvedDatePeriod("이번 주말에 영화 보기")).toBe(false);
+    expect(hasBroadUnresolvedDatePeriod("주말에 영화 보기")).toBe(false);
+    expect(hasBroadUnresolvedDatePeriod("다음 주 오후 3시에 청소")).toBe(true);
+    expect(hasBroadUnresolvedDatePeriod("이번 달 오후 3시에 병원")).toBe(true);
+  });
+
+  it("blocks approximate clocks from exact auto-commit and promises", () => {
+    expect(hasApproximateTimeExpression("오후 3시쯤 병원")).toBe(true);
+    expect(hasApproximateTimeExpression("오후 3시경 회의")).toBe(true);
+    expect(hasApproximateTimeExpression("3시쯤 병원")).toBe(true);
+    expect(hasApproximateTimeExpression("세 시 정도에 출발")).toBe(true);
+    expect(hasApproximateTimeExpression("around 3pm dentist")).toBe(true);
+    expect(hasApproximateTimeExpression("내일 오후 3시 병원")).toBe(false);
+    expect(hasApproximateTimeExpression("다음주쯤 보기")).toBe(false);
+
+    for (const text of ["오후 3시쯤 병원", "오후 3시경 회의", "3시쯤 병원"]) {
+      quiet(text);
+    }
+    expect(shouldShowInlinePromise("내일 3시 병원", "ko")).toBe(true);
+    const exact = evaluateTimedAutoCommit("내일 오후 3시 병원", "ko", MORNING);
+    expect(exact.ok).toBe(true);
+  });
+
+  it("keeps clarification promises for vague week / weekend without inventing a day", () => {
+    for (const [text, lang] of [
+      ["다음주쯤 보기", "ko"],
+      ["Watch it next week or so", "en"],
+      ["Meet Maya this weekend", "en"],
+      ["이번 주말에 영화 보기", "ko"],
+    ] as const) {
+      blocked(text, MORNING);
+      expect(shouldShowInlinePromise(text, lang), text).toBe(true);
+    }
+    // Broad period + exact clock still hides inventing-a-day promises.
+    expect(shouldShowInlinePromise("다음 주 오후 3시에 청소", "ko")).toBe(false);
+    expect(shouldShowInlinePromise("이번 달 오후 3시에 병원", "ko")).toBe(false);
   });
 
   it("preserves semantic title text for valid exact captures", () => {

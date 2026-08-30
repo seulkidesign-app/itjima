@@ -13,6 +13,7 @@ import {
   type ScheduleConfirmationReason,
 } from "@/lib/nlScheduleSafety";
 import {
+  hasApproximateTimeExpression,
   hasBroadUnresolvedDatePeriod,
   hasDeadlineExpression,
   hasExpandedRepeatIntent,
@@ -36,6 +37,7 @@ export type AutoCommitBlockReason =
   | "clarify_intent"
   | "quiet"
   | "deadline"
+  | "approximate_time"
   | ScheduleConfirmationReason;
 
 export type TimedAutoCommitDecision =
@@ -68,8 +70,14 @@ export function evaluateTimedAutoCommit(
   }
 
   // A broad period plus a precise-looking clock still lacks a calendar day.
+  // (Weekend / 주말 are excluded inside the guard — clarification owns them.)
   if (hasBroadUnresolvedDatePeriod(trimmed)) {
     return { ok: false, reason: "unresolved_date" };
+  }
+
+  // Fuzzy clocks ("3시쯤", "around 3pm") have no exact model yet.
+  if (hasApproximateTimeExpression(trimmed)) {
+    return { ok: false, reason: "approximate_time" };
   }
 
   // Past input may be history or a typo. Do not silently move it forward.

@@ -35,13 +35,14 @@ export type FullsweepResult = {
 
 export function gradeFullsweepCase(c: FullsweepCase): FullsweepResult {
   const now = resolveNow(c);
+  const lang = c.lang ?? "ko";
   const actualExplicit = hasNaturalScheduleTime(c.input);
-  const decision = evaluateTimedAutoCommit(c.input, "ko", now);
+  const decision = evaluateTimedAutoCommit(c.input, lang, now);
   const actualAuto = decision.ok;
   const actualInline =
     c.inlinePromise === undefined
       ? undefined
-      : shouldShowInlinePromise(c.input, "ko");
+      : shouldShowInlinePromise(c.input, lang);
   const reasons = scheduleConfirmationReasons(c.input, now);
   const title = cleanScheduleTitle(c.input);
 

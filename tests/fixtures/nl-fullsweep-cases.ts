@@ -14,6 +14,8 @@ export type FullsweepCase = {
   auto: boolean;
   /** Expected shouldShowInlinePromise — only assert when defined */
   inlinePromise?: boolean;
+  /** Language for NL / promise evaluation (default ko) */
+  lang?: "ko" | "en";
   /** If auto true, expected start hour (local) */
   autoStartHour?: number;
   autoStartMinute?: number;
@@ -228,18 +230,27 @@ export const NL_FULLSWEEP_CASES: FullsweepCase[] = [
   blocked("06-relative-daypart", "이번 주말 저녁에 영화", { titleDebt: true }),
 
   // —— 07 approximate / before / after ——
+  ...["3시쯤 병원", "3시경 회의", "3시쯤 전화하기"].map((input) =>
+    c("07-approximate", input, {
+      explicitTime: false,
+      auto: false,
+      inlinePromise: false,
+    }),
+  ),
   ...[
-    "3시쯤 병원",
-    "3시경 회의",
-    "3시쯤 전화하기",
     "3시 전까지 제출",
     "3시 전에 출발",
     "3시 이후에 전화",
     "3시 넘어서 전화",
     "3시부터 회의",
   ].map((input) => bareAmbiguous("07-approximate", input)),
-  blocked("07-approximate", "세 시 정도에 출발"),
+  c("07-approximate", "세 시 정도에 출발", {
+    explicitTime: false,
+    auto: false,
+    inlinePromise: false,
+  }),
   quietClock("07-approximate", "오후 3시쯤 병원"),
+  quietClock("07-approximate", "오후 3시경 회의"),
   // deadline-ish bare until → not auto
   c("07-approximate", "3시까지 회의", {
     explicitTime: false,
@@ -577,5 +588,29 @@ export const NL_FULLSWEEP_CASES: FullsweepCase[] = [
     "9월 말 오후 3시에 보험 갱신",
     "다다음 주 오후 3시에 청소",
   ].map((input) => quietClock("37-broad-period-clock", input)),
+
+  // —— clarification UX preserved (auto blocked, promise kept) ——
+  c("38-clarify-preserve", "다음주쯤 보기", {
+    explicitTime: false,
+    auto: false,
+    inlinePromise: true,
+  }),
+  c("38-clarify-preserve", "Watch it next week or so", {
+    explicitTime: false,
+    auto: false,
+    inlinePromise: true,
+    lang: "en",
+  }),
+  c("38-clarify-preserve", "Meet Maya this weekend", {
+    explicitTime: false,
+    auto: false,
+    inlinePromise: true,
+    lang: "en",
+  }),
+  c("38-clarify-preserve", "이번 주말에 영화 보기", {
+    explicitTime: false,
+    auto: false,
+    inlinePromise: true,
+  }),
 
 ];

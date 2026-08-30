@@ -10,6 +10,7 @@ import {
   resolveNaturalScheduleStart,
 } from "@/lib/naturalScheduleDraft";
 import {
+  hasApproximateTimeExpression,
   hasBroadUnresolvedDatePeriod,
   hasDeadlineExpression,
   hasExpandedRepeatIntent,
@@ -133,7 +134,16 @@ export function shouldShowInlinePromise(
   if (hasNaturalRepeatIntent(trimmed) || hasExpandedRepeatIntent(trimmed)) {
     return false;
   }
-  if (hasBroadUnresolvedDatePeriod(trimmed)) return false;
+  // Fuzzy clocks must not look like exact schedule promises.
+  if (hasApproximateTimeExpression(trimmed)) return false;
+  // Broad period + exact clock invents a day — hide that. Clarification-only
+  // phrases (다음주쯤 / next week or so / weekend) keep their ambiguity UX.
+  if (
+    hasBroadUnresolvedDatePeriod(trimmed) &&
+    hasNaturalScheduleTime(trimmed)
+  ) {
+    return false;
+  }
   if (hasPastDateReference(trimmed) || hasPastTimeOnlyClock(trimmed)) return false;
   if (hasUnsupportedDateRange(trimmed) || hasUnsupportedColonClockRange(trimmed)) {
     return false;
