@@ -61,9 +61,10 @@ describe("inbox schedule defaults", () => {
     expect(result.start.getHours()).toBe(0);
   });
 
-  it("recognizes common Korean and English time phrases", () => {
-    expect(hasExplicitScheduleTime("내일 저녁 치과")).toBe(true);
+  it("recognizes exact clocks, not standalone dayparts (Period≠Clock)", () => {
+    expect(hasExplicitScheduleTime("내일 저녁 치과")).toBe(false);
     expect(hasExplicitScheduleTime("tomorrow at 3pm dentist")).toBe(true);
+    expect(hasExplicitScheduleTime("내일 오후 3시 치과")).toBe(true);
     expect(hasExplicitScheduleTime("내일 치과")).toBe(false);
   });
 

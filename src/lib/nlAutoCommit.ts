@@ -8,9 +8,21 @@ import {
 import { understandNaturalLanguage } from "@/lib/nlSchedule";
 import {
   countDistinctClockMentions,
+  isSingleClockRange,
   scheduleConfirmationReasons,
   type ScheduleConfirmationReason,
 } from "@/lib/nlScheduleSafety";
+import {
+  hasBroadUnresolvedDatePeriod,
+  hasDeadlineExpression,
+  hasExpandedRepeatIntent,
+  hasMixedKoreanMeridiemColon,
+  hasPastDateReference,
+  hasPastTimeOnlyClock,
+  hasUnsupportedColonClockRange,
+  hasUnsupportedDateRange,
+  shouldKeepScheduleSemanticsQuiet,
+} from "@/lib/nlSemanticSafety";
 import type { InboxItem } from "@/lib/store";
 
 export type AutoCommitBlockReason =
@@ -23,6 +35,7 @@ export type AutoCommitBlockReason =
   | "repeat"
   | "clarify_intent"
   | "quiet"
+  | "deadline"
   | ScheduleConfirmationReason;
 
 export type TimedAutoCommitDecision =
@@ -41,8 +54,42 @@ export function evaluateTimedAutoCommit(
 ): TimedAutoCommitDecision {
   const trimmed = text.trim();
   if (!trimmed) return { ok: false, reason: "empty" };
-  if (hasNaturalRepeatIntent(trimmed)) {
+
+  // Semantic context wins over date/time tokens. Questions, negations,
+  // tentative plans, edit replies, unsupported triggers and vague-future
+  // phrases remain durable raw records instead of creating a new schedule.
+  if (shouldKeepScheduleSemanticsQuiet(trimmed)) {
+    return { ok: false, reason: "quiet" };
+  }
+
+  // Repetition is not implemented as a durable recurrence model yet.
+  if (hasNaturalRepeatIntent(trimmed) || hasExpandedRepeatIntent(trimmed)) {
     return { ok: false, reason: "repeat" };
+  }
+
+  // A broad period plus a precise-looking clock still lacks a calendar day.
+  if (hasBroadUnresolvedDatePeriod(trimmed)) {
+    return { ok: false, reason: "unresolved_date" };
+  }
+
+  // Past input may be history or a typo. Do not silently move it forward.
+  if (hasPastDateReference(trimmed, now) || hasPastTimeOnlyClock(trimmed, now)) {
+    return { ok: false, reason: "unresolved_date" };
+  }
+
+  // Unsupported date/range syntax must stay raw rather than truncating.
+  if (hasUnsupportedDateRange(trimmed) || hasUnsupportedColonClockRange(trimmed)) {
+    return { ok: false, reason: "unresolved_date" };
+  }
+
+  // `오후 03:00` previously fell through to 03:00.
+  if (hasMixedKoreanMeridiemColon(trimmed)) {
+    return { ok: false, reason: "unresolved_date" };
+  }
+
+  // End-only / deadline language is not a start-time schedule yet.
+  if (hasDeadlineExpression(trimmed)) {
+    return { ok: false, reason: "deadline" };
   }
 
   const safety = scheduleConfirmationReasons(trimmed, now);
@@ -51,7 +98,9 @@ export function evaluateTimedAutoCommit(
   }
 
   const clockCount = countDistinctClockMentions(trimmed);
-  if (clockCount >= 2) return { ok: false, reason: "multiple_clocks" };
+  if (clockCount >= 2 && !isSingleClockRange(trimmed)) {
+    return { ok: false, reason: "multiple_clocks" };
+  }
 
   if (!hasNaturalScheduleTime(trimmed)) {
     return { ok: false, reason: "no_clock" };

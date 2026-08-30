@@ -9,13 +9,18 @@ import type { InboxItem } from "@/lib/store";
 import { thoughtFirstLine } from "@/lib/brainMirror";
 import { hasAmbiguousBareMeridiem } from "@/lib/nlScheduleSafety";
 
+// Exact/resolvable clocks only. Standalone dayparts such as "오전", "오후",
+// "morning", or "afternoon" deliberately do not count as a clock.
 const EXPLICIT_TIME_RE =
-  /(?:오전|오후|아침|점심|저녁|밤|새벽|퇴근\s*(?:후|하고|하고서|뒤)|(?:\d+|한|두|세|네)\s*(?:분|시간)\s*(?:뒤|후)|반\s*시간\s*(?:뒤|후)|\d{1,2}\s*시(?:\s*반|(?:\s*\d{1,2}\s*분))?|\b(?:morning|afternoon|evening|tonight|noon|midnight|after\s+work)\b|\bin\s+(?:\d+|an?|one|two|three|four|half(?:\s+an?)?)\s*(?:minutes?|mins?|hours?|hrs?)\b|\b(?:[01]?\d|2[0-3]):[0-5]\d\b|\b\d{1,2}(?::\d{2})?\s*(?:am|pm)\b)/i;
+  /(?:(?:오전|오후)\s*\d{1,2}\s*시(?:\s*반|(?:\s*\d{1,2}\s*분))?|(?:\d+|한|두|세|네)\s*(?:분|시간)\s*(?:뒤|후)|반\s*시간\s*(?:뒤|후)|\d{1,2}\s*시(?:\s*반|(?:\s*\d{1,2}\s*분))?|\bin\s+(?:\d+|an?|one|two|three|four|half(?:\s+an?)?)\s*(?:minutes?|mins?|hours?|hrs?)\b|\b(?:[01]?\d|2[0-3]):[0-5]\d\b|\b\d{1,2}(?::\d{2})?\s*(?:am|pm)\b)/i;
 
 const AFTER_WORK_RE = /퇴근\s*(?:후|하고|하고서|뒤)|\bafter\s+work\b/i;
 
 const RESOLVED_CLOCK_BESIDE_AFTER_WORK_RE =
-  /(?:오전|오후|\b(?:am|pm)\b|\d{1,2}\s*시|(?:[01]?\d|2[0-3]):[0-5]\d)/i;
+  /(?:(?:오전|오후)\s*\d{1,2}\s*시|\b\d{1,2}(?::\d{2})?\s*(?:am|pm)\b|(?:[01]?\d|2[0-3]):[0-5]\d|(?:1[3-9]|2[0-3])\s*시)/i;
+
+const KO_CLOCK_RANGE_RE =
+  /(?:(오전|오후)\s*)?(\d{1,2})\s*시(?:\s*(반)|(?:\s*(\d{1,2})\s*분))?\s*부터\s*(?:(오전|오후)\s*)?(\d{1,2})\s*시(?:\s*(반)|(?:\s*(\d{1,2})\s*분))?\s*까지/;
 
 const REPEAT_INTENT_RE =
   /(?:매일|매일마다|매주|매주마다|매월|매달|매년|해마다|every\s+(?:day|week|month|year)|daily|weekly|monthly|yearly|annually)/i;
@@ -64,9 +69,25 @@ export type NaturalScheduleDraft = {
   reminderExplicit: boolean;
 };
 
+function rangeStartIsResolved(text: string): boolean {
+  const match = text.match(KO_CLOCK_RANGE_RE);
+  if (!match) return false;
+  const startPeriod = match[1];
+  const startHour = Number(match[2]);
+  return Boolean(startPeriod) || (startHour >= 13 && startHour <= 23);
+}
+
 export function hasNaturalScheduleTime(text: string): boolean {
   const trimmed = text.trim();
   if (!EXPLICIT_TIME_RE.test(trimmed)) return false;
+
+  // A single from–to range can inherit the start meridiem on its end clock:
+  // "오후 5시부터 6시까지" = 17:00–18:00. A bare "5시부터 6시까지"
+  // still needs AM/PM clarification.
+  if (KO_CLOCK_RANGE_RE.test(trimmed)) {
+    return rangeStartIsResolved(trimmed);
+  }
+
   // Bare 1–12 o'clock without meridiem is ambiguous, not a resolved clock.
   if (hasAmbiguousBareMeridiem(trimmed)) return false;
   // After-work alone is not an absolute time without a known commute end.
@@ -166,17 +187,14 @@ function relativeOffsetStart(text: string, now: Date): Date | null {
 function applyNaturalTime(target: Date, text: string, detected: Date | null): Date {
   const d = new Date(target);
 
-  // Do not invent 18:00 for after-work — clarification owns that choice.
   if (detected && hasNaturalScheduleTime(text)) {
     d.setHours(detected.getHours(), detected.getMinutes(), 0, 0);
     return d;
   }
 
-  if (/저녁|\bevening\b|\btonight\b/i.test(text)) d.setHours(18, 0, 0, 0);
-  else if (/아침|\bmorning\b/i.test(text)) d.setHours(9, 0, 0, 0);
-  else if (/점심|\bnoon\b|\blunch\b/i.test(text)) d.setHours(12, 0, 0, 0);
-  else d.setHours(9, 0, 0, 0);
-
+  // No exact clock was supplied. Keep the date anchor neutral; callers promote
+  // this to an all-day item instead of showing a made-up 09:00/12:00/18:00.
+  d.setHours(0, 0, 0, 0);
   return d;
 }
 
@@ -190,7 +208,29 @@ export function resolveNaturalScheduleStart(text: string, now = new Date()): Dat
   if (anchored) return applyNaturalTime(anchored, text, detected?.start ?? null);
   if (!detected) return null;
 
-  return new Date(detected.start);
+  const resolved = new Date(detected.start);
+  if (!hasNaturalScheduleTime(text)) resolved.setHours(0, 0, 0, 0);
+  return resolved;
+}
+
+function resolveKoreanRangeEnd(text: string, start: Date): Date | null {
+  const match = text.match(KO_CLOCK_RANGE_RE);
+  if (!match) return null;
+
+  const startPeriod = match[1] as "오전" | "오후" | undefined;
+  const endPeriod = (match[5] as "오전" | "오후" | undefined) ?? startPeriod;
+  let endHour = Number(match[6]);
+  const endMinute = match[7] === "반" ? 30 : match[8] ? Number(match[8]) : 0;
+
+  if (!endPeriod && endHour >= 1 && endHour <= 12) return null;
+  if (endPeriod === "오후" && endHour < 12) endHour += 12;
+  if (endPeriod === "오전" && endHour === 12) endHour = 0;
+  if (endHour < 0 || endHour > 23 || endMinute < 0 || endMinute > 59) return null;
+
+  const end = new Date(start);
+  end.setHours(endHour, endMinute, 0, 0);
+  if (end.getTime() <= start.getTime()) return null;
+  return end;
 }
 
 export function inferNaturalReminderMinutes(
@@ -296,7 +336,8 @@ export function buildNaturalScheduleDraft(item: InboxItem): NaturalScheduleDraft
         } else d.setHours(d.getHours() + 1, 0, 0, 0);
         return d;
       })();
-  const end = dateOnly ? endOfDay(start) : defaultEndFromStart(start);
+  const rangeEnd = !dateOnly ? resolveKoreanRangeEnd(item.text, start) : null;
+  const end = dateOnly ? endOfDay(start) : rangeEnd ?? defaultEndFromStart(start);
   const reminder = inferNaturalReminderMinutes(
     item.text,
     Boolean(startResolved) && explicitTime,
