@@ -116,6 +116,11 @@ export function gradeFullsweepCase(c: FullsweepCase): FullsweepResult {
       `confirmationReason missing ${c.confirmationReason} (got ${reasons.join(",") || "none"})`,
     );
   }
+  if (c.expectedTitle !== undefined && title !== c.expectedTitle) {
+    failReasons.push(
+      `expectedTitle expected=${c.expectedTitle} actual=${title}`,
+    );
+  }
 
   if (failReasons.length > 0) {
     return {
@@ -129,17 +134,14 @@ export function gradeFullsweepCase(c: FullsweepCase): FullsweepResult {
 
   const titleMissing =
     c.auto &&
-    !c.titleDebt &&
     (c.titleMustContain ?? []).some((needle) => !title.includes(needle));
 
-  if (c.titleDebt || titleMissing) {
+  if (titleMissing) {
     return {
       input: c.input,
       category: c.category,
       grade: "TITLE_FAIL",
-      detail: titleMissing
-        ? `title missing ${c.titleMustContain?.filter((n) => !title.includes(n)).join(",")}`
-        : "titleDebt",
+      detail: `title missing ${c.titleMustContain?.filter((n) => !title.includes(n)).join(",")}`,
       ...audit,
     };
   }
@@ -191,6 +193,7 @@ describe("NL fullsweep graded corpus (P0-A)", () => {
     );
 
     expect(counts.FAIL, JSON.stringify(fails, null, 2)).toBe(0);
+    expect(counts.TITLE_FAIL, JSON.stringify(titleFails, null, 2)).toBe(0);
     expect(counts.total).toBeGreaterThanOrEqual(200);
   });
 });

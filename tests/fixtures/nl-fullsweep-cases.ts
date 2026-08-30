@@ -23,9 +23,9 @@ export type FullsweepCase = {
   autoEndHour?: number;
   /** If set, scheduleConfirmationReasons must include this when auto=false */
   confirmationReason?: "assumed_meridiem";
-  /** Known title-debt: if temporal OK but title mangled, grade TITLE_FAIL */
-  titleDebt?: boolean;
-  /** Substrings that cleanScheduleTitle must still contain when auto=true (unless titleDebt) */
+  /** Exact cleanScheduleTitle expectation (P0-B). Mismatch is FAIL. */
+  expectedTitle?: string;
+  /** Substrings that cleanScheduleTitle must still contain when auto=true */
   titleMustContain?: string[];
   /** Clock for evaluation; evening used for past-time-only */
   now?: "morning" | "evening";
@@ -107,8 +107,12 @@ export const NL_FULLSWEEP_CASES: FullsweepCase[] = [
     "9월 중순에 여행 가기",
     "9월 말에 보험 갱신",
   ].map((input) => blocked("01-date-only", input)),
-  blocked("01-date-only", "다다음 주 월요일 청소", { titleDebt: true }),
-  blocked("01-date-only", "2026년 9월 3일 청소", { titleDebt: true }),
+  blocked("01-date-only", "다다음 주 월요일 청소", {
+    expectedTitle: "다다음 주 월요일 청소",
+  }),
+  blocked("01-date-only", "2026년 9월 3일 청소", {
+    expectedTitle: "2026년 9월 3일 청소",
+  }),
 
   // —— 02 time-only exact ——
   bareAmbiguous("02-time-only", "3시에 청소"),
@@ -196,7 +200,7 @@ export const NL_FULLSWEEP_CASES: FullsweepCase[] = [
     explicitTime: false,
     auto: false,
     confirmationReason: "assumed_meridiem",
-    titleDebt: true,
+    expectedTitle: "1시간 반 뒤에 출발",
   }),
   ...["조금 있다가 전화하기", "이따가 청소", "잠시 후에 확인하기", "나중에 전화하기"].map(
     (input) => blocked("04-relative-offset", input),
@@ -227,7 +231,9 @@ export const NL_FULLSWEEP_CASES: FullsweepCase[] = [
     "모레 아침 출근",
     "다음 주 월요일 오전 미팅",
   ].map((input) => blocked("06-relative-daypart", input)),
-  blocked("06-relative-daypart", "이번 주말 저녁에 영화", { titleDebt: true }),
+  blocked("06-relative-daypart", "이번 주말 저녁에 영화", {
+    expectedTitle: "이번 주말 저녁에 영화",
+  }),
 
   // —— 07 approximate / before / after ——
   ...["3시쯤 병원", "3시경 회의", "3시쯤 전화하기"].map((input) =>
@@ -307,7 +313,7 @@ export const NL_FULLSWEEP_CASES: FullsweepCase[] = [
   c("09-ranges", "오전 9시~오후 6시 근무", {
     explicitTime: true,
     auto: false,
-    titleDebt: true,
+    expectedTitle: "오전 9시~오후 6시 근무",
   }),
 
   // —— 10 multi-day durations ——
@@ -442,7 +448,7 @@ export const NL_FULLSWEEP_CASES: FullsweepCase[] = [
   bareAmbiguous("22-bare-hour", "12시 반에 회의"),
   bareAmbiguous("22-bare-hour", "내일 엄마 병원 10시에 같이 가기", {
     inlinePromise: true,
-    titleDebt: true,
+    expectedTitle: "엄마 병원 같이 가기",
   }),
 
   // —— 23 explicit past ——
