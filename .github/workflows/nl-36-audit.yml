@@ -1,0 +1,25 @@
+name: NL 36 Group Audit
+
+on:
+  push:
+    branches:
+      - audit/nl-36-matrix-20260830
+
+permissions:
+  contents: read
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    env:
+      VITE_SUPABASE_URL: https://example.supabase.co
+      VITE_SUPABASE_PUBLISHABLE_KEY: e2e-placeholder-key
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Run NL 36-group safety audit
+        run: npx vitest run tests/nl-36-safety-contract.test.ts --reporter=verbose
