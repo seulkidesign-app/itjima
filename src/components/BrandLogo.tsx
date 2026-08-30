@@ -21,7 +21,7 @@ export function BrandLogo({ size = "app", className = "" }: BrandLogoProps) {
       aria-hidden="true"
     >
       <span className="itjima-brand-logo-dot" />
-      <span className="itjima-brand-logo-wordmark">ITJIMA</span>
+      <span className="itjima-brand-logo-wordmark">itjima</span>
     </span>
   );
 }
