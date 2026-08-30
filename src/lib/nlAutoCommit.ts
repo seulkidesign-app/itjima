@@ -12,6 +12,16 @@ import {
   scheduleConfirmationReasons,
   type ScheduleConfirmationReason,
 } from "@/lib/nlScheduleSafety";
+import {
+  hasBroadUnresolvedDatePeriod,
+  hasExpandedRepeatIntent,
+  hasMixedKoreanMeridiemColon,
+  hasPastDateReference,
+  hasPastTimeOnlyClock,
+  hasUnsupportedColonClockRange,
+  hasUnsupportedDateRange,
+  shouldKeepScheduleSemanticsQuiet,
+} from "@/lib/nlSemanticSafety";
 import type { InboxItem } from "@/lib/store";
 
 export type AutoCommitBlockReason =
@@ -42,8 +52,41 @@ export function evaluateTimedAutoCommit(
 ): TimedAutoCommitDecision {
   const trimmed = text.trim();
   if (!trimmed) return { ok: false, reason: "empty" };
-  if (hasNaturalRepeatIntent(trimmed)) {
+
+  // Semantic context wins over date/time tokens. Questions, negations,
+  // tentative plans, edit replies, unsupported triggers and vague-future
+  // phrases remain durable raw records instead of creating a new schedule.
+  if (shouldKeepScheduleSemanticsQuiet(trimmed)) {
+    return { ok: false, reason: "quiet" };
+  }
+
+  // Repetition is not implemented as a durable recurrence model yet. Catch
+  // common Korean dialects too so none of them collapse into one one-off item.
+  if (hasNaturalRepeatIntent(trimmed) || hasExpandedRepeatIntent(trimmed)) {
     return { ok: false, reason: "repeat" };
+  }
+
+  // A broad period plus a precise-looking clock still lacks a calendar day.
+  if (hasBroadUnresolvedDatePeriod(trimmed)) {
+    return { ok: false, reason: "unresolved_date" };
+  }
+
+  // Past input may be history or a typo. Do not silently move it to today or
+  // next year. Likewise, a time-only clock means today only while still ahead.
+  if (hasPastDateReference(trimmed, now) || hasPastTimeOnlyClock(trimmed, now)) {
+    return { ok: false, reason: "unresolved_date" };
+  }
+
+  // Unsupported date/range syntax must stay raw rather than preserving only
+  // the first token and losing the rest of the user's timing meaning.
+  if (hasUnsupportedDateRange(trimmed) || hasUnsupportedColonClockRange(trimmed)) {
+    return { ok: false, reason: "unresolved_date" };
+  }
+
+  // `오후 03:00` previously fell through to 03:00. Until the parser handles
+  // this mixed notation explicitly, blocking is safer than inverting PM.
+  if (hasMixedKoreanMeridiemColon(trimmed)) {
+    return { ok: false, reason: "unresolved_date" };
   }
 
   const safety = scheduleConfirmationReasons(trimmed, now);
