@@ -17,7 +17,7 @@ env:
 jobs:
   p1-rediscovery:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 18
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -30,5 +30,9 @@ jobs:
         run: npm ci
       - name: Run P1 contract tests
         run: npx vitest run tests/home-rediscovery.test.ts
+      - name: Install Chromium
+        run: npx playwright install --with-deps chromium
+      - name: Run P1 mobile E2E
+        run: npx playwright test e2e/p1-home-rediscovery.spec.ts --project=mobile-chrome
       - name: Build
         run: npm run build
