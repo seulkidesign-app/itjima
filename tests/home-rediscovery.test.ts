@@ -33,6 +33,23 @@ describe("P1 Home rediscovery contract", () => {
     expect(selectHomeRediscoveryCandidate(items, emptyState, NOW)).toBeNull();
   });
 
+  test("uses the actual Home surface ids, not an inferred top-three list", () => {
+    const items = [item("old", 4), item("a", 2), item("b", 1), item("c", 0.5)];
+    const candidate = selectHomeRediscoveryCandidate(items, emptyState, NOW, {
+      visibleItemIds: new Set(["old", "a", "b"]),
+    });
+    expect(candidate).toBeNull();
+  });
+
+  test("never resurfaces a record currently shown as clarification/recovery", () => {
+    const items = [item("question", 8), item("old", 4), item("a", 2), item("b", 1)];
+    const candidate = selectHomeRediscoveryCandidate(items, emptyState, NOW, {
+      visibleItemIds: new Set(["a", "b"]),
+      excludedItemIds: new Set(["question"]),
+    });
+    expect(candidate?.item.id).toBe("old");
+  });
+
   test("resurfaces one older active record after three days", () => {
     const items = [item("old", 4), item("a", 2), item("b", 1), item("c", 0.5)];
     const candidate = selectHomeRediscoveryCandidate(items, emptyState, NOW);
