@@ -1,5 +1,5 @@
 import {
-  Wind,
+  CopyCheck,
   Trash2,
   Calendar,
   Archive as ArchiveIcon,
@@ -126,8 +126,8 @@ export function ContextMenu({
         {FEATURES.CLEANUP && (
           <MenuItem
             buttonRef={firstRef()}
-            icon={<Wind size={18} aria-hidden />}
-            label={t("가볍게 비우기", "Lighten up")}
+            icon={<CopyCheck size={18} aria-hidden />}
+            label={t("중복 기록 확인", "Review duplicates")}
             onClick={() => {
               onClose();
               onOpenCleanup();
