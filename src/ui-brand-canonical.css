@@ -1,10 +1,10 @@
-@import url("https://fonts.googleapis.com/css2?family=Playpen+Sans:wght@400&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=Playpen+Sans:wght@500&display=swap");
 
 /*
  * Canonical Itjima brand lockup.
  * Source: Figma landing node 455:33 (LOCKED 2026-08-30).
  * Native geometry: 98 × 33, 14px dot, 10px gap,
- * Playpen Sans Regular 21.582px / 0.1434px tracking, #2E2E2E.
+ * Playpen Sans Medium 21.582px / 0.1434px tracking, #2E2E2E.
  * Brand dot is #FFE658. This is intentionally distinct from the product
  * action/schedule yellow token (#FFE033).
  */
@@ -31,7 +31,7 @@
   flex: 0 0 auto;
   overflow: hidden;
   font-family: "Playpen Sans", cursive;
-  font-weight: 400;
+  font-weight: 500;
   color: var(--itjima-logo-ink);
   text-transform: none;
   white-space: nowrap;
@@ -96,7 +96,7 @@
 .landing-v2 .lv2-brand {
   gap: 10px !important;
   font-size: 0 !important;
-  font-weight: 400 !important;
+  font-weight: 500 !important;
   letter-spacing: 0 !important;
 }
 
@@ -111,7 +111,7 @@
   content: "itjima";
   font-family: "Playpen Sans", cursive;
   font-size: 21.582px;
-  font-weight: 400;
+  font-weight: 500;
   line-height: 33px;
   letter-spacing: 0.1434px;
   color: var(--itjima-logo-ink);
@@ -140,7 +140,7 @@
   box-shadow: none !important;
   font-family: "Playpen Sans", cursive !important;
   font-size: 21.582px !important;
-  font-weight: 400 !important;
+  font-weight: 500 !important;
   line-height: 33px !important;
   letter-spacing: 0.1434px !important;
   color: var(--itjima-logo-ink) !important;
@@ -156,7 +156,7 @@
   gap: 7.273px;
   font-family: "Playpen Sans", cursive !important;
   font-size: 15.696px !important;
-  font-weight: 400 !important;
+  font-weight: 500 !important;
   line-height: 24px !important;
   letter-spacing: 0.1043px !important;
   color: var(--itjima-logo-ink) !important;
