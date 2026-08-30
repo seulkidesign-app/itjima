@@ -9,6 +9,16 @@ import {
   hasNaturalScheduleTime,
   resolveNaturalScheduleStart,
 } from "@/lib/naturalScheduleDraft";
+import {
+  hasBroadUnresolvedDatePeriod,
+  hasExpandedRepeatIntent,
+  hasMixedKoreanMeridiemColon,
+  hasPastDateReference,
+  hasPastTimeOnlyClock,
+  hasUnsupportedColonClockRange,
+  hasUnsupportedDateRange,
+  shouldKeepScheduleSemanticsQuiet,
+} from "@/lib/nlSemanticSafety";
 import type { ThoughtCategory } from "@/lib/ruleEngine";
 
 export type PromisePrimaryAction =
@@ -110,15 +120,26 @@ function confidenceScore(level: ScheduleConfidence): number {
 
 /**
  * v1 exposes schedule interpretation when the user still needs to resolve
- * ambiguity (AM/PM, weekend, clarify chips, multi-clock). Clear timed captures
- * auto-commit on 남기기; undated notes stay quiet — no task/taxonomy card.
+ * genuine timing ambiguity. Semantic non-capture utterances (questions,
+ * negations, edits, tentative plans, unsupported triggers) stay quiet even if
+ * they happen to contain a date or clock token.
  */
 export function shouldShowInlinePromise(
   text: string,
   lang: "ko" | "en",
 ): boolean {
   const trimmed = text.trim();
-  if (hasNaturalRepeatIntent(trimmed)) return false;
+
+  if (shouldKeepScheduleSemanticsQuiet(trimmed)) return false;
+  if (hasNaturalRepeatIntent(trimmed) || hasExpandedRepeatIntent(trimmed)) {
+    return false;
+  }
+  if (hasBroadUnresolvedDatePeriod(trimmed)) return false;
+  if (hasPastDateReference(trimmed) || hasPastTimeOnlyClock(trimmed)) return false;
+  if (hasUnsupportedDateRange(trimmed) || hasUnsupportedColonClockRange(trimmed)) {
+    return false;
+  }
+  if (hasMixedKoreanMeridiemColon(trimmed)) return false;
 
   // Relative offsets such as “30분 뒤” or “in 2 hours” are legitimate timed
   // commitments even though the older date detector does not classify them.
