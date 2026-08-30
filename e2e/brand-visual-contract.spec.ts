@@ -5,6 +5,12 @@ async function openForVisualContract(page: Page, path: string) {
   page.on("pageerror", (error) => pageErrors.push(error.message));
   const response = await page.goto(path, { waitUntil: "domcontentloaded" });
   await page.waitForTimeout(250);
+  let body = (await page.locator("body").innerText()).slice(0, 500);
+  const showError = page.getByRole("button", { name: "Show Error" });
+  if (await showError.isVisible().catch(() => false)) {
+    await showError.click();
+    body = (await page.locator("body").innerText()).slice(0, 1800);
+  }
   console.log(
     "VISUAL_CONTRACT_PAGE",
     JSON.stringify({
@@ -12,7 +18,7 @@ async function openForVisualContract(page: Page, path: string) {
       status: response?.status() ?? null,
       url: page.url(),
       title: await page.title(),
-      body: (await page.locator("body").innerText()).slice(0, 500),
+      body,
       pageErrors,
     }),
   );
