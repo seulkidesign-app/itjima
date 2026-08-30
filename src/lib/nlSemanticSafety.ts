@@ -31,6 +31,14 @@ const BROAD_MONTH_RE =
 const DATE_RANGE_RE =
   /(?:(?:오늘|내일|모레|(?:일|월|화|수|목|금|토)요일|\d{1,2}\s*월\s*\d{1,2}\s*일|\b\d{1,2}[/-]\d{1,2}\b)\s*부터\s*(?:오늘|내일|모레|(?:일|월|화|수|목|금|토)요일|\d{1,2}\s*월\s*\d{1,2}\s*일|\b\d{1,2}[/-]\d{1,2}\b)\s*까지)|(?:\d+\s*일|일주일|한\s*주)\s*동안|(?:이번|다음)\s*주\s*내내/i;
 
+const EXPANDED_REPEAT_RE =
+  /(?:매일|매일마다|매주|매주마다|매월|매달|매년|해마다|(?:일|월|화|수|목|금|토)요일마다|(?:일|월|화|수|목|금|토)요일(?:\s+(?:일|월|화|수|목|금|토)요일)+마다|이틀에\s*한\s*번|\d+\s*일마다|격주|\d+\s*주마다|every\s+(?:day|week|month|year)|every\s+other\s+week|every\s+\d+\s+(?:days?|weeks?)|daily|weekly|monthly|yearly|annually)/i;
+
+const MIXED_KO_MERIDIEM_COLON_RE = /(?:오전|오후)\s*\d{1,2}:[0-5]\d/i;
+const COLON_CLOCK_RE = /\b(?:[01]?\d|2[0-3]):[0-5]\d\b/g;
+const DATE_ANCHOR_RE =
+  /(?:오늘|내일|모레|글피|어제|그제|지난\s*주|이번\s*주|다음\s*주|다다음\s*주|(?:일|월|화|수|목|금|토)요일|\d{1,2}\s*월\s*\d{1,2}\s*일|\b\d{1,2}[/-]\d{1,2}\b|\d{4}\s*년\s*\d{1,2}\s*월\s*\d{1,2}\s*일|today|tomorrow|yesterday|next\s+week|this\s+week|last\s+week|\b(?:sunday|monday|tuesday|wednesday|thursday|friday|saturday)\b)/i;
+
 export type QuietScheduleSemanticReason =
   | "negation"
   | "retrieval_question"
@@ -72,6 +80,60 @@ export function hasBroadUnresolvedDatePeriod(text: string): boolean {
 
 export function hasUnsupportedDateRange(text: string): boolean {
   return DATE_RANGE_RE.test(text.trim());
+}
+
+export function hasExpandedRepeatIntent(text: string): boolean {
+  return EXPANDED_REPEAT_RE.test(text.trim());
+}
+
+/** Until more range syntaxes are parsed end-to-end, never keep only the first HH:MM. */
+export function hasUnsupportedColonClockRange(text: string): boolean {
+  return [...text.matchAll(COLON_CLOCK_RE)].length >= 2;
+}
+
+/** `오후 03:00` used to fall through to 03:00. Keep it unresolved instead. */
+export function hasMixedKoreanMeridiemColon(text: string): boolean {
+  return MIXED_KO_MERIDIEM_COLON_RE.test(text.trim());
+}
+
+function exactTimeOnlyMinutes(text: string): number | null {
+  const value = text.trim();
+
+  const ko = value.match(/(오전|오후)\s*(\d{1,2})\s*시(?:\s*(반)|(?:\s*(\d{1,2})\s*분))?/);
+  if (ko) {
+    let hour = Number(ko[2]);
+    const minute = ko[3] === "반" ? 30 : ko[4] ? Number(ko[4]) : 0;
+    if (ko[1] === "오후" && hour < 12) hour += 12;
+    if (ko[1] === "오전" && hour === 12) hour = 0;
+    return hour * 60 + minute;
+  }
+
+  const h24 = value.match(/(?:^|\s)(1[3-9]|2[0-3])\s*시/);
+  if (h24) return Number(h24[1]) * 60;
+
+  const en = value.match(/\b(\d{1,2})(?::(\d{2}))?\s*(am|pm)\b/i);
+  if (en) {
+    let hour = Number(en[1]);
+    const minute = en[2] ? Number(en[2]) : 0;
+    if (en[3].toLowerCase() === "pm" && hour < 12) hour += 12;
+    if (en[3].toLowerCase() === "am" && hour === 12) hour = 0;
+    return hour * 60 + minute;
+  }
+
+  const colon = value.match(/\b([01]?\d|2[0-3]):([0-5]\d)\b/);
+  if (colon) return Number(colon[1]) * 60 + Number(colon[2]);
+  return null;
+}
+
+/** A clock without a date means today only while that clock is still ahead. */
+export function hasPastTimeOnlyClock(text: string, now = new Date()): boolean {
+  const value = text.trim();
+  if (DATE_ANCHOR_RE.test(value)) return false;
+  if (hasMixedKoreanMeridiemColon(value)) return false;
+  const minutes = exactTimeOnlyMinutes(value);
+  if (minutes === null) return false;
+  const currentMinutes = now.getHours() * 60 + now.getMinutes();
+  return minutes <= currentMinutes;
 }
 
 export function hasPastDateReference(text: string, now = new Date()): boolean {
