@@ -7,6 +7,7 @@ import {
 } from "lucide-react";
 import { useState } from "react";
 import { SettingsSheet } from "./SettingsSheet";
+import { BrandLogo } from "./BrandLogo";
 import { useT } from "@/lib/i18n";
 import { useUserId } from "@/lib/store";
 import { tap } from "@/lib/haptics";
@@ -41,16 +42,10 @@ export function DesktopAppNav() {
         <Link
           to="/"
           onClick={tap}
-          className="itjima-desktop-brand flex min-h-14 items-center gap-2.5 px-5 no-underline"
+          className="itjima-desktop-brand flex min-h-14 items-center px-5 no-underline"
           aria-label={t("잊지마 소개로 이동", "Open Itjima introduction")}
         >
-          <span
-            className="inline-block h-2.5 w-2.5 shrink-0 rounded-full bg-primary"
-            aria-hidden
-          />
-          <strong className="text-[17px] font-extrabold tracking-[-0.03em] text-ink">
-            {t("잊지마", "Itjima")}
-          </strong>
+          <BrandLogo size="native" />
         </Link>
 
         <nav className="mt-4 flex flex-col gap-1.5 px-3">
