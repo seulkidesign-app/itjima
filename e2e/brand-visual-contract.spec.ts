@@ -1,28 +1,4 @@
-import { expect, test, type Page } from "@playwright/test";
-
-async function openForVisualContract(page: Page, path: string) {
-  const pageErrors: string[] = [];
-  page.on("pageerror", (error) => pageErrors.push(error.message));
-  const response = await page.goto(path, { waitUntil: "domcontentloaded" });
-  await page.waitForTimeout(250);
-  let body = (await page.locator("body").innerText()).slice(0, 500);
-  const showError = page.getByRole("button", { name: "Show Error" });
-  if (await showError.isVisible().catch(() => false)) {
-    await showError.click();
-    body = (await page.locator("body").innerText()).slice(0, 1800);
-  }
-  console.log(
-    "VISUAL_CONTRACT_PAGE",
-    JSON.stringify({
-      requested: path,
-      status: response?.status() ?? null,
-      url: page.url(),
-      title: await page.title(),
-      body,
-      pageErrors,
-    }),
-  );
-}
+import { expect, test } from "@playwright/test";
 
 test.describe("locked landing brand visual contract", () => {
   test.use({ viewport: { width: 390, height: 844 } });
@@ -30,7 +6,7 @@ test.describe("locked landing brand visual contract", () => {
   test("mobile app chrome uses the canonical logo and 20/56 baseline", async ({
     page,
   }) => {
-    await openForVisualContract(page, "/app");
+    await page.goto("/app");
 
     const header = page.locator(".mobile-app-header-bar");
     const logo = page.locator(
@@ -67,7 +43,7 @@ test.describe("locked landing brand visual contract", () => {
   });
 
   test("landing header renders the exact 455:33 logo metrics", async ({ page }) => {
-    await openForVisualContract(page, "/");
+    await page.goto("/");
 
     const wordmark = page.locator(".landing-motion-wordmark");
     const word = wordmark.locator(":scope > span:first-child");
