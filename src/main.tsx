@@ -46,6 +46,7 @@ import "./ui-landing-swipe-motion.css";
 import "./ui-landing-mobile-trust-fix.css";
 import "./ui-final-surface-guard.css";
 import "./ui-quietly-organized.css";
+import "./ui-brand-canonical.css";
 import "./landingHeroMotion";
 
 import { registerServiceWorker } from "@/lib/swReminders";
