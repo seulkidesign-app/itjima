@@ -23,8 +23,6 @@ export function hasInvalidClockExpression(text: string): boolean {
     if (hour < 1 || hour > 12 || minute < 0 || minute > 59) return true;
   }
 
-  // Bare Korean 0시 is a valid 24-hour midnight spelling. 24시 and above are
-  // deliberately not auto-normalized because rollover semantics are not modeled.
   for (const match of value.matchAll(KO_BARE_CLOCK_RE)) {
     const hour = Number(match[1]);
     if (hour < 0 || hour > 23) return true;
@@ -53,16 +51,12 @@ export function hasDurationClockCollision(text: string): boolean {
 function countDateAnchors(text: string): number {
   const value = text.trim();
   if (!value) return 0;
-
-  // Composite absolute-date spans are intentionally deferred to the temporal
-  // model so a single `2026년 9월 3일` can never be double-counted as two dates.
   const anchors = [
     ...value.matchAll(/오늘|내일|모레|글피/g),
     ...value.matchAll(/(?:일|월|화|수|목|금|토)요일/g),
     ...value.matchAll(/\b(?:today|tomorrow|yesterday)\b/gi),
     ...value.matchAll(/\b(?:sunday|monday|tuesday|wednesday|thursday|friday|saturday)\b/gi),
   ];
-
   return anchors.length;
 }
 
@@ -107,7 +101,6 @@ export function hasUnsafeCanonicalClockRange(text: string): boolean {
   const end = toMinutes(endPeriod, endHour, endMinute);
   if (start === null || end === null) return true;
 
-  // A bare 1–12 start is already owned by the missing-meridiem clarification.
   if (!startPeriod && startHour >= 1 && startHour <= 12) return false;
   return end <= start;
 }
@@ -117,7 +110,7 @@ export function hasScheduleMetaNegation(text: string): boolean {
   const value = text.trim();
   return (
     /(?:였나|였지|기억이\s*안\s*나|기억\s*안\s*나)/.test(value) ||
-    /(?:저장|등록|일정으로\s*추가)(?:하|해|하지)?\s*말/.test(value) ||
+    /(?:저장|등록|일정으로\s*추가)(?:하|해|하지)?\s*(?:마|말(?:아|라고)?)/.test(value) ||
     /아니고\s*(?:그냥\s*)?메모/.test(value) ||
     /\b(?:do\s+not|don't)\s+(?:schedule|add|save)\b/i.test(value)
   );
