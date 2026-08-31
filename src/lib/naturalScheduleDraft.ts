@@ -223,7 +223,7 @@ export function resolveNaturalScheduleStart(text: string, now = new Date()): Dat
   const relative = relativeOffsetStart(normalized, now);
   if (relative) return relative;
 
-  const detected = detectDate(normalized);
+  const detected = detectDate(normalized, now);
   const anchored = nextWeekWeekday(normalized, now);
 
   if (anchored) return applyNaturalTime(anchored, normalized, detected?.start ?? null);

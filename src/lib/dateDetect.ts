@@ -101,8 +101,8 @@ function nextWeekday(
 
 export function detectDate(
   text: string,
+  now = new Date(),
 ): { label: string; start: Date; end: Date } | null {
-  const now = new Date();
   let target = new Date(now);
   let matched = false;
   let timeSet = false;
