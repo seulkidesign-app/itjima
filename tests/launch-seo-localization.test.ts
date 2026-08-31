@@ -15,9 +15,9 @@ describe("launch SEO localization", () => {
     applyLandingSeo({ locale: "en", canonicalPath: "/about" });
 
     expect(document.documentElement.lang).toBe("en");
-    expect(document.title).toContain("Schedule planner by voice or text");
+    expect(document.title).toContain("AI memory inbox");
     expect(metaContent('meta[name="description"]')).toContain(
-      "Type or say a plan naturally",
+      "Capture a thought in natural language",
     );
     expect(metaContent('meta[property="og:locale"]')).toBe("en_US");
     expect(
@@ -29,12 +29,12 @@ describe("launch SEO localization", () => {
     applyLandingSeo({ locale: "ko", canonicalPath: "/" });
 
     expect(document.documentElement.lang).toBe("ko");
-    expect(document.title).toContain("말로 쓰는 일정 관리 앱");
+    expect(document.title).toContain("AI 메모 앱");
     expect(metaContent('meta[property="og:title"]')).toContain(
-      "대충 말해도 일정이 돼요",
+      "살아있는 메모",
     );
     expect(metaContent('meta[property="og:description"]')).toContain(
-      "애매한 부분만 물어보는 일정 관리 앱",
+      "필요한 순간 다시 보여주는",
     );
     expect(metaContent('meta[property="og:site_name"]')).toBe("잊지마");
     expect(metaContent('meta[property="og:locale"]')).toBe("ko_KR");
@@ -61,7 +61,7 @@ describe("launch SEO localization", () => {
     ).toBe("https://itjima.app/?lang=en");
   });
 
-  it("describes the English product as a bilingual scheduling app", () => {
+  it("describes the English product as a bilingual productivity app", () => {
     const graph = landingStructuredDataGraph([], "en") as {
       "@graph": Array<Record<string, unknown>>;
     };
@@ -72,7 +72,10 @@ describe("launch SEO localization", () => {
     expect(software?.applicationSubCategory).toBe("CalendarApplication");
     expect(software?.inLanguage).toEqual(["en-US", "ko-KR"]);
     expect(software?.featureList).toContain(
-      "Natural-language schedule capture",
+      "Natural-language note, task, and schedule capture",
+    );
+    expect(software?.featureList).toContain(
+      "Resurfacing records when they become relevant",
     );
   });
 
