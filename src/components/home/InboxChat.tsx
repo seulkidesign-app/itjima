@@ -8,13 +8,12 @@ import { LeftItemRow } from "@/components/home/LeftItemRow";
 import { featureEnabled } from "@/lib/features";
 import { useLang, useT } from "@/lib/i18n";
 import { canAutoCommitTimedCapture } from "@/lib/nlAutoCommit";
+import { getNlClarificationPresentation } from "@/lib/nlClarificationPresentation";
 import { isStructuredTimedRecord } from "@/lib/recordTemporal";
 import {
   understandNaturalLanguage,
   type ClarifyPick,
 } from "@/lib/nlSchedule";
-import { scheduleConfirmationReason } from "@/lib/nlScheduleSafety";
-import { shouldShowInlinePromise } from "@/lib/promiseCard";
 import { useInbox, type InboxItem } from "@/lib/store";
 import type { RevivalHint } from "@/lib/memoryRevival";
 import { HomeEmptyHero } from "@/components/home/HomeEmptyHero";
@@ -106,16 +105,21 @@ export function InboxChat({
 
     const inFlight = autoCommitInFlightIds.has(it.id);
     const autoEligible = canAutoCommitTimedCapture(it.text, uiLang);
+    const presentation = getNlClarificationPresentation(
+      it.text,
+      uiLang,
+      it.clarification_state,
+    );
     const basePromise =
       featureEnabled("INLINE_PROMISE") &&
       !acknowledgedIds.has(it.id) &&
       !inFlight &&
-      shouldShowInlinePromise(it.text, uiLang);
+      presentation.shouldSurface;
     const understanding = basePromise
       ? understandNaturalLanguage(it.text, uiLang)
       : null;
     const confirmationReason = basePromise
-      ? scheduleConfirmationReason(it.text)
+      ? presentation.confirmationReason
       : null;
     const showCommitmentRecovery =
       basePromise && autoEligible && !confirmationReason;
@@ -141,7 +145,12 @@ export function InboxChat({
    * place to add a date to any note. */
   const shouldOfferSetTime = (item: InboxItem) => {
     if (item.status === "done" || isStructuredTimedRecord(item)) return false;
-    if (scheduleConfirmationReason(item.text) !== null) return true;
+    const presentation = getNlClarificationPresentation(
+      item.text,
+      uiLang,
+      item.clarification_state,
+    );
+    if (presentation.confirmationReason !== null) return true;
     return understandNaturalLanguage(item.text, uiLang)?.intent === "schedule_clarify";
   };
 
