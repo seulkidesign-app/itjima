@@ -8,6 +8,15 @@ import {
 import type { InboxItem } from "@/lib/store";
 import { thoughtFirstLine } from "@/lib/brainMirror";
 import { hasAmbiguousBareMeridiem } from "@/lib/nlScheduleSafety";
+import {
+  hasApproximateTimeExpression,
+  hasDeadlineExpression,
+  hasExpandedRepeatIntent,
+  hasMixedKoreanMeridiemColon,
+  hasPastDateReference,
+  hasUnsupportedColonClockRange,
+  shouldKeepScheduleSemanticsQuiet,
+} from "@/lib/nlSemanticSafety";
 
 // Exact/resolvable clocks only. Standalone dayparts such as "오전", "오후",
 // "morning", or "afternoon" deliberately do not count as a clock.
@@ -270,34 +279,121 @@ export function inferNaturalReminderMinutes(
   return { minutes: hasSpecificTime ? 0 : null, explicit: false };
 }
 
-/** Display-only: strip spoken date/time so metadata can own the clock. */
-export function cleanScheduleTitle(text: string): string {
-  const original = thoughtFirstLine(text);
-  let title = original;
-  const hadClock =
-    /(?:오전|오후)?\s*\d{1,2}\s*시|\b\d{1,2}(?::\d{2})?\s*(?:am|pm)\b|\d{1,2}:\d{2}/i.test(
-      title,
-    );
+/** Korean clock token: never match 시 inside 시간. */
+const KO_CLOCK_TOKEN_RE =
+  /(?:오전|오후)\s*\d{1,2}\s*시(?:\s*반|(?:\s*\d{1,2}\s*분))?|\d{1,2}\s*시(?!\s*간)(?:\s*반|(?:\s*\d{1,2}\s*분))?/;
+
+const KO_CLOCK_WITH_PARTICLE_RE =
+  /(?:(?:오전|오후)\s*\d{1,2}\s*시(?:\s*반|(?:\s*\d{1,2}\s*분))?|\d{1,2}\s*시(?!\s*간)(?:\s*반|(?:\s*\d{1,2}\s*분))?)(?:에)?/g;
+
+const KO_SUPPORTED_RELATIVE_SRC =
+  "(?:\\d+|한|두|세|네)\\s*분\\s*(?:뒤|후)(?:에)?|(?:한|두|세|네)\\s*시간\\s*(?:뒤|후)(?:에)?|반\\s*시간\\s*(?:뒤|후)(?:에)?";
+
+const EN_SUPPORTED_RELATIVE_SRC =
+  "\\bin\\s+(?:\\d+|an?|one|two|three|four)\\s*(?:minutes?|mins?|hours?|hrs?)\\b";
+
+const EN_CLOCK_SRC = "\\b\\d{1,2}(?::\\d{2})?\\s*(?:am|pm)\\b";
+
+function hasSupportedTitleTemporal(text: string): boolean {
+  if (KO_CLOCK_RANGE_RE.test(text)) return true;
+  if (KO_CLOCK_TOKEN_RE.test(text)) return true;
+  if (new RegExp(EN_CLOCK_SRC, "i").test(text)) return true;
+  if (new RegExp(KO_SUPPORTED_RELATIVE_SRC).test(text)) return true;
+  if (new RegExp(EN_SUPPORTED_RELATIVE_SRC, "i").test(text)) return true;
+  return false;
+}
+
+/**
+ * Unsupported / semantic-critical language must stay verbatim — partial deletes
+ * invent a title that no longer matches what the user said.
+ */
+function shouldPreserveRawScheduleTitle(text: string): boolean {
+  const value = text.trim();
+  if (!value) return true;
+
+  if (shouldKeepScheduleSemanticsQuiet(value)) return true;
+  if (hasApproximateTimeExpression(value)) return true;
+  if (hasDeadlineExpression(value)) return true;
+  if (hasNaturalRepeatIntent(value) || hasExpandedRepeatIntent(value)) return true;
+  if (hasMixedKoreanMeridiemColon(value)) return true;
+  if (hasUnsupportedColonClockRange(value)) return true;
+  if (hasPastDateReference(value)) return true;
+
+  // Week-after-next and half-hour relatives are not owned by metadata yet.
+  if (/다다음\s*주|week\s+after\s+next/i.test(value)) return true;
+  if (/시간\s*반/.test(value)) return true;
+
+  // Unsupported range syntax (~ / bare hyphen clocks).
+  if (/~/.test(value)) return true;
+  if (/\d{1,2}\s*시(?!\s*간)\s*-\s*\d{1,2}\s*시(?!\s*간)/.test(value)) return true;
+
+  // Vague week hedges not covered by approximate-clock guard.
+  if (/(?:주\s*쯤|week\s+or\s+so|\bor\s+so\b)/i.test(value)) return true;
+
+  // Weekend without a supported cleanable clock stays with weekend ambiguity UX.
+  if (/(?:주말|\bweekend\b)/i.test(value) && !hasSupportedTitleTemporal(value)) {
+    return true;
+  }
+
+  // Standalone dayparts / date-only lines have no metadata-owned exact span.
+  if (!hasSupportedTitleTemporal(value)) return true;
+
+  return false;
+}
+
+function stripSupportedTemporalSpans(text: string): string {
+  let title = text;
 
   title = title
-    .replace(/(?:그리고\s*)?(?:전날|하루\s*전|1\s*일\s*전|1\s*시간\s*전|한\s*시간\s*전|30\s*분\s*전|10\s*분\s*전|5\s*분\s*전|그때|시작할\s*때)?\s*(?:에도?\s*)?(?:알려\s*줘|알려줘|알림\s*(?:해|줘)|리마인드(?:\s*해줘)?)/gi, " ")
-    .replace(/\b(?:remind|notify)\s+me(?:\s+(?:the\s+day\s+before|(?:1\s*hour|30\s*minutes?|10\s*minutes?|5\s*minutes?)\s+before|then))?\b/gi, " ")
-    .replace(/(?:\d+|한|두|세|네)\s*(?:분|시간|일)\s*(?:뒤|후)/g, " ")
-    .replace(/반\s*시간\s*(?:뒤|후)/g, " ")
-    .replace(/\bin\s+(?:\d+|an?|one|two|three|four)\s*(?:minutes?|mins?|hours?|hrs?|days?)\b/gi, " ")
-    .replace(/\bin\s+half(?:\s+an?)?\s+hour\b/gi, " ")
-    .replace(/(?:다음\s*주|이번\s*주)\s*/g, " ")
-    .replace(/\b(?:next|this)\s+week\b/gi, " ")
-    .replace(/(일|월|화|수|목|금|토)요일/g, " ")
-    .replace(/\b(?:sunday|monday|tuesday|wednesday|thursday|friday|saturday)\b/gi, " ")
-    .replace(/\d{1,2}\s*월\s*\d{1,2}\s*일/g, " ")
-    .replace(/(?:오전|오후)?\s*\d{1,2}\s*시(?:\s*반|(?:\s*\d{1,2}\s*분))?/g, " ")
-    .replace(/\b\d{1,2}(?::\d{2})?\s*(?:am|pm)\b/gi, " ")
+    .replace(
+      /(?:그리고\s*)?(?:전날|하루\s*전|1\s*일\s*전|1\s*시간\s*전|한\s*시간\s*전|30\s*분\s*전|10\s*분\s*전|5\s*분\s*전|그때|시작할\s*때)?\s*(?:에도?\s*)?(?:알려\s*줘|알려줘|알림\s*(?:해|줘)|리마인드(?:\s*해줘)?)/gi,
+      " ",
+    )
+    .replace(
+      /\b(?:remind|notify)\s+me(?:\s+(?:the\s+day\s+before|(?:1\s*hour|30\s*minutes?|10\s*minutes?|5\s*minutes?)\s+before|then))?\b/gi,
+      " ",
+    );
+
+  // Canonical from–to ranges are one atomic span (includes …까지).
+  title = title.replace(new RegExp(KO_CLOCK_RANGE_RE.source, "g"), " ");
+
+  // Supported relatives (minutes / Hangul-number hours). Never strip `N시간 반`.
+  title = title.replace(new RegExp(KO_SUPPORTED_RELATIVE_SRC, "g"), " ");
+  title = title.replace(new RegExp(EN_SUPPORTED_RELATIVE_SRC, "gi"), " ");
+  title = title.replace(/\bin\s+half(?:\s+an?)?\s+hour\b/gi, " ");
+
+  // English "at 3pm" before bare clocks so the connector leaves with the clock.
+  title = title.replace(/\bat\s+\d{1,2}(?::\d{2})?\s*(?:am|pm)\b/gi, " ");
+  title = title.replace(new RegExp(EN_CLOCK_SRC, "gi"), " ");
+
+  // Korean clocks including attached scheduling particle (에).
+  title = title.replace(KO_CLOCK_WITH_PARTICLE_RE, " ");
+
+  // Full / absolute dates.
+  title = title.replace(/\d{4}\s*년\s*\d{1,2}\s*월\s*\d{1,2}\s*일/g, " ");
+  title = title.replace(/\d{1,2}\s*월\s*\d{1,2}\s*일/g, " ");
+
+  // Week + weekday anchors (never swallow 주말).
+  title = title.replace(
+    /(?:다음|이번)\s*주(?!\s*말)(?:\s*(?:일|월|화|수|목|금|토)요일)?/g,
+    " ",
+  );
+  title = title.replace(/이번\s*(?:일|월|화|수|목|금|토)요일/g, " ");
+  title = title.replace(/(?:일|월|화|수|목|금|토)요일/g, " ");
+  title = title.replace(
+    /\b(?:sunday|monday|tuesday|wednesday|thursday|friday|saturday)\b/gi,
+    " ",
+  );
+  title = title.replace(/\b(?:next|this)\s+week(?!\s*end\b)\b/gi, " ");
+
+  // Relative day words — only reached when a supported temporal span existed.
+  title = title.replace(/(?:오늘|내일|모레|글피)/g, " ");
+  title = title.replace(/\b(?:today|tomorrow)\b/gi, " ");
+
+  title = title
     .replace(/퇴근\s*(?:후|하고|하고서|뒤)/g, " ")
     .replace(/\bafter\s+work\b/gi, " ")
-    // Removing an English time can leave its scheduling preposition behind
-    // ("Dentist tomorrow at 3pm" -> "Dentist at"). Only strip a dangling
-    // terminal connector so semantic phrases such as "Meet at the clinic" stay.
+    // Dangling terminal connectors only — keep semantic "Meet at the clinic".
     .replace(/\b(?:at|on|by)\b(?=\s*(?:[,.!?]|$))/gi, " ")
     .replace(/^(?:에|에서|까지|부터)\s+/g, "")
     .replace(/\s+(?:에|에서|까지|부터)$/g, "")
@@ -305,16 +401,20 @@ export function cleanScheduleTitle(text: string): string {
     .replace(/\s+/g, " ")
     .trim();
 
-  // Only strip relative day words when a clock was also spoken — keeps titles
-  // like "Tomorrow meeting" / "Today compact row" intact when metadata owns the day.
-  if (hadClock) {
-    title = title
-      .replace(/(?:오늘|내일|모레|글피|주말)/g, " ")
-      .replace(/\b(?:today|tomorrow|weekend)\b/gi, " ")
-      .replace(/\s+/g, " ")
-      .trim();
+  return title;
+}
+
+/**
+ * Display-only: remove metadata-owned temporal spans atomically.
+ * Unsupported or semantic-critical language is returned unchanged.
+ */
+export function cleanScheduleTitle(text: string): string {
+  const original = thoughtFirstLine(text);
+  if (shouldPreserveRawScheduleTitle(original)) {
+    return original.trim();
   }
 
+  const title = stripSupportedTemporalSpans(original);
   return title || original.trim();
 }
 
