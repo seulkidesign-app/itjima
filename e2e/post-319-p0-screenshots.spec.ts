@@ -177,7 +177,7 @@ test.describe("POST-319 Manual QA · P0 screenshots", () => {
     await submit(page, "8시에 걷기 운동");
     const caseBPromise = phone(page)
       .getByTestId("inline-promise")
-      .filter({ hasText: /걷기|8시/ });
+      .filter({ hasText: "걷기 운동" });
     await expect(caseBPromise).toBeVisible();
     await expect(caseBPromise).toHaveAttribute(
       "data-confirmation-reason",
