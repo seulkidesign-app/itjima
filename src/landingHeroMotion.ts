@@ -37,7 +37,6 @@ const asciiDrops = [
   ["i", "87%", "350ms", "1.56s", "36px", "310deg"],
   ["j", "91%", "150ms", "1.72s", "-26px", "-370deg"],
   ["*", "95%", "460ms", "1.61s", "24px", "420deg"],
-  [">ij<", "73%", "510ms", "1.94s", "-52px", "-300deg"],
 ] as const;
 
 function normalizedPointer(element: HTMLElement, clientX: number, clientY: number) {
