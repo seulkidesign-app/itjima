@@ -68,7 +68,16 @@ test.describe("Current product information architecture", () => {
     expect((await readGuestList(page, GUEST_INBOX_KEY)).length).toBe(1);
     expect((await readGuestList(page, GUEST_SCHEDULE_KEY)).length).toBe(1);
     await gotoScheduleUpcoming(page);
-    await expect(phone(page).getByText(/Blue notebook/i).first()).toBeVisible();
+
+    // The shared dialog helper chooses Today. Around midnight/late-night CI runs,
+    // that default can already fall into the unified view's collapsed Past bucket.
+    // The contract under test is projection reachability, not a specific time bucket.
+    const row = phone(page).getByText(/Blue notebook/i).first();
+    if (!(await row.isVisible().catch(() => false))) {
+      const past = phone(page).getByRole("button", { name: /^Past\s*·/i });
+      if (await past.isVisible().catch(() => false)) await past.click();
+    }
+    await expect(row).toBeVisible();
   });
 
   test("legacy thought map remains behind its feature flag", async ({ page }) => {

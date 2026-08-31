@@ -2,6 +2,7 @@ import { Clock3, Pencil } from "lucide-react";
 import type { InboxItem } from "@/lib/store";
 import {
   clarifyPicksForText,
+  understandNaturalLanguage,
   type ClarifyPick,
 } from "@/lib/nlSchedule";
 import { buildPromiseCard } from "@/lib/promiseCard";
@@ -30,7 +31,6 @@ type Props = {
   onArchive: (item: InboxItem) => void | Promise<void>;
   onLetGo: (item: InboxItem) => void | Promise<void>;
   onDismiss: () => void;
-  /** Restore raw text into the capture composer (multi-clock). */
   onEditCaptureText?: (text: string) => void;
 };
 
@@ -73,7 +73,18 @@ function resolvedChoiceItem(item: InboxItem, resolvedText: string): InboxItem {
   return withInboxScheduleDraft(next, resolved);
 }
 
-/** Ambiguity / clarify surface — never a second “save” after a clear capture. */
+function hasStandaloneDaypart(text: string): boolean {
+  const hasDaypart =
+    /(?:오전|오후|저녁|아침|점심|새벽|밤|\bevening\b|\bmorning\b|\bafternoon\b|\blunch\b|\btonight\b)/i.test(
+      text,
+    );
+  const hasDate =
+    /(?:오늘|내일|모레|글피|주말|(?:일|월|화|수|목|금|토)요일|\d{1,2}\s*월\s*\d{1,2}\s*일|\b(?:today|tomorrow|monday|tuesday|wednesday|thursday|friday|saturday|sunday|weekend)\b)/i.test(
+      text,
+    );
+  return hasDaypart && !hasDate;
+}
+
 export function InlinePromise({
   item,
   acknowledged = false,
@@ -87,12 +98,10 @@ export function InlinePromise({
   const { lang } = useLang();
   const uiLang = lang === "en" ? "en" : "ko";
   const card = buildPromiseCard(item.text, uiLang);
+  const understanding = understandNaturalLanguage(item.text, uiLang);
   const draftedTitle = scheduleTitlePreview(item.text, uiLang);
-  // Clarify keeps the spoken phrase; timed asks prefer the cleaned event title.
   const title =
     card.nlIntent === "schedule_clarify" ? item.text.trim() || draftedTitle : draftedTitle;
-  // Use the same parsing-only normalization as the safety gate so Korean clock
-  // words ("두 시") surface the same AM/PM question without mutating raw text.
   const presentation = getNlClarificationPresentation(
     item.text,
     uiLang,
@@ -103,7 +112,10 @@ export function InlinePromise({
   const confirmationChoices = activeConfirmation
     ? scheduleConfirmationChoices(confirmationText, activeConfirmation, uiLang)
     : [];
-  const clarifyOptions = clarifyPicksForText(item.text, uiLang);
+  const allClarifyOptions = clarifyPicksForText(item.text, uiLang);
+  const clarifyOptions = hasStandaloneDaypart(item.text)
+    ? allClarifyOptions.filter(({ pick }) => pick === "today" || pick === "tomorrow")
+    : allClarifyOptions;
   const clockLines =
     activeConfirmation === "multiple_clocks"
       ? extractClockPlanLines(confirmationText)
@@ -129,7 +141,6 @@ export function InlinePromise({
     onEditCaptureText?.(item.text);
   };
 
-  // --- Meridiem ambiguity (compact ask → commit on choice) ---
   if (activeConfirmation === "assumed_meridiem" && confirmationChoices.length > 0) {
     return (
       <div
@@ -178,7 +189,6 @@ export function InlinePromise({
     );
   }
 
-  // --- Multiple clocks: honesty + restore composer ---
   if (activeConfirmation === "multiple_clocks") {
     return (
       <div
@@ -232,6 +242,7 @@ export function InlinePromise({
       data-confidence={card.confidenceLevel}
       data-sensitive={card.isSensitive ? "true" : "false"}
       data-needs-confirmation={activeConfirmation ? "true" : "false"}
+      data-clarify-missing={understanding.clarifyMissing}
     >
       <strong className="block text-[16px] font-semibold leading-snug text-ink">
         {title}
@@ -239,7 +250,9 @@ export function InlinePromise({
       <p className="mt-2 text-[14px] font-medium leading-snug text-ink">
         {activeConfirmation
           ? confirmationCopy(activeConfirmation, uiLang, confirmationText)
-          : t("일정으로 이해했어요", "Understood as a schedule")}
+          : card.nlIntent === "schedule_clarify"
+            ? card.label
+            : t("일정으로 이해했어요", "Understood as a schedule")}
       </p>
 
       {activeConfirmation && confirmationChoices.length > 0 ? (
@@ -275,10 +288,29 @@ export function InlinePromise({
             </button>
           ))}
         </div>
+      ) : card.nlIntent === "schedule_clarify" && understanding.clarifyMissing === "time" ? (
+        <div className="mt-3 grid grid-cols-2 gap-2" data-testid="promise-time-clarify-actions">
+          <button
+            type="button"
+            data-testid="promise-pick-time"
+            onClick={() => openManualSchedule("clarify")}
+            className="touch-press min-h-11 rounded-[12px] border border-ink/12 bg-ink/[0.03] px-3 py-2.5 text-[13px] font-semibold text-ink active:border-primary active:bg-primary/25"
+          >
+            {t("시간 고르기", "Pick a time")}
+          </button>
+          <button
+            type="button"
+            data-testid="promise-no-time-today"
+            onClick={() => finish(onConfirmClarify(item, "today"))}
+            className="touch-press min-h-11 rounded-[12px] border border-ink/12 bg-ink/[0.03] px-3 py-2.5 text-[13px] font-semibold text-ink active:border-primary active:bg-primary/25"
+          >
+            {t("시간 없이", "No time")}
+          </button>
+        </div>
       ) : card.nlIntent === "schedule_clarify" ? (
         <>
           <div
-            className="mt-3 grid grid-cols-3 gap-1.5"
+            className={`mt-3 grid gap-1.5 ${clarifyOptions.length === 2 ? "grid-cols-2" : "grid-cols-3"}`}
             data-testid="promise-clarify-chips"
           >
             {clarifyOptions.map(({ pick, label }) => (

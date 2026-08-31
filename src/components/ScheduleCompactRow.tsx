@@ -7,6 +7,7 @@ import {
 } from "@/lib/scheduleTime";
 import { scheduleDisplayTitle } from "@/lib/thoughtProvenance";
 import { cleanScheduleTitle } from "@/lib/naturalScheduleDraft";
+import { parseCanonicalTemporalModel } from "@/lib/nlTemporalCalendarModel";
 import { isMissed } from "@/lib/scheduleGroups";
 import { useT, useLang } from "@/lib/i18n";
 import { confirm as hapticConfirm } from "@/lib/haptics";
@@ -21,14 +22,38 @@ export type ScheduleCompactRowProps = {
   s: ScheduleItem;
   pinned?: boolean;
   done?: boolean;
-  /** When true, suppress per-row overdue label (shown at section level). */
   inPastSection?: boolean;
   onComplete: () => void;
   onEdit: () => void;
-  /** Shared Screen 15 detail — optional; falls back to onEdit. */
   onOpenDetail?: () => void;
   onAlarm?: () => void;
 };
+
+function fuzzyDaypartLabel(text: string, lang: "ko" | "en"): string | null {
+  const daypart = parseCanonicalTemporalModel(text).daypart;
+  if (!daypart) return null;
+  const ko: Record<string, string> = {
+    morning: "오전",
+    afternoon: "오후",
+    evening: "저녁",
+    night: "밤",
+    dawn: "새벽",
+    lunch: "점심",
+    noon: "정오",
+    midnight: "자정",
+  };
+  const en: Record<string, string> = {
+    morning: "Morning",
+    afternoon: "Afternoon",
+    evening: "Evening",
+    night: "Night",
+    dawn: "Dawn",
+    lunch: "Lunch",
+    noon: "Noon",
+    midnight: "Midnight",
+  };
+  return lang === "en" ? en[daypart] ?? null : ko[daypart] ?? null;
+}
 
 export function ScheduleCompactRow({
   s,
@@ -48,13 +73,20 @@ export function ScheduleCompactRow({
   const flags = resolveScheduleAllDayFlags(s);
   const start = new Date(s.start_time);
   const end = new Date(s.end_time);
-  const displayTime = formatScheduleRangeLabel(
+  const baseDisplayTime = formatScheduleRangeLabel(
     start,
     end,
     flags.startAllDay,
     flags.endAllDay,
     locale,
   );
+  const fuzzyLabel =
+    flags.startAllDay && flags.endAllDay
+      ? fuzzyDaypartLabel(s.raw_text ?? s.text, locale)
+      : null;
+  const displayTime = fuzzyLabel
+    ? baseDisplayTime.replace(locale === "ko" ? /종일/g : /All day/g, fuzzyLabel)
+    : baseDisplayTime;
   const openDetail = onOpenDetail ?? onEdit;
   const alarmAt = effectiveAlarmAt(s);
   const alarmLabel = alarmAt
@@ -160,12 +192,10 @@ export function ScheduleCompactRow({
           }`}
           aria-hidden
         >
-          {done && <Check size={13} strokeWidth={3} />}
+          {done && <Check size={13} strokeWidth={3} aria-hidden />}
         </span>
       </button>
 
-      {/* The row itself is the detail/edit affordance. Keep the surface quiet;
-          do not show an always-on “수정” action beside every schedule. */}
       <div
         role="button"
         tabIndex={0}
@@ -188,7 +218,6 @@ export function ScheduleCompactRow({
         className="schedule-row-content min-w-0 flex-1 cursor-pointer pt-1.5 text-left touch-press"
         data-testid="schedule-row-open-detail"
       >
-        {/* Time-first hierarchy (Figma 24) — yellow metadata owns the clock */}
         <span className="schedule-row-meta block text-[12px] font-semibold tabular-nums leading-snug tracking-[-0.01em] text-primary">
           {displayTime}
         </span>
@@ -234,7 +263,6 @@ export type LaterInboxRowProps = {
   onOpen: () => void;
 };
 
-/** Undated inbox row — same grammar as Capture “남긴 것”. */
 export function LaterInboxRow({ text, onOpen }: LaterInboxRowProps) {
   const t = useT();
   const preview = text.split("\n")[0]?.trim() ?? text;

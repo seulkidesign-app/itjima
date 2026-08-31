@@ -101,7 +101,7 @@ test.describe("Home chat bubbles without swipe tray", () => {
       },
       {
         id: `qa2-long-${now}`,
-        text: "치과 예약 전화하고 저녁 약속 장소 확인",
+        text: "치과 예약 전화하고 약속 장소 확인",
         images: [],
         created_at: new Date(now).toISOString(),
         status: "active",
@@ -117,7 +117,7 @@ test.describe("Home chat bubbles without swipe tray", () => {
     const metrics = await viewportMetrics(page);
     expect(metrics.scrollWidth).toBeLessThanOrEqual(metrics.clientWidth + 1);
 
-    for (const text of ["여행", "치과 예약 전화하고 저녁 약속 장소 확인"]) {
+    for (const text of ["여행", "치과 예약 전화하고 약속 장소 확인"]) {
       const bubble = await bubbleBox(page, text);
       expect(bubble).toBeTruthy();
       expect(bubble!.x).toBeGreaterThanOrEqual(0);

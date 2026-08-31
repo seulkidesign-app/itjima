@@ -23,6 +23,7 @@ import {
   type ClarifyPick,
 } from "@/lib/nlSchedule";
 import { evaluateTimedAutoCommit } from "@/lib/nlAutoCommit";
+import { buildTemporalCompletionDraft } from "@/lib/nlTemporalCompletion";
 import {
   commitInboxToSchedule,
   undoScheduleToInbox,
@@ -495,7 +496,6 @@ function Inbox() {
             return;
           }
           if (result.status === "restore_failed_schedule_recreated") {
-            // Keep feedback/undo pointed at the recreated schedule — never a deleted id.
             savedUndoRef.current = {
               scheduleId: result.scheduleId,
               inboxItem: snap.inboxItem,
@@ -668,7 +668,6 @@ function Inbox() {
   ) => {
     await withNlConfirmGuard(it.id, async () => {
       const { start, end } = dateFromClarifyPick(pick);
-      // Clarify chips pick a day, not a clock time → all-day
       const dayStart = new Date(start);
       dayStart.setHours(0, 0, 0, 0);
       const dayEnd = new Date(start);
@@ -845,19 +844,24 @@ function Inbox() {
       }
 
       const decision = evaluateTimedAutoCommit(created.text, uiLang);
-      if (decision.ok) {
+      const completionDraft =
+        !decision.ok && decision.reason === "no_clock"
+          ? buildTemporalCompletionDraft(created.text, uiLang)
+          : null;
+      const resolvedDraft = decision.ok ? decision.draft : completionDraft;
+
+      if (resolvedDraft) {
         if (isFirst) markFirstCaptureDone();
         setAutoCommitInFlightIds((prev) => new Set(prev).add(created.id));
         try {
           const committed = await withNlConfirmGuard(created.id, async () => {
-            const draft = decision.draft;
             await commitInboxSchedule(
               created,
-              draft.text,
-              draft.start,
-              draft.end,
-              draft.options,
-              "capture_auto",
+              resolvedDraft.text,
+              resolvedDraft.start,
+              resolvedDraft.end,
+              resolvedDraft.options,
+              decision.ok ? "capture_auto" : "capture_completion",
               { showSavedFeedback: true },
             );
             trackNlScheduleCreated();
@@ -880,17 +884,25 @@ function Inbox() {
         }
       } else {
         if (isFirst) markFirstCaptureDone();
-        const temporal_state = temporalStateFromAutoCommitReason(decision.reason);
+        if (decision.ok) return;
+        const understanding = understandNaturalLanguage(created.text, uiLang);
+        const completionClarification =
+          decision.reason === "no_clock" &&
+          understanding.intent === "schedule_clarify";
+        const temporal_state = completionClarification
+          ? "ambiguous"
+          : temporalStateFromAutoCommitReason(decision.reason);
         await inbox.update(created.id, {
           temporal_state,
-          clarification_state: isAmbiguousTemporalReason(decision.reason)
-            ? "pending"
-            : null,
+          clarification_state:
+            completionClarification || isAmbiguousTemporalReason(decision.reason)
+              ? "pending"
+              : null,
         });
-        // Undated / non-timed: durable raw only — no taxonomy confirmation.
-        // Ambiguous timed stays in inbox for InlinePromise (AM/PM, multi-clock, …).
+        // Quiet raw notes still get lightweight acknowledgement. Incomplete
+        // temporal intent surfaces its missing decision inline instead.
         if (
-          decision.reason === "no_clock" ||
+          (!completionClarification && decision.reason === "no_clock") ||
           decision.reason === "date_only" ||
           decision.reason === "quiet" ||
           decision.reason === "empty_title"

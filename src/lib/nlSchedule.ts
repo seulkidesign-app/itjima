@@ -35,6 +35,11 @@ export type NlScheduleUnderstanding = {
 const TIME_RE =
   /(?:\d{1,2}\s*시|\d{1,2}:\d{2}|\d{1,2}\s*(?:am|pm)\b|오전|오후|저녁|아침|점심|\bevening\b|\bmorning\b|\bafternoon\b)/i;
 
+const DAYPART_RE =
+  /(?:오전|오후|저녁|아침|점심|새벽|밤|\bevening\b|\bmorning\b|\bafternoon\b|\blunch\b|\btonight\b)/i;
+
+const LATER_TODAY_RE = /(?:이따가|좀\s*있다(?:가)?)/i;
+
 const VAGUE_WHEN_RE =
   /(?:쯤|정도|무렵|경|\baround\b|\babout\b|\bor\s+so\b|\bsometime\b|\broughly\b)/i;
 
@@ -57,9 +62,6 @@ const NEXT_MONTH_EARLY_RE = /다음\s*달\s*초|early\s+next\s+month/i;
 
 const WEEKDAY_IN_TEXT_RE =
   /(일|월|화|수|목|금|토)요일|\b(?:monday|tuesday|wednesday|thursday|friday|saturday|sunday)\b/i;
-
-const JOURNAL_ONLY_RE =
-  /(?:날씨|좋았|피곤|커피|기억하고|마셨|그냥|요즘|회고|떠올|하루였|기분)/i;
 
 function isJournalOnly(text: string): boolean {
   if (/(?:오늘|today)/i.test(text)) {
@@ -144,12 +146,22 @@ function isTimeOnlyPhrase(text: string): boolean {
   return stripped.length <= 1;
 }
 
+function isStandaloneDaypart(text: string): boolean {
+  return DAYPART_RE.test(text) && !hasDateAnchor(text) && !hasExplicitTime(text);
+}
+
+function daypartSurface(text: string, lang: "ko" | "en"): string {
+  const match = text.match(DAYPART_RE)?.[0];
+  if (!match) return lang === "en" ? "that time" : "그 시간대";
+  return match;
+}
+
 function isClarifySchedule(text: string): boolean {
+  if (LATER_TODAY_RE.test(text)) return true;
+  if (isStandaloneDaypart(text)) return true;
   if (NEXT_MONTH_EARLY_RE.test(text)) return true;
   if (/이번\s*주\s*안/i.test(text)) return true;
-  // Vague timing always asks
   if (VAGUE_WHEN_RE.test(text)) return true;
-  // "주말" is rough temporal intent — never silently resolve to Sat/Sun.
   if (
     /(?:주말|weekend)/i.test(text) &&
     !/(?:토|일)요일|\b(?:saturday|sunday)\b/i.test(text)
@@ -162,7 +174,6 @@ function isClarifySchedule(text: string): boolean {
     if (/다음\s*주|next\s+week/i.test(text) && !TIME_RE.test(text)) return true;
     return false;
   }
-  // "다음 주" without a clock time is still wide — ask once
   if (
     !hasExplicitTime(text) &&
     /(?:다음\s*주|next\s+week)/i.test(text) &&
@@ -230,7 +241,6 @@ export function understandNaturalLanguage(
     };
   }
 
-  // Weekend word alone — keep; "내일" alone can still be a one-tap all-day
   if (/^(주말|weekend)$/i.test(trimmed)) {
     return {
       intent: "keep",
@@ -262,8 +272,8 @@ export function understandNaturalLanguage(
           ? "Tap to add — calendar only if you want to change it."
           : "한 번 누르면 일정에 들어가요 — 바꾸고 싶을 때만 날짜를 고르면 돼요."
         : lang === "en"
-          ? "Saved as an all-day plan — add a time only if you want."
-          : "하루 일정으로 넣을게요 — 시간 넣고 싶을 때만 수정하면 돼요.",
+          ? "Saved at the precision you gave — add an exact time only if you want."
+          : "말한 정도로 일정에 넣을게요 — 정확한 시간은 필요할 때만 추가하면 돼요.",
       primaryLabelKo: scheduleLabels.ko,
       primaryLabelEn: scheduleLabels.en,
       isSensitive: false,
@@ -271,7 +281,10 @@ export function understandNaturalLanguage(
   }
 
   if (isClarifySchedule(trimmed)) {
-    const missing = TIME_RE.test(trimmed) ? "day" : "time";
+    const laterToday = LATER_TODAY_RE.test(trimmed);
+    const standaloneDaypart = isStandaloneDaypart(trimmed);
+    const missing: "time" | "day" = laterToday ? "time" : "day";
+    const daypart = daypartSurface(trimmed, lang);
     return {
       intent: "schedule_clarify",
       confidence: "medium",
@@ -279,20 +292,26 @@ export function understandNaturalLanguage(
       detectedDate: dateHit,
       hasExplicitTime: hasExplicitTime(trimmed),
       clarifyMissing: missing,
-      mirrorLine:
-        missing === "day"
+      mirrorLine: laterToday
+        ? lang === "en"
+          ? "What time today?"
+          : "오늘 몇 시쯤 할까요?"
+        : standaloneDaypart
           ? lang === "en"
-            ? "Which day works?"
-            : "며칠쯤이 좋을까요?"
+            ? `Which day for ${daypart}?`
+            : `언제 ${daypart}인가요?`
           : lang === "en"
-            ? "When should we bring it back?"
-            : "언제쯤 보면 좋을까요?",
-      mirrorDetail:
-        lang === "en"
+            ? "Which day works?"
+            : "며칠쯤이 좋을까요?",
+      mirrorDetail: laterToday
+        ? lang === "en"
+          ? "Choose a time, or keep it as a plan for today without one."
+          : "시간을 고르거나, 시간 없이 오늘 일정으로 둘 수 있어요."
+        : lang === "en"
           ? "Pick one — or choose a date yourself."
           : "하나만 골라 주세요 — 필요하면 날짜를 직접 고를 수 있어요.",
-      primaryLabelKo: "날짜 고르기",
-      primaryLabelEn: "Pick a date",
+      primaryLabelKo: laterToday ? "시간 고르기" : "날짜 고르기",
+      primaryLabelEn: laterToday ? "Pick a time" : "Pick a date",
       isSensitive: false,
     };
   }

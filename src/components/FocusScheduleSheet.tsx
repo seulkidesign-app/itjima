@@ -32,6 +32,33 @@ type Props = {
   ) => void;
 };
 
+const LATER_TODAY_RE = /(?:이따가|좀\s*있다(?:가)?)/i;
+
+function sameCalendarDay(a: Date, b: Date): boolean {
+  return (
+    a.getFullYear() === b.getFullYear() &&
+    a.getMonth() === b.getMonth() &&
+    a.getDate() === b.getDate()
+  );
+}
+
+/**
+ * `이따가` already carries a today anchor. The manual time picker must not
+ * fall through to the generic after-hours default (tomorrow 09:00).
+ * This seed is UI-only; no exact clock is persisted until the user confirms.
+ */
+function schedulePickerStart(item: InboxItem): Date {
+  if (!LATER_TODAY_RE.test(item.text)) return defaultScheduleStart(item);
+
+  const now = new Date();
+  const candidate = new Date(now.getTime() + 30 * 60_000);
+  if (sameCalendarDay(candidate, now)) return candidate;
+
+  const endOfToday = new Date(now);
+  endOfToday.setHours(23, 59, 0, 0);
+  return endOfToday.getTime() > now.getTime() ? endOfToday : now;
+}
+
 function reminderKeyFromMinutes(minutes: number | null): ReminderKey {
   if (minutes === null) return "off";
   if (minutes === 0) return "at";
@@ -59,7 +86,7 @@ export function FocusScheduleSheet({ item, open, onClose, onConfirm }: Props) {
 
   const initialStart = useMemo(
     () =>
-      interpretedDraft?.start ?? (item ? defaultScheduleStart(item) : undefined),
+      interpretedDraft?.start ?? (item ? schedulePickerStart(item) : undefined),
     [item, interpretedDraft],
   );
 
