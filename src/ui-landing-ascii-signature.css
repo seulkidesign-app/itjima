@@ -140,7 +140,7 @@
   position: absolute;
   top: -12vh;
   left: var(--ij-drop-x);
-  color: rgba(37, 40, 42, .76);
+  color: rgba(37, 40, 42, .58);
   font-size: clamp(18px, 2.1vw, 30px);
   font-weight: 800;
   line-height: 1;
@@ -149,7 +149,7 @@
 }
 
 .ij-ascii-drop:nth-child(4n) {
-  color: rgba(205, 163, 0, .82);
+  color: rgba(205, 163, 0, .64);
   font-size: clamp(21px, 2.5vw, 34px);
 }
 
