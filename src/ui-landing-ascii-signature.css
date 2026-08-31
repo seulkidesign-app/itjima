@@ -26,29 +26,29 @@
 
 .ij-ascii-face {
   color: rgba(37, 40, 42, 0.52);
-  font-size: clamp(17px, 1.65vw, 25px);
+  font-size: clamp(22px, 2.2vw, 32px);
   opacity: 0;
   filter: blur(0);
 }
 
 .ij-ascii-face[data-face="1"] {
-  left: 7.5%;
-  top: 23%;
+  left: 6%;
+  top: 20%;
   transform: translate3d(-12px, 8px, 0) rotate(-8deg);
   animation: ij-ascii-gather-left 5.1s cubic-bezier(.22, 1, .36, 1) 0.18s forwards;
 }
 
 .ij-ascii-face[data-face="2"] {
-  left: 86%;
-  top: 31%;
+  left: 84%;
+  top: 29%;
   transform: translate3d(10px, -5px, 0) rotate(7deg);
   animation: ij-ascii-gather-right 5.35s cubic-bezier(.22, 1, .36, 1) 0.42s forwards;
 }
 
 .ij-ascii-face[data-face="3"] {
-  left: 13%;
-  top: 66%;
-  font-size: clamp(15px, 1.4vw, 21px);
+  left: 11%;
+  top: 68%;
+  font-size: clamp(18px, 1.8vw, 26px);
   transform: translate3d(8px, 7px, 0) rotate(5deg);
   animation: ij-ascii-gather-low 5.2s cubic-bezier(.22, 1, .36, 1) 0.72s forwards;
 }
@@ -57,7 +57,7 @@
   left: var(--ij-ascii-target-x);
   top: var(--ij-ascii-target-y);
   color: #25282a;
-  font-size: clamp(30px, 3.2vw, 48px);
+  font-size: clamp(40px, 4vw, 64px);
   font-weight: 800;
   opacity: 0;
   transform: translate3d(8px, 13px, 0) scale(.86) rotate(4deg);
@@ -179,15 +179,15 @@
   }
 
   .ij-ascii-face {
-    font-size: 16px;
+    font-size: 19px;
   }
 
   .ij-ascii-face[data-face="1"] { left: 4%; top: 14%; }
-  .ij-ascii-face[data-face="2"] { left: 88%; top: 24%; }
-  .ij-ascii-face[data-face="3"] { left: 8%; top: 76%; font-size: 14px; }
+  .ij-ascii-face[data-face="2"] { left: 84%; top: 24%; }
+  .ij-ascii-face[data-face="3"] { left: 8%; top: 76%; font-size: 16px; }
 
   .ij-ascii-mark {
-    font-size: 29px;
+    font-size: 36px;
   }
 
   .ij-ascii-drop:nth-child(n + 13) {
