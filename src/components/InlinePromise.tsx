@@ -5,11 +5,11 @@ import {
   type ClarifyPick,
 } from "@/lib/nlSchedule";
 import { buildPromiseCard } from "@/lib/promiseCard";
+import { getNlClarificationPresentation } from "@/lib/nlClarificationPresentation";
 import {
   assumedMeridiemQuestion,
   extractClockPlanLines,
   scheduleConfirmationChoices,
-  scheduleConfirmationReason,
   type ScheduleConfirmationReason,
 } from "@/lib/nlScheduleSafety";
 import { withInboxScheduleDraft } from "@/lib/inboxScheduleDefaults";
@@ -91,15 +91,22 @@ export function InlinePromise({
   // Clarify keeps the spoken phrase; timed asks prefer the cleaned event title.
   const title =
     card.nlIntent === "schedule_clarify" ? item.text.trim() || draftedTitle : draftedTitle;
-  // Safety vetoes apply even when the parser already assumed PM for bare hours.
-  const activeConfirmation = scheduleConfirmationReason(item.text);
+  // Use the same parsing-only normalization as the safety gate so Korean clock
+  // words ("두 시") surface the same AM/PM question without mutating raw text.
+  const presentation = getNlClarificationPresentation(
+    item.text,
+    uiLang,
+    item.clarification_state,
+  );
+  const confirmationText = presentation.confirmationText;
+  const activeConfirmation = presentation.confirmationReason;
   const confirmationChoices = activeConfirmation
-    ? scheduleConfirmationChoices(item.text, activeConfirmation, uiLang)
+    ? scheduleConfirmationChoices(confirmationText, activeConfirmation, uiLang)
     : [];
   const clarifyOptions = clarifyPicksForText(item.text, uiLang);
   const clockLines =
     activeConfirmation === "multiple_clocks"
-      ? extractClockPlanLines(item.text)
+      ? extractClockPlanLines(confirmationText)
       : [];
 
   if (acknowledged) return null;
@@ -137,7 +144,7 @@ export function InlinePromise({
           {title}
         </strong>
         <p className="mt-2 text-[14px] font-medium leading-snug text-ink">
-          {confirmationCopy("assumed_meridiem", uiLang, item.text)}
+          {confirmationCopy("assumed_meridiem", uiLang, confirmationText)}
         </p>
         <div
           className={`mt-3 grid gap-2 ${
@@ -231,7 +238,7 @@ export function InlinePromise({
       </strong>
       <p className="mt-2 text-[14px] font-medium leading-snug text-ink">
         {activeConfirmation
-          ? confirmationCopy(activeConfirmation, uiLang)
+          ? confirmationCopy(activeConfirmation, uiLang, confirmationText)
           : t("일정으로 이해했어요", "Understood as a schedule")}
       </p>
 
