@@ -1,5 +1,5 @@
 import { mkdirSync, writeFileSync } from "node:fs";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { evaluateTimedAutoCommit } from "@/lib/nlAutoCommit";
 import { parseNlTemporalModel, type NlTemporalModel } from "@/lib/nlTemporalModel";
 import {
@@ -56,8 +56,7 @@ function resolveWeekday(raw: string, now: Date): Date | null {
   if (target === undefined) return null;
 
   const value = atStartOfDay(now);
-  let delta = (target - value.getDay() + 7) % 7;
-  if (delta === 0) delta = 0;
+  const delta = (target - value.getDay() + 7) % 7;
   value.setDate(value.getDate() + delta);
   return value;
 }
@@ -95,8 +94,7 @@ function resolveModelDate(model: NlTemporalModel, now: Date): Date | null {
     case "next_month_day": {
       const match = date.raw.match(/다음\s*달\s*(\d{1,2})\s*일/);
       if (!match) return null;
-      const value = new Date(now.getFullYear(), now.getMonth() + 1, Number(match[1]), 0, 0, 0, 0);
-      return value;
+      return new Date(now.getFullYear(), now.getMonth() + 1, Number(match[1]), 0, 0, 0, 0);
     }
     default:
       return null;
@@ -143,40 +141,53 @@ function resolveCanonicalCandidate(
   return { start, end: null, precision: model.precision };
 }
 
-const rows = NL_FULLSWEEP_CASES.flatMap((testCase) => {
-  const now = resolveNow(testCase);
-  const decision = evaluateTimedAutoCommit(testCase.input, testCase.lang ?? "ko", now);
-  if (!decision.ok) return [];
+function buildRows() {
+  vi.useFakeTimers();
+  try {
+    return NL_FULLSWEEP_CASES.flatMap((testCase) => {
+      const now = resolveNow(testCase);
+      // Legacy detectDate/buildNaturalScheduleDraft call new Date() internally.
+      // Freeze the process clock so both legacy and canonical candidates are
+      // evaluated against the exact same deterministic reference time.
+      vi.setSystemTime(now);
 
-  const candidate = resolveCanonicalCandidate(testCase.input, now);
-  const startDeltaMs = candidate
-    ? candidate.start.getTime() - decision.draft.start.getTime()
-    : null;
-  const compareEnd = Boolean(candidate?.end && testCase.autoEndHour !== undefined);
-  const endDeltaMs = compareEnd
-    ? candidate!.end!.getTime() - decision.draft.end.getTime()
-    : null;
+      const decision = evaluateTimedAutoCommit(testCase.input, testCase.lang ?? "ko", now);
+      if (!decision.ok) return [];
 
-  return [
-    {
-      category: testCase.category,
-      input: testCase.input,
-      legacyStart: decision.draft.start.toISOString(),
-      legacyEnd: decision.draft.end.toISOString(),
-      candidateStart: candidate?.start.toISOString() ?? null,
-      candidateEnd: candidate?.end?.toISOString() ?? null,
-      precision: candidate?.precision ?? null,
-      candidateResolved: Boolean(candidate),
-      startDeltaMs,
-      endDeltaMs,
-      equivalent:
-        Boolean(candidate) &&
-        startDeltaMs === 0 &&
-        (!compareEnd || endDeltaMs === 0),
-    },
-  ];
-});
+      const candidate = resolveCanonicalCandidate(testCase.input, now);
+      const startDeltaMs = candidate
+        ? candidate.start.getTime() - decision.draft.start.getTime()
+        : null;
+      const compareEnd = Boolean(candidate?.end && testCase.autoEndHour !== undefined);
+      const endDeltaMs = compareEnd
+        ? candidate!.end!.getTime() - decision.draft.end.getTime()
+        : null;
 
+      return [
+        {
+          category: testCase.category,
+          input: testCase.input,
+          legacyStart: decision.draft.start.toISOString(),
+          legacyEnd: decision.draft.end.toISOString(),
+          candidateStart: candidate?.start.toISOString() ?? null,
+          candidateEnd: candidate?.end?.toISOString() ?? null,
+          precision: candidate?.precision ?? null,
+          candidateResolved: Boolean(candidate),
+          startDeltaMs,
+          endDeltaMs,
+          equivalent:
+            Boolean(candidate) &&
+            startDeltaMs === 0 &&
+            (!compareEnd || endDeltaMs === 0),
+        },
+      ];
+    });
+  } finally {
+    vi.useRealTimers();
+  }
+}
+
+const rows = buildRows();
 const mismatches = rows.filter((row) => !row.equivalent);
 
 mkdirSync("artifacts", { recursive: true });
