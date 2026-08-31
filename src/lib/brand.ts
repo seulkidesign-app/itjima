@@ -8,10 +8,10 @@ export const BRAND = {
   siteUrl: "https://itjima.app",
   landingPath: "/",
   landingUrl: "https://itjima.app/",
-  logoUrl: "https://itjima.app/icons/itjima-512-v5.png",
+  logoUrl: "https://itjima.app/icons/itjima-512-v4.png",
   ogImageUrl: "https://itjima.app/og-itjima-brand-v3.png",
   ogImageAlt: "잊지마(itjima) ij 심볼이 노란 배경 위에 놓인 브랜드 미리보기",
-  logoAlt: "잊지마(itjima) ij* 브랜드 아이콘",
+  logoAlt: "잊지마(itjima) ij 브랜드 아이콘",
   taglineKo: "대충 말해도 일정이 돼요.",
   taglineEn: "Say it roughly. Turn it into a schedule.",
   /** Verified external profiles that describe the same product entity. */
