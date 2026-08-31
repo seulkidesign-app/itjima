@@ -137,7 +137,7 @@ function HeroDemo({ demos }: { demos: Demo[] }) {
         <span className="lv2-spark"><Sparkles size={18} aria-hidden="true" /></span>
         <h3>{t("한 문장만", "Just one sentence")}<br />{t("남기면 돼요.", "is enough.")}</h3>
         <p>{t("메모인지, 할 일인지,", "No need to decide whether it's a note,")}<br />{t("일정인지 먼저 고르지 않아요.", "a task, or a schedule first.")}</p>
-        <PillLink ariaLabel={t("첫 일정 남기기", "Drop your first plan")}>{t("그냥 남기기", "Just drop it")}</PillLink>
+        <PillLink ariaLabel={t("첫 기록 남기기", "Drop your first thought")}>{t("그냥 남기기", "Just drop it")}</PillLink>
       </motion.aside>
     </div>
   );
@@ -338,14 +338,14 @@ export function LandingV2() {
           <div className="lv2-hero-glow lv2-glow-a" aria-hidden="true" />
           <div className="lv2-hero-glow lv2-glow-b" aria-hidden="true" />
           <Reveal className="lv2-hero-copy">
-            <p className="lv2-eyebrow">{t("분류 없는 AI 기록", "AI notes without categories")}</p>
-            <h1>{t("메모·할 일·일정,", "Say it roughly.")}<br /><span>{t("구분하지 말고 한 문장으로.", "It becomes a schedule.")}</span></h1>
-            <p className="lv2-lead">{t("생각난 순간 그냥 남기세요. 잊지마가 날짜와 행동을 읽고 필요한 곳에 정리해요.", "Drop the thought as it comes. Itjima reads dates and actions, then puts them where you'll need them.")}</p>
+            <p className="lv2-eyebrow">{t("AI MEMORY INBOX · 살아있는 메모", "AI MEMORY INBOX · LIVING NOTES")}</p>
+            <h1>{t("생각나는 대로 남기면,", "Drop thoughts as they come.")}<br /><span>{t("알아서 정리하고 다시 꺼내줘요.", "It organizes and brings them back.")}</span></h1>
+            <p className="lv2-lead">{t("메모·할 일·일정을 구분하지 말고 한 문장으로 남기세요. 잊지마가 자연어를 이해해 날짜와 행동을 자동으로 구조화하고, 필요한 순간 다시 보여줘요.", "No need to separate notes, tasks, or schedules. Itjima understands natural language, structures dates and actions, and resurfaces what matters when it matters.")}</p>
             <div className="lv2-hero-cta-row">
-              <PillLink dark ariaLabel={t("첫 일정 남기기", "Drop your first plan")}>{t("무료로 시작하기", "Start free")}</PillLink>
+              <PillLink dark ariaLabel={t("첫 기록 남기기", "Drop your first thought")}>{t("무료로 시작하기", "Start free")}</PillLink>
               <a className="lv2-secondary-pill" href="#how">{t("10초 데모 보기", "See the 10-second flow")} <ChevronDown size={15} aria-hidden="true" /></a>
             </div>
-            <p className="lv2-no-setup">{t("폴더 · 제목 · 카테고리 선택 없이", "No folders · titles · category picking")}</p>
+            <p className="lv2-no-setup">{t("자연어 기록 · 자동 구조화 · 다시 꺼내기", "Natural capture · Auto-organize · Resurface")}</p>
           </Reveal>
           <Reveal className="lv2-hero-demo-wrap" delay={0.12}>
             <div id="demo"><HeroDemo demos={demos} /></div>
@@ -356,13 +356,13 @@ export function LandingV2() {
           <div className="lv2-container">
             <SectionRule label="HOW IT WORKS" />
             <Reveal className="lv2-centered-head">
-              <h2>{t("기록 전에도, 기록 후에도", "No organizing before.")}<br />{t("정리할 필요 없어요.", "No organizing after.")}</h2>
-              <p>{t("입력 형식을 고르는 단계부터 기록을 다시 분류하는 일까지 줄였습니다.", "We removed the work of choosing a format first and sorting everything again later.")}</p>
+              <h2>{t("남기기만 하세요.", "Just capture it.")}<br />{t("정리하고 다시 꺼내는 건 잊지마가.", "Itjima organizes and brings it back.")}</h2>
+              <p>{t("자연어로 남긴 기록을 일정·할 일·생각으로 이해하고, 필요한 순간 다시 보여줘요.", "It understands what you write as a schedule, task, or thought, then resurfaces it when it becomes useful.")}</p>
             </Reveal>
             <div className="lv2-workflow">
-              <WorkflowCard index={0} title={t("그냥 남기기", "Just drop it")} label="Capture" tone="paper" rows={[[t("금요일까지 포폴 수정", "Revise portfolio by Friday"), t("한 문장 그대로", "Kept as one sentence")], [t("엄마 선물 알아보기", "Look for a gift for mom"), t("날짜 없이 그대로", "Kept without a date")]]} />
-              <WorkflowCard index={1} title={t("AI가 의미 이해", "AI understands meaning")} label="Interpret" tone="yellow" rows={[[t("포트폴리오 수정", "Revise portfolio"), t("할 일 · 금요일까지", "Task · by Friday")], [t("치과", "Dentist"), t("일정 · 내일 오후 3:00", "Schedule · tomorrow 3:00 PM")]]} />
-              <WorkflowCard index={2} title={t("필요할 때 다시 보기", "See it when it matters")} label="Resurface" tone="blue" rows={[[t("오늘 오후 3:00 · 치과", "Today 3:00 PM · Dentist"), t("오늘 필요한 것만", "Only what matters today")], [t("금요일까지 · 포폴 수정", "By Friday · Revise portfolio"), t("다가오는 할 일", "Upcoming task")]]} />
+              <WorkflowCard index={0} title={t("생각나는 대로 기록", "Capture naturally")} label="Natural capture" tone="paper" rows={[[t("금요일까지 포폴 수정", "Revise portfolio by Friday"), t("한 문장 그대로", "Kept as one sentence")], [t("엄마 선물 알아보기", "Look for a gift for mom"), t("날짜 없이 그대로", "Kept without a date")]]} />
+              <WorkflowCard index={1} title={t("AI가 자동 구조화", "AI auto-organizes")} label="Auto organize" tone="yellow" rows={[[t("포트폴리오 수정", "Revise portfolio"), t("할 일 · 금요일까지", "Task · by Friday")], [t("치과", "Dentist"), t("일정 · 내일 오후 3:00", "Schedule · tomorrow 3:00 PM")]]} />
+              <WorkflowCard index={2} title={t("필요한 순간 다시 꺼내기", "Resurface when it matters")} label="Resurface" tone="blue" rows={[[t("오늘 오후 3:00 · 치과", "Today 3:00 PM · Dentist"), t("오늘 필요한 것만", "Only what matters today")], [t("금요일까지 · 포폴 수정", "By Friday · Revise portfolio"), t("다가오는 할 일", "Upcoming task")]]} />
             </div>
           </div>
         </section>
@@ -396,9 +396,9 @@ export function LandingV2() {
                 <motion.div className="lv2-note note-b" whileHover={{ rotate: 3, y: -7 }}><strong>{t("내일 치과", "Dentist tomorrow")}<br />{t("아 맞다 3시", "oh right, 3 PM")}</strong></motion.div>
               </Reveal>
               <Reveal className="lv2-why-copy" delay={0.08}>
-                <h2>{t("생각은 원래", "Thoughts arrive")}<br />{t("정리되기 전에 떠오르니까.", "before they're organized.")}</h2>
-                <p>{t("정돈된 사람만 기록할 수 있는 도구가 되지 않도록 만들었습니다.", "Itjima is designed so recording isn't reserved for people who already have everything organized.")}</p>
-                <blockquote>{t("“아무렇게나 적어도 돼.", "“Write it however it comes.")}<br />{t("필요한 건 내가 기억할게.”", "I'll remember what matters.”")}</blockquote>
+                <h2>{t("쌓아두는 메모보다,", "More than stored notes.")}<br />{t("다시 만나는 메모.", "Notes that come back.")}</h2>
+                <p>{t("잊지마는 기록을 보관하는 데서 끝나지 않아요. 흩어진 생각을 이해하고, 필요해질 때 다시 연결해요.", "Itjima doesn't stop at storing notes. It understands scattered thoughts and reconnects them when they become relevant.")}</p>
+                <blockquote>{t("“아무렇게나 적어도 돼.", "“Write it however it comes.")}<br />{t("필요할 때 내가 다시 꺼내줄게.”", "I'll bring it back when you need it.”")}</blockquote>
                 <strong className="lv2-manifesto">{t("기록은 쌓여도, 관리할 일은 쌓이지 않게.", "Let records pile up—not maintenance work.")}</strong>
               </Reveal>
             </div>
@@ -409,27 +409,27 @@ export function LandingV2() {
           <div className="lv2-container">
             <SectionRule label="THE PRODUCT" />
             <Reveal className="lv2-product-head">
-              <h2>{t("입력하고,", "Drop it in.")}<br />{t("필요할 때 확인하면 끝.", "Check it when you need it.")}</h2>
-              <p>{t("복잡한 관리 화면 대신 입력·일정·요약의 세 장면만 남겼습니다.", "Instead of a complex management screen, the product centers on capture, schedule, and a light summary.")}</p>
+              <h2>{t("기록하면,", "Drop it in.")}<br />{t("필요한 순간 다시 보여요.", "It comes back when it matters.")}</h2>
+              <p>{t("자연어 입력부터 자동 구조화, 일정 확인과 가벼운 요약까지 하나의 기록 흐름으로 이어집니다.", "Natural capture, automatic structure, schedules, and lightweight summaries stay connected in one memory flow.")}</p>
             </Reveal>
             <div className="lv2-product-track">
-              <ProductCard title={t("그냥 남기기", "Just drop it")} eyebrow={t("Capture · 자연어 입력", "Capture · natural language")} tone="paper">
+              <ProductCard title={t("그냥 남기기", "Just drop it")} eyebrow={t("Capture · 자연어 기록", "Capture · natural language")} tone="paper">
                 <div className="lv2-product-input"><strong>{t("엄마 선물 알아보기", "Look for a gift for mom")}</strong><span>{t("말하듯 아무렇게나 남겨보세요", "Write it the way you'd say it")}</span></div>
                 <div className="lv2-mini-row"><strong>{t("금요일까지 포트폴리오 수정", "Revise portfolio by Friday")}</strong><span>{t("할 일 · 금요일까지", "Task · by Friday")}</span></div>
                 <div className="lv2-mini-row"><strong>{t("제주도에서 가고 싶은 카페", "Cafes I want to visit in Jeju")}</strong><span>{t("생각 · 날짜 없이 그대로", "Thought · kept without a date")}</span></div>
               </ProductCard>
-              <ProductCard title={t("오늘 보기", "Today")} eyebrow={t("Schedule · 필요한 일정", "Schedule · what matters now")} tone="blue" delay={0.08}>
+              <ProductCard title={t("오늘 다시 보기", "Resurface today")} eyebrow={t("Schedule · 필요한 순간", "Schedule · when it matters")} tone="blue" delay={0.08}>
                 <div className="lv2-today"><span>{t("8월 29일 · 토요일", "August 29 · Saturday")}</span><strong>{t("오늘은 두 가지만 보면 돼요", "Only two things need your attention today")}</strong></div>
                 <div className="lv2-event"><span>{t("오후 3:00", "3:00 PM")}</span><strong>{t("치과 예약", "Dentist appointment")}</strong><small>{t("출발 전에 한 번 확인", "One check before you leave")}</small></div>
                 <div className="lv2-mini-row"><strong>{t("포트폴리오 수정", "Revise portfolio")}</strong><span>{t("금요일까지 · 할 일", "By Friday · task")}</span></div>
               </ProductCard>
-              <ProductCard title={t("가볍게 요약", "Light summary")} eyebrow={t("Summary · 한눈에 보기", "Summary · at a glance")} tone="yellow" delay={0.16}>
+              <ProductCard title={t("알아서 구조화", "Auto-organized")} eyebrow={t("Summary · 기록 한눈에 보기", "Summary · at a glance")} tone="yellow" delay={0.16}>
                 <p className="lv2-summary-label">{t("지금 기록은 이렇게 보여요", "Here's what your records look like now")}</p>
                 <div className="lv2-stats">
                   <div><span>{t("일정", "Schedule")}</span><strong>4</strong></div><div><span>{t("할 일", "Tasks")}</span><strong>3</strong></div>
                   <div><span>{t("생각", "Thoughts")}</span><strong>7</strong></div><div><span>{t("확인 필요", "Check")}</span><strong>2</strong></div>
                 </div>
-                <div className="lv2-summary-note"><strong>{t("정리할 필요는 없어요", "Nothing to organize")}</strong><span>{t("현재 기록을 이해하기 위한 가벼운 요약이에요.", "Just a lightweight way to understand what's already here.")}</span></div>
+                <div className="lv2-summary-note"><strong>{t("직접 분류할 필요 없어요", "Nothing to sort yourself")}</strong><span>{t("남긴 기록을 잊지마가 이해하기 쉽게 구조화해요.", "Itjima keeps what you captured structured and easy to scan.")}</span></div>
               </ProductCard>
             </div>
           </div>
@@ -438,10 +438,10 @@ export function LandingV2() {
         <section className="lv2-final">
           <div className="lv2-container lv2-final-inner">
             <Reveal className="lv2-centered-head">
-              <p className="lv2-eyebrow">{t("정리부터 하지 마세요.", "Don't organize first.")}</p>
-              <h2>{t("떠오른 문장부터", "Start with the sentence")}<br />{t("남겨보세요.", "that just came to mind.")}</h2>
-              <p>{t("메모인지 일정인지 고민하는 일은 잊지마에 맡겨두세요.", "Leave the question of note versus schedule to Itjima.")}</p>
-              <div className="lv2-final-cta"><PillLink dark ariaLabel={t("첫 일정 남기기", "Drop your first plan")}>{t("무료로 시작하기", "Start free")}</PillLink></div>
+              <p className="lv2-eyebrow">{t("살아있는 메모", "A LIVING MEMORY INBOX")}</p>
+              <h2>{t("생각나는 대로", "Drop it while it's on your mind.")}<br />{t("잊지마에 남겨두세요.", "Itjima will bring it back.")}</h2>
+              <p>{t("자동으로 정리하고, 필요한 순간 다시 꺼내드릴게요.", "It organizes what you leave and resurfaces it when you need it.")}</p>
+              <div className="lv2-final-cta"><PillLink dark ariaLabel={t("첫 기록 남기기", "Drop your first thought")}>{t("무료로 시작하기", "Start free")}</PillLink></div>
               <FinalMiniDemo />
             </Reveal>
           </div>
@@ -450,10 +450,10 @@ export function LandingV2() {
 
       <section className="lv2-brand-band" aria-label={t("잊지마 브랜드", "Itjima brand")}>
         <div className="lv2-container lv2-brand-band-inner">
-          <p className="lv2-brand-band-kicker">ITJIMA · AI NOTES</p>
+          <p className="lv2-brand-band-kicker">ITJIMA · AI MEMORY INBOX</p>
           <p className="lv2-brand-masthead">잊지마</p>
           <p className="lv2-brand-band-copy">
-            {t("정리하려 애쓰기보다, 생각난 문장을 먼저 남기는 기록 도구.", "A place to capture the thought first, before you have to organize it.")}
+            {t("자연어로 남기면, 알아서 정리하고 필요한 순간 다시 꺼내주는 살아있는 메모.", "A living memory inbox that organizes what you capture and brings it back when it matters.")}
           </p>
         </div>
       </section>
@@ -462,7 +462,7 @@ export function LandingV2() {
         <div className="lv2-container">
           <SectionRule label="ITJIMA" />
           <div className="lv2-footer-row">
-            <strong>{t("한 문장으로 시작하는 AI 기록", "AI notes that start with one sentence")}</strong>
+            <strong>{t("자연어로 기록하고 다시 만나는 AI 메모", "AI memory that brings your notes back")}</strong>
             <div className="lv2-footer-links">
               <a href="#how">{t("서비스 소개", "How it works")}</a>
               <a href="#product">{t("주요 기능", "Product")}</a>
