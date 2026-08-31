@@ -48,7 +48,9 @@ test.describe("Temporal Completion UX", () => {
       start_all_day?: boolean;
       raw_text?: string | null;
     }>;
-    const plan = schedules.find((item) => item.raw_text === "내일 운동" || item.text?.includes("운동"));
+    const plan = schedules.find(
+      (item) => item.raw_text === "내일 운동" || item.text?.includes("운동"),
+    );
     expect(plan).toBeTruthy();
     expect(plan?.all_day ?? plan?.start_all_day).toBe(true);
 
@@ -120,5 +122,19 @@ test.describe("Temporal Completion UX", () => {
     expect(plan).toBeTruthy();
     expect(plan?.all_day ?? plan?.start_all_day).toBe(true);
     expect(plan?.start_time).toBeTruthy();
+  });
+
+  test("이따가 time picker stays anchored to today even after generic after-hours defaults", async ({ page }) => {
+    await submit(page, "이따가 운동");
+
+    const promise = phone(page).getByTestId("inline-promise");
+    await expect(promise).toBeVisible();
+    await promise.getByTestId("promise-pick-time").click();
+
+    const flow = phone(page).getByTestId("schedule-choice-flow");
+    await expect(flow).toBeVisible();
+    await expect(flow.getByRole("button", { name: "오늘", exact: true })).toHaveClass(
+      /bg-primary/,
+    );
   });
 });
