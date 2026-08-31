@@ -57,7 +57,7 @@ describe("PWA product metadata safety", () => {
       ]),
     );
     expect(html).toContain('rel="manifest" href="/manifest-v4.webmanifest"');
-    expect(html).toContain('href="/favicon-32-v4.png"');
+    expect(html).toContain('href="/favicon-32-v5.png"');
     expect(html).toContain('href="/apple-touch-icon.png?v=4"');
   });
 
