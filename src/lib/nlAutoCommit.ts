@@ -9,6 +9,7 @@ import {
   adversarialScheduleReason,
   type AdversarialScheduleReason,
 } from "@/lib/nlAdversarialSafety";
+import { normalizeKoreanClockWordsForParsing } from "@/lib/nlKoreanTemporalNormalization";
 import { understandNaturalLanguage } from "@/lib/nlSchedule";
 import {
   countDistinctClockMentions,
@@ -31,6 +32,7 @@ import {
 import { applyCanonicalTemporalAuthority } from "@/lib/nlTemporalAuthority";
 import { evaluateTemporalDecisionGate } from "@/lib/nlTemporalDecisionGate";
 import { observeTemporalShadow } from "@/lib/nlTemporalShadow";
+import { hasLowConfidenceScheduleTitle } from "@/lib/nlScheduleTitleSafety";
 import type { InboxItem } from "@/lib/store";
 
 export type AutoCommitBlockReason =
@@ -46,6 +48,7 @@ export type AutoCommitBlockReason =
   | "deadline"
   | "approximate_time"
   | "temporal_model_unresolved"
+  | "low_confidence_title"
   | AdversarialScheduleReason
   | ScheduleConfirmationReason;
 
@@ -53,21 +56,15 @@ export type TimedAutoCommitDecision =
   | { ok: true; draft: NaturalScheduleDraft }
   | { ok: false; reason: AutoCommitBlockReason };
 
-/**
- * Legacy timed decision preserved as an explicit audit baseline. It still owns
- * all historical parser/safety behavior, but callers should use
- * evaluateTimedAutoCommit() for production so Canonical timestamp authority is
- * applied after this decision succeeds.
- */
+/** Legacy parser/safety baseline retained for independent migration audits. */
 export function evaluateLegacyTimedAutoCommit(
   text: string,
   lang: "ko" | "en",
   now = new Date(),
 ): TimedAutoCommitDecision {
-  const trimmed = text.trim();
+  // Parsing-only normalization. The durable user record remains untouched.
+  const trimmed = normalizeKoreanClockWordsForParsing(text.trim());
 
-  // P0-E shadow integration intentionally observes the legacy decision so the
-  // migration audits remain meaningful after Canonical timestamp promotion.
   const finish = (decision: TimedAutoCommitDecision): TimedAutoCommitDecision => {
     try {
       const legacyResolvedStart = trimmed
@@ -90,52 +87,31 @@ export function evaluateLegacyTimedAutoCommit(
 
   if (!trimmed) return finish({ ok: false, reason: "empty" });
 
-  // Fail closed on malformed/contradictory inputs before any parser can clamp,
-  // truncate, or attach a clock to the wrong semantic unit.
   const adversarialReason = adversarialScheduleReason(trimmed);
   if (adversarialReason) {
     return finish({ ok: false, reason: adversarialReason });
   }
-
-  // Semantic context wins over date/time tokens. Questions, negations,
-  // tentative plans, edit replies, unsupported triggers and vague-future
-  // phrases remain durable raw records instead of creating a new schedule.
   if (shouldKeepScheduleSemanticsQuiet(trimmed)) {
     return finish({ ok: false, reason: "quiet" });
   }
-
-  // Repetition is not implemented as a durable recurrence model yet.
   if (hasNaturalRepeatIntent(trimmed) || hasExpandedRepeatIntent(trimmed)) {
     return finish({ ok: false, reason: "repeat" });
   }
-
-  // A broad period plus a precise-looking clock still lacks a calendar day.
-  // (Weekend / 주말 are excluded inside the guard — clarification owns them.)
   if (hasBroadUnresolvedDatePeriod(trimmed)) {
     return finish({ ok: false, reason: "unresolved_date" });
   }
-
-  // Fuzzy clocks ("3시쯤", "around 3pm") have no exact model yet.
   if (hasApproximateTimeExpression(trimmed)) {
     return finish({ ok: false, reason: "approximate_time" });
   }
-
-  // Past input may be history or a typo. Do not silently move it forward.
   if (hasPastDateReference(trimmed, now) || hasPastTimeOnlyClock(trimmed, now)) {
     return finish({ ok: false, reason: "unresolved_date" });
   }
-
-  // Unsupported date/range syntax must stay raw rather than truncating.
   if (hasUnsupportedDateRange(trimmed) || hasUnsupportedColonClockRange(trimmed)) {
     return finish({ ok: false, reason: "unresolved_date" });
   }
-
-  // `오후 03:00` previously fell through to 03:00.
   if (hasMixedKoreanMeridiemColon(trimmed)) {
     return finish({ ok: false, reason: "unresolved_date" });
   }
-
-  // End-only / deadline language is not a start-time schedule yet.
   if (hasDeadlineExpression(trimmed)) {
     return finish({ ok: false, reason: "deadline" });
   }
@@ -149,12 +125,9 @@ export function evaluateLegacyTimedAutoCommit(
   if (clockCount >= 2 && !isSingleClockRange(trimmed)) {
     return finish({ ok: false, reason: "multiple_clocks" });
   }
-
   if (!hasNaturalScheduleTime(trimmed)) {
     return finish({ ok: false, reason: "no_clock" });
   }
-
-  // Bare clock count 0 is only OK for relative offsets ("30분 뒤") that still resolve.
   if (clockCount === 0) {
     const relativeOk = resolveNaturalScheduleStart(trimmed, now) !== null;
     if (!relativeOk) return finish({ ok: false, reason: "no_clock" });
@@ -167,7 +140,8 @@ export function evaluateLegacyTimedAutoCommit(
   if (nl.intent === "schedule_clarify") {
     return finish({ ok: false, reason: "clarify_intent" });
   }
-  // Quiet / sensitive / low-confidence notes stay as left items.
+  // Quiet / sensitive notes stay as left items when NL itself is low-confidence
+  // and no resolved clock is present yet.
   if (
     nl.confidence === "low" &&
     nl.intent !== "schedule_exact" &&
@@ -176,8 +150,6 @@ export function evaluateLegacyTimedAutoCommit(
     return finish({ ok: false, reason: "quiet" });
   }
 
-  // P0-H: a timed auto-commit needs explicit permission from the canonical
-  // Temporal Model as a second, fail-closed semantic gate.
   const temporalGate = evaluateTemporalDecisionGate(trimmed, now);
   if (!temporalGate.ok) {
     return finish({ ok: false, reason: "temporal_model_unresolved" });
@@ -191,18 +163,18 @@ export function evaluateLegacyTimedAutoCommit(
   } satisfies InboxItem);
 
   if (!draft.text.trim()) return finish({ ok: false, reason: "empty_title" });
-  // Timed auto-commit requires a real clock, not a silent all-day promotion.
   if (draft.options.allDay) return finish({ ok: false, reason: "date_only" });
+
+  // Temporal parse success ≠ auto-save permission.
+  // Low-confidence title/action semantics stay fail-closed.
+  if (hasLowConfidenceScheduleTitle(draft.text, lang)) {
+    return finish({ ok: false, reason: "low_confidence_title" });
+  }
 
   return finish({ ok: true, draft });
 }
 
-/**
- * P0-K: production timestamp authority. Legacy remains the safety/parser
- * baseline, but once it accepts a timed capture the Canonical Temporal Model
- * supplies the persisted start timestamp (and both ends for explicit ranges).
- * If Canonical cannot resolve the same capture, fail closed.
- */
+/** Production timestamp authority stays Canonical after legacy safety passes. */
 export function evaluateTimedAutoCommit(
   text: string,
   lang: "ko" | "en",

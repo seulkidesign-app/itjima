@@ -15,7 +15,9 @@ test("Landing V2 and app keep the intended UI while Home motion stays active", a
   await page.goto("/?lang=ko");
 
   await expect(
-    page.getByRole("heading", { name: /메모·할 일·일정.*구분하지 말고 한 문장으로/ }),
+    page.getByRole("heading", {
+      name: /생각나는 대로 남기면.*알아서 정리돼요/,
+    }),
   ).toBeVisible();
   await expect(page.locator(".landing-v2")).toHaveAttribute(
     "data-landing-version",

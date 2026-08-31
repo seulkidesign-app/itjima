@@ -409,13 +409,13 @@ export const NL_FULLSWEEP_CASES: FullsweepCase[] = [
     "오눌 3시 회의",
     "다음주 월요릴 미팅",
   ].map((input) => blocked("17-colloquial-typo", input)),
-  c("17-colloquial-typo", "오후 세시 회의", {
-    explicitTime: false,
-    auto: false,
+  exact("17-colloquial-typo", "오후 세시 회의", 15, {
+    titleMustContain: ["회의"],
   }),
   c("17-colloquial-typo", "오후 세시 병웜", {
-    explicitTime: false,
+    explicitTime: true,
     auto: false,
+    expectedTitle: "병웜",
   }),
   exact("17-colloquial-typo", "오후3시회의", 15, {
     titleMustContain: ["회의"],

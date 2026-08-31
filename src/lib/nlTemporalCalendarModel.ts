@@ -1,3 +1,4 @@
+import { normalizeKoreanClockWordsForParsing } from "@/lib/nlKoreanTemporalNormalization";
 import {
   parseNlTemporalModel,
   type NlTemporalModel,
@@ -39,44 +40,28 @@ function parseScopedWeekdayDate(text: string): CanonicalTemporalDate | null {
   }
 
   const enNextWeek = text.match(EN_NEXT_WEEK_WEEKDAY_RE);
-  if (enNextWeek) {
-    return { kind: "next_week_weekday", raw: enNextWeek[0] };
-  }
+  if (enNextWeek) return { kind: "next_week_weekday", raw: enNextWeek[0] };
 
   const enThisWeek = text.match(EN_THIS_WEEK_WEEKDAY_RE);
-  if (enThisWeek) {
-    return { kind: "this_week_weekday", raw: enThisWeek[0] };
-  }
+  if (enThisWeek) return { kind: "this_week_weekday", raw: enThisWeek[0] };
 
   const enDirectNext = text.match(EN_DIRECT_NEXT_WEEKDAY_RE);
-  if (enDirectNext) {
-    return { kind: "next_week_weekday", raw: enDirectNext[0] };
-  }
+  if (enDirectNext) return { kind: "next_week_weekday", raw: enDirectNext[0] };
 
   return null;
 }
 
-/**
- * Canonical temporal model used by migration/resolution gates.
- *
- * The base parser intentionally stays conservative, while this layer preserves
- * calendar scope that would otherwise be flattened from `다음 주 월요일` to a
- * generic `weekday`. Runtime scheduling does not consume this model yet.
- */
+/** Canonical model with parsing-only Korean spoken-clock normalization. */
 export function parseCanonicalTemporalModel(
   text: string,
   now = new Date(),
 ): CanonicalTemporalModel {
-  const base = parseNlTemporalModel(text, now);
+  const normalized = normalizeKoreanClockWordsForParsing(text);
+  const base = parseNlTemporalModel(normalized, now);
 
-  // Never let a scoped-weekday phrase override a more specific absolute date.
-  // The current base parser flattens these phrases to `weekday`, so enrichment
-  // is limited to that shape.
   if (base.date?.kind === "weekday") {
-    const scopedDate = parseScopedWeekdayDate(text);
-    if (scopedDate) {
-      return { ...base, date: scopedDate };
-    }
+    const scopedDate = parseScopedWeekdayDate(normalized);
+    if (scopedDate) return { ...base, date: scopedDate };
   }
 
   return base as CanonicalTemporalModel;
