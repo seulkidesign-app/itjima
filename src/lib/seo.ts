@@ -9,31 +9,31 @@ const EN_SITE_NAME = "Itjima";
 
 const SEO_BY_LOCALE = {
   ko: {
-    landingTitle: "잊지마 | 말로 쓰는 일정 관리 앱",
+    landingTitle: "잊지마 | 자연어로 기록하고 다시 꺼내주는 AI 메모 앱",
     landingDescription:
-      "‘내일 3시 치과’처럼 말하거나 적어보세요. 잊지마가 날짜와 시간을 정리하고, 애매한 부분만 확인해 일정과 할 일로 만들어 줍니다. 설치 없이 무료로 시작하세요.",
-    ogTitle: "대충 말해도 일정이 돼요 | 잊지마",
+      "메모·할 일·일정을 구분하지 말고 한 문장으로 남기세요. 잊지마가 자연어를 이해해 날짜와 행동을 자동으로 구조화하고, 필요한 순간 다시 꺼내주는 AI 기록 관리 앱입니다.",
+    ogTitle: "적어두면, 정리하고 다시 꺼내주는 살아있는 메모 | 잊지마",
     ogDescription:
-      "말하거나 적으면 날짜와 시간을 정리하고, 애매한 부분만 물어보는 일정 관리 앱.",
+      "자연어로 메모·할 일·일정을 남기면 AI가 자동으로 구조화하고 필요한 순간 다시 보여주는 AI memory inbox.",
     appDescription:
-      "잊지마는 자연어·음성 입력을 일정과 할 일로 정리하고, 애매한 날짜와 시간만 확인하는 일정 관리 웹앱입니다.",
+      "잊지마는 자연어로 남긴 메모·할 일·일정을 자동으로 구조화하고 필요한 순간 다시 꺼내주는 AI 기록 관리 웹앱입니다.",
     keywords:
-      "잊지마, 잊지마 앱, Itjima, 일정 관리, 일정 관리 앱, 음성 일정, 자연어 일정, 할 일 관리, 캘린더, 리마인더",
+      "잊지마, 잊지마 앱, Itjima, AI 메모, AI 기록 관리, 자연어 메모, 자연어 기록, 일정 관리, 일정 관리 앱, 할 일 관리, 캘린더, 리마인더",
     locale: "ko_KR",
     language: "ko-KR",
     currency: "KRW",
   },
   en: {
-    landingTitle: "Itjima | Schedule planner by voice or text",
+    landingTitle: "Itjima | AI memory inbox for notes, tasks, and schedules",
     landingDescription:
-      "Type or say a plan naturally. Itjima organizes the date and time, asks only about ambiguous details, and turns it into a usable schedule.",
-    ogTitle: "Say it roughly. It becomes a schedule. | Itjima",
+      "Capture a thought in natural language. Itjima auto-organizes notes, tasks, and schedules, then resurfaces what matters when you need it.",
+    ogTitle: "A living memory inbox that brings thoughts back | Itjima",
     ogDescription:
-      "A schedule planner that organizes natural voice or text input and asks only about ambiguous details.",
+      "Capture naturally, let AI organize it, and get the right note, task, or schedule back when it matters.",
     appDescription:
-      "Itjima is an English and Korean scheduling web app that turns natural voice or text input into schedules and tasks.",
+      "Itjima is a bilingual AI memory inbox that structures natural-language notes, tasks, and schedules and resurfaces them when relevant.",
     keywords:
-      "Itjima, natural language scheduling, schedule capture, voice schedule, task capture, calendar, reminder",
+      "Itjima, AI memory inbox, AI notes, natural language notes, task capture, schedule capture, reminders, productivity app",
     locale: "en_US",
     language: "en-US",
     currency: "USD",
@@ -213,11 +213,18 @@ export function landingOrganizationLd(locale: Lang = "ko") {
       caption: BRAND.logoAlt,
     },
     knowsAbout: [
+      "AI memory inbox",
+      "AI note management",
+      "natural-language note capture",
       "natural-language scheduling",
+      "automatic record organization",
+      "record resurfacing",
       "task capture",
       "reminders",
       "productivity software",
-      "자연어 일정",
+      "자연어 기록",
+      "AI 메모",
+      "일정 관리",
       "잊지마",
       "Itjima",
     ],
@@ -301,20 +308,21 @@ export function landingSoftwareApplicationLd(locale: Lang = "ko") {
     isPartOf: { "@id": WEBSITE_ID },
     featureList: isEnglish
       ? [
-          "Natural-language schedule capture",
+          "Natural-language note, task, and schedule capture",
+          "Automatic structure from dates and actions",
+          "Resurfacing records when they become relevant",
           "Voice capture",
           "Ambiguity confirmation",
           "Cross-device sync",
           "Push reminders",
-          "Swipe decisions for schedule, keep, or archive",
           "Data export and account deletion",
         ]
       : [
-          "자연어·음성 일정 입력",
-          "날짜와 시간 자동 정리",
+          "자연어·음성으로 메모·할 일·일정 기록",
+          "날짜와 행동을 읽어 자동 구조화",
+          "필요한 순간 기록 다시 꺼내기",
           "애매한 일정 정보만 확인",
           "일정과 할 일 관리",
-          "스와이프로 일정·유지·보관 결정",
           "기기 간 동기화",
           "푸시 알림",
           "데이터 내려받기와 계정 삭제",
