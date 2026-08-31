@@ -1,6 +1,6 @@
 import { mkdirSync, writeFileSync } from "node:fs";
 import { describe, expect, it, vi } from "vitest";
-import { evaluateTimedAutoCommit } from "@/lib/nlAutoCommit";
+import { evaluateLegacyTimedAutoCommit } from "@/lib/nlAutoCommit";
 import { resolveCanonicalTemporalCandidate } from "@/lib/nlTemporalResolver";
 import {
   NL_FULLSWEEP_CASES,
@@ -22,12 +22,9 @@ function buildRows() {
   try {
     return NL_FULLSWEEP_CASES.flatMap((testCase) => {
       const now = resolveNow(testCase);
-      // Legacy detectDate/buildNaturalScheduleDraft call new Date() internally.
-      // Freeze the process clock so both legacy and canonical candidates are
-      // evaluated against the exact same deterministic reference time.
       vi.setSystemTime(now);
 
-      const decision = evaluateTimedAutoCommit(
+      const decision = evaluateLegacyTimedAutoCommit(
         testCase.input,
         testCase.lang ?? "ko",
         now,
@@ -90,7 +87,7 @@ writeFileSync(
 );
 
 describe("P0-I temporal timestamp equivalence audit", () => {
-  it("covers every currently expected auto-commit in the locked corpus", () => {
+  it("covers every currently expected legacy auto-commit in the locked corpus", () => {
     const expectedAutoCount = NL_FULLSWEEP_CASES.filter(
       (testCase) => testCase.auto,
     ).length;
@@ -98,7 +95,7 @@ describe("P0-I temporal timestamp equivalence audit", () => {
     expect(rows.length).toBeGreaterThan(0);
   });
 
-  it("prints timestamp equivalence without granting timestamp authority", () => {
+  it("keeps the independent legacy-versus-canonical timestamp audit green", () => {
     console.log(
       JSON.stringify({
         totalAuto: rows.length,
@@ -108,6 +105,6 @@ describe("P0-I temporal timestamp equivalence audit", () => {
         sample: mismatches.slice(0, 20),
       }),
     );
-    expect(mismatches.length).toBeGreaterThanOrEqual(0);
+    expect(mismatches).toHaveLength(0);
   });
 });
