@@ -11,7 +11,6 @@ import {
 } from "@/lib/nlAdversarialSafety";
 import { normalizeKoreanClockWordsForParsing } from "@/lib/nlKoreanTemporalNormalization";
 import { understandNaturalLanguage } from "@/lib/nlSchedule";
-import { buildTemporalCompletionDraft } from "@/lib/nlTemporalCompletion";
 import {
   countDistinctClockMentions,
   isSingleClockRange,
@@ -190,29 +189,7 @@ export function evaluateTimedAutoCommit(
   now = new Date(),
 ): TimedAutoCommitDecision {
   const legacy = evaluateLegacyTimedAutoCommit(text, lang, now);
-
-  if (!legacy.ok) {
-    // Completion is downstream of the frozen exact-time safety gate. Promote only
-    // high-confidence date/date+daypart plans that can be represented all-day
-    // without inventing a wall clock.
-    if (
-      legacy.reason === "no_clock" ||
-      legacy.reason === "date_only" ||
-      legacy.reason === "temporal_model_unresolved"
-    ) {
-      const completion = buildTemporalCompletionDraft(text, lang, now);
-      if (completion) return { ok: true, draft: completion };
-
-      // The semantic layer may know exactly which single field is missing even
-      // when the timed parser correctly says "no clock". Surface that as a
-      // clarification instead of collapsing it to a quiet note.
-      const nl = understandNaturalLanguage(text.trim(), lang);
-      if (nl.intent === "schedule_clarify") {
-        return { ok: false, reason: "clarify_intent" };
-      }
-    }
-    return legacy;
-  }
+  if (!legacy.ok) return legacy;
 
   const canonicalDraft = applyCanonicalTemporalAuthority(
     text.trim(),
