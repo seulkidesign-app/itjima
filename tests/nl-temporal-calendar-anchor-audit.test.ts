@@ -1,6 +1,7 @@
 import { mkdirSync, writeFileSync } from "node:fs";
 import { describe, expect, it, vi } from "vitest";
 import { evaluateTimedAutoCommit } from "@/lib/nlAutoCommit";
+import { parseCanonicalTemporalModel } from "@/lib/nlTemporalCalendarModel";
 import { resolveCanonicalTemporalCandidate } from "@/lib/nlTemporalResolver";
 import { NL_FULLSWEEP_CASES } from "./fixtures/nl-fullsweep-cases";
 
@@ -93,13 +94,35 @@ writeFileSync(
 );
 
 describe("P0-J calendar-anchor timestamp matrix", () => {
+  it("preserves explicit week scope before timestamp resolution", () => {
+    expect(
+      parseCanonicalTemporalModel(
+        "다음 주 월요일 오전 9시에 출근",
+        ANCHORS[0].now,
+      ).date,
+    ).toMatchObject({
+      kind: "next_week_weekday",
+      raw: "다음 주 월요일",
+    });
+
+    expect(
+      parseCanonicalTemporalModel(
+        "이번 주 금요일 오후 3시 회의",
+        ANCHORS[0].now,
+      ).date,
+    ).toMatchObject({
+      kind: "this_week_weekday",
+      raw: "이번 주 금요일",
+    });
+  });
+
   it("covers all currently auto-committed cases across every anchor", () => {
     expect(AUTO_CASES.length).toBe(38);
     expect(rows.length).toBe(AUTO_CASES.length * ANCHORS.length);
     expect(rows.length).toBe(190);
   });
 
-  it("prints cross-anchor mismatches without granting timestamp authority", () => {
+  it("requires zero cross-anchor timestamp mismatches before authority migration", () => {
     console.log(
       JSON.stringify({
         anchors: ANCHORS.length,
@@ -111,6 +134,6 @@ describe("P0-J calendar-anchor timestamp matrix", () => {
         sample: mismatches.slice(0, 20),
       }),
     );
-    expect(mismatches.length).toBeGreaterThanOrEqual(0);
+    expect(mismatches).toHaveLength(0);
   });
 });
