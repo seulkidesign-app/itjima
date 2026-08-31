@@ -1,5 +1,6 @@
 import { Check } from "lucide-react";
-import { useT } from "@/lib/i18n";
+import { useLang, useT } from "@/lib/i18n";
+import { parseCanonicalTemporalModel } from "@/lib/nlTemporalCalendarModel";
 
 export type SavedScheduleFeedbackModel = {
   id: string;
@@ -13,11 +14,45 @@ type Props = {
   onEdit: () => void;
 };
 
-/**
- * Special-state feedback card (Figma 04 Clear Save) — card surface only for this confirmation.
- */
+function fuzzyWhenLabel(
+  title: string,
+  whenLabel: string,
+  lang: "ko" | "en",
+): string {
+  if (!(whenLabel.includes("종일") || whenLabel.includes("All day"))) {
+    return whenLabel;
+  }
+  const daypart = parseCanonicalTemporalModel(title).daypart;
+  if (!daypart) return whenLabel;
+  const ko = {
+    morning: "오전",
+    afternoon: "오후",
+    evening: "저녁",
+    night: "밤",
+    dawn: "새벽",
+    lunch: "점심",
+    noon: "정오",
+    midnight: "자정",
+  } as const;
+  const en = {
+    morning: "Morning",
+    afternoon: "Afternoon",
+    evening: "Evening",
+    night: "Night",
+    dawn: "Dawn",
+    lunch: "Lunch",
+    noon: "Noon",
+    midnight: "Midnight",
+  } as const;
+  const label = lang === "en" ? en[daypart] : ko[daypart];
+  return whenLabel.replace(lang === "ko" ? /하루 종일|종일/g : /All day/g, label);
+}
+
 export function SavedScheduleFeedback({ feedback, onEdit }: Props) {
   const t = useT();
+  const { lang } = useLang();
+  const uiLang = lang === "en" ? "en" : "ko";
+  const displayWhen = fuzzyWhenLabel(feedback.title, feedback.whenLabel, uiLang);
 
   return (
     <div
@@ -46,7 +81,7 @@ export function SavedScheduleFeedback({ feedback, onEdit }: Props) {
             className="mt-1 text-[14px] font-semibold tabular-nums tracking-[-0.01em] text-primary"
             data-testid="saved-schedule-when"
           >
-            {feedback.whenLabel}
+            {displayWhen}
           </p>
         </div>
         <button
