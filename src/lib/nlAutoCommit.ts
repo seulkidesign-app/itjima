@@ -32,6 +32,7 @@ import {
 import { applyCanonicalTemporalAuthority } from "@/lib/nlTemporalAuthority";
 import { evaluateTemporalDecisionGate } from "@/lib/nlTemporalDecisionGate";
 import { observeTemporalShadow } from "@/lib/nlTemporalShadow";
+import { hasLowConfidenceScheduleTitle } from "@/lib/nlScheduleTitleSafety";
 import type { InboxItem } from "@/lib/store";
 
 export type AutoCommitBlockReason =
@@ -47,6 +48,7 @@ export type AutoCommitBlockReason =
   | "deadline"
   | "approximate_time"
   | "temporal_model_unresolved"
+  | "low_confidence_title"
   | AdversarialScheduleReason
   | ScheduleConfirmationReason;
 
@@ -138,6 +140,8 @@ export function evaluateLegacyTimedAutoCommit(
   if (nl.intent === "schedule_clarify") {
     return finish({ ok: false, reason: "clarify_intent" });
   }
+  // Quiet / sensitive notes stay as left items when NL itself is low-confidence
+  // and no resolved clock is present yet.
   if (
     nl.confidence === "low" &&
     nl.intent !== "schedule_exact" &&
@@ -160,6 +164,12 @@ export function evaluateLegacyTimedAutoCommit(
 
   if (!draft.text.trim()) return finish({ ok: false, reason: "empty_title" });
   if (draft.options.allDay) return finish({ ok: false, reason: "date_only" });
+
+  // Temporal parse success ≠ auto-save permission.
+  // Low-confidence title/action semantics stay fail-closed.
+  if (hasLowConfidenceScheduleTitle(draft.text, lang)) {
+    return finish({ ok: false, reason: "low_confidence_title" });
+  }
 
   return finish({ ok: true, draft });
 }

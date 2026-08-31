@@ -88,4 +88,29 @@ describe("P0.5 Korean spoken clock words", () => {
     expect(evaluateTimedAutoCommit("내일 오후 세시 아니 네시 병원", "ko", NOW).ok)
       .toBe(false);
   });
+
+  it("treats spoken and Arabic clocks as the same supported contract", () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(NOW);
+    try {
+      const spoken = evaluateTimedAutoCommit("오후 세시 회의", "ko", NOW);
+      const arabic = evaluateTimedAutoCommit("오후 3시 회의", "ko", NOW);
+      expect(spoken.ok).toBe(true);
+      expect(arabic.ok).toBe(true);
+      if (!spoken.ok || !arabic.ok) return;
+      expect(spoken.draft.start.getHours()).toBe(15);
+      expect(arabic.draft.start.getHours()).toBe(15);
+      expect(spoken.draft.text).toBe("회의");
+      expect(arabic.draft.text).toBe("회의");
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("does not auto-commit a confident clock with low-confidence title semantics", () => {
+    const decision = evaluateTimedAutoCommit("오후 세시 병웜", "ko", NOW);
+    expect(decision.ok).toBe(false);
+    if (!decision.ok) expect(decision.reason).toBe("low_confidence_title");
+    expect(evaluateTimedAutoCommit("오후 3시 병웜", "ko", NOW).ok).toBe(false);
+  });
 });

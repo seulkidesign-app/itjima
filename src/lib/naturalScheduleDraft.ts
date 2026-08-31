@@ -8,6 +8,7 @@ import {
 import type { InboxItem } from "@/lib/store";
 import { thoughtFirstLine } from "@/lib/brainMirror";
 import { hasAmbiguousBareMeridiem } from "@/lib/nlScheduleSafety";
+import { normalizeKoreanClockWordsForParsing } from "@/lib/nlKoreanTemporalNormalization";
 import {
   hasApproximateTimeExpression,
   hasDeadlineExpression,
@@ -87,7 +88,8 @@ function rangeStartIsResolved(text: string): boolean {
 }
 
 export function hasNaturalScheduleTime(text: string): boolean {
-  const trimmed = text.trim();
+  // Parsing-only: spoken Korean clocks share the Arabic-digit safety contract.
+  const trimmed = normalizeKoreanClockWordsForParsing(text.trim());
   if (!EXPLICIT_TIME_RE.test(trimmed)) return false;
 
   // A single from–to range can inherit the start meridiem on its end clock:
@@ -208,17 +210,18 @@ function applyNaturalTime(target: Date, text: string, detected: Date | null): Da
 }
 
 export function resolveNaturalScheduleStart(text: string, now = new Date()): Date | null {
-  const relative = relativeOffsetStart(text, now);
+  const normalized = normalizeKoreanClockWordsForParsing(text.trim());
+  const relative = relativeOffsetStart(normalized, now);
   if (relative) return relative;
 
-  const detected = detectDate(text);
-  const anchored = nextWeekWeekday(text, now);
+  const detected = detectDate(normalized);
+  const anchored = nextWeekWeekday(normalized, now);
 
-  if (anchored) return applyNaturalTime(anchored, text, detected?.start ?? null);
+  if (anchored) return applyNaturalTime(anchored, normalized, detected?.start ?? null);
   if (!detected) return null;
 
   const resolved = new Date(detected.start);
-  if (!hasNaturalScheduleTime(text)) resolved.setHours(0, 0, 0, 0);
+  if (!hasNaturalScheduleTime(normalized)) resolved.setHours(0, 0, 0, 0);
   return resolved;
 }
 
@@ -410,11 +413,14 @@ function stripSupportedTemporalSpans(text: string): string {
  */
 export function cleanScheduleTitle(text: string): string {
   const original = thoughtFirstLine(text);
-  if (shouldPreserveRawScheduleTitle(original)) {
+  // Title cleaning is display-only over a parsing normalization of clocks.
+  const normalized = normalizeKoreanClockWordsForParsing(original);
+  if (shouldPreserveRawScheduleTitle(normalized)) {
+    // Preserve the caller's original surface form for unsupported/unsafe input.
     return original.trim();
   }
 
-  const title = stripSupportedTemporalSpans(original);
+  const title = stripSupportedTemporalSpans(normalized);
   return title || original.trim();
 }
 
