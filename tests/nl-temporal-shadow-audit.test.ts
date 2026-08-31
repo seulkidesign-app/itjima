@@ -1,6 +1,6 @@
 import { mkdirSync, writeFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
-import { evaluateTimedAutoCommit } from "@/lib/nlAutoCommit";
+import { evaluateLegacyTimedAutoCommit } from "@/lib/nlAutoCommit";
 import { resolveNaturalScheduleStart } from "@/lib/naturalScheduleDraft";
 import { buildTemporalShadowAudit } from "@/lib/nlTemporalShadow";
 import {
@@ -21,7 +21,7 @@ function resolveNow(testCase: FullsweepCase): Date {
 const rows = NL_FULLSWEEP_CASES.map((testCase) => {
   const now = resolveNow(testCase);
   const lang = testCase.lang ?? "ko";
-  const decision = evaluateTimedAutoCommit(testCase.input, lang, now);
+  const decision = evaluateLegacyTimedAutoCommit(testCase.input, lang, now);
   const legacyResolvedStart = resolveNaturalScheduleStart(testCase.input, now);
   const audit = buildTemporalShadowAudit(
     testCase.input,
@@ -87,7 +87,7 @@ describe("P0-F temporal shadow audit", () => {
     expect(drift, JSON.stringify(drift.slice(0, 20), null, 2)).toEqual([]);
   });
 
-  it("prints the shadow migration baseline without gating on zero mismatches", () => {
+  it("prints the legacy shadow baseline without gating on zero mismatches", () => {
     console.log(
       JSON.stringify({
         total: rows.length,

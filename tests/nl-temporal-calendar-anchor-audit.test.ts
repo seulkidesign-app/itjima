@@ -1,6 +1,6 @@
 import { mkdirSync, writeFileSync } from "node:fs";
 import { describe, expect, it, vi } from "vitest";
-import { evaluateTimedAutoCommit } from "@/lib/nlAutoCommit";
+import { evaluateLegacyTimedAutoCommit } from "@/lib/nlAutoCommit";
 import { parseCanonicalTemporalModel } from "@/lib/nlTemporalCalendarModel";
 import { resolveCanonicalTemporalCandidate } from "@/lib/nlTemporalResolver";
 import { NL_FULLSWEEP_CASES } from "./fixtures/nl-fullsweep-cases";
@@ -21,7 +21,7 @@ function buildRows() {
     return ANCHORS.flatMap((anchor) =>
       AUTO_CASES.map((testCase) => {
         vi.setSystemTime(anchor.now);
-        const legacy = evaluateTimedAutoCommit(
+        const legacy = evaluateLegacyTimedAutoCommit(
           testCase.input,
           testCase.lang ?? "ko",
           anchor.now,
@@ -116,13 +116,13 @@ describe("P0-J calendar-anchor timestamp matrix", () => {
     });
   });
 
-  it("covers all currently auto-committed cases across every anchor", () => {
+  it("covers all legacy auto-committed cases across every anchor", () => {
     expect(AUTO_CASES.length).toBe(38);
     expect(rows.length).toBe(AUTO_CASES.length * ANCHORS.length);
     expect(rows.length).toBe(190);
   });
 
-  it("requires zero cross-anchor timestamp mismatches before authority migration", () => {
+  it("keeps zero legacy-versus-canonical cross-anchor mismatches", () => {
     console.log(
       JSON.stringify({
         anchors: ANCHORS.length,

@@ -28,6 +28,7 @@ import {
   hasUnsupportedDateRange,
   shouldKeepScheduleSemanticsQuiet,
 } from "@/lib/nlSemanticSafety";
+import { applyCanonicalTemporalAuthority } from "@/lib/nlTemporalAuthority";
 import { evaluateTemporalDecisionGate } from "@/lib/nlTemporalDecisionGate";
 import { observeTemporalShadow } from "@/lib/nlTemporalShadow";
 import type { InboxItem } from "@/lib/store";
@@ -53,20 +54,20 @@ export type TimedAutoCommitDecision =
   | { ok: false; reason: AutoCommitBlockReason };
 
 /**
- * V02-08C: high-confidence timed capture may auto-commit only when every
- * scheduling assumption is already resolved. Prefer left-item / ambiguity UI
- * whenever anything is uncertain — never use nlIntent === schedule_exact alone.
+ * Legacy timed decision preserved as an explicit audit baseline. It still owns
+ * all historical parser/safety behavior, but callers should use
+ * evaluateTimedAutoCommit() for production so Canonical timestamp authority is
+ * applied after this decision succeeds.
  */
-export function evaluateTimedAutoCommit(
+export function evaluateLegacyTimedAutoCommit(
   text: string,
   lang: "ko" | "en",
   now = new Date(),
 ): TimedAutoCommitDecision {
   const trimmed = text.trim();
 
-  // P0-E shadow integration: the legacy decision remains the only timestamp authority.
-  // The Temporal Model runs beside it and emits only structural disagreement
-  // metadata; raw user text is never sent. Shadow failures must never alter UX.
+  // P0-E shadow integration intentionally observes the legacy decision so the
+  // migration audits remain meaningful after Canonical timestamp promotion.
   const finish = (decision: TimedAutoCommitDecision): TimedAutoCommitDecision => {
     try {
       const legacyResolvedStart = trimmed
@@ -175,9 +176,8 @@ export function evaluateTimedAutoCommit(
     return finish({ ok: false, reason: "quiet" });
   }
 
-  // P0-H: Legacy still owns the actual Date, but a timed auto-commit now needs
-  // explicit permission from the canonical Temporal Model as a second,
-  // fail-closed semantic gate. This can only remove unsafe autos, never add one.
+  // P0-H: a timed auto-commit needs explicit permission from the canonical
+  // Temporal Model as a second, fail-closed semantic gate.
   const temporalGate = evaluateTemporalDecisionGate(trimmed, now);
   if (!temporalGate.ok) {
     return finish({ ok: false, reason: "temporal_model_unresolved" });
@@ -195,6 +195,32 @@ export function evaluateTimedAutoCommit(
   if (draft.options.allDay) return finish({ ok: false, reason: "date_only" });
 
   return finish({ ok: true, draft });
+}
+
+/**
+ * P0-K: production timestamp authority. Legacy remains the safety/parser
+ * baseline, but once it accepts a timed capture the Canonical Temporal Model
+ * supplies the persisted start timestamp (and both ends for explicit ranges).
+ * If Canonical cannot resolve the same capture, fail closed.
+ */
+export function evaluateTimedAutoCommit(
+  text: string,
+  lang: "ko" | "en",
+  now = new Date(),
+): TimedAutoCommitDecision {
+  const legacy = evaluateLegacyTimedAutoCommit(text, lang, now);
+  if (!legacy.ok) return legacy;
+
+  const canonicalDraft = applyCanonicalTemporalAuthority(
+    text.trim(),
+    legacy.draft,
+    now,
+  );
+  if (!canonicalDraft) {
+    return { ok: false, reason: "temporal_model_unresolved" };
+  }
+
+  return { ok: true, draft: canonicalDraft };
 }
 
 export function canAutoCommitTimedCapture(
