@@ -13,10 +13,15 @@ const KO_CLOCK_WORD_TO_HOUR: Record<string, number> = {
   열두: 12,
 };
 
+const KO_CLOCK_WORD_SRC =
+  "(?:열두|열한|아홉|여덟|일곱|여섯|다섯|열|네|세|두|한)";
+
 // Longest alternatives first so `열한 시` never degrades to `한 시`.
 // Require a clock token boundary so noun stems (`시안`, `시나리오`, …) stay intact.
-const KO_CLOCK_WORD_RE =
-  /(?:(오전|오후)\s*)?(열두|열한|아홉|여덟|일곱|여섯|다섯|열|네|세|두|한)\s*시(?!\s*(?:간|적))(?=(?:\s*(?:반|\d{1,2}\s*분))?(?:\s|$|[.,!?…]|[에을를이가의은는도만]|부터|까지|쯤|경|무렵|정도))/g;
+const KO_CLOCK_WORD_RE = new RegExp(
+  `(?:(오전|오후)\\s*)?(${KO_CLOCK_WORD_SRC.slice(3, -1)})\\s*시(?!\\s*(?:간|적))(?=(?:\\s*(?:반|\\d{1,2}\\s*분))?(?:\\s|$|[.,!?…]|[에을를이가의은는도만]|부터|까지|쯤|경|무렵|정도))`,
+  "g",
+);
 
 /**
  * Parsing-only normalization for conversational Korean clock words.
@@ -36,4 +41,34 @@ export function normalizeKoreanClockWordsForParsing(text: string): string {
 export function hasKoreanClockWord(text: string): boolean {
   KO_CLOCK_WORD_RE.lastIndex = 0;
   return KO_CLOCK_WORD_RE.test(text);
+}
+
+/**
+ * A clock word immediately followed by an unsupported Hangul noun stem is not
+ * a clock token. Completion must not use a surrounding date to promote it into
+ * an all-day schedule (`두 시안`, `한 시나리오`, `세 시리즈`).
+ */
+export function hasKoreanClockWordNounCollision(text: string): boolean {
+  const collision = new RegExp(
+    `(?:오전|오후)?\\s*${KO_CLOCK_WORD_SRC}\\s*시([가-힣])`,
+    "g",
+  );
+  const allowedFollowers = new Set([
+    "에",
+    "을",
+    "를",
+    "이",
+    "가",
+    "의",
+    "은",
+    "는",
+    "도",
+    "만",
+    "간",
+    "적",
+  ]);
+  for (const match of text.matchAll(collision)) {
+    if (!allowedFollowers.has(match[1])) return true;
+  }
+  return false;
 }
