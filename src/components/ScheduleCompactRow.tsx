@@ -32,7 +32,7 @@ export type ScheduleCompactRowProps = {
 function fuzzyDaypartLabel(text: string, lang: "ko" | "en"): string | null {
   const daypart = parseCanonicalTemporalModel(text).daypart;
   if (!daypart) return null;
-  const ko = {
+  const ko: Record<string, string> = {
     morning: "오전",
     afternoon: "오후",
     evening: "저녁",
@@ -41,8 +41,8 @@ function fuzzyDaypartLabel(text: string, lang: "ko" | "en"): string | null {
     lunch: "점심",
     noon: "정오",
     midnight: "자정",
-  } as const;
-  const en = {
+  };
+  const en: Record<string, string> = {
     morning: "Morning",
     afternoon: "Afternoon",
     evening: "Evening",
@@ -51,8 +51,8 @@ function fuzzyDaypartLabel(text: string, lang: "ko" | "en"): string | null {
     lunch: "Lunch",
     noon: "Noon",
     midnight: "Midnight",
-  } as const;
-  return lang === "en" ? en[daypart] : ko[daypart];
+  };
+  return lang === "en" ? en[daypart] ?? null : ko[daypart] ?? null;
 }
 
 export function ScheduleCompactRow({
@@ -192,7 +192,7 @@ export function ScheduleCompactRow({
           }`}
           aria-hidden
         >
-          {done && <Check size={13} strokeWidth={3} />}
+          {done && <Check size={13} strokeWidth={3} aria-hidden />}
         </span>
       </button>
 
