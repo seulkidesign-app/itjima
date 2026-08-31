@@ -123,6 +123,9 @@ export type NlTemporalModel = {
 const KO_RANGE_RE =
   /(?:(오전|오후)\s*)?(\d{1,2})\s*시(?:\s*(반)|(?:\s*(\d{1,2})\s*분))?\s*부터\s*(?:(오전|오후)\s*)?(\d{1,2})\s*시(?:\s*(반)|(?:\s*(\d{1,2})\s*분))?\s*까지/;
 
+const KO_UNSUPPORTED_DASH_RANGE_RE =
+  /(?:(?:오전|오후)\s*)?\d{1,2}\s*시(?!\s*간)(?:\s*반|(?:\s*\d{1,2}\s*분))?\s*[-~]\s*(?:(?:오전|오후)\s*)?\d{1,2}\s*시(?!\s*간)(?:\s*반|(?:\s*\d{1,2}\s*분))?/;
+
 const KO_SMALL_NUMBER: Record<string, number> = {
   한: 1,
   두: 2,
@@ -342,7 +345,7 @@ function parseRange(text: string): TemporalRange | null {
   if (
     hasUnsupportedColonClockRange(text) ||
     hasUnsupportedDateRange(text) ||
-    /\d{1,2}\s*시(?!\s*간)\s*[-~]\s*\d{1,2}\s*시(?!\s*간)/.test(text) ||
+    KO_UNSUPPORTED_DASH_RANGE_RE.test(text) ||
     /\b\d{1,2}:\d{2}\s*[-~]\s*\d{1,2}:\d{2}\b/.test(text)
   ) {
     return {
