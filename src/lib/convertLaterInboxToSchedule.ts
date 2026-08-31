@@ -34,11 +34,8 @@ export type ConvertLaterInboxOps = {
     patch: Partial<ScheduleItem>,
   ) => Promise<boolean | void>;
   removeSchedule: (id: string) => Promise<boolean | void>;
-  /** Find existing projection by canonical id (same id or source_id). */
   getScheduleByRecordId: (recordId: string) => ScheduleItem | undefined;
-  /** Current canonical row (for stale-revision checks). */
   getInboxById?: (recordId: string) => InboxItem | undefined;
-  /** Patch canonical inbox record — never delete on timed attach. */
   updateInbox: (id: string, patch: Partial<InboxItem>) => Promise<boolean | void>;
 };
 
@@ -58,7 +55,6 @@ export type UndoScheduleToInboxResult =
 
 const inFlightIds = new Set<string>();
 
-/** Title shown in the schedule sheet when opening a no-time later inbox row. */
 export function laterInboxScheduleDraftTitle(item: InboxItem): string {
   return thoughtFirstLine(item.text);
 }
@@ -74,16 +70,6 @@ function projectionPayload(
   };
 }
 
-/**
- * Attach structured time to a canonical inbox record and upsert its
- * ScheduleItem projection. Never deletes the inbox record.
- *
- * Identity: prefer ScheduleItem.id === InboxItem.id; always set source_id.
- * Legacy rows (random id + source_id) are updated in place — no duplicate.
- *
- * Pass `expectedRevision` when the commit was started from an async parse so
- * a user edit mid-flight rejects the stale apply.
- */
 export async function convertLaterInboxToSchedule(
   item: InboxItem,
   fields: LaterInboxScheduleFields,
@@ -96,8 +82,7 @@ export async function convertLaterInboxToSchedule(
   inFlightIds.add(item.id);
 
   try {
-    const expected =
-      options?.expectedRevision ?? contentRevisionOf(item);
+    const expected = options?.expectedRevision ?? contentRevisionOf(item);
     const live = ops.getInboxById?.(item.id) ?? item;
     if (isStaleContentRevision(expected, live)) {
       return { status: "stale_revision" };
@@ -123,9 +108,7 @@ export async function convertLaterInboxToSchedule(
           raw_text: payload.raw_text,
           status: "active",
         });
-        if (ok === false) {
-          return { status: "create_failed" };
-        }
+        if (ok === false) return { status: "create_failed" };
       } catch {
         return { status: "create_failed" };
       }
@@ -146,14 +129,9 @@ export async function convertLaterInboxToSchedule(
       scheduleId = created.id;
     }
 
-    // Re-check after async schedule write — user may have edited meanwhile.
     const liveAfter = ops.getInboxById?.(item.id) ?? live;
     if (isStaleContentRevision(expected, liveAfter)) {
-      // Only roll back a projection we just created; leave legacy updates alone
-      // when stale — safer than wiping an older schedule the user may still want.
-      if (!existing) {
-        await ops.removeSchedule(scheduleId);
-      }
+      if (!existing) await ops.removeSchedule(scheduleId);
       return { status: "stale_revision" };
     }
 
@@ -161,6 +139,7 @@ export async function convertLaterInboxToSchedule(
       const patched = await ops.updateInbox(
         item.id,
         attachExactTemporalPatch({
+          text: liveAfter.text,
           start_time: fields.start_time,
           end_time: fields.end_time,
           all_day: fields.all_day,
@@ -182,13 +161,8 @@ export async function convertLaterInboxToSchedule(
   }
 }
 
-/** Alias used by capture auto-commit / clarify paths. */
 export const commitInboxToSchedule = convertLaterInboxToSchedule;
 
-/**
- * Undo timed attach: remove schedule projection and clear temporal metadata
- * on the canonical record. The record itself stays.
- */
 export async function undoScheduleToInbox(
   scheduleId: string,
   inboxItem: InboxItem,
@@ -205,9 +179,7 @@ export async function undoScheduleToInbox(
   try {
     try {
       const removed = await ops.removeSchedule(scheduleId);
-      if (removed === false) {
-        return { status: "remove_failed" };
-      }
+      if (removed === false) return { status: "remove_failed" };
     } catch {
       return { status: "remove_failed" };
     }
@@ -218,9 +190,7 @@ export async function undoScheduleToInbox(
         inboxItem.id,
         clearTemporalMetadataPatch(),
       );
-      if (cleared === false) {
-        throw new Error("clear temporal failed");
-      }
+      if (cleared === false) throw new Error("clear temporal failed");
     } catch {
       try {
         const payload = projectionPayload(inboxItem, fields);
@@ -245,7 +215,6 @@ export async function undoScheduleToInbox(
   }
 }
 
-/** Test-only: clear in-flight locks between cases. */
 export function resetLaterInboxConvertLocksForTests() {
   inFlightIds.clear();
 }
