@@ -125,61 +125,27 @@ export function evaluateLegacyTimedAutoCommit(
   if (clockCount >= 2 && !isSingleClockRange(trimmed)) {
     return finish({ ok: false, reason: "multiple_clocks" });
   }
-
-  const nl = understandNaturalLanguage(trimmed, lang);
-  // Completion questions (for example a daypart without a date, or "이따가")
-  // must surface before the legacy no-clock gate collapses them into a quiet note.
-  if (nl.intent === "schedule_clarify") {
-    return finish({ ok: false, reason: "clarify_intent" });
+  if (!hasNaturalScheduleTime(trimmed)) {
+    return finish({ ok: false, reason: "no_clock" });
   }
-
-  const hasResolvedClock = hasNaturalScheduleTime(trimmed);
-  const start = resolveNaturalScheduleStart(trimmed, now);
-
-  if (!hasResolvedClock) {
-    // A high-confidence date-bearing plan is already complete at date precision.
-    // Time is optional: promote it to an all-day/date-window draft instead of
-    // treating the missing clock as parser failure.
-    if (nl.intent !== "schedule_exact" || !nl.detectedDate || !start) {
-      return finish({ ok: false, reason: "no_clock" });
-    }
-
-    const draft = buildNaturalScheduleDraft(
-      {
-        id: "auto-commit-eval",
-        text: trimmed,
-        images: [],
-        created_at: now.toISOString(),
-      } satisfies InboxItem,
-      now,
-    );
-
-    if (!draft.text.trim()) return finish({ ok: false, reason: "empty_title" });
-    if (!draft.options.allDay) return finish({ ok: false, reason: "no_clock" });
-    if (hasLowConfidenceScheduleTitle(draft.text, lang)) {
-      return finish({ ok: false, reason: "low_confidence_title" });
-    }
-    // All-day plans remain valid for the rest of today; reject only when the
-    // entire represented day is already over.
-    if (draft.end.getTime() <= now.getTime()) {
-      return finish({ ok: false, reason: "unresolved_date" });
-    }
-    return finish({ ok: true, draft });
-  }
-
   if (clockCount === 0) {
-    const relativeOk = start !== null;
+    const relativeOk = resolveNaturalScheduleStart(trimmed, now) !== null;
     if (!relativeOk) return finish({ ok: false, reason: "no_clock" });
   }
 
+  const start = resolveNaturalScheduleStart(trimmed, now);
   if (!start) return finish({ ok: false, reason: "unresolved_date" });
 
+  const nl = understandNaturalLanguage(trimmed, lang);
+  if (nl.intent === "schedule_clarify") {
+    return finish({ ok: false, reason: "clarify_intent" });
+  }
   // Quiet / sensitive notes stay as left items when NL itself is low-confidence
   // and no resolved clock is present yet.
   if (
     nl.confidence === "low" &&
     nl.intent !== "schedule_exact" &&
-    !hasResolvedClock
+    !hasNaturalScheduleTime(trimmed)
   ) {
     return finish({ ok: false, reason: "quiet" });
   }
@@ -234,10 +200,7 @@ export function evaluateTimedAutoCommit(
     return { ok: false, reason: "temporal_model_unresolved" };
   }
 
-  const representedTimePassed = canonicalDraft.options.allDay
-    ? canonicalDraft.end.getTime() <= now.getTime()
-    : canonicalDraft.start.getTime() <= now.getTime();
-  if (representedTimePassed) {
+  if (canonicalDraft.start.getTime() <= now.getTime()) {
     return { ok: false, reason: "unresolved_date" };
   }
 
