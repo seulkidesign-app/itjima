@@ -131,7 +131,6 @@ function resolveModelDate(
       ) {
         return null;
       }
-      // Prefer a leap-valid construction when Feb 29 rolls into next year.
       const baseYear = isValidCalendarYmd(year, month, day) ? year : year + 1;
       const value = new Date(baseYear, month - 1, day, 0, 0, 0, 0);
       if (
@@ -161,10 +160,7 @@ function resolveModelDate(
   }
 }
 
-/**
- * Canonical timestamp candidate derived only from the Temporal Model.
- * This is intentionally non-authoritative until the migration gates promote it.
- */
+/** Canonical timestamp/date candidate derived only from the Temporal Model. */
 export function resolveCanonicalTemporalCandidate(
   text: string,
   now = new Date(),
@@ -211,8 +207,18 @@ export function resolveCanonicalTemporalCandidate(
     return { start, end, precision: model.precision };
   }
 
-  if (!model.exactClock) return null;
-  const start = new Date(date);
-  start.setHours(model.exactClock.hour24, model.exactClock.minute, 0, 0);
-  return { start, end: null, precision: model.precision };
+  if (model.exactClock) {
+    const start = new Date(date);
+    start.setHours(model.exactClock.hour24, model.exactClock.minute, 0, 0);
+    return { start, end: null, precision: model.precision };
+  }
+
+  // Date-only and date+daypart are valid completed precision levels. Keep the
+  // canonical start at midnight; callers preserve all-day/window semantics and
+  // must never invent an exact clock from a daypart.
+  if (model.date && (model.precision === "date" || model.precision === "daypart")) {
+    return { start: date, end: null, precision: model.precision };
+  }
+
+  return null;
 }
