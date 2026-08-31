@@ -1,12 +1,12 @@
 import {
-  parseNlTemporalModel,
-  type NlTemporalModel,
-} from "@/lib/nlTemporalModel";
+  parseCanonicalTemporalModel,
+  type CanonicalTemporalModel,
+} from "@/lib/nlTemporalCalendarModel";
 
 export type CanonicalTemporalCandidate = {
   start: Date;
   end: Date | null;
-  precision: NlTemporalModel["precision"];
+  precision: CanonicalTemporalModel["precision"];
 };
 
 const KO_WEEKDAY: Record<string, number> = {
@@ -41,17 +41,20 @@ function addDays(now: Date, amount: number): Date {
   return value;
 }
 
-function resolveWeekday(raw: string, now: Date): Date | null {
+function weekdayNumber(raw: string): number | null {
   const ko = raw.match(/(일|월|화|수|목|금|토)요일/);
+  if (ko) return KO_WEEKDAY[ko[1]] ?? null;
+
   const en = raw.match(
     /\b(sunday|monday|tuesday|wednesday|thursday|friday|saturday)\b/i,
   );
-  const target = ko
-    ? KO_WEEKDAY[ko[1]]
-    : en
-      ? EN_WEEKDAY[en[1].toLowerCase()]
-      : undefined;
-  if (target === undefined) return null;
+  if (!en) return null;
+  return EN_WEEKDAY[en[1].toLowerCase()] ?? null;
+}
+
+function resolveWeekday(raw: string, now: Date): Date | null {
+  const target = weekdayNumber(raw);
+  if (target === null) return null;
 
   const value = atStartOfDay(now);
   const delta = (target - value.getDay() + 7) % 7;
@@ -59,7 +62,32 @@ function resolveWeekday(raw: string, now: Date): Date | null {
   return value;
 }
 
-function resolveModelDate(model: NlTemporalModel, now: Date): Date | null {
+function mondayOfWeek(now: Date): Date {
+  const value = atStartOfDay(now);
+  const daysSinceMonday = (value.getDay() + 6) % 7;
+  value.setDate(value.getDate() - daysSinceMonday);
+  return value;
+}
+
+function resolveScopedWeekday(
+  raw: string,
+  now: Date,
+  weekOffset: 0 | 1,
+): Date | null {
+  const target = weekdayNumber(raw);
+  if (target === null) return null;
+
+  const monday = mondayOfWeek(now);
+  monday.setDate(monday.getDate() + weekOffset * 7);
+  const mondayBasedOffset = target === 0 ? 6 : target - 1;
+  monday.setDate(monday.getDate() + mondayBasedOffset);
+  return monday;
+}
+
+function resolveModelDate(
+  model: CanonicalTemporalModel,
+  now: Date,
+): Date | null {
   const date = model.date;
   if (!date) return atStartOfDay(now);
 
@@ -74,6 +102,10 @@ function resolveModelDate(model: NlTemporalModel, now: Date): Date | null {
       return addDays(now, 3);
     case "weekday":
       return resolveWeekday(date.raw, now);
+    case "this_week_weekday":
+      return resolveScopedWeekday(date.raw, now, 0);
+    case "next_week_weekday":
+      return resolveScopedWeekday(date.raw, now, 1);
     case "full_date": {
       const match = date.raw.match(
         /(\d{4})\s*년\s*(\d{1,2})\s*월\s*(\d{1,2})\s*일/,
@@ -127,7 +159,7 @@ export function resolveCanonicalTemporalCandidate(
   text: string,
   now = new Date(),
 ): CanonicalTemporalCandidate | null {
-  const model = parseNlTemporalModel(text, now);
+  const model = parseCanonicalTemporalModel(text, now);
   if (model.ambiguities.length > 0 || model.deadline || model.recurrence) {
     return null;
   }
