@@ -1,4 +1,5 @@
 import type { AutoCommitBlockReason } from "@/lib/nlAutoCommit";
+import { parseCanonicalTemporalModel } from "@/lib/nlTemporalCalendarModel";
 import type {
   ClarificationState,
   InboxItem,
@@ -38,7 +39,7 @@ export function isAmbiguousTemporalReason(
   return temporalStateFromAutoCommitReason(reason) === "ambiguous";
 }
 
-/** Timed canonical record that already has a schedule projection attached. */
+/** Canonical record that already has a schedule projection attached. */
 export function isStructuredTimedRecord(
   item: Pick<
     InboxItem,
@@ -46,7 +47,9 @@ export function isStructuredTimedRecord(
   >,
 ): boolean {
   return (
-    item.temporal_state === "exact_datetime" &&
+    (item.temporal_state === "exact_datetime" ||
+      item.temporal_state === "date_only" ||
+      item.temporal_state === "fuzzy_time") &&
     Boolean(item.start_time) &&
     Boolean(item.structured_at)
   );
@@ -70,12 +73,20 @@ export function attachExactTemporalPatch(fields: {
   all_day?: boolean;
   text?: string;
 }): Partial<InboxItem> {
+  let temporalState: TemporalState = "exact_datetime";
+  if (fields.all_day) {
+    const model = fields.text
+      ? parseCanonicalTemporalModel(fields.text)
+      : null;
+    temporalState = model?.daypart ? "fuzzy_time" : "date_only";
+  }
+
   return {
     ...(fields.text !== undefined ? { text: fields.text } : {}),
     start_time: fields.start_time,
     end_time: fields.end_time,
     all_day: fields.all_day ?? false,
-    temporal_state: "exact_datetime",
+    temporal_state: temporalState,
     structured_at: new Date().toISOString(),
     clarification_state: "resolved",
   };
