@@ -5,6 +5,10 @@ import {
   resolveNaturalScheduleStart,
   type NaturalScheduleDraft,
 } from "@/lib/naturalScheduleDraft";
+import {
+  adversarialScheduleReason,
+  type AdversarialScheduleReason,
+} from "@/lib/nlAdversarialSafety";
 import { understandNaturalLanguage } from "@/lib/nlSchedule";
 import {
   countDistinctClockMentions,
@@ -38,6 +42,7 @@ export type AutoCommitBlockReason =
   | "quiet"
   | "deadline"
   | "approximate_time"
+  | AdversarialScheduleReason
   | ScheduleConfirmationReason;
 
 export type TimedAutoCommitDecision =
@@ -56,6 +61,13 @@ export function evaluateTimedAutoCommit(
 ): TimedAutoCommitDecision {
   const trimmed = text.trim();
   if (!trimmed) return { ok: false, reason: "empty" };
+
+  // Fail closed on malformed/contradictory inputs before any parser can clamp,
+  // truncate, or attach a clock to the wrong semantic unit.
+  const adversarialReason = adversarialScheduleReason(trimmed);
+  if (adversarialReason) {
+    return { ok: false, reason: adversarialReason };
+  }
 
   // Semantic context wins over date/time tokens. Questions, negations,
   // tentative plans, edit replies, unsupported triggers and vague-future
