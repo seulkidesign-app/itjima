@@ -15,9 +15,9 @@ describe("launch SEO localization", () => {
     applyLandingSeo({ locale: "en", canonicalPath: "/about" });
 
     expect(document.documentElement.lang).toBe("en");
-    expect(document.title).toContain("AI memory inbox");
+    expect(document.title).toContain("Natural-language notes, tasks, and schedules");
     expect(metaContent('meta[name="description"]')).toContain(
-      "Capture a thought in natural language",
+      "Capture notes, tasks, and schedules in one natural sentence",
     );
     expect(metaContent('meta[property="og:locale"]')).toBe("en_US");
     expect(
@@ -29,12 +29,12 @@ describe("launch SEO localization", () => {
     applyLandingSeo({ locale: "ko", canonicalPath: "/" });
 
     expect(document.documentElement.lang).toBe("ko");
-    expect(document.title).toContain("AI 메모 앱");
+    expect(document.title).toContain("알아서 정리되는 메모·일정 앱");
     expect(metaContent('meta[property="og:title"]')).toContain(
       "살아있는 메모",
     );
     expect(metaContent('meta[property="og:description"]')).toContain(
-      "필요한 순간 다시 보여주는",
+      "다시 보기 쉽게",
     );
     expect(metaContent('meta[property="og:site_name"]')).toBe("잊지마");
     expect(metaContent('meta[property="og:locale"]')).toBe("ko_KR");
@@ -74,9 +74,7 @@ describe("launch SEO localization", () => {
     expect(software?.featureList).toContain(
       "Natural-language note, task, and schedule capture",
     );
-    expect(software?.featureList).toContain(
-      "Resurfacing records when they become relevant",
-    );
+    expect(software?.featureList).toContain("Schedule and task review");
   });
 
   it("uses 잊지마 as the preferred homepage site name", () => {
