@@ -104,6 +104,49 @@ add("unicode_malformed", [
   "tomorrow 3：00 pm meeting",
 ]);
 
+add("invalid_bare_minute", [
+  "13시 60분 회의",
+  "13시 66분 회의",
+  "20시 75분 전화",
+  "23시 99분 회의",
+  "내일 13시 70분 회의",
+]);
+
+add("mixed_format_multi_clock", [
+  "내일 오후 3시 회의 4pm 병원",
+  "내일 오후 3시 회의 16:00 병원",
+  "내일 15:00 회의 4pm 병원",
+  "3pm 회의 오후 4시 병원",
+  "15:00 meeting at 4pm",
+]);
+
+add("invalid_calendar_date", [
+  "2027년 2월 30일 오후 3시 병원",
+  "2027년 2월 29일 오후 3시 병원",
+  "9월 31일 오후 3시 병원",
+  "13월 1일 오후 3시 병원",
+]);
+
+add("weekday_date_contradiction", [
+  "9월 3일 금요일 오후 3시 병원",
+  "2026년 9월 3일 금요일 오후 3시 병원",
+  "목요일 9월 4일 오후 3시 병원",
+]);
+
+add("unsupported_date_residue", [
+  "낼 오후 3시 병원",
+  "금욜 오후 3시 병원",
+  "담주 오후 3시 회의",
+  "tomorow at 3pm meeting",
+  "tmrw at 3pm meeting",
+]);
+
+add("clock_word_noun_collision", [
+  "오후 두 시안 비교",
+  "오후 한 시나리오 검토",
+  "오후 세 시리즈 확인",
+]);
+
 add("multi_clause_attachment", [
   "오후 3시 드라마 보고 청소하기",
   "내일 오후 3시 엄마 만나고 저녁에 운동",

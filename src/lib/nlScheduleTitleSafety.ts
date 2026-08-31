@@ -72,6 +72,15 @@ function hasPositiveScheduleTitleCue(title: string): boolean {
   return false;
 }
 
+/** Syntactic residue that is not a natural schedule title (no keyword denylist). */
+function hasCodeLikeTitleResidue(title: string): boolean {
+  const value = title.trim();
+  if (!value) return false;
+  // Statement terminators / comment markers / braces are not schedule prose.
+  if (/[;{}<>`]|--|\/\*|\*\//.test(value)) return true;
+  return false;
+}
+
 /**
  * Temporal parse success ≠ auto-save permission.
  * A confident clock must not promote a low-confidence title/action.
@@ -83,6 +92,7 @@ export function hasLowConfidenceScheduleTitle(
   const value = title.trim();
   if (!value) return true;
   if (isNearMissScheduleKeyword(value)) return true;
+  if (hasCodeLikeTitleResidue(value)) return true;
 
   const nl = understandNaturalLanguage(value, lang);
   if (nl.confidence !== "low") return false;

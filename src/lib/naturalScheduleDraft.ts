@@ -161,6 +161,15 @@ function numericValue(raw: string, words: Record<string, number>): number | null
  * on the reliable path without introducing a model/API dependency.
  */
 function relativeOffsetStart(text: string, now: Date): Date | null {
+  // Larger unsupported compounds must not leak a smaller supported substring.
+  if (
+    /(?:\d+|한|두|세|네)\s*시간\s+\d+\s*분\s*(?:뒤|후)/.test(text) ||
+    /\d+\.\d+\s*(?:시간|분|일)/.test(text) ||
+    /[+-]\s*\d+(?:\.\d+)?\s*(?:시간|분|일)\s*(?:뒤|후)/.test(text)
+  ) {
+    return null;
+  }
+
   const koHalf = text.match(/반\s*시간\s*(?:뒤|후)/);
   if (koHalf) return new Date(now.getTime() + 30 * 60_000);
 
@@ -214,7 +223,7 @@ export function resolveNaturalScheduleStart(text: string, now = new Date()): Dat
   const relative = relativeOffsetStart(normalized, now);
   if (relative) return relative;
 
-  const detected = detectDate(normalized);
+  const detected = detectDate(normalized, now);
   const anchored = nextWeekWeekday(normalized, now);
 
   if (anchored) return applyNaturalTime(anchored, normalized, detected?.start ?? null);
@@ -412,20 +421,33 @@ function stripSupportedTemporalSpans(text: string): string {
  * Unsupported or semantic-critical language is returned unchanged.
  */
 export function cleanScheduleTitle(text: string): string {
-  const original = thoughtFirstLine(text);
+  const original = sanitizeScheduleTitleControls(thoughtFirstLine(text));
   // Title cleaning is display-only over a parsing normalization of clocks.
   const normalized = normalizeKoreanClockWordsForParsing(original);
   if (shouldPreserveRawScheduleTitle(normalized)) {
-    // Preserve the caller's original surface form for unsupported/unsafe input.
-    return original.trim();
+    // Preserve the caller's original surface form for unsupported/unsafe input,
+    // but never persist C0 control characters.
+    return sanitizeScheduleTitleControls(original.trim());
   }
 
   const title = stripSupportedTemporalSpans(normalized);
-  return title || original.trim();
+  return sanitizeScheduleTitleControls(title || original.trim());
 }
 
-export function buildNaturalScheduleDraft(item: InboxItem): NaturalScheduleDraft {
-  const startResolved = resolveNaturalScheduleStart(item.text);
+/** Strip C0 controls / DEL; keep ordinary whitespace collapsed. */
+function sanitizeScheduleTitleControls(text: string): string {
+  return text
+    .replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F]/g, "")
+    .replace(/[\t\n\r]+/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+export function buildNaturalScheduleDraft(
+  item: InboxItem,
+  now = new Date(),
+): NaturalScheduleDraft {
+  const startResolved = resolveNaturalScheduleStart(item.text, now);
   const explicitTime = hasNaturalScheduleTime(item.text);
   const dateOnly = Boolean(startResolved) && !explicitTime;
   const start = startResolved
@@ -433,7 +455,7 @@ export function buildNaturalScheduleDraft(item: InboxItem): NaturalScheduleDraft
       ? startOfDay(startResolved)
       : startResolved
     : (() => {
-        const d = new Date();
+        const d = new Date(now);
         d.setMinutes(0, 0, 0);
         if (d.getHours() < 9) d.setHours(9, 0, 0, 0);
         else if (d.getHours() >= 18) {

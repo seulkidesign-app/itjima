@@ -113,16 +113,33 @@ function hasBareMeridiemGuess(text: string): boolean {
 }
 
 export function countDistinctClockMentions(text: string): number {
-  const ko = [
-    ...text.matchAll(
-      /(오전|오후)?\s*(\d{1,2})\s*시(?:\s*(반)|(?:\s*(\d{1,2})\s*분))?/g,
-    ),
-  ];
-  const enAmPm = [
-    ...text.matchAll(/\b(\d{1,2})(?::(\d{2}))?\s*(am|pm)\b/gi),
-  ];
-  // Prefer Korean tokens when present; English am/pm is a separate count.
-  return Math.max(ko.length, enAmPm.length);
+  // All recognized clock families share one ambiguity model.
+  // Do not use Math.max across families — mixed KO/EN/colon anchors must add up.
+  const spans = new Set<number>();
+
+  for (const match of text.matchAll(
+    /(오전|오후)?\s*(\d{1,2})\s*시(?:\s*(반)|(?:\s*(\d{1,2})\s*분))?/g,
+  )) {
+    spans.add(match.index ?? -1);
+  }
+
+  for (const match of text.matchAll(
+    /\b(\d{1,2})(?::(\d{2}))?\s*(am|pm)\b/gi,
+  )) {
+    spans.add(match.index ?? -2);
+  }
+
+  for (const match of text.matchAll(
+    /(?:^|\D)(([01]?\d|2[0-3]):([0-5]\d))(?!\d)(?!\s*(?:am|pm)\b)/gi,
+  )) {
+    // match.index points at the non-digit prefix; clock starts one later when prefixed.
+    const rawIndex = match.index ?? 0;
+    const clockIndex =
+      match[0].length === match[1].length ? rawIndex : rawIndex + 1;
+    spans.add(clockIndex);
+  }
+
+  return spans.size;
 }
 
 /** A from–to clock range is one event, not two separate schedule items. */
