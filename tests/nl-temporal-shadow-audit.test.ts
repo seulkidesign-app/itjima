@@ -3,13 +3,23 @@ import { describe, expect, it } from "vitest";
 import { evaluateTimedAutoCommit } from "@/lib/nlAutoCommit";
 import { resolveNaturalScheduleStart } from "@/lib/naturalScheduleDraft";
 import { buildTemporalShadowAudit } from "@/lib/nlTemporalShadow";
-import { NL_FULLSWEEP_CASES } from "./fixtures/nl-fullsweep-cases";
+import {
+  NL_FULLSWEEP_CASES,
+  type FullsweepCase,
+} from "./fixtures/nl-fullsweep-cases";
 
-const MORNING = new Date(2026, 7, 30, 10, 0, 0, 0);
+const MORNING = new Date(2026, 7, 30, 8, 0, 0, 0);
 const EVENING = new Date(2026, 7, 30, 20, 0, 0, 0);
 
+function resolveNow(testCase: FullsweepCase): Date {
+  if (testCase.now === "evening") return EVENING;
+  if (testCase.now === "morning") return MORNING;
+  if (testCase.category.includes("past-time-only")) return EVENING;
+  return MORNING;
+}
+
 const rows = NL_FULLSWEEP_CASES.map((testCase) => {
-  const now = testCase.now === "evening" ? EVENING : MORNING;
+  const now = resolveNow(testCase);
   const lang = testCase.lang ?? "ko";
   const decision = evaluateTimedAutoCommit(testCase.input, lang, now);
   const legacyResolvedStart = resolveNaturalScheduleStart(testCase.input, now);
