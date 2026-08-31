@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import { evaluateTimedAutoCommit } from "@/lib/nlAutoCommit";
 import { resolveNaturalScheduleStart } from "@/lib/naturalScheduleDraft";
 import { buildTemporalShadowAudit } from "@/lib/nlTemporalShadow";
-import { NL_FULLSWEEP_CASES } from "@/tests/fixtures/nl-fullsweep-cases";
+import { NL_FULLSWEEP_CASES } from "./fixtures/nl-fullsweep-cases";
 
 const MORNING = new Date(2026, 7, 30, 10, 0, 0, 0);
 const EVENING = new Date(2026, 7, 30, 20, 0, 0, 0);
