@@ -28,6 +28,7 @@ import {
   hasUnsupportedDateRange,
   shouldKeepScheduleSemanticsQuiet,
 } from "@/lib/nlSemanticSafety";
+import { observeTemporalShadow } from "@/lib/nlTemporalShadow";
 import type { InboxItem } from "@/lib/store";
 
 export type AutoCommitBlockReason =
@@ -60,84 +61,108 @@ export function evaluateTimedAutoCommit(
   now = new Date(),
 ): TimedAutoCommitDecision {
   const trimmed = text.trim();
-  if (!trimmed) return { ok: false, reason: "empty" };
+
+  // P0-E shadow integration: the legacy decision remains the only authority.
+  // The Temporal Model runs beside it and emits only structural disagreement
+  // metadata; raw user text is never sent. Shadow failures must never alter UX.
+  const finish = (decision: TimedAutoCommitDecision): TimedAutoCommitDecision => {
+    try {
+      const legacyResolvedStart = trimmed
+        ? resolveNaturalScheduleStart(trimmed, now)
+        : null;
+      observeTemporalShadow(
+        trimmed,
+        lang,
+        now,
+        decision.ok
+          ? { ok: true, start: decision.draft.start }
+          : { ok: false, reason: decision.reason },
+        legacyResolvedStart,
+      );
+    } catch {
+      // Shadow observation is deliberately non-authoritative.
+    }
+    return decision;
+  };
+
+  if (!trimmed) return finish({ ok: false, reason: "empty" });
 
   // Fail closed on malformed/contradictory inputs before any parser can clamp,
   // truncate, or attach a clock to the wrong semantic unit.
   const adversarialReason = adversarialScheduleReason(trimmed);
   if (adversarialReason) {
-    return { ok: false, reason: adversarialReason };
+    return finish({ ok: false, reason: adversarialReason });
   }
 
   // Semantic context wins over date/time tokens. Questions, negations,
   // tentative plans, edit replies, unsupported triggers and vague-future
   // phrases remain durable raw records instead of creating a new schedule.
   if (shouldKeepScheduleSemanticsQuiet(trimmed)) {
-    return { ok: false, reason: "quiet" };
+    return finish({ ok: false, reason: "quiet" });
   }
 
   // Repetition is not implemented as a durable recurrence model yet.
   if (hasNaturalRepeatIntent(trimmed) || hasExpandedRepeatIntent(trimmed)) {
-    return { ok: false, reason: "repeat" };
+    return finish({ ok: false, reason: "repeat" });
   }
 
   // A broad period plus a precise-looking clock still lacks a calendar day.
   // (Weekend / 주말 are excluded inside the guard — clarification owns them.)
   if (hasBroadUnresolvedDatePeriod(trimmed)) {
-    return { ok: false, reason: "unresolved_date" };
+    return finish({ ok: false, reason: "unresolved_date" });
   }
 
   // Fuzzy clocks ("3시쯤", "around 3pm") have no exact model yet.
   if (hasApproximateTimeExpression(trimmed)) {
-    return { ok: false, reason: "approximate_time" };
+    return finish({ ok: false, reason: "approximate_time" });
   }
 
   // Past input may be history or a typo. Do not silently move it forward.
   if (hasPastDateReference(trimmed, now) || hasPastTimeOnlyClock(trimmed, now)) {
-    return { ok: false, reason: "unresolved_date" };
+    return finish({ ok: false, reason: "unresolved_date" });
   }
 
   // Unsupported date/range syntax must stay raw rather than truncating.
   if (hasUnsupportedDateRange(trimmed) || hasUnsupportedColonClockRange(trimmed)) {
-    return { ok: false, reason: "unresolved_date" };
+    return finish({ ok: false, reason: "unresolved_date" });
   }
 
   // `오후 03:00` previously fell through to 03:00.
   if (hasMixedKoreanMeridiemColon(trimmed)) {
-    return { ok: false, reason: "unresolved_date" };
+    return finish({ ok: false, reason: "unresolved_date" });
   }
 
   // End-only / deadline language is not a start-time schedule yet.
   if (hasDeadlineExpression(trimmed)) {
-    return { ok: false, reason: "deadline" };
+    return finish({ ok: false, reason: "deadline" });
   }
 
   const safety = scheduleConfirmationReasons(trimmed, now);
   if (safety.length > 0) {
-    return { ok: false, reason: safety[0] };
+    return finish({ ok: false, reason: safety[0] });
   }
 
   const clockCount = countDistinctClockMentions(trimmed);
   if (clockCount >= 2 && !isSingleClockRange(trimmed)) {
-    return { ok: false, reason: "multiple_clocks" };
+    return finish({ ok: false, reason: "multiple_clocks" });
   }
 
   if (!hasNaturalScheduleTime(trimmed)) {
-    return { ok: false, reason: "no_clock" };
+    return finish({ ok: false, reason: "no_clock" });
   }
 
   // Bare clock count 0 is only OK for relative offsets ("30분 뒤") that still resolve.
   if (clockCount === 0) {
     const relativeOk = resolveNaturalScheduleStart(trimmed, now) !== null;
-    if (!relativeOk) return { ok: false, reason: "no_clock" };
+    if (!relativeOk) return finish({ ok: false, reason: "no_clock" });
   }
 
   const start = resolveNaturalScheduleStart(trimmed, now);
-  if (!start) return { ok: false, reason: "unresolved_date" };
+  if (!start) return finish({ ok: false, reason: "unresolved_date" });
 
   const nl = understandNaturalLanguage(trimmed, lang);
   if (nl.intent === "schedule_clarify") {
-    return { ok: false, reason: "clarify_intent" };
+    return finish({ ok: false, reason: "clarify_intent" });
   }
   // Quiet / sensitive / low-confidence notes stay as left items.
   if (
@@ -145,7 +170,7 @@ export function evaluateTimedAutoCommit(
     nl.intent !== "schedule_exact" &&
     !hasNaturalScheduleTime(trimmed)
   ) {
-    return { ok: false, reason: "quiet" };
+    return finish({ ok: false, reason: "quiet" });
   }
 
   const draft = buildNaturalScheduleDraft({
@@ -155,11 +180,11 @@ export function evaluateTimedAutoCommit(
     created_at: now.toISOString(),
   } satisfies InboxItem);
 
-  if (!draft.text.trim()) return { ok: false, reason: "empty_title" };
+  if (!draft.text.trim()) return finish({ ok: false, reason: "empty_title" });
   // Timed auto-commit requires a real clock, not a silent all-day promotion.
-  if (draft.options.allDay) return { ok: false, reason: "date_only" };
+  if (draft.options.allDay) return finish({ ok: false, reason: "date_only" });
 
-  return { ok: true, draft };
+  return finish({ ok: true, draft });
 }
 
 export function canAutoCommitTimedCapture(
