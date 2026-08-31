@@ -110,6 +110,7 @@ jobs:
             artifacts/nl-adversarial-report.json
             artifacts/nl-temporal-shadow-audit.json
             artifacts/nl-temporal-timestamp-equivalence.json
+            artifacts/nl-temporal-calendar-anchor-audit.json
           if-no-files-found: ignore
           retention-days: 7
 
