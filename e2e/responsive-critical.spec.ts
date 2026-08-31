@@ -312,11 +312,15 @@ test("[critical] bilingual launch page has working CTAs and no layout overflow",
 
   await expect(
     page.getByRole("heading", {
-      name: /Say it roughly\. It becomes a schedule/i,
+      name: /Drop thoughts as they come\.?\s*They organize themselves/i,
     }),
   ).toBeVisible();
   await expect(
-    page.getByRole("link", { name: /Drop your first plan|Open app/i }).first(),
+    page
+      .getByRole("link", {
+        name: /Drop your first thought|Open app|Start free/i,
+      })
+      .first(),
   ).toBeVisible();
   await expect(
     page.getByRole("link", { name: /See the 10-second flow|See how it works/i }),
@@ -327,10 +331,10 @@ test("[critical] bilingual launch page has working CTAs and no layout overflow",
   await page.getByRole("option", { name: "한국어", exact: true }).click();
   await expect(page).toHaveURL(/lang=ko/);
   await expect(
-    page.getByRole("link", { name: /첫 일정|앱 열기|남기기/i }).first(),
+    page.getByRole("link", { name: /첫 기록|앱 열기|무료로 시작/i }).first(),
   ).toBeVisible();
 
-  await page.getByRole("link", { name: /첫 일정|앱 열기/i }).first().click();
+  await page.getByRole("link", { name: /첫 기록|앱 열기|무료로 시작/i }).first().click();
   await expect(page.locator("#capture-input")).toBeVisible({ timeout: 15000 });
 
   expect(errors).toEqual([]);
