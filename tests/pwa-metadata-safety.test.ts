@@ -7,7 +7,7 @@ function read(path: string) {
 }
 
 describe("PWA product metadata safety", () => {
-  const manifestSource = read("public/manifest-v5.webmanifest");
+  const manifestSource = read("public/manifest-v4.webmanifest");
   const manifest = JSON.parse(manifestSource) as {
     name: string;
     description: string;
@@ -43,22 +43,22 @@ describe("PWA product metadata safety", () => {
     );
   });
 
-  it("uses the approved ij star launcher assets with fresh v5 URLs", () => {
+  it("uses the approved ij launcher assets with the v4 URLs", () => {
     expect(manifest.icons).toEqual(
       expect.arrayContaining([
         expect.objectContaining({
-          src: "/icons/itjima-192-v5.png",
+          src: "/icons/itjima-192-v4.png",
           sizes: "192x192",
         }),
         expect.objectContaining({
-          src: "/icons/itjima-512-v5.png",
+          src: "/icons/itjima-512-v4.png",
           sizes: "512x512",
         }),
       ]),
     );
-    expect(html).toContain('rel="manifest" href="/manifest-v5.webmanifest"');
-    expect(html).toContain('href="/favicon-32-v6.png"');
-    expect(html).toContain('href="/apple-touch-icon-v5.png"');
+    expect(html).toContain('rel="manifest" href="/manifest-v4.webmanifest"');
+    expect(html).toContain('href="/favicon-32-v4.png"');
+    expect(html).toContain('href="/apple-touch-icon.png?v=4"');
   });
 
   it("keeps the lowercase wordmark on Playpen Sans Medium", () => {
