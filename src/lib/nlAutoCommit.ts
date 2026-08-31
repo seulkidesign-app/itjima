@@ -28,6 +28,7 @@ import {
   hasUnsupportedDateRange,
   shouldKeepScheduleSemanticsQuiet,
 } from "@/lib/nlSemanticSafety";
+import { evaluateTemporalDecisionGate } from "@/lib/nlTemporalDecisionGate";
 import { observeTemporalShadow } from "@/lib/nlTemporalShadow";
 import type { InboxItem } from "@/lib/store";
 
@@ -43,6 +44,7 @@ export type AutoCommitBlockReason =
   | "quiet"
   | "deadline"
   | "approximate_time"
+  | "temporal_model_unresolved"
   | AdversarialScheduleReason
   | ScheduleConfirmationReason;
 
@@ -62,7 +64,7 @@ export function evaluateTimedAutoCommit(
 ): TimedAutoCommitDecision {
   const trimmed = text.trim();
 
-  // P0-E shadow integration: the legacy decision remains the only authority.
+  // P0-E shadow integration: the legacy decision remains the only timestamp authority.
   // The Temporal Model runs beside it and emits only structural disagreement
   // metadata; raw user text is never sent. Shadow failures must never alter UX.
   const finish = (decision: TimedAutoCommitDecision): TimedAutoCommitDecision => {
@@ -171,6 +173,14 @@ export function evaluateTimedAutoCommit(
     !hasNaturalScheduleTime(trimmed)
   ) {
     return finish({ ok: false, reason: "quiet" });
+  }
+
+  // P0-H: Legacy still owns the actual Date, but a timed auto-commit now needs
+  // explicit permission from the canonical Temporal Model as a second,
+  // fail-closed semantic gate. This can only remove unsafe autos, never add one.
+  const temporalGate = evaluateTemporalDecisionGate(trimmed, now);
+  if (!temporalGate.ok) {
+    return finish({ ok: false, reason: "temporal_model_unresolved" });
   }
 
   const draft = buildNaturalScheduleDraft({
