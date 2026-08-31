@@ -101,12 +101,14 @@ jobs:
       - name: Run release build
         run: npm run build
 
-      - name: Upload adversarial NL audit report
+      - name: Upload NL audit reports
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: nl-adversarial-report-${{ github.event.pull_request.number || github.run_number }}
-          path: artifacts/nl-adversarial-report.json
+          name: nl-audit-report-${{ github.event.pull_request.number || github.run_number }}
+          path: |
+            artifacts/nl-adversarial-report.json
+            artifacts/nl-temporal-shadow-audit.json
           if-no-files-found: ignore
           retention-days: 7
 
