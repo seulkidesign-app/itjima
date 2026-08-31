@@ -1,3 +1,4 @@
+import { normalizeKoreanClockWordsForParsing } from "@/lib/nlKoreanTemporalNormalization";
 import {
   parseNlTemporalModel,
   type NlTemporalModel,
@@ -57,23 +58,19 @@ function parseScopedWeekdayDate(text: string): CanonicalTemporalDate | null {
 }
 
 /**
- * Canonical temporal model used by migration/resolution gates.
- *
- * The base parser intentionally stays conservative, while this layer preserves
- * calendar scope that would otherwise be flattened from `다음 주 월요일` to a
- * generic `weekday`. Runtime scheduling does not consume this model yet.
+ * Canonical temporal model used by migration/resolution gates. Spoken Korean
+ * clock words are normalized only for parsing; the user's durable raw record is
+ * never rewritten by this layer.
  */
 export function parseCanonicalTemporalModel(
   text: string,
   now = new Date(),
 ): CanonicalTemporalModel {
-  const base = parseNlTemporalModel(text, now);
+  const normalized = normalizeKoreanClockWordsForParsing(text);
+  const base = parseNlTemporalModel(normalized, now);
 
-  // Never let a scoped-weekday phrase override a more specific absolute date.
-  // The current base parser flattens these phrases to `weekday`, so enrichment
-  // is limited to that shape.
   if (base.date?.kind === "weekday") {
-    const scopedDate = parseScopedWeekdayDate(text);
+    const scopedDate = parseScopedWeekdayDate(normalized);
     if (scopedDate) {
       return { ...base, date: scopedDate };
     }
