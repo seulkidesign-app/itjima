@@ -1,3 +1,5 @@
+import { normalizeKoreanClockWordsForParsing } from "@/lib/nlKoreanTemporalNormalization";
+
 export type ScheduleConfirmationReason =
   | "past_today"
   | "weekend_day"
@@ -250,7 +252,9 @@ export function assumedMeridiemQuestion(
   text: string,
   lang: "ko" | "en",
 ): string {
-  const clock = extractBareClock(text);
+  const clock = extractBareClock(
+    normalizeKoreanClockWordsForParsing(text.trim()),
+  );
   if (lang === "en") {
     if (!clock) return "Which time should I remember?";
     const minute =
@@ -287,7 +291,8 @@ export function scheduleConfirmationReasons(
   text: string,
   now = new Date(),
 ): ScheduleConfirmationReason[] {
-  const trimmed = text.trim();
+  // Match evaluateTimedAutoCommit: parsing-only clock-word normalize.
+  const trimmed = normalizeKoreanClockWordsForParsing(text.trim());
   const reasons: ScheduleConfirmationReason[] = [];
   const bareMeridiem = hasBareMeridiemGuess(trimmed);
 
@@ -341,12 +346,16 @@ export function scheduleConfirmationChoices(
   const reasons = scheduleConfirmationReasons(text, now);
   if (reasons.length !== 1 || reasons[0] !== reason) return [];
 
+  // Choices rewrite the parsing surface (spoken clocks → digits) so the
+  // existing deterministic commit path can resolve without new coverage.
+  const parsingText = normalizeKoreanClockWordsForParsing(text.trim());
+
   // No one-tap merge of multiple timed plans — open the manual sheet instead.
   if (reason === "multiple_clocks") return [];
 
   if (reason === "past_today") {
-    const resolvedText = replaceTodayWithTomorrow(text);
-    return resolvedText === text
+    const resolvedText = replaceTodayWithTomorrow(parsingText);
+    return resolvedText === parsingText
       ? []
       : [
           {
@@ -362,12 +371,12 @@ export function scheduleConfirmationChoices(
       {
         id: "saturday",
         label: lang === "en" ? "Saturday" : "토요일",
-        resolvedText: replaceWeekend(text, "saturday"),
+        resolvedText: replaceWeekend(parsingText, "saturday"),
       },
       {
         id: "sunday",
         label: lang === "en" ? "Sunday" : "일요일",
-        resolvedText: replaceWeekend(text, "sunday"),
+        resolvedText: replaceWeekend(parsingText, "sunday"),
       },
     ];
   }
@@ -377,33 +386,33 @@ export function scheduleConfirmationChoices(
       {
         id: "after_work_18",
         label: lang === "en" ? "6 PM" : "오후 6시",
-        resolvedText: replaceAfterWork(text, 18),
+        resolvedText: replaceAfterWork(parsingText, 18),
       },
       {
         id: "after_work_19",
         label: lang === "en" ? "7 PM" : "오후 7시",
-        resolvedText: replaceAfterWork(text, 19),
+        resolvedText: replaceAfterWork(parsingText, 19),
       },
     ];
   }
 
-  const clock = extractBareClock(text);
+  const clock = extractBareClock(parsingText);
   if (!clock) return [];
   return [
     {
       id: "morning",
       label: clockChoiceLabel(clock, "am", lang),
-      resolvedText: replaceBareMeridiem(text, "am"),
+      resolvedText: replaceBareMeridiem(parsingText, "am"),
     },
     {
       id: "afternoon",
       label: clockChoiceLabel(clock, "pm", lang),
-      resolvedText: replaceBareMeridiem(text, "pm"),
+      resolvedText: replaceBareMeridiem(parsingText, "pm"),
     },
     {
       id: "no_time",
       label: lang === "en" ? "No time" : "시간 없이",
-      resolvedText: stripBareClock(text),
+      resolvedText: stripBareClock(parsingText),
     },
   ];
 }

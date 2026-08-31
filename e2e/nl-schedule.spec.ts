@@ -131,6 +131,81 @@ test.describe("Natural-language scheduling in Korean", () => {
     ).toBeVisible();
   });
 
+  test("bare clock without date still asks AM/PM and never auto-schedules", async ({
+    page,
+  }) => {
+    await submitKo(page, "8시에 운동");
+    expect((await readGuestList(page, GUEST_SCHEDULE_KEY)).length).toBe(0);
+    const inbox = (await readGuestList(page, GUEST_INBOX_KEY)) as Array<{
+      text?: string;
+      start_time?: string | null;
+      temporal_state?: string;
+    }>;
+    expect(inbox).toHaveLength(1);
+    expect(inbox[0]?.text).toContain("8시에 운동");
+    expect(inbox[0]?.start_time).toBeFalsy();
+
+    const promise = phone(page).getByTestId("inline-promise").last();
+    await expect(promise).toBeVisible();
+    await expect(promise).toHaveAttribute(
+      "data-confirmation-reason",
+      "assumed_meridiem",
+    );
+    await expect(promise).toContainText("8시는 언제인가요?");
+    await expect(promise.getByTestId("promise-confirm-morning")).toBeVisible();
+    await expect(promise.getByTestId("promise-confirm-afternoon")).toBeVisible();
+
+    await promise.getByTestId("promise-confirm-afternoon").click();
+    const schedules = (await readGuestList(page, GUEST_SCHEDULE_KEY)) as Array<{
+      text?: string;
+      start_time?: string;
+    }>;
+    expect(schedules).toHaveLength(1);
+    expect(schedules[0]?.text).toMatch(/운동/);
+    // Playwright runs with timezoneId America/New_York (see playwright.config).
+    const hourInAppTz = Number(
+      new Intl.DateTimeFormat("en-US", {
+        timeZone: "America/New_York",
+        hour: "numeric",
+        hour12: false,
+      }).format(new Date(schedules[0]!.start_time!)),
+    );
+    expect(hourInAppTz % 24).toBe(20);
+  });
+
+  test("spoken bare clock gets the same AM/PM clarification; noun collisions stay quiet", async ({
+    page,
+  }) => {
+    await submitKo(page, "두 시안 비교");
+    await expect(phone(page).getByTestId("inline-promise")).toHaveCount(0);
+    expect((await readGuestList(page, GUEST_SCHEDULE_KEY)).length).toBe(0);
+    expect((await readGuestList(page, GUEST_INBOX_KEY)).length).toBe(1);
+
+    await submitKo(page, "두 시 회의");
+    expect((await readGuestList(page, GUEST_SCHEDULE_KEY)).length).toBe(0);
+    const promise = phone(page).getByTestId("inline-promise").last();
+    await expect(promise).toBeVisible();
+    await expect(promise).toHaveAttribute(
+      "data-confirmation-reason",
+      "assumed_meridiem",
+    );
+    await expect(promise).toContainText("2시는 언제인가요?");
+    await promise.getByTestId("promise-confirm-afternoon").click();
+    const schedules = (await readGuestList(page, GUEST_SCHEDULE_KEY)) as Array<{
+      text?: string;
+      start_time?: string;
+    }>;
+    expect(schedules).toHaveLength(1);
+    const hourInAppTz = Number(
+      new Intl.DateTimeFormat("en-US", {
+        timeZone: "America/New_York",
+        hour: "numeric",
+        hour12: false,
+      }).format(new Date(schedules[0]!.start_time!)),
+    );
+    expect(hourInAppTz % 24).toBe(14);
+  });
+
   test("시간이 두 개면 일정 생성 없이 입력 수정으로 복원한다", async ({ page }) => {
     await submitKo(page, "오늘 3시 A, 6시 B");
     expect((await readGuestList(page, GUEST_SCHEDULE_KEY)).length).toBe(0);

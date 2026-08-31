@@ -106,16 +106,23 @@ export function InboxChat({
 
     const inFlight = autoCommitInFlightIds.has(it.id);
     const autoEligible = canAutoCommitTimedCapture(it.text, uiLang);
+    // Explicit schedule confirmation (e.g. assumed_meridiem) must surface even
+    // when generic promise eligibility is false — bare clocks often have no
+    // resolvable start until the user picks AM/PM.
+    const confirmationReason =
+      featureEnabled("INLINE_PROMISE") &&
+      !acknowledgedIds.has(it.id) &&
+      !inFlight
+        ? scheduleConfirmationReason(it.text)
+        : null;
     const basePromise =
       featureEnabled("INLINE_PROMISE") &&
       !acknowledgedIds.has(it.id) &&
       !inFlight &&
-      shouldShowInlinePromise(it.text, uiLang);
+      (confirmationReason !== null ||
+        shouldShowInlinePromise(it.text, uiLang));
     const understanding = basePromise
       ? understandNaturalLanguage(it.text, uiLang)
-      : null;
-    const confirmationReason = basePromise
-      ? scheduleConfirmationReason(it.text)
       : null;
     const showCommitmentRecovery =
       basePromise && autoEligible && !confirmationReason;

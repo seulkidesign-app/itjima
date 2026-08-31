@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { evaluateTimedAutoCommit } from "@/lib/nlAutoCommit";
 import {
   scheduleConfirmationChoices,
   scheduleConfirmationReason,
@@ -32,6 +33,58 @@ describe("natural-language schedule safety", () => {
     expect(scheduleConfirmationReason("내일 3시에 치과", now)).toBe(
       "assumed_meridiem",
     );
+  });
+
+  it("surfaces AM/PM for bare clocks even when generic promise eligibility is false", () => {
+    expect(evaluateTimedAutoCommit("8시에 운동", "ko", now).ok).toBe(false);
+    const decision = evaluateTimedAutoCommit("8시에 운동", "ko", now);
+    if (!decision.ok) expect(decision.reason).toBe("assumed_meridiem");
+    expect(scheduleConfirmationReason("8시에 운동", now)).toBe(
+      "assumed_meridiem",
+    );
+    // Generic promise gate may stay false — UI must not hide confirmation behind it.
+    expect(shouldShowInlinePromise("8시에 운동", "ko")).toBe(false);
+    const choices = scheduleConfirmationChoices(
+      "8시에 운동",
+      "assumed_meridiem",
+      "ko",
+      now,
+    );
+    expect(choices.map((c) => c.id)).toEqual(
+      expect.arrayContaining(["morning", "afternoon"]),
+    );
+    expect(choices.find((c) => c.id === "morning")?.resolvedText).toBe(
+      "오전 8시에 운동",
+    );
+    expect(choices.find((c) => c.id === "afternoon")?.resolvedText).toBe(
+      "오후 8시에 운동",
+    );
+  });
+
+  it("treats spoken bare clocks like digit bare clocks for AM/PM confirmation", () => {
+    expect(scheduleConfirmationReason("두 시 회의", now)).toBe(
+      "assumed_meridiem",
+    );
+    const choices = scheduleConfirmationChoices(
+      "두 시 회의",
+      "assumed_meridiem",
+      "ko",
+      now,
+    );
+    expect(choices.find((c) => c.id === "morning")?.resolvedText).toBe(
+      "오전 2시 회의",
+    );
+    expect(choices.find((c) => c.id === "afternoon")?.resolvedText).toBe(
+      "오후 2시 회의",
+    );
+  });
+
+  it("keeps clock-word noun collisions quiet", () => {
+    expect(scheduleConfirmationReason("두 시안 비교", now)).toBeNull();
+    expect(shouldShowInlinePromise("두 시안 비교", "ko")).toBe(false);
+    const decision = evaluateTimedAutoCommit("두 시안 비교", "ko", now);
+    expect(decision.ok).toBe(false);
+    if (!decision.ok) expect(decision.reason).toBe("no_clock");
   });
 
   it("asks AM or PM before deciding that a bare time has passed", () => {
