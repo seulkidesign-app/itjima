@@ -235,6 +235,14 @@ function parseDaypart(text: string): TemporalDaypart | null {
 }
 
 function parseRelativeOffset(text: string): TemporalRelativeOffset | null {
+  if (
+    /(?:\d+|한|두|세|네)\s*시간\s+\d+\s*분\s*(?:뒤|후)/.test(text) ||
+    /\d+\.\d+\s*(?:시간|분|일)/.test(text) ||
+    /[+-]\s*\d+(?:\.\d+)?\s*(?:시간|분|일)\s*(?:뒤|후)/.test(text)
+  ) {
+    return null;
+  }
+
   const koHalf = text.match(/반\s*시간\s*(?:뒤|후)/);
   if (koHalf) return { amount: 30, unit: "minute", raw: koHalf[0] };
 
@@ -284,12 +292,27 @@ function parseExactClock(text: string): TemporalExactClock | null {
     }
   }
 
-  const h24 = text.match(/\b([01]?\d|2[0-3]):([0-5]\d)\b|(?:^|\s)(1[3-9]|2[0-3])\s*시/);
+  const colon = text.match(/\b([01]?\d|2[0-3]):([0-5]\d)\b/);
+  if (colon) {
+    return {
+      hour24: Number(colon[1]),
+      minute: Number(colon[2]),
+      raw: colon[0].trim(),
+    };
+  }
+
+  // Bare 13–23시 must consume an attached minute/half atomically (or reject upstream).
+  const h24 = text.match(
+    /(?:^|\s)(1[3-9]|2[0-3])\s*시(?:\s*(반)|(?:\s*(\d{1,2})\s*분))?/,
+  );
   if (h24) {
-    if (h24[1] !== undefined) {
-      return { hour24: Number(h24[1]), minute: Number(h24[2]), raw: h24[0].trim() };
-    }
-    return { hour24: Number(h24[3]), minute: 0, raw: h24[0].trim() };
+    const minute = h24[2] === "반" ? 30 : h24[3] ? Number(h24[3]) : 0;
+    if (minute < 0 || minute > 59) return null;
+    return {
+      hour24: Number(h24[1]),
+      minute,
+      raw: h24[0].trim(),
+    };
   }
 
   return null;

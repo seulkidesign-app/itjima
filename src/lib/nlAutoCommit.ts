@@ -87,7 +87,7 @@ export function evaluateLegacyTimedAutoCommit(
 
   if (!trimmed) return finish({ ok: false, reason: "empty" });
 
-  const adversarialReason = adversarialScheduleReason(trimmed);
+  const adversarialReason = adversarialScheduleReason(trimmed, now);
   if (adversarialReason) {
     return finish({ ok: false, reason: adversarialReason });
   }
@@ -155,12 +155,15 @@ export function evaluateLegacyTimedAutoCommit(
     return finish({ ok: false, reason: "temporal_model_unresolved" });
   }
 
-  const draft = buildNaturalScheduleDraft({
-    id: "auto-commit-eval",
-    text: trimmed,
-    images: [],
-    created_at: now.toISOString(),
-  } satisfies InboxItem);
+  const draft = buildNaturalScheduleDraft(
+    {
+      id: "auto-commit-eval",
+      text: trimmed,
+      images: [],
+      created_at: now.toISOString(),
+    } satisfies InboxItem,
+    now,
+  );
 
   if (!draft.text.trim()) return finish({ ok: false, reason: "empty_title" });
   if (draft.options.allDay) return finish({ ok: false, reason: "date_only" });
@@ -169,6 +172,11 @@ export function evaluateLegacyTimedAutoCommit(
   // Low-confidence title/action semantics stay fail-closed.
   if (hasLowConfidenceScheduleTitle(draft.text, lang)) {
     return finish({ ok: false, reason: "low_confidence_title" });
+  }
+
+  // Final resolved timestamp must be in the future for auto-commit.
+  if (draft.start.getTime() <= now.getTime()) {
+    return finish({ ok: false, reason: "unresolved_date" });
   }
 
   return finish({ ok: true, draft });
@@ -190,6 +198,10 @@ export function evaluateTimedAutoCommit(
   );
   if (!canonicalDraft) {
     return { ok: false, reason: "temporal_model_unresolved" };
+  }
+
+  if (canonicalDraft.start.getTime() <= now.getTime()) {
+    return { ok: false, reason: "unresolved_date" };
   }
 
   return { ok: true, draft: canonicalDraft };

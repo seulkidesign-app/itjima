@@ -2,6 +2,7 @@ import {
   parseCanonicalTemporalModel,
   type CanonicalTemporalModel,
 } from "@/lib/nlTemporalCalendarModel";
+import { isValidCalendarYmd } from "@/lib/nlCalendarValidity";
 
 export type CanonicalTemporalCandidate = {
   start: Date;
@@ -111,15 +112,11 @@ function resolveModelDate(
         /(\d{4})\s*년\s*(\d{1,2})\s*월\s*(\d{1,2})\s*일/,
       );
       if (!match) return null;
-      return new Date(
-        Number(match[1]),
-        Number(match[2]) - 1,
-        Number(match[3]),
-        0,
-        0,
-        0,
-        0,
-      );
+      const year = Number(match[1]);
+      const month = Number(match[2]);
+      const day = Number(match[3]);
+      if (!isValidCalendarYmd(year, month, day)) return null;
+      return new Date(year, month - 1, day, 0, 0, 0, 0);
     }
     case "month_day": {
       const ko = date.raw.match(/(\d{1,2})\s*월\s*(\d{1,2})\s*일/);
@@ -127,9 +124,22 @@ function resolveModelDate(
       const month = Number((ko ?? slash)?.[1]);
       const day = Number((ko ?? slash)?.[2]);
       if (!month || !day) return null;
-      const value = new Date(now.getFullYear(), month - 1, day, 0, 0, 0, 0);
-      if (value.getTime() < atStartOfDay(now).getTime()) {
-        value.setFullYear(value.getFullYear() + 1);
+      const year = now.getFullYear();
+      if (
+        !isValidCalendarYmd(year, month, day) &&
+        !isValidCalendarYmd(year + 1, month, day)
+      ) {
+        return null;
+      }
+      // Prefer a leap-valid construction when Feb 29 rolls into next year.
+      const baseYear = isValidCalendarYmd(year, month, day) ? year : year + 1;
+      const value = new Date(baseYear, month - 1, day, 0, 0, 0, 0);
+      if (
+        baseYear === year &&
+        value.getTime() < atStartOfDay(now).getTime()
+      ) {
+        if (!isValidCalendarYmd(year + 1, month, day)) return null;
+        value.setFullYear(year + 1);
       }
       return value;
     }
