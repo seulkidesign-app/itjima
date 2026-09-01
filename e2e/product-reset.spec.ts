@@ -71,10 +71,11 @@ test.describe("Current product information architecture", () => {
 
     // The shared dialog helper chooses Today. Around midnight/late-night CI runs,
     // that default can already fall into the unified view's collapsed Past bucket.
+    // Past intentionally no longer carries a count in the quiet-history contract.
     // The contract under test is projection reachability, not a specific time bucket.
     const row = phone(page).getByText(/Blue notebook/i).first();
     if (!(await row.isVisible().catch(() => false))) {
-      const past = phone(page).getByRole("button", { name: /^Past\s*·/i });
+      const past = phone(page).getByRole("button", { name: /^Past$/i });
       if (await past.isVisible().catch(() => false)) await past.click();
     }
     await expect(row).toBeVisible();
