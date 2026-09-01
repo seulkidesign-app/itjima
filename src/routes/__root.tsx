@@ -15,6 +15,7 @@ import { ScheduleDeepLinkBridge } from "@/components/ScheduleDeepLinkBridge";
 import { ScheduleInAppReminderHost } from "@/components/ScheduleInAppReminderHost";
 import { PwaInstallExperience } from "@/components/PwaInstallExperience";
 import { PwaInstallHomeBar } from "@/components/PwaInstallHomeBar";
+import { RediscoveryStudyGate } from "@/components/RediscoveryStudyGate";
 import { LanguageProvider, useLang } from "@/lib/i18n";
 import { applyLandingSeo } from "@/lib/seo";
 import { useArchiveMetaSync } from "@/hooks/useArchiveMetaSync";
@@ -229,6 +230,7 @@ function RootLayout() {
   return (
     <LanguageProvider>
       <AppRuntimeServices />
+      <RediscoveryStudyGate pathname={pathname} />
       {isFullPage ? (
         <>
           {isRootLanding ? <RootLanding /> : <Outlet />}
