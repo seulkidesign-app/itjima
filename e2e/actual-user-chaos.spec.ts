@@ -249,7 +249,7 @@ test.describe("Actual user chaos — temporal state integrity", () => {
     ).toHaveLength(1);
   });
 
-  test("archive → undo → reload never leaves an orphan timed projection", async ({
+  test("structured timed records fail closed before archive can orphan the schedule", async ({
     page,
   }) => {
     const text = "모레 오후 4시 안과";
@@ -258,43 +258,21 @@ test.describe("Actual user chaos — temporal state integrity", () => {
 
     const source = (await inboxRows(page)).find((row) => row.text === text);
     expect(source).toBeTruthy();
-    const beforeProjection = (await scheduleRows(page)).find(
+    expect(source?.temporal_state).toBe("exact_datetime");
+    const projection = (await scheduleRows(page)).find(
       (row) => row.source_id === source?.id,
     );
-    expect(beforeProjection).toBeTruthy();
+    expect(projection).toBeTruthy();
 
     await openContextMenuRaw(page, text);
-    await clickContextMenuItem(page, "보관함에 맡기기");
+    const menu = page.getByTestId("inbox-context-menu");
+    await expect(
+      menu.getByRole("menuitem", { name: "보관함에 맡기기", exact: true }),
+    ).toHaveCount(0);
 
-    await expect.poll(async () => (await archiveRows(page)).length).toBe(1);
-    await waitForScheduleCount(page, 0);
-    expect((await inboxRows(page)).some((row) => row.id === source?.id)).toBe(false);
-    const archived = (await archiveRows(page)).find(
-      (row) => row.source_id === source?.id,
-    );
-    expect(archived).toBeTruthy();
-    await expect(phone(page).getByTestId("saved-schedule-feedback")).toHaveCount(0);
-
-    const undo = page.getByRole("button", { name: "되돌리기", exact: true }).last();
-    await expect(undo).toBeVisible();
-    await undo.click();
-
-    await expect.poll(async () => (await archiveRows(page)).length).toBe(0);
-    await waitForScheduleCount(page, 1);
-    const restored = (await inboxRows(page)).filter((row) => row.id === source?.id);
-    expect(restored).toHaveLength(1);
-    expect(restored[0]?.temporal_state).toBe("exact_datetime");
-    const projections = (await scheduleRows(page)).filter(
-      (row) => row.source_id === source?.id,
-    );
-    expect(projections).toHaveLength(1);
-    expect(projections[0]?.id).toBe(beforeProjection?.id);
-
-    await page.reload();
-    await phone(page).getByRole("link", { name: /^남기기$/ }).waitFor();
-    expect(
-      (await inboxRows(page)).filter((row) => row.id === source?.id),
-    ).toHaveLength(1);
+    // The dangerous transition never starts: source and projection remain one
+    // coherent record, and no archive copy is created behind the user's back.
+    expect((await inboxRows(page)).filter((row) => row.id === source?.id)).toHaveLength(1);
     expect(
       (await scheduleRows(page)).filter((row) => row.source_id === source?.id),
     ).toHaveLength(1);
