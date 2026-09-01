@@ -220,24 +220,28 @@ export function ThoughtDetailSheet({
             </div>
 
             <div className="mt-3 flex gap-2 px-0.5">
-              <button
-                type="button"
-                onClick={() => {
-                  tap();
-                  onClose();
-                  onArchive(item);
-                }}
-                className="touch-press min-h-11 flex-1 text-left text-[13px] font-medium text-ink-soft underline-offset-2 hover:underline"
-              >
-                {t("보관하기", "Save to vault")}
-              </button>
+              {!hasTemporal && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    tap();
+                    onClose();
+                    onArchive(item);
+                  }}
+                  className="touch-press min-h-11 flex-1 text-left text-[13px] font-medium text-ink-soft underline-offset-2 hover:underline"
+                >
+                  {t("보관하기", "Save to vault")}
+                </button>
+              )}
               <button
                 type="button"
                 onClick={() => {
                   tap();
                   void copyText();
                 }}
-                className="touch-press min-h-11 flex-1 text-right text-[13px] font-medium text-ink-soft underline-offset-2 hover:underline"
+                className={`touch-press min-h-11 flex-1 text-[13px] font-medium text-ink-soft underline-offset-2 hover:underline ${
+                  hasTemporal ? "text-left" : "text-right"
+                }`}
               >
                 {t("복사하기", "Copy")}
               </button>
