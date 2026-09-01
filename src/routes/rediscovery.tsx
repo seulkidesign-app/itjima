@@ -1,6 +1,6 @@
 import { Link, useNavigate } from "@tanstack/react-router";
 import { createFileRoute } from "@tanstack/react-router";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { motion } from "framer-motion";
 import { useArchive, useSchedules } from "@/lib/store";
 import { useT, useLang } from "@/lib/i18n";
@@ -27,6 +27,7 @@ function RediscoveryPage() {
   const archive = useArchive();
   const schedules = useSchedules();
   const [dismissed, setDismissed] = useState(false);
+  const impressionIdRef = useRef<string | null>(null);
   const enabled = featureEnabled("REDISCOVERY");
 
   const pick = useMemo(
@@ -36,6 +37,8 @@ function RediscoveryPage() {
 
   useEffect(() => {
     if (!enabled || !pick || dismissed) return;
+    if (impressionIdRef.current === pick.memory.id) return;
+    impressionIdRef.current = pick.memory.id;
     markRediscoverySessionShown();
     trackRediscoveryUt("impression", pick);
   }, [enabled, pick, dismissed]);
