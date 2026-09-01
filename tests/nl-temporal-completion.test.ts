@@ -1,6 +1,7 @@
 import "./nl-combinatorial-diagnostic.test";
 import "./nl-combinatorial-fuzz.test";
 import "./nl-combinatorial-fuzz-2.test";
+import "./nl-combinatorial-fuzz-3.test";
 import { describe, expect, it } from "vitest";
 import { evaluateTimedAutoCommit } from "@/lib/nlAutoCommit";
 import { buildTemporalCompletionDraft } from "@/lib/nlTemporalCompletion";
