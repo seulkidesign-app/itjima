@@ -5,6 +5,7 @@ import {
   type ConvertLaterInboxOps,
   type LaterInboxScheduleFields,
 } from "@/lib/convertLaterInboxToSchedule";
+import { withInboxScheduleDraft } from "@/lib/inboxScheduleDefaults";
 import type { InboxItem, ScheduleItem } from "@/lib/store";
 
 const original = "내일 오후 3시 운동하고 오후 5시 병원";
@@ -76,7 +77,32 @@ function harness(observed: InboxItem) {
 describe("schedule commit action snapshot precedence", () => {
   beforeEach(() => resetLaterInboxConvertLocksForTests());
 
-  it("uses a newer just-edited action snapshot when the observed render is one revision behind", async () => {
+  it("keeps a just-edited user action when the observed render still has old text at the same revision", async () => {
+    const staleRender: InboxItem = {
+      ...actionItem(0),
+      text: original,
+    };
+    const { state, ops } = harness(staleRender);
+
+    const result = await convertLaterInboxToSchedule(
+      actionItem(0),
+      fields,
+      ops,
+      { expectedRevision: 0 },
+    );
+
+    expect(result).toEqual({ status: "ok", scheduleId: "edited-1" });
+    expect(state.inbox.text).toBe(corrected);
+    expect(state.inbox.temporal_state).toBe("exact_datetime");
+    expect(state.schedules).toHaveLength(1);
+    expect(state.schedules[0]).toMatchObject({
+      source_id: "edited-1",
+      text: "운동",
+      raw_text: original,
+    });
+  });
+
+  it("also keeps a newer user action when the observed render is one revision behind", async () => {
     const staleRender: InboxItem = {
       ...actionItem(0),
       text: original,
@@ -92,13 +118,6 @@ describe("schedule commit action snapshot precedence", () => {
 
     expect(result).toEqual({ status: "ok", scheduleId: "edited-1" });
     expect(state.inbox.text).toBe(corrected);
-    expect(state.inbox.temporal_state).toBe("exact_datetime");
-    expect(state.schedules).toHaveLength(1);
-    expect(state.schedules[0]).toMatchObject({
-      source_id: "edited-1",
-      text: "운동",
-      raw_text: original,
-    });
   });
 
   it("keeps canonical source text when clarification supplies derived text at the same revision", async () => {
@@ -107,10 +126,24 @@ describe("schedule commit action snapshot precedence", () => {
       text: "내일 8시 운동",
       raw_text: "내일 8시 운동",
     };
-    const derived: InboxItem = {
-      ...canonical,
-      text: "내일 오후 8시 운동",
-    };
+    const derived = withInboxScheduleDraft(
+      {
+        ...canonical,
+        text: "내일 오후 8시 운동",
+      },
+      {
+        text: "운동",
+        start: new Date("2026-09-02T11:00:00.000Z"),
+        end: new Date("2026-09-02T12:00:00.000Z"),
+        options: {
+          reminderMinutes: null,
+          allDay: false,
+          startAllDay: false,
+          endAllDay: false,
+          repeat: null,
+        },
+      },
+    );
     const { state, ops } = harness(canonical);
 
     const result = await convertLaterInboxToSchedule(
@@ -136,16 +169,16 @@ describe("schedule commit action snapshot precedence", () => {
 
   it("still rejects a genuinely newer canonical revision", async () => {
     const newer: InboxItem = {
-      ...actionItem(2),
+      ...actionItem(1),
       text: "사용자가 다시 고친 문장",
     };
     const { state, ops } = harness(newer);
 
     const result = await convertLaterInboxToSchedule(
-      actionItem(1),
+      actionItem(0),
       fields,
       ops,
-      { expectedRevision: 1 },
+      { expectedRevision: 0 },
     );
 
     expect(result).toEqual({ status: "stale_revision" });
