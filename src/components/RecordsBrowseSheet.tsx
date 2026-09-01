@@ -4,28 +4,28 @@ import { BottomSheet } from "./BottomSheet";
 import { OrganizeSummarySheet } from "./OrganizeSummarySheet";
 import { useLang, useT } from "@/lib/i18n";
 import {
-  getBrowsableRecords,
-  searchCanonicalRecords,
-} from "@/lib/canonicalBrowse";
+  getAllBrowseEntries,
+  searchAllBrowseEntries,
+  type BrowseRecordEntry,
+} from "@/lib/browseRecordModel";
 import { formatCaptureWhenLabel } from "@/lib/naturalScheduleDraft";
-import type { InboxItem } from "@/lib/store";
+import { replaceAllDayWithFuzzyDaypart } from "@/lib/temporalDisplay";
+import type { InboxItem, ScheduleItem } from "@/lib/store";
 
-/** Flat temporal metadata (Figma 319:2 Screen 10 / 29) — never pill/button chrome. */
+/** Flat factual metadata. Missing date is not an error state and stays quiet. */
 function browseWhenMeta(
-  item: InboxItem,
+  entry: BrowseRecordEntry,
   lang: "ko" | "en",
   t: ReturnType<typeof useT>,
-): string {
-  const done = item.status === "done";
+): string | null {
+  const done = entry.status === "done";
   if (done) {
-    const created = new Date(item.created_at).getTime();
+    const created = new Date(entry.created_at).getTime();
     const dayMs = 24 * 60 * 60 * 1000;
     const days = Number.isFinite(created)
       ? Math.max(0, Math.floor((Date.now() - created) / dayMs))
       : 0;
-    if (days <= 0) {
-      return lang === "en" ? "Completed" : "완료";
-    }
+    if (days <= 0) return lang === "en" ? "Completed" : "완료";
     const ago =
       lang === "en"
         ? days === 1
@@ -34,28 +34,56 @@ function browseWhenMeta(
         : `${days}일 전`;
     return `${ago} · ${lang === "en" ? "Completed" : "완료"}`;
   }
-  if (item.start_time) {
-    return formatCaptureWhenLabel(
-      new Date(item.start_time),
-      Boolean(item.all_day),
+
+  if (entry.kind === "record" && entry.clarification_state === "pending") {
+    return t("확인 필요", "Needs confirmation");
+  }
+
+  if (entry.start_time) {
+    const base = formatCaptureWhenLabel(
+      new Date(entry.start_time),
+      Boolean(entry.all_day),
       lang,
     );
+    if (
+      entry.kind === "record" &&
+      entry.temporal_state === "fuzzy_time"
+    ) {
+      return replaceAllDayWithFuzzyDaypart(
+        base,
+        entry.raw_text ?? entry.text,
+        lang,
+      );
+    }
+    if (entry.kind === "schedule" && entry.all_day) {
+      return replaceAllDayWithFuzzyDaypart(
+        base,
+        entry.raw_text ?? entry.text,
+        lang,
+      );
+    }
+    return base;
   }
-  return t("날짜 없음", "No date");
+
+  return null;
 }
 
 type Props = {
   items: InboxItem[];
+  schedules: ScheduleItem[];
   open: boolean;
   onClose: () => void;
   onOpenRecord: (item: InboxItem) => void;
+  onOpenSchedule: (item: ScheduleItem) => void;
 };
 
 export function RecordsBrowseSheet({
   items,
+  schedules,
   open,
   onClose,
   onOpenRecord,
+  onOpenSchedule,
 }: Props) {
   const t = useT();
   const { lang } = useLang();
@@ -70,11 +98,14 @@ export function RecordsBrowseSheet({
     }
   }, [open]);
 
-  const results = useMemo(
-    () => searchCanonicalRecords(items, query),
-    [items, query],
+  const browsing = useMemo(
+    () => getAllBrowseEntries(items, schedules),
+    [items, schedules],
   );
-  const browsing = useMemo(() => getBrowsableRecords(items), [items]);
+  const results = useMemo(
+    () => searchAllBrowseEntries(items, schedules, query),
+    [items, schedules, query],
+  );
   const isSearching = query.trim().length > 0;
   const emptySearch = isSearching && results.length === 0;
   const emptyAll = !isSearching && browsing.length === 0;
@@ -91,6 +122,7 @@ export function RecordsBrowseSheet({
       {organizeOpen ? (
         <OrganizeSummarySheet
           items={items}
+          schedules={schedules}
           open
           embedded
           onClose={() => setOrganizeOpen(false)}
@@ -169,23 +201,29 @@ export function RecordsBrowseSheet({
                   : "records-browse-list"
               }
             >
-              {results.map((item) => {
-                const done = item.status === "done";
+              {results.map((entry) => {
+                const done = entry.status === "done";
                 const title =
-                  item.text.trim() || t("(내용 없음)", "(No text)");
+                  entry.text.trim() || t("(내용 없음)", "(No text)");
+                const meta = browseWhenMeta(entry, uiLang, t);
                 return (
                   <li
-                    key={item.id}
+                    key={`${entry.kind}:${entry.id}`}
                     className="quietly-record-row last:border-b-0"
                   >
                     <button
                       type="button"
                       data-testid="records-browse-row"
-                      data-record-id={item.id}
-                      data-status={item.status ?? "active"}
+                      data-record-id={entry.canonicalId}
+                      data-record-kind={entry.kind}
+                      data-status={entry.status ?? "active"}
                       onClick={() => {
                         onClose();
-                        onOpenRecord(item);
+                        if (entry.kind === "record") {
+                          onOpenRecord(entry.record);
+                        } else {
+                          onOpenSchedule(entry.schedule);
+                        }
                       }}
                       className="flex min-h-11 w-full items-start gap-2.5 px-1 py-3 text-left touch-press"
                     >
@@ -202,9 +240,11 @@ export function RecordsBrowseSheet({
                         >
                           {title}
                         </span>
-                        <span className="mt-1 block text-[12px] font-medium tabular-nums tracking-[-0.01em] text-ink-soft">
-                          {browseWhenMeta(item, uiLang, t)}
-                        </span>
+                        {meta ? (
+                          <span className="mt-1 block text-[12px] font-medium tabular-nums tracking-[-0.01em] text-ink-soft">
+                            {meta}
+                          </span>
+                        ) : null}
                       </span>
                     </button>
                   </li>
