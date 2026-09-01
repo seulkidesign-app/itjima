@@ -3,7 +3,7 @@ import { readArchiveVisits } from "@/lib/archiveMeta";
 import type { RediscoveryPick } from "@/lib/rediscoveryPick";
 import { remainingUntil } from "@/lib/scheduleTime";
 
-export type RediscoveryUtEvent = "impression" | "open" | "done" | "hide";
+export type RediscoveryUtEvent = "impression" | "open" | "later" | "hide";
 export type RediscoveryReason =
   | "upcoming_schedule"
   | "long_unvisited"
@@ -17,6 +17,7 @@ export type RediscoveryAnalyticsContext = {
   visit_bucket: RediscoveryVisitBucket;
   has_related_schedule: boolean;
   repeat_visit: boolean;
+  source: "record" | "archive";
 };
 
 function ageDays(createdAt: string, nowMs: number) {
@@ -45,7 +46,7 @@ export function buildRediscoveryAnalyticsContext(
   nowMs = Date.now(),
 ): RediscoveryAnalyticsContext {
   const days = ageDays(pick.memory.created_at, nowMs);
-  const visits = readArchiveVisits()[pick.memory.id] ?? 0;
+  const visits = readArchiveVisits()[pick.key] ?? 0;
   const linked = pick.relatedSchedule;
   const upcoming = linked
     ? remainingUntil(new Date(linked.start_time), new Date(nowMs))
@@ -64,6 +65,7 @@ export function buildRediscoveryAnalyticsContext(
     visit_bucket: visitBucket(visits),
     has_related_schedule: Boolean(linked),
     repeat_visit: visits > 0,
+    source: pick.memory.rediscovery_source,
   };
 }
 
