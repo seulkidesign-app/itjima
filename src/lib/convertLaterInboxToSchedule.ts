@@ -217,9 +217,13 @@ export async function undoScheduleToInbox(
 
   try {
     try {
-      const removed = await ops.removeSchedule(scheduleId);
-      if (removed === false) return { status: "remove_failed" };
+      // Store removal is intentionally local-first. `false` means the local
+      // projection is already gone but its cloud DELETE is pending behind a
+      // tombstone. That is still a successful local Undo, so continue clearing
+      // canonical temporal metadata and let sync retry the remote delete.
+      await ops.removeSchedule(scheduleId);
     } catch {
+      // A thrown removal is different: local commit is unknown, so fail closed.
       return { status: "remove_failed" };
     }
 
