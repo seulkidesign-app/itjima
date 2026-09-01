@@ -62,6 +62,12 @@ async function waitForScheduleCount(page: Page, count: number) {
   await expect.poll(async () => (await scheduleRows(page)).length).toBe(count);
 }
 
+function assumedMeridiemPromise(page: Page) {
+  return phone(page).locator(
+    '[data-testid="inline-promise"][data-confirmation-reason="assumed_meridiem"]',
+  );
+}
+
 test.describe("Actual user chaos — temporal state integrity", () => {
   test.use({ viewport: { width: 390, height: 844 } });
 
@@ -74,14 +80,9 @@ test.describe("Actual user chaos — temporal state integrity", () => {
   }) => {
     await submit(page, "내일 8시 운동");
 
-    const oldPromise = phone(page)
-      .getByTestId("inline-promise")
-      .filter({ hasText: "내일 8시 운동" });
+    const oldPromise = assumedMeridiemPromise(page);
     await expect(oldPromise).toBeVisible();
-    await expect(oldPromise).toHaveAttribute(
-      "data-confirmation-reason",
-      "assumed_meridiem",
-    );
+    await expect(oldPromise).toContainText("8시는 언제인가요?");
 
     const oldInbox = (await inboxRows(page)).find(
       (row) => row.text === "내일 8시 운동",
@@ -128,10 +129,9 @@ test.describe("Actual user chaos — temporal state integrity", () => {
     await page.reload();
     await phone(page).getByRole("link", { name: /^남기기$/ }).waitFor();
 
-    const promise = phone(page)
-      .getByTestId("inline-promise")
-      .filter({ hasText: "내일 8시 운동" });
+    const promise = assumedMeridiemPromise(page);
     await expect(promise).toBeVisible();
+    await expect(promise).toContainText("8시는 언제인가요?");
     await promise.getByTestId("promise-confirm-afternoon").click();
     await waitForScheduleCount(page, 1);
 
@@ -154,16 +154,10 @@ test.describe("Actual user chaos — temporal state integrity", () => {
     const corrected = "내일 오후 4시 운동";
     await submit(page, original);
 
-    const multi = phone(page)
-      .getByTestId("inline-promise")
-      .filter({ has: page.locator('[data-confirmation-reason="multiple_clocks"]') });
-    // Filter-by-descendant can be brittle across portals; fall back to the
-    // explicit confirmation attribute on the promise itself.
     const promise = phone(page).locator(
       '[data-testid="inline-promise"][data-confirmation-reason="multiple_clocks"]',
     );
     await expect(promise).toBeVisible();
-    expect(await multi.count()).toBeGreaterThanOrEqual(0);
 
     const originalInbox = (await inboxRows(page)).find(
       (row) => row.text === original,
@@ -180,7 +174,7 @@ test.describe("Actual user chaos — temporal state integrity", () => {
       .click();
 
     // This is the key chaos contract: editing the unresolved record must not
-    // leave it acknowledged-but-unscheduled because its revision changed.
+    // leave old copy paired with a new timestamp or create a second source row.
     await waitForScheduleCount(page, 1);
 
     const inbox = await inboxRows(page);
@@ -209,7 +203,7 @@ test.describe("Actual user chaos — temporal state integrity", () => {
     expect(source?.temporal_state).toBe("fuzzy_time");
 
     await openContextMenuRaw(page, text);
-    await clickContextMenuItem(page, "삭제");
+    await clickContextMenuItem(page, "삭제하기");
     await waitForScheduleCount(page, 0);
 
     const deleted = (await inboxRows(page)).find((row) => row.id === source?.id);
