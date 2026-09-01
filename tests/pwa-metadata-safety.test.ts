@@ -43,22 +43,22 @@ describe("PWA product metadata safety", () => {
     );
   });
 
-  it("uses the approved ij launcher assets with the v4 URLs", () => {
+  it("uses the approved ij launcher assets with cache-busted v4 asset URLs", () => {
     expect(manifest.icons).toEqual(
       expect.arrayContaining([
         expect.objectContaining({
-          src: "/icons/itjima-192-v4.png",
+          src: "/icons/itjima-192-v4.png?v=6",
           sizes: "192x192",
         }),
         expect.objectContaining({
-          src: "/icons/itjima-512-v4.png",
+          src: "/icons/itjima-512-v4.png?v=6",
           sizes: "512x512",
         }),
       ]),
     );
-    expect(html).toContain('rel="manifest" href="/manifest-v4.webmanifest"');
-    expect(html).toContain('href="/favicon-32-v4.png"');
-    expect(html).toContain('href="/apple-touch-icon.png?v=4"');
+    expect(html).toContain('rel="manifest" href="/manifest-v4.webmanifest?v=6"');
+    expect(html).toContain('href="/favicon-32-v4.png?v=6"');
+    expect(html).toContain('href="/apple-touch-icon.png?v=6"');
   });
 
   it("keeps the lowercase wordmark on Playpen Sans Medium", () => {
