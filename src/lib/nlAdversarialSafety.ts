@@ -4,6 +4,7 @@ export type AdversarialScheduleReason =
   | "invalid_clock"
   | "duration_clock_collision"
   | "conflicting_dates"
+  | "conflicting_meridiem"
   | "unsafe_clock_range"
   | "semantic_meta"
   | "malformed_clock"
@@ -184,6 +185,18 @@ export function hasConflictingDateAnchors(
 const KO_RANGE_RE =
   /(?:(오전|오후)\s*)?(\d{1,2})\s*시(?:\s*(반)|(?:\s*(\d{1,2})\s*분))?\s*부터\s*(?:(오전|오후)\s*)?(\d{1,2})\s*시(?:\s*(반)|(?:\s*(\d{1,2})\s*분))?\s*까지/;
 
+/**
+ * Opposite meridiem words around a single clock are contradictory, not a cue to
+ * pick whichever token is closest. A valid from-to range may legitimately use
+ * both (e.g. 오전 11시부터 오후 1시까지), so remove owned ranges first.
+ */
+export function hasConflictingKoreanMeridiem(text: string): boolean {
+  const value = text.trim();
+  if (!value) return false;
+  const withoutRanges = value.replace(new RegExp(KO_RANGE_RE.source, "g"), " ");
+  return /오전/.test(withoutRanges) && /오후/.test(withoutRanges);
+}
+
 function toMinutes(
   period: string | undefined,
   hour: number,
@@ -270,6 +283,9 @@ export function hasUnsupportedCompoundRelative(text: string): boolean {
   if (
     /(?:\d+|한|두|세|네)\s*시간\s+\d+\s*분\s*(?:뒤|후)/.test(value)
   ) {
+    return true;
+  }
+  if (/(?:\d+|한|두|세|네)\s*시간\s*반\s*(?:뒤|후)/.test(value)) {
     return true;
   }
   if (/\d+\.\d+\s*(?:시간|분|일)/.test(value)) return true;
@@ -359,6 +375,7 @@ export function adversarialScheduleReason(
   if (hasUnsupportedCompoundRelative(text)) {
     return "unsupported_compound_relative";
   }
+  if (hasConflictingKoreanMeridiem(text)) return "conflicting_meridiem";
   if (hasNonExactClockSemantics(text)) return "non_exact_clock_semantics";
   if (hasUnsupportedDateResidue(text)) return "unsupported_date_residue";
   if (hasConflictingDateAnchors(text, now)) return "conflicting_dates";
