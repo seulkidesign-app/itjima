@@ -44,6 +44,7 @@ import {
   undoDeleteRecord,
   type CanonicalMutationOps,
 } from "@/lib/canonicalMutations";
+import { attachExactTemporalPatch } from "@/lib/recordTemporal";
 import {
   dedupeScheduleProjections,
   findScheduleProjection,
@@ -185,6 +186,26 @@ function Schedule() {
     setSheet({ open: true, edit: target });
   }, [items]);
 
+  const createCanonicalForManualSchedule = async (
+    pending: PendingScheduleSave,
+    allDay: boolean,
+  ) => {
+    const temporal = attachExactTemporalPatch({
+      text: pending.text,
+      start_time: pending.start.toISOString(),
+      end_time: pending.end.toISOString(),
+      all_day: allDay,
+    });
+    const { item } = await inbox.add({
+      text: pending.text,
+      images: [],
+      raw_text: pending.text,
+      status: "active",
+      ...temporal,
+    });
+    return item;
+  };
+
   const persistScheduleItem = async (
     pending: PendingScheduleSave,
     alarmPayload: { alarm: boolean; alarm_at?: string | null },
@@ -219,16 +240,35 @@ function Schedule() {
           ...alarmPayload,
           source_id: recordId,
         });
-      } else {
-        await update(pending.edit.id, {
+
+        return {
+          ...pending.edit,
           text: pending.text,
           start_time: pending.start.toISOString(),
           end_time: pending.end.toISOString(),
           ...allDayFields,
           repeat: pending.repeat ?? null,
           ...alarmPayload,
-        });
+          source_id: recordId,
+        };
       }
+
+      // Heal legacy standalone schedules the first time a user edits them.
+      // From this point on the schedule is a projection of one canonical record.
+      const canonical = await createCanonicalForManualSchedule(
+        pending,
+        allDayFields.all_day,
+      );
+      await update(pending.edit.id, {
+        text: pending.text,
+        start_time: pending.start.toISOString(),
+        end_time: pending.end.toISOString(),
+        ...allDayFields,
+        repeat: pending.repeat ?? null,
+        ...alarmPayload,
+        source_id: canonical.id,
+        raw_text: pending.edit.raw_text ?? pending.text,
+      });
 
       return {
         ...pending.edit,
@@ -238,22 +278,40 @@ function Schedule() {
         ...allDayFields,
         repeat: pending.repeat ?? null,
         ...alarmPayload,
+        source_id: canonical.id,
+        raw_text: pending.edit.raw_text ?? pending.text,
       };
     }
 
-    const { item } = await add({
-      text: pending.text,
-      start_time: pending.start.toISOString(),
-      end_time: pending.end.toISOString(),
-      ...allDayFields,
-      repeat: pending.repeat ?? null,
-      ...alarmPayload,
-    });
-    track("schedule_created", {
-      source: "manual",
-      text_length: pending.text.length,
-    });
-    return item as ScheduleItem;
+    // Manual schedule creation follows the same product contract as capture:
+    // one canonical record owns the meaning, Schedule is only its projection.
+    const canonical = await createCanonicalForManualSchedule(
+      pending,
+      allDayFields.all_day,
+    );
+    try {
+      const { item } = await add({
+        text: pending.text,
+        start_time: pending.start.toISOString(),
+        end_time: pending.end.toISOString(),
+        ...allDayFields,
+        repeat: pending.repeat ?? null,
+        ...alarmPayload,
+        source_id: canonical.id,
+        raw_text: pending.text,
+        status: "active",
+      });
+      track("schedule_created", {
+        source: "manual",
+        text_length: pending.text.length,
+      });
+      return item as ScheduleItem;
+    } catch (error) {
+      // Do not leave a canonical record claiming it has temporal structure when
+      // its derived Schedule row could not be created at all.
+      await inbox.softDelete(canonical.id);
+      throw error;
+    }
   };
 
   const applySaveOutcome = (outcome: ScheduleSaveOutcome, isEdit: boolean) => {
@@ -864,13 +922,13 @@ function CollapsibleSection({
   const [open, setOpen] = useState(false);
 
   return (
-    <section className="border-t border-ink/[0.06] pt-3">
+    <section className="border-t border-ink/[0.05] pt-2">
       <button
         type="button"
         onClick={() => setOpen((value) => !value)}
-        className="touch-press flex min-h-11 w-full items-center justify-between px-0.5 text-left text-[12px] font-semibold text-ink-soft"
+        className="touch-press flex min-h-10 w-full items-center justify-between px-0.5 text-left text-[11px] font-medium text-ink-soft/70"
       >
-        <span>{title} · {items.length}</span>
+        <span>{title}</span>
         <span aria-hidden>{open ? "▴" : "▾"}</span>
       </button>
       <AnimatePresence initial={false}>
@@ -914,13 +972,13 @@ function DoneSection({
   const [open, setOpen] = useState(false);
 
   return (
-    <section className="border-t border-ink/[0.06] pt-3">
+    <section className="border-t border-ink/[0.05] pt-2">
       <button
         type="button"
         onClick={() => setOpen((value) => !value)}
-        className="touch-press flex min-h-11 w-full items-center justify-between px-0.5 text-left text-[12px] font-semibold text-ink-soft"
+        className="touch-press flex min-h-10 w-full items-center justify-between px-0.5 text-left text-[11px] font-medium text-ink-soft/70"
       >
-        <span>{t("완료", "Done")} · {items.length}</span>
+        <span>{t("완료", "Done")}</span>
         <span aria-hidden>{open ? "▴" : "▾"}</span>
       </button>
       <AnimatePresence initial={false}>
