@@ -4,9 +4,7 @@ import {
   attachExactTemporalPatch,
   clearTemporalMetadataPatch,
 } from "@/lib/recordTemporal";
-import {
-  contentRevisionOf,
-} from "@/lib/recordRevision";
+import { contentRevisionOf } from "@/lib/recordRevision";
 import { scheduleFromInbox } from "@/lib/thoughtProvenance";
 import type { InboxItem, RepeatRule, ScheduleItem } from "@/lib/store";
 
@@ -70,28 +68,26 @@ function projectionPayload(
 }
 
 /**
- * React/store readers can lag one render behind an item that the same user
- * action just edited. Revisions are monotonic, so only an observed record with
- * a strictly newer revision can supersede the action snapshot. On equal/older
- * revisions the supplied item is the authoritative subject of this commit.
+ * A store reader can lag one render behind a user edit. Revisions are
+ * monotonic, so a strictly older observed row cannot supersede the action
+ * snapshot. Equal revisions are different: clarification UI may pass a derived
+ * interpretation with changed text but the canonical raw record must stay the
+ * source of truth, so the observed canonical row wins on equality.
  */
-function preferActionSnapshot(
+function canonicalForCommit(
   item: InboxItem,
   observed: InboxItem | undefined,
+  expectedRevision: number,
 ): InboxItem {
   if (!observed) return item;
-  return contentRevisionOf(observed) > contentRevisionOf(item)
-    ? observed
-    : item;
+  return contentRevisionOf(observed) < expectedRevision ? item : observed;
 }
 
 function hasNewerRevision(
   expectedRevision: number,
   observed: InboxItem | undefined,
 ): boolean {
-  return Boolean(
-    observed && contentRevisionOf(observed) > expectedRevision,
-  );
+  return Boolean(observed && contentRevisionOf(observed) > expectedRevision);
 }
 
 export async function convertLaterInboxToSchedule(
@@ -111,7 +107,7 @@ export async function convertLaterInboxToSchedule(
     if (hasNewerRevision(expected, observed)) {
       return { status: "stale_revision" };
     }
-    const live = preferActionSnapshot(item, observed);
+    const live = canonicalForCommit(item, observed, expected);
 
     const payload = projectionPayload(live, fields);
     const existing = ops.getScheduleByRecordId(item.id);
@@ -159,7 +155,7 @@ export async function convertLaterInboxToSchedule(
       if (!existing) await ops.removeSchedule(scheduleId);
       return { status: "stale_revision" };
     }
-    const liveAfter = preferActionSnapshot(item, observedAfter);
+    const liveAfter = canonicalForCommit(item, observedAfter, expected);
 
     try {
       const patched = await ops.updateInbox(
