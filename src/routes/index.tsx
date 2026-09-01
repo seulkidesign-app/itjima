@@ -749,9 +749,13 @@ function Inbox() {
             track("undo_used");
             await archive.remove(created.id);
             await inbox.add({
-              text: payload.text,
-              images: payload.images,
-              brain_mirror: payload.brain_mirror,
+              ...it,
+              id: it.id,
+              text: it.text,
+              images: it.images,
+              created_at: it.created_at,
+              status: it.status ?? "active",
+              raw_text: it.raw_text ?? it.text,
             });
           },
           t("보러 가기", "Take a look"),
