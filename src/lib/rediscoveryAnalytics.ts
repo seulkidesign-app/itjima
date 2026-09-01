@@ -47,7 +47,9 @@ export function buildRediscoveryAnalyticsContext(
   const days = ageDays(pick.memory.created_at, nowMs);
   const visits = readArchiveVisits()[pick.memory.id] ?? 0;
   const linked = pick.relatedSchedule;
-  const upcoming = linked ? remainingUntil(new Date(linked.start_time)) : null;
+  const upcoming = linked
+    ? remainingUntil(new Date(linked.start_time), new Date(nowMs))
+    : null;
 
   const reason: RediscoveryReason =
     linked && upcoming && !upcoming.past && upcoming.days <= 7
