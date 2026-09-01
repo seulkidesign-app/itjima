@@ -1,5 +1,8 @@
 import { thoughtFirstLine } from "@/lib/brainMirror";
-import { clearInboxTombstones } from "@/lib/decisionRecovery";
+import {
+  clearInboxTombstones,
+  clearScheduleTombstones,
+} from "@/lib/decisionRecovery";
 import { readInboxScheduleDraft } from "@/lib/inboxScheduleDefaults";
 import {
   attachExactTemporalPatch,
@@ -143,6 +146,10 @@ export async function convertLaterInboxToSchedule(
         return { status: "create_failed" };
       }
       scheduleId = existing.id;
+      // A successful explicit re-schedule supersedes any older failed-delete
+      // intent for this projection. Clear it only after the schedule write has
+      // succeeded so a failed create/update still preserves the delete retry.
+      clearScheduleTombstones(scheduleId);
     } else {
       let created: Pick<ScheduleItem, "id">;
       let cloudSynced: boolean;
@@ -157,6 +164,7 @@ export async function convertLaterInboxToSchedule(
         return { status: "create_failed" };
       }
       scheduleId = created.id;
+      clearScheduleTombstones(scheduleId);
     }
 
     const observedAfter = ops.getInboxById?.(item.id);
@@ -230,6 +238,7 @@ export async function undoScheduleToInbox(
           await ops.removeSchedule(created.id);
           return { status: "restore_failed" };
         }
+        clearScheduleTombstones(created.id);
         return {
           status: "restore_failed_schedule_recreated",
           scheduleId: created.id,
