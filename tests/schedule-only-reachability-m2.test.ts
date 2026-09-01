@@ -4,9 +4,9 @@ import { describe, expect, it } from "vitest";
 
 /**
  * Existing schedule-only legacy rows (no source_id, no matching inbox) must stay
- * reachable after the unified Schedule IA. New schedule creation no longer
- * depends on the removed Schedule Quick Add, and legacy rows must never gain a
- * fabricated canonical source just because they are edited.
+ * reachable after the unified Schedule IA. They are compatibility data, not a
+ * second source of truth: the first meaningful edit heals the row by creating a
+ * canonical record and reconnecting Schedule as its projection.
  */
 describe("M2 schedule-only row reachability", () => {
   const scheduleSource = readFileSync(
@@ -22,22 +22,20 @@ describe("M2 schedule-only row reachability", () => {
     expect(scheduleSource).toContain("canonicalIdFromSchedule(detailSchedule)");
   });
 
-  it("edits schedule-only rows in place when no matching canonical exists", () => {
+  it("heals a legacy standalone row into a canonical record when it is edited", () => {
     const branchStart = scheduleSource.indexOf(
       "const hasCanonical = inbox.allItems.some",
     );
     expect(branchStart).toBeGreaterThan(-1);
 
-    const branchEnd = scheduleSource.indexOf("return {", branchStart);
-    expect(branchEnd).toBeGreaterThan(branchStart);
-
-    const editBranch = scheduleSource.slice(branchStart, branchEnd);
+    const editBranch = scheduleSource.slice(
+      branchStart,
+      scheduleSource.indexOf("// Manual schedule creation", branchStart),
+    );
     expect(editBranch).toContain("if (hasCanonical)");
     expect(editBranch).toContain("syncRecordTemporal(");
-    expect(editBranch).toContain("} else {");
-
-    const fallbackBranch = editBranch.slice(editBranch.indexOf("} else {"));
-    expect(fallbackBranch).toContain("await update(pending.edit.id");
-    expect(fallbackBranch).not.toContain("source_id:");
+    expect(editBranch).toContain("createCanonicalForManualSchedule(");
+    expect(editBranch).toContain("source_id: canonical.id");
+    expect(editBranch).toContain("await update(pending.edit.id");
   });
 });
