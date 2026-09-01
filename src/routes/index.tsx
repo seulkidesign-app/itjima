@@ -84,6 +84,7 @@ import {
   undoDeleteRecord,
   type CanonicalMutationOps,
 } from "@/lib/canonicalMutations";
+import { clearInboxTombstones } from "@/lib/decisionRecovery";
 import { track } from "@/lib/analytics";
 import { showActionToast, showUndoActionToast, showUndoToast as showUndoToastBase } from "@/lib/undoToast";
 import { useT, useLang } from "@/lib/i18n";
@@ -283,6 +284,50 @@ function Inbox() {
     void navigate({ to: "/archive" });
   };
 
+  const restoreCanonicalAfterArchiveFailure = useCallback(
+    async (it: InboxItem) => {
+      clearInboxTombstones(it.id);
+      await inbox.add({
+        ...it,
+        id: it.id,
+        text: it.text,
+        images: it.images,
+        created_at: it.created_at,
+        status: it.status ?? "active",
+        raw_text: it.raw_text ?? it.text,
+      });
+    },
+    [inbox],
+  );
+
+  const archiveInboxSafely = useCallback(
+    async (it: InboxItem) => {
+      const payload = archiveFromInbox(it);
+      const { item: created, cloudSynced: archiveSynced } = await archive.add(
+        payload,
+        { confirmCloud: true },
+      );
+
+      if (!archiveSynced) {
+        return { ok: false as const, reason: "archive_create_failed" as const };
+      }
+
+      const inboxSynced = await inbox.remove(it.id);
+      if (!inboxSynced) {
+        // remove() is local-first and leaves an Inbox tombstone on cloud failure.
+        // Abort the move: cancel that tombstone, remove the destination copy, and
+        // restore the original canonical identity locally. A later sync can
+        // reconcile whichever side of the failed DELETE actually reached cloud.
+        clearInboxTombstones(it.id);
+        await archive.remove(created.id);
+        await restoreCanonicalAfterArchiveFailure(it);
+        return { ok: false as const, reason: "inbox_remove_failed" as const };
+      }
+
+      return { ok: true as const, created, payload };
+    },
+    [archive, inbox, restoreCanonicalAfterArchiveFailure],
+  );
 
   const openDecisionDeck = (fromId?: string) => {
     setDecisionDeckStartId(fromId ?? null);
@@ -339,14 +384,10 @@ function Inbox() {
       return {};
     }
 
-    const payload = archiveFromInbox(it);
-    const { item: created, cloudSynced: archiveSynced } = await archive.add(payload);
-    const inboxSynced = await inbox.remove(it.id);
+    const result = await archiveInboxSafely(it);
+    if (!result.ok) throw new Error(result.reason);
     track("thought_swiped_archive", { text_length: it.text.length });
-    if (!allCloudSynced(archiveSynced, inboxSynced)) {
-      throw new Error("sync failed");
-    }
-    return { archiveId: created.id };
+    return { archiveId: result.created.id };
   };
 
   const handleDeckUndo = async (snap: UndoSnapshot) => {
@@ -723,25 +764,23 @@ function Inbox() {
   const moveToArchive = async (it: InboxItem) => {
     await withNlConfirmGuard(it.id, async () => {
       try {
-        const payload = archiveFromInbox(it);
         const existing = archive.items;
-        const { item: created, cloudSynced: archiveSynced } = await archive.add(payload);
-        const inboxSynced = await inbox.remove(it.id);
+        const result = await archiveInboxSafely(it);
+        if (!result.ok) throw new Error(result.reason);
+        const { created } = result;
         track("thought_swiped_archive", { text_length: it.text.length });
         trackNlArchiveCreated();
 
-        const related =
-        FEATURES.REDISCOVERY
+        const related = FEATURES.REDISCOVERY
           ? buildRevivalHint(created, existing, "archive")
           : null;
-      if (related) {
-        setRevivalHint(related);
-      }
-      if (FEATURES.REDISCOVERY && inboxRevival?.sourceId === it.id) {
-        setInboxRevival(null);
-      }
+        if (related) {
+          setRevivalHint(related);
+        }
+        if (FEATURES.REDISCOVERY && inboxRevival?.sourceId === it.id) {
+          setInboxRevival(null);
+        }
 
-      if (allCloudSynced(archiveSynced, inboxSynced)) {
         track("thought_archived", { text_length: it.text.length });
         showUndoActionToast(
           t("보관함에 넣었어요", "Saved to vault"),
@@ -765,10 +804,9 @@ function Inbox() {
             actionAriaLabel: t("보관함 열기", "Open vault"),
           },
         );
+      } catch {
+        toast.error(t("잠깐, 못 옮겼어요. 그대로 있어요", "Didn't move — still here"));
       }
-    } catch {
-      toast.error(t("잠깐, 못 옮겼어요. 그대로 있어요", "Didn't move — still here"));
-    }
     });
   };
 
