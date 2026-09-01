@@ -48,7 +48,7 @@ test.describe("Rediscovery UT boundary", () => {
     });
 
     await page.goto("/rediscovery");
-    await expect(page.getByText("언젠가 제주에서 한 달 살아보기", { exact: true })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "언젠가 제주에서 한 달 살아보기" })).toBeVisible();
     await expect(page.getByText(/남긴 기록/)).toBeVisible();
   });
 
@@ -74,7 +74,7 @@ test.describe("Rediscovery UT boundary", () => {
     });
 
     await page.goto("/rediscovery");
-    await expect(page.getByText("UT에서만 보이는 민감한 여행 메모", { exact: true })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "UT에서만 보이는 민감한 여행 메모" })).toBeVisible();
 
     const impressionEvents = await page.evaluate(() =>
       ((window as Window & { dataLayer?: Array<Record<string, unknown>> }).dataLayer ?? [])
@@ -124,7 +124,7 @@ test.describe("Rediscovery UT boundary", () => {
 
     await page.evaluate(() => sessionStorage.clear());
     await page.reload();
-    await expect(page.getByText("다음에 다시 생각할 메모", { exact: true })).toHaveCount(0);
+    await expect(page.getByRole("heading", { name: "다음에 다시 생각할 메모" })).toHaveCount(0);
     await expect(page.getByText("지금은 다시 볼 기록이 없어요")).toBeVisible();
   });
 
@@ -146,10 +146,10 @@ test.describe("Rediscovery UT boundary", () => {
     });
 
     await page.goto("/rediscovery");
-    await expect(page.getByText("세션에서 한 번만 볼 기록", { exact: true })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "세션에서 한 번만 볼 기록" })).toBeVisible();
     await page.goto("/");
     await page.goto("/rediscovery");
-    await expect(page.getByText("세션에서 한 번만 볼 기록", { exact: true })).toHaveCount(0);
+    await expect(page.getByRole("heading", { name: "세션에서 한 번만 볼 기록" })).toHaveCount(0);
   });
 
   test("hide permanently removes the surfaced record from Rediscovery selection", async ({ page }) => {
@@ -179,6 +179,6 @@ test.describe("Rediscovery UT boundary", () => {
 
     await page.evaluate(() => sessionStorage.clear());
     await page.reload();
-    await expect(page.getByText("그만 볼 메모", { exact: true })).toHaveCount(0);
+    await expect(page.getByRole("heading", { name: "그만 볼 메모" })).toHaveCount(0);
   });
 });
