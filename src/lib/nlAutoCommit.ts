@@ -56,8 +56,17 @@ export type TimedAutoCommitDecision =
   | { ok: true; draft: NaturalScheduleDraft }
   | { ok: false; reason: AutoCommitBlockReason };
 
-function stripDurationAtomsForClockSafety(text: string): string {
-  return text.replace(/(?:\d+|한|두|세|네)\s*시간/g, " ");
+const EXPLICIT_CROSS_MERIDIEM_RANGE_RE =
+  /(?:오전|오후)\s*\d{1,2}\s*시(?:\s*(?:반|\d{1,2}\s*분))?\s*부터\s*(?:오전|오후)\s*\d{1,2}\s*시(?:\s*(?:반|\d{1,2}\s*분))?\s*까지/;
+
+/**
+ * One clock cannot be both 오전 and 오후. Keep legitimate cross-meridiem
+ * from-to ranges (e.g. 오전 11시부터 오후 1시까지) on the range path.
+ */
+function hasConflictingKoreanMeridiem(text: string): boolean {
+  if (!/오전/.test(text) || !/오후/.test(text)) return false;
+  if (EXPLICIT_CROSS_MERIDIEM_RANGE_RE.test(text)) return false;
+  return true;
 }
 
 /** Legacy parser/safety baseline retained for independent migration audits. */
@@ -98,6 +107,9 @@ export function evaluateLegacyTimedAutoCommit(
   if (shouldKeepScheduleSemanticsQuiet(trimmed)) {
     return finish({ ok: false, reason: "quiet" });
   }
+  if (hasConflictingKoreanMeridiem(trimmed)) {
+    return finish({ ok: false, reason: "unresolved_date" });
+  }
   if (hasNaturalRepeatIntent(trimmed) || hasExpandedRepeatIntent(trimmed)) {
     return finish({ ok: false, reason: "repeat" });
   }
@@ -120,15 +132,12 @@ export function evaluateLegacyTimedAutoCommit(
     return finish({ ok: false, reason: "deadline" });
   }
 
-  // A duration such as `1시간 후` is not the bare clock `1시`.
-  // Keep the original text for parsing; sanitize only clock-ambiguity counting.
-  const clockSafetyText = stripDurationAtomsForClockSafety(trimmed);
-  const safety = scheduleConfirmationReasons(clockSafetyText, now);
+  const safety = scheduleConfirmationReasons(trimmed, now);
   if (safety.length > 0) {
     return finish({ ok: false, reason: safety[0] });
   }
 
-  const clockCount = countDistinctClockMentions(clockSafetyText);
+  const clockCount = countDistinctClockMentions(trimmed);
   if (clockCount >= 2 && !isSingleClockRange(trimmed)) {
     return finish({ ok: false, reason: "multiple_clocks" });
   }
