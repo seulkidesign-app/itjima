@@ -18,6 +18,8 @@ The test is successful only if participants understand why a record came back, c
 - `/rediscovery` must not expose the experimental surface unless the existing local feature override enables `REDISCOVERY`.
 - Do not ship a public navigation entry before this validation.
 - Do not change candidate ranking during the first UT round unless a P0/P1 integrity defect is found.
+- The UT must use normal canonical Capture records as its primary source. Archive-only seeding does not validate the core product promise.
+- Opening a resurfaced record stays inside Rediscovery; do not send the participant into legacy Archive IA during the value test.
 
 Prepared participant environments may enable the existing override:
 
@@ -41,9 +43,9 @@ Small-N results are directional evidence. Do not report conversion percentages a
 
 ## Test setup
 
-Best: participants use Itjima naturally long enough to accumulate their own records.
+Best: participants use Itjima naturally long enough to accumulate their own Capture records.
 
-If time does not allow a longitudinal setup, seed realistic records with the participant before the session and preserve at least these differences:
+If time does not allow a longitudinal setup, seed realistic **canonical records** with the participant before the session and preserve at least these differences:
 
 - 3–6 day old record
 - 7–20 day old record
@@ -51,7 +53,8 @@ If time does not allow a longitudinal setup, seed realistic records with the par
 - one record related to an upcoming schedule when available
 - one record the participant no longer cares about
 
-Never seed deleted content as a Rediscovery candidate.
+Do not require the participant to organize or archive these records first. That would test a different hypothesis.
+Never seed deleted, completed, or unresolved-clarification content as a Rediscovery candidate.
 
 ## Session flow
 
@@ -59,10 +62,11 @@ Never seed deleted content as a Rediscovery candidate.
 2. Present Rediscovery without explaining why the item was chosen.
 3. Ask them to think aloud only after they have read the resurfaced record.
 4. Let them choose naturally among the existing actions.
-5. If they open the record, observe what they do next without prompting an edit/schedule action.
-6. After the interaction, ask the short interview questions below.
+5. If they choose `기록 보기`, expand the full record in place and observe what they want to do next without sending them to another product area.
+6. `나중에 다시` snoozes the record for 3 days; `그만 보기` permanently excludes that record from Rediscovery selection.
+7. After the interaction, ask the short interview questions below.
 
-Do not tell the participant that `완료했어요` and `다시 보지 않기` currently both remove the item from future Rediscovery selection. Their differing intent is measured separately and is a decision input for the next iteration.
+Do not frame `나중에 다시` as failure. It is timing evidence: the record may be valuable but the current moment may be wrong.
 
 ## Instrumented events
 
@@ -72,7 +76,7 @@ Events:
 
 - `rediscovery_impression`
 - `rediscovery_open`
-- `rediscovery_done`
+- `rediscovery_later`
 - `rediscovery_hide`
 
 Allowed context only:
@@ -82,6 +86,9 @@ Allowed context only:
 - `visit_bucket`: `0 | 1 | 2_plus`
 - `has_related_schedule`: boolean
 - `repeat_visit`: boolean
+- `source`: `record | archive`
+
+`source` exists only to verify that real Capture records, rather than legacy Archive-only data, are powering the UT. It contains no user content.
 
 ## What to observe
 
@@ -97,10 +104,10 @@ Allowed context only:
 Use counts, not statistically framed rates, with N=5–8:
 
 - surfaced → opened
-- surfaced → done
+- surfaced → later
 - surfaced → hidden
 - surfaced → ignored / session ended
-- repeated item → opened vs annoyance
+- later → useful when it eventually returns vs still irrelevant
 - upcoming-schedule reason → perceived timing relevance
 
 ### Short interview after the action
@@ -122,12 +129,13 @@ Treat these as product evidence, not participant error:
 - “왜 이게 나왔지?” with no plausible value.
 - Resurfacing feels creepy, intrusive, or too personal.
 - User thinks there is a Rediscovery inbox they must clear.
-- Same item returns often enough to annoy.
-- User cannot distinguish `완료했어요` from `다시 보지 않기` in intent.
-- Deleted content returns.
-- A completed/no-longer-relevant item returns as if still actionable.
+- Same item returns again in the same session or often enough to annoy.
+- User cannot tell the difference between `나중에 다시` and `그만 보기`.
+- A user who only used Capture never receives a candidate because they did not manually archive anything.
+- Deleted, completed, or unresolved content returns.
 - Resurfaced content differs from the current canonical record.
 - Opening Rediscovery mutates schedule/canonical state unexpectedly.
+- Opening the record forces the participant into legacy Archive IA and confounds the test.
 
 Any deleted-record resurrection or cross-account content leak is P0 and blocks further UT.
 
@@ -139,7 +147,7 @@ First classify evidence into:
 
 1. **Value** — did resurfacing recover something the user cared about?
 2. **Timing** — was now a believable moment?
-3. **Control** — could the user dismiss/act without management burden?
+3. **Control** — could the user defer/dismiss without management burden?
 4. **Trust** — did the surfaced content/state remain correct?
 
 Only then decide whether to adjust candidate age, cooldown/repetition, action semantics, or placement.

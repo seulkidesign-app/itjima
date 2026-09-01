@@ -1,17 +1,20 @@
-import { Link, useNavigate } from "@tanstack/react-router";
+import { Link } from "@tanstack/react-router";
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { motion } from "framer-motion";
-import { useArchive, useSchedules } from "@/lib/store";
+import { useArchive, useInbox, useSchedules } from "@/lib/store";
 import { useT, useLang } from "@/lib/i18n";
-import { archiveDisplayTitle, recordArchiveVisit } from "@/lib/archiveMeta";
+import { recordArchiveVisit } from "@/lib/archiveMeta";
 import {
+  buildRediscoveryPool,
   dismissRediscovery,
   pickRediscoveryCandidate,
   markRediscoverySessionShown,
+  rediscoveryDisplayTitle,
   revivalHeaderKo,
+  snoozeRediscovery,
+  type RediscoveryPick,
 } from "@/lib/rediscoveryPick";
-import { setRevivalJumpTarget } from "@/lib/memoryRevival";
 import { MOTION_CRAFT } from "@/lib/motionLanguage";
 import { featureEnabled } from "@/lib/features";
 import { trackRediscoveryUt } from "@/lib/rediscoveryAnalytics";
@@ -23,25 +26,46 @@ export const Route = createFileRoute("/rediscovery")({
 function RediscoveryPage() {
   const t = useT();
   const { lang } = useLang();
-  const navigate = useNavigate();
+  const inbox = useInbox();
   const archive = useArchive();
   const schedules = useSchedules();
-  const [dismissed, setDismissed] = useState(false);
+  const [handled, setHandled] = useState(false);
+  const [expanded, setExpanded] = useState(false);
+  const [selectedPick, setSelectedPick] = useState<RediscoveryPick | null>(null);
   const impressionIdRef = useRef<string | null>(null);
   const enabled = featureEnabled("REDISCOVERY");
 
-  const pick = useMemo(
-    () => pickRediscoveryCandidate(archive.items, schedules.items),
-    [archive.items, schedules.items],
+  const pool = useMemo(
+    () => buildRediscoveryPool(inbox.items, archive.items),
+    [inbox.items, archive.items],
+  );
+  const candidate = useMemo(
+    () => pickRediscoveryCandidate(pool, schedules.items),
+    [pool, schedules.items],
   );
 
+  const selectedStillExists = selectedPick
+    ? pool.some((memory) => (memory.source_id ?? memory.id) === selectedPick.key)
+    : false;
+  const pick = selectedStillExists ? selectedPick : candidate;
+
   useEffect(() => {
-    if (!enabled || !pick || dismissed) return;
-    if (impressionIdRef.current === pick.memory.id) return;
-    impressionIdRef.current = pick.memory.id;
-    markRediscoverySessionShown();
+    if (!selectedPick && candidate) {
+      setSelectedPick(candidate);
+      return;
+    }
+    if (selectedPick && !selectedStillExists) {
+      setSelectedPick(null);
+    }
+  }, [candidate, selectedPick, selectedStillExists]);
+
+  useEffect(() => {
+    if (!enabled || !pick || handled) return;
+    if (impressionIdRef.current === pick.key) return;
+    impressionIdRef.current = pick.key;
+    markRediscoverySessionShown(pick.key);
     trackRediscoveryUt("impression", pick);
-  }, [enabled, pick, dismissed]);
+  }, [enabled, pick, handled]);
 
   if (!enabled) {
     return (
@@ -68,20 +92,20 @@ function RediscoveryPage() {
     );
   }
 
-  if (!pick || dismissed) {
+  if (!pick || handled) {
     return (
       <div className="flex min-h-[60dvh] flex-col items-center justify-center px-8 text-center">
         <p className="text-[17px] font-semibold text-ink">
-          {t("지금은 다시 만날 기억이 없어요", "Nothing asking to return yet")}
+          {t("지금은 다시 볼 기록이 없어요", "Nothing to revisit right now")}
         </p>
         <p className="mt-2 text-[14px] text-ink-soft">
-          {t("조용히 기다리고 있을게요.", "We'll wait quietly.")}
+          {t("필요할 때 다시 보여드릴게요.", "We'll bring something back when it may help.")}
         </p>
         <Link
-          to="/schedule"
+          to="/"
           className="touch-press mt-6 rounded-full bg-primary px-6 py-3 text-[14px] font-bold text-ink"
         >
-          {t("오늘 보기", "See today")}
+          {t("남기기로 돌아가기", "Back to Capture")}
         </Link>
       </div>
     );
@@ -90,25 +114,27 @@ function RediscoveryPage() {
   const { memory, ageKo, ageEn, nudgeKo, nudgeEn } = pick;
   const age = lang === "en" ? ageEn : ageKo;
   const nudge = lang === "en" ? nudgeEn : nudgeKo;
-  const title = archiveDisplayTitle(memory.id, memory);
+  const title = rediscoveryDisplayTitle(memory);
+  const fullText = memory.raw_text ?? memory.text;
 
   const onView = () => {
-    trackRediscoveryUt("open", pick);
-    recordArchiveVisit(memory.id);
-    setRevivalJumpTarget(memory.id);
-    navigate({ to: "/archive" });
+    if (!expanded) {
+      trackRediscoveryUt("open", pick);
+      recordArchiveVisit(pick.key);
+    }
+    setExpanded(true);
   };
 
-  const onDone = () => {
-    trackRediscoveryUt("done", pick);
-    dismissRediscovery(memory.id);
-    setDismissed(true);
+  const onLater = () => {
+    trackRediscoveryUt("later", pick);
+    snoozeRediscovery(pick.key);
+    setHandled(true);
   };
 
   const onHide = () => {
     trackRediscoveryUt("hide", pick);
-    dismissRediscovery(memory.id);
-    setDismissed(true);
+    dismissRediscovery(pick.key);
+    setHandled(true);
   };
 
   return (
@@ -119,9 +145,7 @@ function RediscoveryPage() {
         transition={MOTION_CRAFT}
         className="page-eyebrow text-center"
       >
-        {lang === "en"
-          ? `A thought from ${age}`
-          : revivalHeaderKo(ageKo)}
+        {lang === "en" ? `A record from ${age}` : revivalHeaderKo(ageKo)}
       </motion.p>
 
       <motion.div
@@ -129,6 +153,7 @@ function RediscoveryPage() {
         animate={{ opacity: 1, y: 0 }}
         transition={{ ...MOTION_CRAFT, delay: 0.1 }}
         className="mx-auto mt-10 w-full max-w-[340px] rounded-[30px] bg-white px-7 py-9 shadow-craft ring-1 ring-ink/[0.04]"
+        data-testid="rediscovery-card"
       >
         <p className="text-[12px] font-medium tracking-[0.01em] text-ink-soft/80">
           {new Date(memory.created_at).toLocaleDateString(
@@ -139,8 +164,11 @@ function RediscoveryPage() {
         <h1 className="mt-2.5 text-[24px] font-bold leading-[1.3] tracking-[-0.03em] text-ink">
           {title}
         </h1>
-        <p className="mt-4 line-clamp-4 text-[15px] leading-[1.68] tracking-[0.005em] text-ink/82">
-          {memory.raw_text ?? memory.text}
+        <p
+          className={`mt-4 text-[15px] leading-[1.68] tracking-[0.005em] text-ink/82 ${expanded ? "whitespace-pre-wrap" : "line-clamp-4"}`}
+          data-testid="rediscovery-record-text"
+        >
+          {fullText}
         </p>
       </motion.div>
 
@@ -154,26 +182,28 @@ function RediscoveryPage() {
       </motion.p>
 
       <div className="mx-auto mt-10 flex w-full max-w-[340px] flex-col gap-3">
+        {!expanded && (
+          <button
+            type="button"
+            onClick={onView}
+            className="touch-press w-full rounded-full bg-primary py-4 text-[15px] font-bold tracking-[-0.01em] text-ink shadow-craft"
+          >
+            {t("기록 보기", "View record")}
+          </button>
+        )}
         <button
           type="button"
-          onClick={onView}
-          className="touch-press w-full rounded-full bg-primary py-4 text-[15px] font-bold tracking-[-0.01em] text-ink shadow-craft"
+          onClick={onLater}
+          className={`touch-press w-full rounded-full py-4 text-[15px] font-semibold tracking-[-0.01em] text-ink shadow-card ${expanded ? "bg-primary font-bold shadow-craft" : "border border-ink/[0.08] bg-white/90"}`}
         >
-          {t("보기", "View")}
-        </button>
-        <button
-          type="button"
-          onClick={onDone}
-          className="touch-press w-full rounded-full border border-ink/[0.08] bg-white/90 py-4 text-[15px] font-semibold tracking-[-0.01em] text-ink shadow-card"
-        >
-          {t("완료했어요", "I'm done")}
+          {t("나중에 다시", "Later")}
         </button>
         <button
           type="button"
           onClick={onHide}
           className="touch-press py-2.5 text-[13px] font-medium text-ink-soft/65"
         >
-          {t("다시 보지 않기", "Don't show again")}
+          {t("그만 보기", "Don't show this again")}
         </button>
       </div>
     </div>
