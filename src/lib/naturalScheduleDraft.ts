@@ -292,12 +292,12 @@ export function inferNaturalReminderMinutes(
   return { minutes: hasSpecificTime ? 0 : null, explicit: false };
 }
 
-/** Korean clock token: never match 시 inside 시간. */
+/** Korean clock token: never match 시 inside 시간 or title words such as 7시리즈. */
 const KO_CLOCK_TOKEN_RE =
-  /(?:오전|오후)\s*\d{1,2}\s*시(?:\s*반|(?:\s*\d{1,2}\s*분))?|\d{1,2}\s*시(?!\s*간)(?:\s*반|(?:\s*\d{1,2}\s*분))?/;
+  /(?:오전|오후)\s*\d{1,2}\s*시(?:\s*반|(?:\s*\d{1,2}\s*분))?(?![가-힣A-Za-z0-9])(?!\s*방향)|\d{1,2}\s*시(?!\s*간)(?:\s*반|(?:\s*\d{1,2}\s*분))?(?![가-힣A-Za-z0-9])(?!\s*방향)/;
 
 const KO_CLOCK_WITH_PARTICLE_RE =
-  /(?:(?:오전|오후)\s*\d{1,2}\s*시(?:\s*반|(?:\s*\d{1,2}\s*분))?|\d{1,2}\s*시(?!\s*간)(?:\s*반|(?:\s*\d{1,2}\s*분))?)(?:에)?/g;
+  /(?:(?:오전|오후)\s*\d{1,2}\s*시(?:\s*반|(?:\s*\d{1,2}\s*분))?|\d{1,2}\s*시(?!\s*간)(?:\s*반|(?:\s*\d{1,2}\s*분))?)(?:에)?(?![가-힣A-Za-z0-9])(?!\s*방향)/g;
 
 const KO_SUPPORTED_RELATIVE_SRC =
   "(?:\\d+|한|두|세|네)\\s*분\\s*(?:뒤|후)(?:에)?|(?:\\d+|한|두|세|네)\\s*시간\\s*(?:뒤|후)(?:에)?|반\\s*시간\\s*(?:뒤|후)(?:에)?";
@@ -379,7 +379,8 @@ function stripSupportedTemporalSpans(text: string): string {
   title = title.replace(/\bat\s+\d{1,2}(?::\d{2})?\s*(?:am|pm)\b/gi, " ");
   title = title.replace(new RegExp(EN_CLOCK_SRC, "gi"), " ");
 
-  // Korean clocks including attached scheduling particle (에).
+  // Korean clocks including attached scheduling particle (에). Embedded title
+  // words and spatial phrases such as `7시리즈` / `3시 방향` are not owned.
   title = title.replace(KO_CLOCK_WITH_PARTICLE_RE, " ");
 
   // Full / absolute dates.
@@ -399,8 +400,12 @@ function stripSupportedTemporalSpans(text: string): string {
   );
   title = title.replace(/\b(?:next|this)\s+week(?!\s*end\b)\b/gi, " ");
 
-  // Relative day words — only reached when a supported temporal span existed.
-  title = title.replace(/(?:오늘|내일|모레|글피)/g, " ");
+  // Relative day words must be standalone date phrases. Do not strip semantic
+  // title text such as `내일이라는 소설` merely because it starts with 내일.
+  title = title.replace(
+    /(?:오늘|내일|모레|글피)(?:은|는|에|부터|까지)?(?=\s|$|[,.!?])/g,
+    " ",
+  );
   title = title.replace(/\b(?:today|tomorrow)\b/gi, " ");
 
   title = title
