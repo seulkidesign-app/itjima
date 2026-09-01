@@ -199,7 +199,6 @@ export const NL_FULLSWEEP_CASES: FullsweepCase[] = [
   c("04-relative-offset", "1시간 반 뒤에 출발", {
     explicitTime: false,
     auto: false,
-    confirmationReason: "assumed_meridiem",
     expectedTitle: "1시간 반 뒤에 출발",
   }),
   ...["조금 있다가 전화하기", "이따가 청소", "잠시 후에 확인하기", "나중에 전화하기"].map(

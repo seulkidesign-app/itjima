@@ -56,6 +56,19 @@ export type TimedAutoCommitDecision =
   | { ok: true; draft: NaturalScheduleDraft }
   | { ok: false; reason: AutoCommitBlockReason };
 
+const EXPLICIT_CROSS_MERIDIEM_RANGE_RE =
+  /(?:오전|오후)\s*\d{1,2}\s*시(?:\s*(?:반|\d{1,2}\s*분))?\s*부터\s*(?:오전|오후)\s*\d{1,2}\s*시(?:\s*(?:반|\d{1,2}\s*분))?\s*까지/;
+
+/**
+ * One clock cannot be both 오전 and 오후. Keep legitimate cross-meridiem
+ * from-to ranges (e.g. 오전 11시부터 오후 1시까지) on the range path.
+ */
+function hasConflictingKoreanMeridiem(text: string): boolean {
+  if (!/오전/.test(text) || !/오후/.test(text)) return false;
+  if (EXPLICIT_CROSS_MERIDIEM_RANGE_RE.test(text)) return false;
+  return true;
+}
+
 /** Legacy parser/safety baseline retained for independent migration audits. */
 export function evaluateLegacyTimedAutoCommit(
   text: string,
@@ -93,6 +106,9 @@ export function evaluateLegacyTimedAutoCommit(
   }
   if (shouldKeepScheduleSemanticsQuiet(trimmed)) {
     return finish({ ok: false, reason: "quiet" });
+  }
+  if (hasConflictingKoreanMeridiem(trimmed)) {
+    return finish({ ok: false, reason: "unresolved_date" });
   }
   if (hasNaturalRepeatIntent(trimmed) || hasExpandedRepeatIntent(trimmed)) {
     return finish({ ok: false, reason: "repeat" });
