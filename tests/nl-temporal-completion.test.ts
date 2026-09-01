@@ -1,3 +1,4 @@
+import "./nl-combinatorial-diagnostic.test";
 import "./nl-combinatorial-fuzz.test";
 import { describe, expect, it } from "vitest";
 import { evaluateTimedAutoCommit } from "@/lib/nlAutoCommit";
