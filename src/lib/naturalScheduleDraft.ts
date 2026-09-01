@@ -22,7 +22,7 @@ import {
 // Exact/resolvable clocks only. Standalone dayparts such as "오전", "오후",
 // "morning", or "afternoon" deliberately do not count as a clock.
 const EXPLICIT_TIME_RE =
-  /(?:(?:오전|오후)\s*\d{1,2}\s*시(?:\s*반|(?:\s*\d{1,2}\s*분))?|(?:\d+|한|두|세|네)\s*(?:분|시간)\s*(?:뒤|후)|반\s*시간\s*(?:뒤|후)|\d{1,2}\s*시(?:\s*반|(?:\s*\d{1,2}\s*분))?|\bin\s+(?:\d+|an?|one|two|three|four|half(?:\s+an?)?)\s*(?:minutes?|mins?|hours?|hrs?)\b|\b(?:[01]?\d|2[0-3]):[0-5]\d\b|\b\d{1,2}(?::\d{2})?\s*(?:am|pm)\b)/i;
+  /(?:(?:오전|오후)\s*\d{1,2}\s*시(?!\s*간)(?:\s*반|(?:\s*\d{1,2}\s*분))?|(?:\d+|한|두|세|네)\s*(?:분|시간)\s*(?:뒤|후)|반\s*시간\s*(?:뒤|후)|\d{1,2}\s*시(?!\s*간)(?:\s*반|(?:\s*\d{1,2}\s*분))?|\bin\s+(?:\d+|an?|one|two|three|four|half(?:\s+an?)?)\s*(?:minutes?|mins?|hours?|hrs?)\b|\b(?:[01]?\d|2[0-3]):[0-5]\d\b|\b\d{1,2}(?::\d{2})?\s*(?:am|pm)\b)/i;
 
 const AFTER_WORK_RE = /퇴근\s*(?:후|하고|하고서|뒤)|\bafter\s+work\b/i;
 
@@ -164,6 +164,7 @@ function relativeOffsetStart(text: string, now: Date): Date | null {
   // Larger unsupported compounds must not leak a smaller supported substring.
   if (
     /(?:\d+|한|두|세|네)\s*시간\s+\d+\s*분\s*(?:뒤|후)/.test(text) ||
+    /(?:\d+|한|두|세|네)\s*시간\s*반\s*(?:뒤|후)/.test(text) ||
     /\d+\.\d+\s*(?:시간|분|일)/.test(text) ||
     /[+-]\s*\d+(?:\.\d+)?\s*(?:시간|분|일)\s*(?:뒤|후)/.test(text)
   ) {
@@ -299,7 +300,7 @@ const KO_CLOCK_WITH_PARTICLE_RE =
   /(?:(?:오전|오후)\s*\d{1,2}\s*시(?:\s*반|(?:\s*\d{1,2}\s*분))?|\d{1,2}\s*시(?!\s*간)(?:\s*반|(?:\s*\d{1,2}\s*분))?)(?:에)?/g;
 
 const KO_SUPPORTED_RELATIVE_SRC =
-  "(?:\\d+|한|두|세|네)\\s*분\\s*(?:뒤|후)(?:에)?|(?:한|두|세|네)\\s*시간\\s*(?:뒤|후)(?:에)?|반\\s*시간\\s*(?:뒤|후)(?:에)?";
+  "(?:\\d+|한|두|세|네)\\s*분\\s*(?:뒤|후)(?:에)?|(?:\\d+|한|두|세|네)\\s*시간\\s*(?:뒤|후)(?:에)?|반\\s*시간\\s*(?:뒤|후)(?:에)?";
 
 const EN_SUPPORTED_RELATIVE_SRC =
   "\\bin\\s+(?:\\d+|an?|one|two|three|four)\\s*(?:minutes?|mins?|hours?|hrs?)\\b";
