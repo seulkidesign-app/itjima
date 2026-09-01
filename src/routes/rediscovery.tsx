@@ -13,6 +13,7 @@ import {
   rediscoveryDisplayTitle,
   revivalHeaderKo,
   snoozeRediscovery,
+  type RediscoveryPick,
 } from "@/lib/rediscoveryPick";
 import { MOTION_CRAFT } from "@/lib/motionLanguage";
 import { featureEnabled } from "@/lib/features";
@@ -30,6 +31,7 @@ function RediscoveryPage() {
   const schedules = useSchedules();
   const [handled, setHandled] = useState(false);
   const [expanded, setExpanded] = useState(false);
+  const [selectedPick, setSelectedPick] = useState<RediscoveryPick | null>(null);
   const impressionIdRef = useRef<string | null>(null);
   const enabled = featureEnabled("REDISCOVERY");
 
@@ -37,10 +39,25 @@ function RediscoveryPage() {
     () => buildRediscoveryPool(inbox.items, archive.items),
     [inbox.items, archive.items],
   );
-  const pick = useMemo(
+  const candidate = useMemo(
     () => pickRediscoveryCandidate(pool, schedules.items),
     [pool, schedules.items],
   );
+
+  const selectedStillExists = selectedPick
+    ? pool.some((memory) => (memory.source_id ?? memory.id) === selectedPick.key)
+    : false;
+  const pick = selectedStillExists ? selectedPick : candidate;
+
+  useEffect(() => {
+    if (!selectedPick && candidate) {
+      setSelectedPick(candidate);
+      return;
+    }
+    if (selectedPick && !selectedStillExists) {
+      setSelectedPick(null);
+    }
+  }, [candidate, selectedPick, selectedStillExists]);
 
   useEffect(() => {
     if (!enabled || !pick || handled) return;
