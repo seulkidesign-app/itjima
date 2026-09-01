@@ -6,7 +6,6 @@ import {
 } from "@/lib/recordTemporal";
 import {
   contentRevisionOf,
-  isStaleContentRevision,
 } from "@/lib/recordRevision";
 import { scheduleFromInbox } from "@/lib/thoughtProvenance";
 import type { InboxItem, RepeatRule, ScheduleItem } from "@/lib/store";
@@ -70,6 +69,31 @@ function projectionPayload(
   };
 }
 
+/**
+ * React/store readers can lag one render behind an item that the same user
+ * action just edited. Revisions are monotonic, so only an observed record with
+ * a strictly newer revision can supersede the action snapshot. On equal/older
+ * revisions the supplied item is the authoritative subject of this commit.
+ */
+function preferActionSnapshot(
+  item: InboxItem,
+  observed: InboxItem | undefined,
+): InboxItem {
+  if (!observed) return item;
+  return contentRevisionOf(observed) > contentRevisionOf(item)
+    ? observed
+    : item;
+}
+
+function hasNewerRevision(
+  expectedRevision: number,
+  observed: InboxItem | undefined,
+): boolean {
+  return Boolean(
+    observed && contentRevisionOf(observed) > expectedRevision,
+  );
+}
+
 export async function convertLaterInboxToSchedule(
   item: InboxItem,
   fields: LaterInboxScheduleFields,
@@ -83,10 +107,11 @@ export async function convertLaterInboxToSchedule(
 
   try {
     const expected = options?.expectedRevision ?? contentRevisionOf(item);
-    const live = ops.getInboxById?.(item.id) ?? item;
-    if (isStaleContentRevision(expected, live)) {
+    const observed = ops.getInboxById?.(item.id);
+    if (hasNewerRevision(expected, observed)) {
       return { status: "stale_revision" };
     }
+    const live = preferActionSnapshot(item, observed);
 
     const payload = projectionPayload(live, fields);
     const existing = ops.getScheduleByRecordId(item.id);
@@ -129,11 +154,12 @@ export async function convertLaterInboxToSchedule(
       scheduleId = created.id;
     }
 
-    const liveAfter = ops.getInboxById?.(item.id) ?? live;
-    if (isStaleContentRevision(expected, liveAfter)) {
+    const observedAfter = ops.getInboxById?.(item.id);
+    if (hasNewerRevision(expected, observedAfter)) {
       if (!existing) await ops.removeSchedule(scheduleId);
       return { status: "stale_revision" };
     }
+    const liveAfter = preferActionSnapshot(item, observedAfter);
 
     try {
       const patched = await ops.updateInbox(
