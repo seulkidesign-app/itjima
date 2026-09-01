@@ -1,11 +1,12 @@
-import { Check, Clock, List, CalendarOff } from "lucide-react";
+import { AlertCircle, Check, Clock, List } from "lucide-react";
 import { BottomSheet } from "./BottomSheet";
 import { useT } from "@/lib/i18n";
-import { getBrowsableRecords } from "@/lib/canonicalBrowse";
-import type { InboxItem } from "@/lib/store";
+import { getAllBrowseEntries } from "@/lib/browseRecordModel";
+import type { InboxItem, ScheduleItem } from "@/lib/store";
 
 type Props = {
   items: InboxItem[];
+  schedules: ScheduleItem[];
   open: boolean;
   onClose: () => void;
   /** Render inside an existing sheet instead of stacking a second modal. */
@@ -13,25 +14,29 @@ type Props = {
 };
 
 /**
- * Factual organize summary from canonical state only.
- * Do not present heuristic buckets as AI understanding: until a real classifier
- * exists, counts are limited to date/status facts the product can guarantee.
+ * User-facing factual summary. "All" uses the same complete read model as
+ * search/browse, so historical standalone schedules cannot make Schedule show
+ * more records than the app's own "All records" surface.
  */
 export function OrganizeSummarySheet({
   items,
+  schedules,
   open,
   onClose,
   embedded = false,
 }: Props) {
   const t = useT();
-  const browsing = getBrowsableRecords(items);
+  const browsing = getAllBrowseEntries(items, schedules);
   const schedule = browsing.filter(
-    (i) => Boolean(i.start_time) && i.status !== "done",
+    (entry) => Boolean(entry.start_time) && entry.status !== "done",
   );
-  const undated = browsing.filter(
-    (i) => !i.start_time && i.status !== "done",
+  const needsConfirmation = browsing.filter(
+    (entry) =>
+      entry.kind === "record" &&
+      entry.clarification_state === "pending" &&
+      entry.status !== "done",
   );
-  const done = browsing.filter((i) => i.status === "done");
+  const done = browsing.filter((entry) => entry.status === "done");
 
   const tiles = [
     {
@@ -41,10 +46,10 @@ export function OrganizeSummarySheet({
       Icon: Clock,
     },
     {
-      key: "undated",
-      count: undated.length,
-      label: t("날짜 없음", "No date"),
-      Icon: CalendarOff,
+      key: "confirm",
+      count: needsConfirmation.length,
+      label: t("확인 필요", "Needs confirmation"),
+      Icon: AlertCircle,
     },
     {
       key: "done",
@@ -82,8 +87,8 @@ export function OrganizeSummarySheet({
       </h2>
       <p className="quietly-hero-sub mt-2">
         {t(
-          "날짜와 상태처럼 확실한 정보만 기준으로 나눴어요.",
-          "Grouped only by facts like date and status.",
+          "확실한 일정과 확인이 필요한 기록만 가볍게 보여드려요.",
+          "A light view of confirmed schedules and records that need a choice.",
         )}
       </p>
 
@@ -103,7 +108,7 @@ export function OrganizeSummarySheet({
         ))}
       </div>
 
-      {(schedule[0] || undated[0]) && (
+      {(schedule[0] || needsConfirmation[0]) && (
         <section className="mt-7">
           <h3 className="quietly-section-label mb-2">
             {t("최근 기록", "Recent records")}
@@ -122,15 +127,20 @@ export function OrganizeSummarySheet({
                 </div>
               </div>
             )}
-            {undated[0] && (
+            {needsConfirmation[0] && (
               <div className="flex items-start gap-2.5 px-3 py-3">
-                <CalendarOff size={16} className="mt-0.5 text-ink-soft" aria-hidden />
+                <AlertCircle
+                  size={16}
+                  className="mt-0.5 text-ink-soft"
+                  aria-hidden
+                />
                 <div className="min-w-0 flex-1">
                   <p className="text-[15px] font-semibold text-ink">
-                    {undated[0].text.trim() || t("(내용 없음)", "(No text)")}
+                    {needsConfirmation[0].text.trim() ||
+                      t("(내용 없음)", "(No text)")}
                   </p>
                   <p className="mt-0.5 text-[12px] font-medium text-ink-soft">
-                    {t("날짜 없음", "No date")}
+                    {t("확인 필요", "Needs confirmation")}
                   </p>
                 </div>
               </div>

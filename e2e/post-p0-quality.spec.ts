@@ -48,9 +48,11 @@ test.describe("POST-P0 product quality", () => {
       .filter({ hasText: "제주도에서 가고 싶은 카페" });
     await expect(noteRow).toBeVisible();
     await expect(noteRow.getByTestId("left-item-set-time")).toHaveCount(0);
+    // Creation age (방금 / N시간 전) is not schedule metadata on Home.
+    await expect(noteRow.getByTestId("left-item-meta")).toHaveCount(0);
   });
 
-  test("Organize summary only claims factual date/status buckets", async ({ page }) => {
+  test("Organize summary only claims factual schedule/confirmation/status buckets", async ({ page }) => {
     const frame = phone(page);
     await submit(page, "제주도에서 가고 싶은 카페");
     await submit(page, "내일 오후 3시 치과");
@@ -62,11 +64,11 @@ test.describe("POST-P0 product quality", () => {
     const organize = page.getByTestId("organize-summary-sheet");
     await expect(organize).toBeVisible();
     await expect(organize.getByTestId("organize-tile-schedule")).toContainText("일정");
-    await expect(organize.getByTestId("organize-tile-undated")).toContainText("날짜 없음");
+    await expect(organize.getByTestId("organize-tile-confirm")).toContainText("확인 필요");
     await expect(organize.getByTestId("organize-tile-done")).toContainText("완료");
     await expect(organize.getByTestId("organize-tile-all")).toContainText("전체");
     await expect(organize.getByText("할 일", { exact: true })).toHaveCount(0);
-    await expect(organize.getByText("확인 필요", { exact: true })).toHaveCount(0);
+    await expect(organize.getByText("날짜 없음", { exact: true })).toHaveCount(0);
   });
 
   test("schedule is unified and row completion stays accessible", async ({ page }) => {
