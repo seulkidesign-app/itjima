@@ -93,6 +93,20 @@ describe("NL title preservation P0-B", () => {
     }
   });
 
+  describe("SEMANTIC COLLISIONS — only the owned schedule span may be removed", () => {
+    const cases: Array<[string, string]> = [
+      ["내일 오후 3시 병원", "병원"],
+      ["7시리즈 오후 3시 디자인 비교", "7시리즈 디자인 비교"],
+      ["3시 방향 출구에서 오후 5시 만나", "3시 방향 출구에서 만나"],
+      ["내일이라는 소설 오후 3시 사기", "내일이라는 소설 사기"],
+      ["오후 3시 7시리즈 디자인 비교", "7시리즈 디자인 비교"],
+    ];
+
+    for (const [input, expected] of cases) {
+      it(input, () => expectTitle(input, expected));
+    }
+  });
+
   it("removes a supported clock together with its attached Korean scheduling particle", () => {
     expectTitle("내일 엄마 병원 10시에 같이 가기", "엄마 병원 같이 가기");
   });
