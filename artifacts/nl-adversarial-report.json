@@ -1,0 +1,75 @@
+{
+  "total": 204,
+  "unsafeAutoCommits": 0,
+  "categoryCounts": {
+    "invalid_clock_ko": {
+      "total": 72,
+      "unsafe": 0
+    },
+    "invalid_clock_en": {
+      "total": 21,
+      "unsafe": 0
+    },
+    "duration_not_clock": {
+      "total": 24,
+      "unsafe": 0
+    },
+    "contradictory_time": {
+      "total": 8,
+      "unsafe": 0
+    },
+    "contradictory_date": {
+      "total": 6,
+      "unsafe": 0
+    },
+    "range_attack": {
+      "total": 8,
+      "unsafe": 0
+    },
+    "deadline_repeat_approx": {
+      "total": 12,
+      "unsafe": 0
+    },
+    "semantic_quiet": {
+      "total": 10,
+      "unsafe": 0
+    },
+    "unicode_malformed": {
+      "total": 8,
+      "unsafe": 0
+    },
+    "invalid_bare_minute": {
+      "total": 5,
+      "unsafe": 0
+    },
+    "mixed_format_multi_clock": {
+      "total": 5,
+      "unsafe": 0
+    },
+    "invalid_calendar_date": {
+      "total": 4,
+      "unsafe": 0
+    },
+    "weekday_date_contradiction": {
+      "total": 3,
+      "unsafe": 0
+    },
+    "unsupported_date_residue": {
+      "total": 5,
+      "unsafe": 0
+    },
+    "clock_word_noun_collision": {
+      "total": 3,
+      "unsafe": 0
+    },
+    "multi_clause_attachment": {
+      "total": 6,
+      "unsafe": 0
+    },
+    "long_input": {
+      "total": 4,
+      "unsafe": 0
+    }
+  },
+  "failures": []
+}

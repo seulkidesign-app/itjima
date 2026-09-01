@@ -1,0 +1,15 @@
+{
+  "anchors": [
+    "mon-2026-08-24",
+    "tue-2026-08-25",
+    "fri-2026-08-28",
+    "sun-2026-08-30",
+    "mon-2026-08-31"
+  ],
+  "autoCases": 39,
+  "comparisons": 195,
+  "equivalent": 195,
+  "mismatches": 0,
+  "mismatchRate": 0,
+  "rows": []
+}
