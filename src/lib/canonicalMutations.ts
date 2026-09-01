@@ -46,6 +46,30 @@ function projectionFor(
   return findScheduleProjection(ops.getSchedules(), recordId);
 }
 
+async function restoreProjectionRow(
+  row: ScheduleItem,
+  ops: CanonicalMutationOps,
+): Promise<void> {
+  if (ops.getSchedules().some((current) => current.id === row.id)) return;
+  await ops.addSchedule({
+    id: row.id,
+    text: row.text,
+    start_time: row.start_time,
+    end_time: row.end_time,
+    alarm: row.alarm ?? false,
+    created_at: row.created_at,
+    all_day: row.all_day,
+    start_all_day: row.start_all_day,
+    end_all_day: row.end_all_day,
+    repeat: row.repeat,
+    source_id: row.source_id,
+    raw_text: row.raw_text,
+    brain_mirror: row.brain_mirror,
+    status: row.status ?? "active",
+    alarm_at: row.alarm_at,
+  });
+}
+
 /** Canonical text + revision bump + matching projection text. */
 export async function syncRecordText(
   recordId: string,
@@ -158,14 +182,22 @@ export async function deleteRecord(
   };
 
   // Drop every matching projection row (same-id and legacy source_id).
+  // Keep exact row snapshots so a failed canonical delete cannot eat the
+  // schedule projection while leaving the source record active.
   const matches = ops
     .getSchedules()
-    .filter((s) => s.id === recordId || s.source_id === recordId);
+    .filter((s) => s.id === recordId || s.source_id === recordId)
+    .map((row) => ({ ...row }));
   for (const row of matches) {
     await ops.removeSchedule(row.id);
   }
   const ok = await ops.softDeleteInbox(recordId);
-  if (ok === false) return null;
+  if (ok === false) {
+    for (const row of matches) {
+      await restoreProjectionRow(row, ops);
+    }
+    return null;
+  }
   return snapshot;
 }
 
@@ -222,13 +254,16 @@ export async function undoDeleteRecord(
   const ok = await ops.updateInbox(id, restorePatch);
   if (ok === false) return false;
 
-  // If delete raced without a projection snapshot but the record was timed,
-  // rebuild the derived schedule so undo never yields an undated timed record.
+  // If delete raced without a projection snapshot but the record was already
+  // structured, rebuild the derived schedule for exact, date-only and fuzzy
+  // temporal states alike. Partial precision is still a real schedule state.
   if (
     !projection &&
     start_time &&
     end_time &&
-    temporal_state === "exact_datetime"
+    (temporal_state === "exact_datetime" ||
+      temporal_state === "date_only" ||
+      temporal_state === "fuzzy_time")
   ) {
     const rebuilt = scheduleFromInbox(record, {
       text,
@@ -262,23 +297,10 @@ export async function undoDeleteRecord(
         alarm_at: projection.alarm_at,
       });
     } else {
-      await ops.addSchedule({
-        id: projection.id,
-        text: projection.text,
-        start_time: projection.start_time,
-        end_time: projection.end_time,
-        alarm: projection.alarm ?? false,
-        created_at: projection.created_at,
-        all_day: projection.all_day,
-        start_all_day: projection.start_all_day,
-        end_all_day: projection.end_all_day,
-        repeat: projection.repeat,
-        source_id: projection.source_id ?? id,
-        raw_text: projection.raw_text,
-        brain_mirror: projection.brain_mirror,
-        status: projection.status ?? "active",
-        alarm_at: projection.alarm_at,
-      });
+      await restoreProjectionRow(
+        { ...projection, source_id: projection.source_id ?? id },
+        ops,
+      );
     }
   }
 
