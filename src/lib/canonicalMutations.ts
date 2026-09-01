@@ -5,6 +5,7 @@ import {
 import { withBumpedContentRevision } from "@/lib/recordRevision";
 import { findScheduleProjection } from "@/lib/scheduleProjection";
 import { scheduleFromInbox } from "@/lib/thoughtProvenance";
+import { clearScheduleTombstones } from "@/lib/decisionRecovery";
 import type { InboxItem, ScheduleItem } from "@/lib/store";
 
 export type CanonicalMutationOps = {
@@ -51,6 +52,10 @@ async function restoreProjectionRow(
   ops: CanonicalMutationOps,
 ): Promise<void> {
   if (ops.getSchedules().some((current) => current.id === row.id)) return;
+  // A failed local-first cloud DELETE leaves a schedule tombstone. Undoing or
+  // rolling back that delete must cancel it before recreating the projection,
+  // otherwise the next sync will silently delete the restored schedule again.
+  clearScheduleTombstones(row.id);
   await ops.addSchedule({
     id: row.id,
     text: row.text,
