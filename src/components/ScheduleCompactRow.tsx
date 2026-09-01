@@ -7,7 +7,7 @@ import {
 } from "@/lib/scheduleTime";
 import { scheduleDisplayTitle } from "@/lib/thoughtProvenance";
 import { cleanScheduleTitle } from "@/lib/naturalScheduleDraft";
-import { parseCanonicalTemporalModel } from "@/lib/nlTemporalCalendarModel";
+import { fuzzyDaypartLabel } from "@/lib/temporalDisplay";
 import { isMissed } from "@/lib/scheduleGroups";
 import { useT, useLang } from "@/lib/i18n";
 import { confirm as hapticConfirm } from "@/lib/haptics";
@@ -28,32 +28,6 @@ export type ScheduleCompactRowProps = {
   onOpenDetail?: () => void;
   onAlarm?: () => void;
 };
-
-function fuzzyDaypartLabel(text: string, lang: "ko" | "en"): string | null {
-  const daypart = parseCanonicalTemporalModel(text).daypart;
-  if (!daypart) return null;
-  const ko: Record<string, string> = {
-    morning: "오전",
-    afternoon: "오후",
-    evening: "저녁",
-    night: "밤",
-    dawn: "새벽",
-    lunch: "점심",
-    noon: "정오",
-    midnight: "자정",
-  };
-  const en: Record<string, string> = {
-    morning: "Morning",
-    afternoon: "Afternoon",
-    evening: "Evening",
-    night: "Night",
-    dawn: "Dawn",
-    lunch: "Lunch",
-    noon: "Noon",
-    midnight: "Midnight",
-  };
-  return lang === "en" ? en[daypart] ?? null : ko[daypart] ?? null;
-}
 
 export function ScheduleCompactRow({
   s,

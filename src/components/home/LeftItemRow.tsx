@@ -3,6 +3,7 @@ import type { InboxItem } from "@/lib/store";
 import { useLang, useT } from "@/lib/i18n";
 import { formatCaptureWhenLabel } from "@/lib/naturalScheduleDraft";
 import { isStructuredTimedRecord } from "@/lib/recordTemporal";
+import { replaceAllDayWithFuzzyDaypart } from "@/lib/temporalDisplay";
 
 type Props = {
   item: InboxItem;
@@ -50,7 +51,7 @@ export function LeftItemRow({
   const uiLang = lang === "en" ? "en" : "ko";
   const title = item.text.trim() || t("(내용 없음)", "(No text)");
   const timed = isStructuredTimedRecord(item);
-  const meta =
+  const baseMeta =
     timed && item.start_time
       ? formatCaptureWhenLabel(
           new Date(item.start_time),
@@ -58,6 +59,14 @@ export function LeftItemRow({
           uiLang,
         )
       : relativeMeta(item.created_at, uiLang);
+  const meta =
+    timed && item.temporal_state === "fuzzy_time"
+      ? replaceAllDayWithFuzzyDaypart(
+          baseMeta,
+          item.raw_text ?? item.text,
+          uiLang,
+        )
+      : baseMeta;
   const done = item.status === "done";
 
   return (
@@ -104,6 +113,7 @@ export function LeftItemRow({
           ) : null}
         </div>
         <p
+          data-testid="left-item-meta"
           className={`mt-1 text-[13px] font-medium tabular-nums tracking-[-0.01em] ${
             timed ? "text-primary" : "text-ink-soft"
           }`}

@@ -4,6 +4,7 @@ import { BottomSheet } from "./BottomSheet";
 import { useLang, useT } from "@/lib/i18n";
 import { tap } from "@/lib/haptics";
 import { formatCaptureWhenLabel } from "@/lib/naturalScheduleDraft";
+import { replaceAllDayWithFuzzyDaypart } from "@/lib/temporalDisplay";
 import type { InboxItem } from "@/lib/store";
 
 type Props = {
@@ -75,7 +76,7 @@ export function ThoughtDetailSheet({
   const title =
     item.text.trim().split("\n")[0]?.trim() ||
     t("사진만 있어요", "Photo only");
-  const whenLabel =
+  const baseWhenLabel =
     hasTemporal && item.start_time
       ? formatCaptureWhenLabel(
           new Date(item.start_time),
@@ -83,6 +84,14 @@ export function ThoughtDetailSheet({
           uiLang,
         )
       : t("날짜 없음", "No date");
+  const whenLabel =
+    hasTemporal && item.temporal_state === "fuzzy_time"
+      ? replaceAllDayWithFuzzyDaypart(
+          baseWhenLabel,
+          item.raw_text ?? item.text,
+          uiLang,
+        )
+      : baseWhenLabel;
 
   const copyText = async () => {
     try {
@@ -147,6 +156,7 @@ export function ThoughtDetailSheet({
                 {title}
               </p>
               <p
+                data-testid="thought-detail-when"
                 className={`mt-2 text-[13px] font-semibold tabular-nums tracking-[-0.01em] ${
                   hasTemporal ? "text-primary" : "text-ink-soft"
                 }`}
