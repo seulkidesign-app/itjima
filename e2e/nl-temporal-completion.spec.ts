@@ -64,15 +64,30 @@ test.describe("Temporal Completion UX", () => {
     expect(canonical?.start_time).toBeTruthy();
   });
 
-  test("date plus daypart preserves the fuzzy window without a fake exact clock", async ({ page }) => {
+  test("date plus daypart preserves the fuzzy window on every visible surface", async ({ page }) => {
     await submit(page, "내일 오후 운동");
 
-    const feedback = phone(page).getByTestId("saved-schedule-feedback");
+    const frame = phone(page);
+    const feedback = frame.getByTestId("saved-schedule-feedback");
     await expect(feedback).toBeVisible();
     const when = feedback.getByTestId("saved-schedule-when");
     await expect(when).toContainText("오후");
     await expect(when).not.toContainText("종일");
     await expect(when).not.toContainText(/\d{1,2}:\d{2}/);
+
+    const row = frame
+      .getByTestId("left-item-row")
+      .filter({ hasText: "내일 오후 운동" })
+      .first();
+    await expect(row).toBeVisible();
+    await expect(row.getByTestId("left-item-meta")).toContainText("오후");
+    await expect(row.getByTestId("left-item-meta")).not.toContainText("종일");
+
+    await row.getByTestId("left-item-open-detail").click();
+    const detail = frame.getByTestId("thought-detail-sheet");
+    await expect(detail).toBeVisible();
+    await expect(detail.getByTestId("thought-detail-when")).toContainText("오후");
+    await expect(detail.getByTestId("thought-detail-when")).not.toContainText("종일");
 
     const inbox = (await readGuestList(page, GUEST_INBOX_KEY)) as Array<{
       text?: string;
