@@ -1,7 +1,5 @@
 import { test, expect } from "@playwright/test";
 
-const DAY = 86400000;
-
 async function seedStudy(
   page: import("@playwright/test").Page,
   opts?: { returnGapDays?: number },
@@ -97,13 +95,20 @@ test.describe("Rediscovery longitudinal UT", () => {
     );
     expect(impressions).toHaveLength(1);
 
+    const recordedVisitAt = await page.evaluate(() =>
+      localStorage.getItem("itjima.rediscovery.study.last_visit_at"),
+    );
+    expect(recordedVisitAt).not.toBeNull();
+
+    // A reload/navigation within the same 30-minute visit must neither count as
+    // another return nor auto-enter Rediscovery again. dataLayer is intentionally
+    // reset on a new document, so persistence of last_visit_at is the stable proof.
     await page.goto("/app");
     await expect(page).toHaveURL(/\/app$/);
 
-    const sessionEventsAfterBack = await page.evaluate(() =>
-      ((window as Window & { dataLayer?: Array<Record<string, unknown>> }).dataLayer ?? [])
-        .filter((event) => event.event === "rediscovery_session_start"),
+    const visitAtAfterBack = await page.evaluate(() =>
+      localStorage.getItem("itjima.rediscovery.study.last_visit_at"),
     );
-    expect(sessionEventsAfterBack).toHaveLength(1);
+    expect(visitAtAfterBack).toBe(recordedVisitAt);
   });
 });
