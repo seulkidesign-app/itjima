@@ -53,7 +53,7 @@ function inheritRangeMeridiem(text: string): string {
 
 function parseMentionedTime(text: string): MentionedTime | null {
   const ko = text.match(
-    /(오전|오후)?\s*(\d{1,2})\s*시(?:\s*(반)|(?:\s*(\d{1,2})\s*분))?/,
+    /(오전|오후)?\s*(\d{1,2})\s*시(?!\s*간)(?:\s*(반)|(?:\s*(\d{1,2})\s*분))?/,
   );
   if (ko) {
     let hour = Number(ko[2]);
@@ -83,7 +83,7 @@ function parseMentionedTime(text: string): MentionedTime | null {
 function extractBareClock(text: string): BareClock | null {
   const normalized = inheritRangeMeridiem(text);
   for (const match of normalized.matchAll(
-    /(\d{1,2})\s*시(?:\s*(반)|(?:\s*(\d{1,2})\s*분))?/g,
+    /(\d{1,2})\s*시(?!\s*간)(?:\s*(반)|(?:\s*(\d{1,2})\s*분))?/g,
   )) {
     const hour = Number(match[1]);
     // 1–12 without meridiem is ambiguous; 13–23 is 24h-style and resolved.
@@ -118,7 +118,7 @@ export function countDistinctClockMentions(text: string): number {
   const spans = new Set<number>();
 
   for (const match of text.matchAll(
-    /(오전|오후)?\s*(\d{1,2})\s*시(?:\s*(반)|(?:\s*(\d{1,2})\s*분))?/g,
+    /(오전|오후)?\s*(\d{1,2})\s*시(?!\s*간)(?:\s*(반)|(?:\s*(\d{1,2})\s*분))?/g,
   )) {
     spans.add(match.index ?? -1);
   }
@@ -155,7 +155,7 @@ export function extractClockPlanLines(text: string): string[] {
   const trimmed = text.trim();
   const ko = [
     ...trimmed.matchAll(
-      /(?:(?:오늘|내일|모레)\s*)?(?:오전|오후)?\s*\d{1,2}\s*시(?:\s*반|(?:\s*\d{1,2}\s*분))?\s*[^,，/]*/g,
+      /(?:(?:오늘|내일|모레)\s*)?(?:오전|오후)?\s*\d{1,2}\s*시(?!\s*간)(?:\s*반|(?:\s*\d{1,2}\s*분))?\s*[^,，/]*/g,
     ),
   ]
     .map((m) => m[0].replace(/[,，/]+$/, "").trim())
@@ -201,7 +201,7 @@ function replaceAfterWork(text: string, hour: 18 | 19): string {
 function replaceBareMeridiem(text: string, period: "am" | "pm"): string {
   const koPeriod = period === "am" ? "오전" : "오후";
   const koResolved = text.replace(
-    /(^|[\s(])(\d{1,2})\s*시(?:\s*(반)|(?:\s*(\d{1,2})\s*분))?/,
+    /(^|[\s(])(\d{1,2})\s*시(?!\s*간)(?:\s*(반)|(?:\s*(\d{1,2})\s*분))?/,
     (
       _match,
       prefix: string,
@@ -231,7 +231,7 @@ function stripBareClock(text: string): string {
   }
 
   const koResolved = text.replace(
-    /(^|[\s(])(\d{1,2})\s*시(?:\s*(반)|(?:\s*(\d{1,2})\s*분))?/,
+    /(^|[\s(])(\d{1,2})\s*시(?!\s*간)(?:\s*(반)|(?:\s*(\d{1,2})\s*분))?/,
     "$1",
   );
   if (koResolved !== text) {
