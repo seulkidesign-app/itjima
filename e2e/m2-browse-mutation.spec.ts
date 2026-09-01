@@ -270,7 +270,7 @@ test.describe("M2 browse & mutation trust", () => {
 
     await expect.poll(async () => (await allInbox(page))[0]?.status).toBe("done");
 
-    await frame.getByRole("button", { name: /Done ·|완료 ·/i }).click();
+    await frame.getByRole("button", { name: /^(Done|완료)$/i }).click();
     await frame
       .getByTestId("schedule-compact-row")
       .filter({ hasText: title })

@@ -1,7 +1,13 @@
-import { AlertCircle, Check, Clock, List } from "lucide-react";
+import {
+  AlertCircle,
+  CalendarDays,
+  CheckSquare2,
+  Lightbulb,
+} from "lucide-react";
 import { BottomSheet } from "./BottomSheet";
 import { useT } from "@/lib/i18n";
-import { getAllBrowseEntries } from "@/lib/browseRecordModel";
+import { getAllBrowseEntries, type BrowseRecordEntry } from "@/lib/browseRecordModel";
+import { classifyLocally } from "@/lib/localClassifier";
 import type { InboxItem, ScheduleItem } from "@/lib/store";
 
 type Props = {
@@ -13,10 +19,37 @@ type Props = {
   embedded?: boolean;
 };
 
+type SummaryBucket = "schedule" | "todo" | "thought" | "confirm";
+
+function classifySummaryBucket(entry: BrowseRecordEntry): SummaryBucket {
+  if (
+    entry.kind === "record" &&
+    entry.clarification_state === "pending" &&
+    entry.status !== "done"
+  ) {
+    return "confirm";
+  }
+
+  if (entry.start_time && entry.status !== "done") {
+    return "schedule";
+  }
+
+  const category = classifyLocally(entry.raw_text ?? entry.text)?.category;
+  if (
+    category === "task" ||
+    category === "reminder" ||
+    category === "shopping"
+  ) {
+    return "todo";
+  }
+
+  return "thought";
+}
+
 /**
- * User-facing factual summary. "All" uses the same complete read model as
- * search/browse, so historical standalone schedules cannot make Schedule show
- * more records than the app's own "All records" surface.
+ * V0.2 organize contract: this is a read-only AI summary, not a backlog or
+ * cleanup queue. The four tiles describe ways the current records can be read;
+ * they never imply that the user has work left to process.
  */
 export function OrganizeSummarySheet({
   items,
@@ -27,43 +60,44 @@ export function OrganizeSummarySheet({
 }: Props) {
   const t = useT();
   const browsing = getAllBrowseEntries(items, schedules);
-  const schedule = browsing.filter(
-    (entry) => Boolean(entry.start_time) && entry.status !== "done",
+  const active = browsing.filter((entry) => entry.status !== "done");
+
+  const buckets = active.reduce<Record<SummaryBucket, BrowseRecordEntry[]>>(
+    (acc, entry) => {
+      acc[classifySummaryBucket(entry)].push(entry);
+      return acc;
+    },
+    { schedule: [], todo: [], thought: [], confirm: [] },
   );
-  const needsConfirmation = browsing.filter(
-    (entry) =>
-      entry.kind === "record" &&
-      entry.clarification_state === "pending" &&
-      entry.status !== "done",
-  );
-  const done = browsing.filter((entry) => entry.status === "done");
 
   const tiles = [
     {
       key: "schedule",
-      count: schedule.length,
+      count: buckets.schedule.length,
       label: t("일정", "Schedule"),
-      Icon: Clock,
+      Icon: CalendarDays,
+    },
+    {
+      key: "todo",
+      count: buckets.todo.length,
+      label: t("할 일", "To do"),
+      Icon: CheckSquare2,
+    },
+    {
+      key: "thought",
+      count: buckets.thought.length,
+      label: t("생각", "Thoughts"),
+      Icon: Lightbulb,
     },
     {
       key: "confirm",
-      count: needsConfirmation.length,
+      count: buckets.confirm.length,
       label: t("확인 필요", "Needs confirmation"),
       Icon: AlertCircle,
     },
-    {
-      key: "done",
-      count: done.length,
-      label: t("완료", "Completed"),
-      Icon: Check,
-    },
-    {
-      key: "all",
-      count: browsing.length,
-      label: t("전체", "All records"),
-      Icon: List,
-    },
   ] as const;
+
+  const recent = active.slice(0, 2);
 
   if (!open) return null;
 
@@ -83,12 +117,12 @@ export function OrganizeSummarySheet({
       )}
 
       <h2 className="quietly-hero-title mt-2 text-[28px]">
-        {t("기록을 이렇게 볼 수 있어요.", "Here’s a clear view of your records.")}
+        {t("다 정리해뒀어요.", "Already organized.")}
       </h2>
       <p className="quietly-hero-sub mt-2">
         {t(
-          "확실한 일정과 확인이 필요한 기록만 가볍게 보여드려요.",
-          "A light view of confirmed schedules and records that need a choice.",
+          "현재 기록을 이렇게 볼 수 있어요.",
+          "Here are the useful views of your records.",
         )}
       </p>
 
@@ -96,58 +130,74 @@ export function OrganizeSummarySheet({
         {tiles.map(({ key, count, label, Icon }) => (
           <div
             key={key}
-            className="quietly-feedback-card flex flex-col gap-2 px-4 py-4"
+            className="quietly-feedback-card flex min-h-[116px] flex-col justify-between gap-3 px-4 py-4"
             data-testid={`organize-tile-${key}`}
           >
-            <Icon size={18} className="text-ink-soft" aria-hidden />
-            <p className="text-[36px] font-black tabular-nums leading-none tracking-[-0.05em] text-ink">
-              {count}
-            </p>
-            <p className="text-[13px] font-medium text-ink-soft">{label}</p>
+            <div className="flex items-start justify-between gap-3">
+              <span className="grid h-8 w-8 place-items-center rounded-full bg-ink/[0.04] text-ink-soft">
+                <Icon size={16} aria-hidden />
+              </span>
+              <p className="text-[36px] font-black tabular-nums leading-none tracking-[-0.05em] text-ink">
+                {count}
+              </p>
+            </div>
+            <p className="text-[13px] font-semibold text-ink-soft">{label}</p>
           </div>
         ))}
       </div>
 
-      {(schedule[0] || needsConfirmation[0]) && (
+      {recent.length > 0 && (
         <section className="mt-7">
           <h3 className="quietly-section-label mb-2">
-            {t("최근 기록", "Recent records")}
+            {t("최근 정리 결과", "Recently organized")}
           </h3>
           <div className="quietly-feedback-card divide-y divide-[var(--quietly-border)] px-1 py-1">
-            {schedule[0] && (
-              <div className="flex items-start gap-2.5 px-3 py-3">
-                <Clock size={16} className="mt-0.5 text-ink-soft" aria-hidden />
-                <div className="min-w-0 flex-1">
-                  <p className="text-[15px] font-semibold text-ink">
-                    {schedule[0].text.trim() || t("(내용 없음)", "(No text)")}
-                  </p>
-                  <p className="mt-0.5 text-[12px] font-medium text-ink-soft">
-                    {t("일정", "Schedule")}
-                  </p>
+            {recent.map((entry) => {
+              const bucket = classifySummaryBucket(entry);
+              const meta =
+                bucket === "schedule"
+                  ? t("일정", "Schedule")
+                  : bucket === "todo"
+                    ? t("할 일", "To do")
+                    : bucket === "confirm"
+                      ? t("확인 필요", "Needs confirmation")
+                      : t("생각", "Thought");
+              const Icon =
+                bucket === "schedule"
+                  ? CalendarDays
+                  : bucket === "todo"
+                    ? CheckSquare2
+                    : bucket === "confirm"
+                      ? AlertCircle
+                      : Lightbulb;
+
+              return (
+                <div
+                  key={`${entry.kind}:${entry.id}`}
+                  className="flex items-start gap-2.5 px-3 py-3"
+                >
+                  <Icon size={16} className="mt-0.5 text-ink-soft" aria-hidden />
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-[15px] font-semibold text-ink">
+                      {entry.text.trim() || t("(내용 없음)", "(No text)")}
+                    </p>
+                    <p className="mt-0.5 text-[12px] font-medium text-ink-soft">
+                      {meta}
+                    </p>
+                  </div>
                 </div>
-              </div>
-            )}
-            {needsConfirmation[0] && (
-              <div className="flex items-start gap-2.5 px-3 py-3">
-                <AlertCircle
-                  size={16}
-                  className="mt-0.5 text-ink-soft"
-                  aria-hidden
-                />
-                <div className="min-w-0 flex-1">
-                  <p className="text-[15px] font-semibold text-ink">
-                    {needsConfirmation[0].text.trim() ||
-                      t("(내용 없음)", "(No text)")}
-                  </p>
-                  <p className="mt-0.5 text-[12px] font-medium text-ink-soft">
-                    {t("확인 필요", "Needs confirmation")}
-                  </p>
-                </div>
-              </div>
-            )}
+              );
+            })}
           </div>
         </section>
       )}
+
+      <p className="mt-5 text-center text-[11px] leading-relaxed text-ink-soft/75">
+        {t(
+          "숫자는 해야 할 일의 잔량이 아니라, 지금 기록을 보는 방식이에요.",
+          "These numbers are views of your records, not work left to clear.",
+        )}
+      </p>
     </div>
   );
 
