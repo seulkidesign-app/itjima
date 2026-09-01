@@ -1,5 +1,6 @@
 import { thoughtFirstLine } from "@/lib/brainMirror";
 import { clearInboxTombstones } from "@/lib/decisionRecovery";
+import { readInboxScheduleDraft } from "@/lib/inboxScheduleDefaults";
 import {
   attachExactTemporalPatch,
   clearTemporalMetadataPatch,
@@ -68,11 +69,16 @@ function projectionPayload(
 }
 
 /**
- * A store reader can lag one render behind a user edit. Revisions are
- * monotonic, so a strictly older observed row cannot supersede the action
- * snapshot. Equal revisions are different: clarification UI may pass a derived
- * interpretation with changed text but the canonical raw record must stay the
- * source of truth, so the observed canonical row wins on equality.
+ * There are two legitimate same-revision snapshots:
+ * 1) a user just edited the capture text and React's list is one render behind;
+ * 2) clarification UI derived a temporary resolved sentence from the canonical
+ *    raw text. The latter carries an ephemeral schedule draft and must never
+ *    rewrite the user's source sentence.
+ *
+ * A strictly newer observed revision always wins by rejecting this commit as
+ * stale. A strictly older observed revision is render lag, so the action item
+ * wins. On equality, clarification drafts preserve observed canonical text;
+ * ordinary/user-edited action snapshots are safe to use.
  */
 function canonicalForCommit(
   item: InboxItem,
@@ -80,7 +86,10 @@ function canonicalForCommit(
   expectedRevision: number,
 ): InboxItem {
   if (!observed) return item;
-  return contentRevisionOf(observed) < expectedRevision ? item : observed;
+  const observedRevision = contentRevisionOf(observed);
+  if (observedRevision < expectedRevision) return item;
+  if (readInboxScheduleDraft(item)) return observed;
+  return item;
 }
 
 function hasNewerRevision(
