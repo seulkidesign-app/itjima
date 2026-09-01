@@ -252,7 +252,9 @@ test.describe("Actual user chaos — temporal state integrity", () => {
   test("structured timed records fail closed before archive can orphan the schedule", async ({
     page,
   }) => {
-    const text = "모레 오후 4시 안과";
+    // Reuse an exact-time fixture already proven green above. This test is
+    // about archive state integrity, not expanding parser expression coverage.
+    const text = "모레 오후 3시 치과";
     await submit(page, text);
     await waitForScheduleCount(page, 1);
 
