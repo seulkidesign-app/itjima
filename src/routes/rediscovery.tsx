@@ -1,6 +1,6 @@
 import { Link, useNavigate } from "@tanstack/react-router";
 import { createFileRoute } from "@tanstack/react-router";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { motion } from "framer-motion";
 import { useArchive, useSchedules } from "@/lib/store";
 import { useT, useLang } from "@/lib/i18n";
@@ -13,6 +13,8 @@ import {
 } from "@/lib/rediscoveryPick";
 import { setRevivalJumpTarget } from "@/lib/memoryRevival";
 import { MOTION_CRAFT } from "@/lib/motionLanguage";
+import { featureEnabled } from "@/lib/features";
+import { trackRediscoveryUt } from "@/lib/rediscoveryAnalytics";
 
 export const Route = createFileRoute("/rediscovery")({
   component: RediscoveryPage,
@@ -25,11 +27,43 @@ function RediscoveryPage() {
   const archive = useArchive();
   const schedules = useSchedules();
   const [dismissed, setDismissed] = useState(false);
+  const enabled = featureEnabled("REDISCOVERY");
 
   const pick = useMemo(
     () => pickRediscoveryCandidate(archive.items, schedules.items),
     [archive.items, schedules.items],
   );
+
+  useEffect(() => {
+    if (!enabled || !pick || dismissed) return;
+    markRediscoverySessionShown();
+    trackRediscoveryUt("impression", pick);
+  }, [enabled, pick, dismissed]);
+
+  if (!enabled) {
+    return (
+      <div
+        className="flex min-h-[60dvh] flex-col items-center justify-center px-8 text-center"
+        data-testid="rediscovery-locked"
+      >
+        <p className="text-[17px] font-semibold text-ink">
+          {t("아직 준비 중인 기능이에요", "This feature is still being tested")}
+        </p>
+        <p className="mt-2 text-[14px] text-ink-soft">
+          {t(
+            "검증이 끝나면 조용히 다시 만날 수 있게 할게요.",
+            "It will return quietly after validation.",
+          )}
+        </p>
+        <Link
+          to="/"
+          className="touch-press mt-6 rounded-full bg-primary px-6 py-3 text-[14px] font-bold text-ink"
+        >
+          {t("남기기로 돌아가기", "Back to Capture")}
+        </Link>
+      </div>
+    );
+  }
 
   if (!pick || dismissed) {
     return (
@@ -56,18 +90,20 @@ function RediscoveryPage() {
   const title = archiveDisplayTitle(memory.id, memory);
 
   const onView = () => {
-    markRediscoverySessionShown();
+    trackRediscoveryUt("open", pick);
     recordArchiveVisit(memory.id);
     setRevivalJumpTarget(memory.id);
     navigate({ to: "/archive" });
   };
 
   const onDone = () => {
+    trackRediscoveryUt("done", pick);
     dismissRediscovery(memory.id);
     setDismissed(true);
   };
 
   const onHide = () => {
+    trackRediscoveryUt("hide", pick);
     dismissRediscovery(memory.id);
     setDismissed(true);
   };
