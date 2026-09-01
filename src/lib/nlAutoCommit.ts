@@ -56,6 +56,10 @@ export type TimedAutoCommitDecision =
   | { ok: true; draft: NaturalScheduleDraft }
   | { ok: false; reason: AutoCommitBlockReason };
 
+function stripDurationAtomsForClockSafety(text: string): string {
+  return text.replace(/(?:\d+|한|두|세|네)\s*시간/g, " ");
+}
+
 /** Legacy parser/safety baseline retained for independent migration audits. */
 export function evaluateLegacyTimedAutoCommit(
   text: string,
@@ -116,12 +120,15 @@ export function evaluateLegacyTimedAutoCommit(
     return finish({ ok: false, reason: "deadline" });
   }
 
-  const safety = scheduleConfirmationReasons(trimmed, now);
+  // A duration such as `1시간 후` is not the bare clock `1시`.
+  // Keep the original text for parsing; sanitize only clock-ambiguity counting.
+  const clockSafetyText = stripDurationAtomsForClockSafety(trimmed);
+  const safety = scheduleConfirmationReasons(clockSafetyText, now);
   if (safety.length > 0) {
     return finish({ ok: false, reason: safety[0] });
   }
 
-  const clockCount = countDistinctClockMentions(trimmed);
+  const clockCount = countDistinctClockMentions(clockSafetyText);
   if (clockCount >= 2 && !isSingleClockRange(trimmed)) {
     return finish({ ok: false, reason: "multiple_clocks" });
   }
