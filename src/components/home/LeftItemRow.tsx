@@ -15,27 +15,6 @@ type Props = {
   metaRight?: string | null;
 };
 
-function relativeMeta(createdAt: string, lang: "ko" | "en"): string {
-  const created = new Date(createdAt).getTime();
-  if (!Number.isFinite(created)) return lang === "ko" ? "방금" : "Just now";
-  const delta = Date.now() - created;
-  const minute = 60_000;
-  const hour = 60 * minute;
-  const day = 24 * hour;
-  if (delta < 2 * minute) return lang === "ko" ? "방금" : "Just now";
-  if (delta < hour) {
-    const n = Math.max(1, Math.floor(delta / minute));
-    return lang === "ko" ? `${n}분 전` : `${n}m ago`;
-  }
-  if (delta < day) {
-    const n = Math.max(1, Math.floor(delta / hour));
-    return lang === "ko" ? `${n}시간 전` : `${n}h ago`;
-  }
-  const n = Math.max(1, Math.floor(delta / day));
-  if (n === 1) return lang === "ko" ? "어제" : "Yesterday";
-  return lang === "ko" ? `${n}일 전` : `${n}d ago`;
-}
-
 /** Quiet flat record row — yellow dot + title + temporal typography. */
 export function LeftItemRow({
   item,
@@ -58,9 +37,9 @@ export function LeftItemRow({
           Boolean(item.all_day),
           uiLang,
         )
-      : relativeMeta(item.created_at, uiLang);
+      : null;
   const meta =
-    timed && item.temporal_state === "fuzzy_time"
+    baseMeta && timed && item.temporal_state === "fuzzy_time"
       ? replaceAllDayWithFuzzyDaypart(
           baseMeta,
           item.raw_text ?? item.text,
@@ -112,14 +91,14 @@ export function LeftItemRow({
             </span>
           ) : null}
         </div>
-        <p
-          data-testid="left-item-meta"
-          className={`mt-1 text-[13px] font-medium tabular-nums tracking-[-0.01em] ${
-            timed ? "text-primary" : "text-ink-soft"
-          }`}
-        >
-          {meta}
-        </p>
+        {meta ? (
+          <p
+            data-testid="left-item-meta"
+            className="mt-1 text-[13px] font-medium tabular-nums tracking-[-0.01em] text-primary"
+          >
+            {meta}
+          </p>
+        ) : null}
         {showSetTime && !done && !timed && (
           <button
             type="button"
