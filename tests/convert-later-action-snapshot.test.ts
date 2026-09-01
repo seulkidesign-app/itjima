@@ -63,7 +63,6 @@ function harness(observed: InboxItem) {
     },
     getScheduleByRecordId: (id) =>
       state.schedules.find((row) => row.id === id || row.source_id === id),
-    // Deliberately returns a render-lagged snapshot in the first test.
     getInboxById: () => state.inbox,
     updateInbox: async (_id, patch) => {
       state.inbox = { ...state.inbox, ...patch };
@@ -77,7 +76,7 @@ function harness(observed: InboxItem) {
 describe("schedule commit action snapshot precedence", () => {
   beforeEach(() => resetLaterInboxConvertLocksForTests());
 
-  it("does not overwrite a just-edited action snapshot with an equal-revision render-lagged row", async () => {
+  it("uses a newer just-edited action snapshot when the observed render is one revision behind", async () => {
     const staleRender: InboxItem = {
       ...actionItem(0),
       text: original,
@@ -85,10 +84,10 @@ describe("schedule commit action snapshot precedence", () => {
     const { state, ops } = harness(staleRender);
 
     const result = await convertLaterInboxToSchedule(
-      actionItem(0),
+      actionItem(1),
       fields,
       ops,
-      { expectedRevision: 0 },
+      { expectedRevision: 1 },
     );
 
     expect(result).toEqual({ status: "ok", scheduleId: "edited-1" });
@@ -102,18 +101,51 @@ describe("schedule commit action snapshot precedence", () => {
     });
   });
 
+  it("keeps canonical source text when clarification supplies derived text at the same revision", async () => {
+    const canonical: InboxItem = {
+      ...actionItem(0),
+      text: "내일 8시 운동",
+      raw_text: "내일 8시 운동",
+    };
+    const derived: InboxItem = {
+      ...canonical,
+      text: "내일 오후 8시 운동",
+    };
+    const { state, ops } = harness(canonical);
+
+    const result = await convertLaterInboxToSchedule(
+      derived,
+      {
+        ...fields,
+        text: "운동",
+        start_time: "2026-09-02T11:00:00.000Z",
+        end_time: "2026-09-02T12:00:00.000Z",
+      },
+      ops,
+      { expectedRevision: 0 },
+    );
+
+    expect(result).toEqual({ status: "ok", scheduleId: "edited-1" });
+    expect(state.inbox.text).toBe("내일 8시 운동");
+    expect(state.schedules[0]).toMatchObject({
+      source_id: "edited-1",
+      text: "운동",
+      raw_text: "내일 8시 운동",
+    });
+  });
+
   it("still rejects a genuinely newer canonical revision", async () => {
     const newer: InboxItem = {
-      ...actionItem(1),
+      ...actionItem(2),
       text: "사용자가 다시 고친 문장",
     };
     const { state, ops } = harness(newer);
 
     const result = await convertLaterInboxToSchedule(
-      actionItem(0),
+      actionItem(1),
       fields,
       ops,
-      { expectedRevision: 0 },
+      { expectedRevision: 1 },
     );
 
     expect(result).toEqual({ status: "stale_revision" });
