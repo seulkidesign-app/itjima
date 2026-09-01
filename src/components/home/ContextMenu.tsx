@@ -9,6 +9,7 @@ import {
 import { useEffect, useRef } from "react";
 import { FEATURES } from "@/lib/features";
 import { useT } from "@/lib/i18n";
+import { isStructuredTimedRecord } from "@/lib/recordTemporal";
 import type { InboxItem } from "@/lib/store";
 
 type Props = {
@@ -65,6 +66,7 @@ export function ContextMenu({
   const t = useT();
   const panelRef = useRef<HTMLDivElement | null>(null);
   const firstItemRef = useRef<HTMLButtonElement | null>(null);
+  const hasStructuredTime = isStructuredTimedRecord(menuItem);
 
   useEffect(() => {
     const previous =
@@ -162,14 +164,16 @@ export function ContextMenu({
             onOpenHomeSchedule(menuItem);
           }}
         />
-        <MenuItem
-          icon={<ArchiveIcon size={18} aria-hidden />}
-          label={t("보관함에 맡기기", "Save to vault")}
-          onClick={() => {
-            onClose();
-            onMoveToArchive(menuItem);
-          }}
-        />
+        {!hasStructuredTime && (
+          <MenuItem
+            icon={<ArchiveIcon size={18} aria-hidden />}
+            label={t("보관함에 맡기기", "Save to vault")}
+            onClick={() => {
+              onClose();
+              onMoveToArchive(menuItem);
+            }}
+          />
+        )}
         <MenuItem
           icon={<Trash2 size={18} aria-hidden />}
           label={t("삭제하기", "Delete")}

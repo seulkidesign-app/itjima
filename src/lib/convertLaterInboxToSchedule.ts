@@ -1,13 +1,11 @@
 import { thoughtFirstLine } from "@/lib/brainMirror";
 import { clearInboxTombstones } from "@/lib/decisionRecovery";
+import { readInboxScheduleDraft } from "@/lib/inboxScheduleDefaults";
 import {
   attachExactTemporalPatch,
   clearTemporalMetadataPatch,
 } from "@/lib/recordTemporal";
-import {
-  contentRevisionOf,
-  isStaleContentRevision,
-} from "@/lib/recordRevision";
+import { contentRevisionOf } from "@/lib/recordRevision";
 import { scheduleFromInbox } from "@/lib/thoughtProvenance";
 import type { InboxItem, RepeatRule, ScheduleItem } from "@/lib/store";
 
@@ -70,6 +68,37 @@ function projectionPayload(
   };
 }
 
+/**
+ * There are two legitimate same-revision snapshots:
+ * 1) a user just edited the capture text and React's list is one render behind;
+ * 2) clarification UI derived a temporary resolved sentence from the canonical
+ *    raw text. The latter carries an ephemeral schedule draft and must never
+ *    rewrite the user's source sentence.
+ *
+ * A strictly newer observed revision always wins by rejecting this commit as
+ * stale. A strictly older observed revision is render lag, so the action item
+ * wins. On equality, clarification drafts preserve observed canonical text;
+ * ordinary/user-edited action snapshots are safe to use.
+ */
+function canonicalForCommit(
+  item: InboxItem,
+  observed: InboxItem | undefined,
+  expectedRevision: number,
+): InboxItem {
+  if (!observed) return item;
+  const observedRevision = contentRevisionOf(observed);
+  if (observedRevision < expectedRevision) return item;
+  if (readInboxScheduleDraft(item)) return observed;
+  return item;
+}
+
+function hasNewerRevision(
+  expectedRevision: number,
+  observed: InboxItem | undefined,
+): boolean {
+  return Boolean(observed && contentRevisionOf(observed) > expectedRevision);
+}
+
 export async function convertLaterInboxToSchedule(
   item: InboxItem,
   fields: LaterInboxScheduleFields,
@@ -83,10 +112,11 @@ export async function convertLaterInboxToSchedule(
 
   try {
     const expected = options?.expectedRevision ?? contentRevisionOf(item);
-    const live = ops.getInboxById?.(item.id) ?? item;
-    if (isStaleContentRevision(expected, live)) {
+    const observed = ops.getInboxById?.(item.id);
+    if (hasNewerRevision(expected, observed)) {
       return { status: "stale_revision" };
     }
+    const live = canonicalForCommit(item, observed, expected);
 
     const payload = projectionPayload(live, fields);
     const existing = ops.getScheduleByRecordId(item.id);
@@ -129,11 +159,12 @@ export async function convertLaterInboxToSchedule(
       scheduleId = created.id;
     }
 
-    const liveAfter = ops.getInboxById?.(item.id) ?? live;
-    if (isStaleContentRevision(expected, liveAfter)) {
+    const observedAfter = ops.getInboxById?.(item.id);
+    if (hasNewerRevision(expected, observedAfter)) {
       if (!existing) await ops.removeSchedule(scheduleId);
       return { status: "stale_revision" };
     }
+    const liveAfter = canonicalForCommit(item, observedAfter, expected);
 
     try {
       const patched = await ops.updateInbox(
