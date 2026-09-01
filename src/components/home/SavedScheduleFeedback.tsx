@@ -1,6 +1,7 @@
 import { Check } from "lucide-react";
 import { useLang, useT } from "@/lib/i18n";
 import { replaceAllDayWithFuzzyDaypart } from "@/lib/temporalDisplay";
+import { useSchedules } from "@/lib/store";
 
 export type SavedScheduleFeedbackModel = {
   id: string;
@@ -17,7 +18,16 @@ type Props = {
 export function SavedScheduleFeedback({ feedback, onEdit }: Props) {
   const t = useT();
   const { lang } = useLang();
+  const schedules = useSchedules();
   const uiLang = lang === "en" ? "en" : "ko";
+
+  // Feedback is a projection of real schedule state, not durable content.
+  // If delete/archive/undo removed that schedule, never leave a ghost card
+  // whose Edit action points at an entity that no longer exists.
+  if (!schedules.items.some((item) => item.id === feedback.scheduleId)) {
+    return null;
+  }
+
   const displayWhen = replaceAllDayWithFuzzyDaypart(
     feedback.whenLabel,
     feedback.title,
