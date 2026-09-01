@@ -1,7 +1,12 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useRouterState } from "@tanstack/react-router";
 import { RecordsBrowseSheet } from "@/components/RecordsBrowseSheet";
-import { useInbox, type InboxItem } from "@/lib/store";
+import {
+  useInbox,
+  useSchedules,
+  type InboxItem,
+  type ScheduleItem,
+} from "@/lib/store";
 
 const OPEN_BROWSE = "itjima:open-browse";
 const OPEN_RECORD_DETAIL = "itjima:open-record-detail";
@@ -15,6 +20,7 @@ function dispatchRecordDetail(item: InboxItem) {
 /** Always-mounted browse host — Home unmount must not break the search icon. */
 export function AppBrowseHost() {
   const inbox = useInbox();
+  const schedules = useSchedules();
   const navigate = useNavigate();
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const [open, setOpen] = useState(false);
@@ -48,12 +54,26 @@ export function AppBrowseHost() {
     dispatchRecordDetail(item);
   };
 
+  const openStandaloneSchedule = (schedule: ScheduleItem) => {
+    setOpen(false);
+    sessionStorage.setItem("itjima.openScheduleEdit", schedule.id);
+    if (pathname === "/schedule") {
+      // The Schedule route opens the requested row on mount. A same-route
+      // navigation is a no-op, so legacy standalone rows need one clean remount.
+      window.location.assign("/schedule");
+      return;
+    }
+    void navigate({ to: "/schedule" });
+  };
+
   return (
     <RecordsBrowseSheet
       open={open}
       items={inbox.allItems}
+      schedules={schedules.items}
       onClose={() => setOpen(false)}
       onOpenRecord={openRecord}
+      onOpenSchedule={openStandaloneSchedule}
     />
   );
 }
