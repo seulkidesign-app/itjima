@@ -2,6 +2,7 @@ import { test, expect, type Page } from "@playwright/test";
 import {
   phone,
   GUEST_INBOX_KEY,
+  GUEST_ARCHIVE_KEY,
   GUEST_SCHEDULE_KEY,
   readGuestList,
   openContextMenuRaw,
@@ -25,6 +26,13 @@ type ScheduleRow = {
   all_day?: boolean;
   start_all_day?: boolean;
   start_time?: string;
+};
+
+type ArchiveRow = {
+  id: string;
+  source_id?: string | null;
+  text?: string;
+  raw_text?: string | null;
 };
 
 async function resetKo(page: Page) {
@@ -56,6 +64,10 @@ async function inboxRows(page: Page) {
 
 async function scheduleRows(page: Page) {
   return (await readGuestList(page, GUEST_SCHEDULE_KEY)) as ScheduleRow[];
+}
+
+async function archiveRows(page: Page) {
+  return (await readGuestList(page, GUEST_ARCHIVE_KEY)) as ArchiveRow[];
 }
 
 async function waitForScheduleCount(page: Page, count: number) {
@@ -201,6 +213,7 @@ test.describe("Actual user chaos — temporal state integrity", () => {
     const source = (await inboxRows(page)).find((row) => row.text === text);
     expect(source).toBeTruthy();
     expect(source?.temporal_state).toBe("fuzzy_time");
+    await expect(phone(page).getByTestId("saved-schedule-feedback")).toBeVisible();
 
     await openContextMenuRaw(page, text);
     await clickContextMenuItem(page, "삭제하기");
@@ -208,6 +221,7 @@ test.describe("Actual user chaos — temporal state integrity", () => {
 
     const deleted = (await inboxRows(page)).find((row) => row.id === source?.id);
     expect(deleted?.status).toBe("deleted");
+    await expect(phone(page).getByTestId("saved-schedule-feedback")).toHaveCount(0);
 
     const undo = page.getByRole("button", { name: "되돌리기", exact: true }).last();
     await expect(undo).toBeVisible();
@@ -233,5 +247,57 @@ test.describe("Actual user chaos — temporal state integrity", () => {
     expect(
       (await inboxRows(page)).filter((row) => row.id === source?.id),
     ).toHaveLength(1);
+  });
+
+  test("archive → undo → reload never leaves an orphan timed projection", async ({
+    page,
+  }) => {
+    const text = "모레 오후 4시 안과";
+    await submit(page, text);
+    await waitForScheduleCount(page, 1);
+
+    const source = (await inboxRows(page)).find((row) => row.text === text);
+    expect(source).toBeTruthy();
+    const beforeProjection = (await scheduleRows(page)).find(
+      (row) => row.source_id === source?.id,
+    );
+    expect(beforeProjection).toBeTruthy();
+
+    await openContextMenuRaw(page, text);
+    await clickContextMenuItem(page, "보관함에 맡기기");
+
+    await expect.poll(async () => (await archiveRows(page)).length).toBe(1);
+    await waitForScheduleCount(page, 0);
+    expect((await inboxRows(page)).some((row) => row.id === source?.id)).toBe(false);
+    const archived = (await archiveRows(page)).find(
+      (row) => row.source_id === source?.id,
+    );
+    expect(archived).toBeTruthy();
+    await expect(phone(page).getByTestId("saved-schedule-feedback")).toHaveCount(0);
+
+    const undo = page.getByRole("button", { name: "되돌리기", exact: true }).last();
+    await expect(undo).toBeVisible();
+    await undo.click();
+
+    await expect.poll(async () => (await archiveRows(page)).length).toBe(0);
+    await waitForScheduleCount(page, 1);
+    const restored = (await inboxRows(page)).filter((row) => row.id === source?.id);
+    expect(restored).toHaveLength(1);
+    expect(restored[0]?.temporal_state).toBe("exact_datetime");
+    const projections = (await scheduleRows(page)).filter(
+      (row) => row.source_id === source?.id,
+    );
+    expect(projections).toHaveLength(1);
+    expect(projections[0]?.id).toBe(beforeProjection?.id);
+
+    await page.reload();
+    await phone(page).getByRole("link", { name: /^남기기$/ }).waitFor();
+    expect(
+      (await inboxRows(page)).filter((row) => row.id === source?.id),
+    ).toHaveLength(1);
+    expect(
+      (await scheduleRows(page)).filter((row) => row.source_id === source?.id),
+    ).toHaveLength(1);
+    expect(await archiveRows(page)).toHaveLength(0);
   });
 });
