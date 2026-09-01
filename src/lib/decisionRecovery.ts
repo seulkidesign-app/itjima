@@ -16,6 +16,8 @@ type UndoLike = {
   archiveId?: string;
 };
 
+type TombstoneTable = "inbox" | "schedules" | "archive";
+
 function storageAvailable() {
   return typeof window !== "undefined" && typeof localStorage !== "undefined";
 }
@@ -105,8 +107,12 @@ export function recoverLocallyCommittedDecision(
   return id ? { archiveId: id } : null;
 }
 
-/** Undoing a failed cloud delete must also cancel its pending tombstone. */
-export function clearInboxTombstones(itemId: string) {
+/**
+ * A local-first delete leaves a tombstone when its cloud DELETE fails. If the
+ * user later restores that entity, the matching tombstone must be cancelled or
+ * the next sync will delete the freshly restored row again.
+ */
+function clearTombstones(itemId: string, table: TombstoneTable) {
   if (!storageAvailable()) return;
   for (let i = 0; i < localStorage.length; i += 1) {
     const key = localStorage.key(i);
@@ -115,7 +121,13 @@ export function clearInboxTombstones(itemId: string) {
       const parsed = JSON.parse(localStorage.getItem(key) || "[]");
       if (!Array.isArray(parsed)) continue;
       const next = parsed.filter(
-        (row) => !(row && typeof row === "object" && row.id === itemId && row.table === "inbox"),
+        (row) =>
+          !(
+            row &&
+            typeof row === "object" &&
+            row.id === itemId &&
+            row.table === table
+          ),
       );
       if (next.length !== parsed.length) {
         localStorage.setItem(key, JSON.stringify(next));
@@ -124,6 +136,16 @@ export function clearInboxTombstones(itemId: string) {
       // A malformed tombstone bucket should not block a visible undo.
     }
   }
+}
+
+/** Undoing a failed Inbox cloud delete must cancel its pending tombstone. */
+export function clearInboxTombstones(itemId: string) {
+  clearTombstones(itemId, "inbox");
+}
+
+/** Restoring a Schedule projection must cancel its failed-delete tombstone. */
+export function clearScheduleTombstones(scheduleId: string) {
+  clearTombstones(scheduleId, "schedules");
 }
 
 export function undoLocallyCommitted(snapshot: UndoLike) {
