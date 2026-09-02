@@ -1,0 +1,5 @@
+Itjima final brand asset set
+Approved: 2026-09-02
+Version: v7
+Icon: >ij< on #FFF986
+Wordmark: itjima final artwork (jsMath-cmr10 source)
