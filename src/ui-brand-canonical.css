@@ -29,23 +29,46 @@
 .itjima-brand-logo--native { width: 100px; }
 .itjima-brand-logo--micro { width: 48px; }
 
-/* Landing V2 legacy text nodes are preserved semantically, but the visual
- * treatment always uses the approved artwork rather than a substitute font. */
-.landing-v2 .lv2-brand {
+/* Landing V2 header: render exactly one approved wordmark. The legacy markup
+ * still contains a yellow dot and a text node, so both are force-disabled. */
+html body .landing-v2 header.lv2-nav-wrap nav.lv2-nav > a.lv2-brand {
   display: block !important;
-  width: 104px !important;
-  height: 40px !important;
-  flex: 0 0 104px;
-  overflow: hidden;
+  width: 92px !important;
+  height: 35px !important;
+  flex: 0 0 92px !important;
+  min-width: 0 !important;
+  overflow: hidden !important;
+  background-color: transparent !important;
   background-image: var(--itjima-wordmark-url) !important;
   background-repeat: no-repeat !important;
   background-position: left center !important;
-  background-size: contain !important;
+  background-size: 92px auto !important;
+  box-shadow: none !important;
   font-size: 0 !important;
   line-height: 0 !important;
   letter-spacing: 0 !important;
+  color: transparent !important;
+  text-indent: -9999px !important;
 }
 
+html body .landing-v2 header.lv2-nav-wrap nav.lv2-nav > a.lv2-brand > *,
+html body .landing-v2 header.lv2-nav-wrap nav.lv2-nav > a.lv2-brand > .lv2-brand-dot,
+html body .landing-v2 header.lv2-nav-wrap nav.lv2-nav > a.lv2-brand::before,
+html body .landing-v2 header.lv2-nav-wrap nav.lv2-nav > a.lv2-brand::after {
+  display: none !important;
+  visibility: hidden !important;
+  opacity: 0 !important;
+  width: 0 !important;
+  height: 0 !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  border: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  content: none !important;
+}
+
+/* Keep a generic fallback for any non-header reuse. */
 .landing-v2 .lv2-brand-dot,
 .landing-v2 .lv2-brand::before,
 .landing-v2 .lv2-brand::after {
@@ -145,15 +168,18 @@
 /* Mobile landing guard for 375–430px in-app browser viewports. */
 @media (max-width: 560px) {
   .landing-v2 .lv2-nav {
-    grid-template-columns: 80px minmax(0, 1fr) !important;
+    min-height: 52px !important;
+    grid-template-columns: 72px minmax(0, 1fr) !important;
     gap: 8px !important;
-    padding: 7px 7px 7px 11px !important;
+    padding: 6px 7px 6px 12px !important;
   }
 
-  .landing-v2 .lv2-brand {
-    width: 80px !important;
-    height: 31px !important;
-    flex: 0 0 80px !important;
+  html body .landing-v2 header.lv2-nav-wrap nav.lv2-nav > a.lv2-brand {
+    width: 72px !important;
+    height: 28px !important;
+    flex: 0 0 72px !important;
+    background-size: 72px auto !important;
+    background-position: left center !important;
   }
 
   .landing-v2 .lv2-nav-actions {
@@ -208,14 +234,15 @@
 
 @media (max-width: 380px) {
   .landing-v2 .lv2-nav {
-    grid-template-columns: 72px minmax(0, 1fr) !important;
+    grid-template-columns: 66px minmax(0, 1fr) !important;
     gap: 6px !important;
   }
 
-  .landing-v2 .lv2-brand {
-    width: 72px !important;
-    height: 28px !important;
-    flex-basis: 72px !important;
+  html body .landing-v2 header.lv2-nav-wrap nav.lv2-nav > a.lv2-brand {
+    width: 66px !important;
+    height: 26px !important;
+    flex-basis: 66px !important;
+    background-size: 66px auto !important;
   }
 
   .landing-v2 .lv2-nav-actions > div > button {
