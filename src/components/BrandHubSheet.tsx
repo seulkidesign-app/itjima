@@ -15,6 +15,7 @@ import { useNavigate } from "@tanstack/react-router";
 import { BottomSheet } from "./BottomSheet";
 import { FeedbackSheet } from "./FeedbackSheet";
 import { IosInstallHint } from "./IosInstallHint";
+import { BrandLogo } from "./BrandLogo";
 import { useT } from "@/lib/i18n";
 import { BRAND } from "@/lib/brand";
 import { usePwaInstall } from "@/hooks/usePwaInstall";
@@ -119,19 +120,21 @@ export function BrandHubSheet({
         <div className="sheet-scroll flex min-h-0 flex-1 flex-col overflow-y-auto px-5 pb-[calc(env(safe-area-inset-bottom)+1.25rem)]">
           <section className="pt-1" aria-labelledby="brand-hub-title">
             <div className="flex items-start gap-3.5 rounded-[22px] border border-ink/[0.07] bg-white/75 p-4 shadow-card backdrop-blur-xl">
-              <span className="grid h-12 w-12 shrink-0 place-items-center rounded-[16px] bg-primary text-[14px] font-black tracking-tight text-ink">
-                IJ
-              </span>
+              <img
+                src="/icons/itjima-192-v7.png"
+                alt=""
+                aria-hidden="true"
+                draggable={false}
+                className="h-12 w-12 shrink-0 rounded-[16px] object-cover"
+              />
               <div className="min-w-0 flex-1">
                 <p className="text-[10px] font-black uppercase tracking-[0.15em] text-ink/38">
                   {t("자연어 일정 캡처", "Natural-language scheduling")}
                 </p>
-                <h2
-                  id="brand-hub-title"
-                  className="mt-1 text-[20px] font-black tracking-[-0.035em] text-ink"
-                >
-                  Itjima <span className="text-ink-soft">잊지마</span>
-                </h2>
+                <div id="brand-hub-title" className="mt-2 flex items-center gap-3">
+                  <BrandLogo size="native" />
+                  <span className="text-[12px] font-bold text-ink-soft">잊지마</span>
+                </div>
                 <p className="mt-2 text-[13px] leading-[1.6] text-ink-soft">
                   {t(BRAND.aboutIntro.ko, BRAND.aboutIntro.en)}
                 </p>
