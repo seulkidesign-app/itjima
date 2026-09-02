@@ -165,7 +165,10 @@ for (const viewport of viewports) {
     });
 
     await page.goto("/app?lang=en");
-    const browseEntry = page.getByTestId("open-browse-search");
+    const browseEntry = page
+      .getByRole("button", { name: "Search records" })
+      .filter({ visible: true })
+      .first();
     await browseEntry.scrollIntoViewIfNeeded();
     await expect(browseEntry).toBeVisible();
     await browseEntry.click();
@@ -174,6 +177,12 @@ for (const viewport of viewports) {
     await expect(browse).toBeVisible();
     await expectNoHorizontalOverflow(page);
     await expectFitsViewportWidth(page, browse);
+
+    const search = page.getByTestId("records-browse-search");
+    await search.fill("easy to browse");
+    await expect(page.getByTestId("records-browse-row")).toContainText(
+      "A note that should stay easy to browse",
+    );
 
     const organizeEntry = page.getByTestId("records-browse-organize");
     await organizeEntry.scrollIntoViewIfNeeded();
