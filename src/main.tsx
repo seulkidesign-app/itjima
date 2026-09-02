@@ -51,6 +51,7 @@ import "./ui-post-72-final-polish.css";
 import "./ui-brand-canonical.css";
 import "./ui-capture-mobile-hotfix.css";
 import "./ui-composer-mobile-hotfix.css";
+import "./ui-landing-mobile-type-hotfix.css";
 import "./landingHeroMotion";
 
 import { registerServiceWorker } from "@/lib/swReminders";
