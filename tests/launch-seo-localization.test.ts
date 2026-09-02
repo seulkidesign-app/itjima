@@ -39,7 +39,7 @@ describe("launch SEO localization", () => {
     expect(metaContent('meta[property="og:site_name"]')).toBe("잊지마");
     expect(metaContent('meta[property="og:locale"]')).toBe("ko_KR");
     expect(metaContent('meta[property="og:image"]')).toBe(
-      "https://itjima.app/og-itjima-brand-v3.png",
+      "https://itjima.app/og-itjima-brand-v7.png",
     );
     expect(metaContent('meta[property="og:image:type"]')).toBe("image/png");
     expect(metaContent('meta[property="og:image:width"]')).toBe("1200");
