@@ -17,6 +17,7 @@ import { useIsAdmin } from "@/hooks/useIsAdmin";
 import { signOutWithPushCleanup } from "@/lib/push/pushSignOut";
 import { AboutSheet } from "@/components/AboutSheet";
 import { FeedbackSheet } from "@/components/FeedbackSheet";
+import { BrandLogo } from "@/components/BrandLogo";
 import { tap } from "@/lib/haptics";
 
 export function SideNav() {
@@ -35,8 +36,8 @@ export function SideNav() {
 
   return (
     <aside className="hidden md:flex sticky top-0 h-dvh w-[240px] shrink-0 flex-col gap-2 px-5 py-8">
-      <div className="px-2 pb-4 text-[24px] font-extrabold tracking-tight text-ink">
-        It<span className="text-primary">Jima</span>
+      <div className="px-2 pb-4">
+        <BrandLogo size="native" />
       </div>
 
       <nav className="flex flex-col gap-1">
