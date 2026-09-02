@@ -1,0 +1,90 @@
+/* Mobile composer real-device fixes.
+ * Keep the textarea visually transparent inside one rounded focus surface,
+ * and keep attachment / voice controls in the action row rather than letting
+ * legacy responsive rules pull them into the input field. */
+
+.itjima-app-stage[data-route="home"] form.composer-hero #capture-input {
+  min-width: 0 !important;
+  max-width: 100% !important;
+  border: 0 !important;
+  border-color: transparent !important;
+  border-radius: 0 !important;
+  outline: none !important;
+  background: transparent !important;
+  background-color: transparent !important;
+  box-shadow: none !important;
+  -webkit-appearance: none !important;
+  appearance: none !important;
+}
+
+.itjima-app-stage[data-route="home"] form.composer-hero #capture-input:focus,
+.itjima-app-stage[data-route="home"] form.composer-hero #capture-input:focus-visible {
+  border: 0 !important;
+  border-color: transparent !important;
+  outline: none !important;
+  background: transparent !important;
+  background-color: transparent !important;
+  box-shadow: none !important;
+}
+
+.itjima-app-stage[data-route="home"] form.composer-hero .input-shell {
+  border-radius: 22px !important;
+}
+
+.itjima-app-stage[data-route="home"] form.composer-hero .input-shell:focus-within,
+.itjima-app-stage[data-route="home"] form.composer-hero .input-shell-focused {
+  border-color: rgba(235, 183, 0, 0.3) !important;
+  box-shadow: 0 0 0 3px rgba(255, 211, 61, 0.18) !important;
+}
+
+@media (max-width: 639px) {
+  .itjima-app-stage[data-route="home"] form.composer-hero {
+    overflow: visible !important;
+  }
+
+  .itjima-app-stage[data-route="home"]
+    form.composer-hero
+    > div:has([data-testid="capture-submit"]) {
+    position: relative !important;
+    inset: auto !important;
+    display: flex !important;
+    min-width: 0 !important;
+    min-height: 52px !important;
+    align-items: center !important;
+    gap: 4px !important;
+    overflow: visible !important;
+  }
+
+  .itjima-app-stage[data-route="home"]
+    form.composer-hero
+    button[aria-haspopup="menu"],
+  .itjima-app-stage[data-route="home"]
+    form.composer-hero
+    button[aria-pressed] {
+    position: static !important;
+    inset: auto !important;
+    width: 44px !important;
+    min-width: 44px !important;
+    height: 44px !important;
+    min-height: 44px !important;
+    flex: 0 0 44px !important;
+    margin: 0 !important;
+    translate: none !important;
+  }
+
+  .itjima-app-stage[data-route="home"]
+    form.composer-hero
+    button[aria-pressed="false"] {
+    background: transparent !important;
+    box-shadow: none !important;
+  }
+
+  .itjima-app-stage[data-route="home"]
+    form.composer-hero
+    [data-testid="capture-submit"] {
+    position: static !important;
+    inset: auto !important;
+    margin-left: auto !important;
+    flex: 0 0 auto !important;
+  }
+}
