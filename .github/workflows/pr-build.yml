@@ -119,23 +119,43 @@ jobs:
     needs: [security-audit, build]
     runs-on: ubuntu-latest
     steps:
-      - name: Verify focused production metadata
+      - name: Verify production brand and metadata
         shell: bash
         run: |
           set -euo pipefail
           for attempt in {1..20}; do
             html="$(curl -fsSL --max-time 20 https://itjima.app/ || true)"
             manifest="$(curl -fsSL --max-time 20 https://itjima.app/manifest.webmanifest || true)"
+            final_manifest="$(curl -fsSL --max-time 20 https://itjima.app/manifest-v7.webmanifest || true)"
 
-            if grep -Fq "애매한 부분만 확인" <<<"$html" \
-              && grep -Fq "말하듯 남기는 일정 캡처" <<<"$manifest"; then
-              echo "Production smoke check passed"
+            wordmark_ok=false
+            icon_ok=false
+            og_ok=false
+
+            if curl -fsSL --max-time 20 -o /dev/null https://itjima.app/brand/itjima-wordmark-v7.png; then
+              wordmark_ok=true
+            fi
+            if curl -fsSL --max-time 20 -o /dev/null https://itjima.app/icons/itjima-512-v7.png; then
+              icon_ok=true
+            fi
+            if curl -fsSL --max-time 20 -o /dev/null https://itjima.app/og-itjima-brand-v7.png; then
+              og_ok=true
+            fi
+
+            if grep -Fq "/favicon-32-v7.png" <<<"$html" \
+              && grep -Fq "/manifest-v7.webmanifest" <<<"$html" \
+              && grep -Fq "/icons/itjima-192-v7.png" <<<"$manifest" \
+              && grep -Fq "/icons/itjima-512-v7.png" <<<"$final_manifest" \
+              && [[ "$wordmark_ok" == true ]] \
+              && [[ "$icon_ok" == true ]] \
+              && [[ "$og_ok" == true ]]; then
+              echo "Production brand smoke check passed"
               exit 0
             fi
 
-            echo "Production is not updated yet (attempt $attempt/20)"
+            echo "Production brand is not updated yet (attempt $attempt/20)"
             sleep 15
           done
 
-          echo "::error::Production did not serve the focused Itjima metadata"
+          echo "::error::Production did not serve the final Itjima brand assets and metadata"
           exit 1
