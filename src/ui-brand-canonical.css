@@ -53,20 +53,35 @@
   content: none !important;
 }
 
-/* Final sign-off uses the same artwork at a responsive, fully visible size.
- * Do not use the old giant text pseudo-element here: it clips badly in iOS
- * in-app browsers and can overlap the real PNG during stylesheet races. */
+/* Final sign-off: oversized white wordmark anchored to the bottom edge,
+ * matching the original landing composition without rendering duplicate text. */
+.landing-v2 .lv2-brand-band {
+  overflow: hidden !important;
+  padding-bottom: 0 !important;
+}
+
+.landing-v2 .lv2-brand-band-inner {
+  width: 100%;
+}
+
 .landing-v2 .lv2-brand-masthead {
   display: block !important;
-  width: min(460px, calc(100vw - 48px)) !important;
+  width: min(980px, 92vw) !important;
+  max-width: none !important;
   height: auto !important;
   aspect-ratio: 1625 / 614;
-  margin: 0 auto clamp(28px, 4vw, 48px) !important;
+  margin: 0 auto -0.018em !important;
   overflow: visible !important;
-  background-image: var(--itjima-wordmark-url) !important;
-  background-repeat: no-repeat !important;
-  background-position: center !important;
-  background-size: 100% auto !important;
+  background: #fff !important;
+  background-image: none !important;
+  -webkit-mask-image: var(--itjima-wordmark-url);
+  mask-image: var(--itjima-wordmark-url);
+  -webkit-mask-repeat: no-repeat;
+  mask-repeat: no-repeat;
+  -webkit-mask-position: center bottom;
+  mask-position: center bottom;
+  -webkit-mask-size: contain;
+  mask-size: contain;
   font-size: 0 !important;
   line-height: 0 !important;
   color: transparent !important;
@@ -117,8 +132,7 @@
   content: none !important;
 }
 
-/* Mobile landing guard for 375–430px in-app browser viewports. The final
- * artwork keeps its native aspect ratio; no fixed-height crop or giant type. */
+/* Mobile landing guard for 375–430px in-app browser viewports. */
 @media (max-width: 560px) {
   .landing-v2 .lv2-nav {
     grid-template-columns: 80px minmax(0, 1fr) !important;
@@ -158,17 +172,22 @@
   }
 
   .landing-v2 .lv2-brand-band {
-    overflow: visible !important;
-    padding-bottom: 28px !important;
+    overflow: hidden !important;
+    padding-bottom: 0 !important;
   }
 
   .landing-v2 .lv2-brand-masthead {
-    width: min(280px, calc(100vw - 64px)) !important;
+    width: 108vw !important;
+    max-width: none !important;
     height: auto !important;
     aspect-ratio: 1625 / 614 !important;
-    margin: 0 auto 24px !important;
+    margin: 0 0 -0.025em 50% !important;
+    transform: translateX(-50%);
     overflow: visible !important;
-    background-size: contain !important;
+    -webkit-mask-size: contain !important;
+    mask-size: contain !important;
+    -webkit-mask-position: center bottom !important;
+    mask-position: center bottom !important;
   }
 }
 
@@ -195,6 +214,6 @@
   }
 
   .landing-v2 .lv2-brand-masthead {
-    width: min(250px, calc(100vw - 56px)) !important;
+    width: 112vw !important;
   }
 }
