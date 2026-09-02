@@ -25,17 +25,9 @@
   pointer-events: none;
 }
 
-.itjima-brand-logo--app {
-  width: 72px;
-}
-
-.itjima-brand-logo--native {
-  width: 100px;
-}
-
-.itjima-brand-logo--micro {
-  width: 48px;
-}
+.itjima-brand-logo--app { width: 72px; }
+.itjima-brand-logo--native { width: 100px; }
+.itjima-brand-logo--micro { width: 48px; }
 
 /* Landing V2 legacy text nodes are preserved semantically, but the visual
  * treatment always uses the approved artwork rather than a substitute font. */
@@ -61,23 +53,26 @@
   content: none !important;
 }
 
+/* Final sign-off uses the same artwork at a responsive, fully visible size.
+ * Do not use the old giant text pseudo-element here: it clips badly in iOS
+ * in-app browsers and can overlap the real PNG during stylesheet races. */
 .landing-v2 .lv2-brand-masthead {
-  width: clamp(240px, 35vw, 460px) !important;
+  display: block !important;
+  width: min(460px, calc(100vw - 48px)) !important;
+  height: auto !important;
   aspect-ratio: 1625 / 614;
-  margin-inline: auto;
-  overflow: hidden;
+  margin: 0 auto clamp(28px, 4vw, 48px) !important;
+  overflow: visible !important;
   background-image: var(--itjima-wordmark-url) !important;
   background-repeat: no-repeat !important;
   background-position: center !important;
-  background-size: contain !important;
+  background-size: 100% auto !important;
   font-size: 0 !important;
   line-height: 0 !important;
   color: transparent !important;
+  white-space: normal !important;
 }
 
-/* Old editorial CSS generated a second giant wordmark using ::after.
- * Once the canonical PNG is present this must never render, especially on
- * narrow viewports where the two layers visibly collide. */
 .landing-v2 .lv2-brand-masthead::before,
 .landing-v2 .lv2-brand-masthead::after {
   display: none !important;
@@ -115,19 +110,15 @@
   background-size: contain !important;
 }
 
-.about-v2 .site-header .brand > * {
-  display: none !important;
-}
+.about-v2 .site-header .brand > * { display: none !important; }
 
-/* Legacy brand text fallbacks inside the product shell should never reintroduce
- * the old yellow-dot lockup. */
 .phone-frame [aria-label="Itjima"]::before {
   display: none !important;
   content: none !important;
 }
 
-/* Mobile landing guard: keep the final wordmark, language selector and CTA in
- * one stable row inside 375–430px in-app browser viewports. */
+/* Mobile landing guard for 375–430px in-app browser viewports. The final
+ * artwork keeps its native aspect ratio; no fixed-height crop or giant type. */
 @media (max-width: 560px) {
   .landing-v2 .lv2-nav {
     grid-template-columns: 80px minmax(0, 1fr) !important;
@@ -148,9 +139,7 @@
     justify-self: end !important;
   }
 
-  .landing-v2 .lv2-nav-actions > div {
-    min-width: 0 !important;
-  }
+  .landing-v2 .lv2-nav-actions > div { min-width: 0 !important; }
 
   .landing-v2 .lv2-nav-actions > div > button {
     min-width: 0 !important;
@@ -168,10 +157,18 @@
     white-space: nowrap !important;
   }
 
+  .landing-v2 .lv2-brand-band {
+    overflow: visible !important;
+    padding-bottom: 28px !important;
+  }
+
   .landing-v2 .lv2-brand-masthead {
-    width: min(220px, calc(100vw - 64px)) !important;
-    max-width: 100% !important;
-    margin: 0 auto 28px !important;
+    width: min(280px, calc(100vw - 64px)) !important;
+    height: auto !important;
+    aspect-ratio: 1625 / 614 !important;
+    margin: 0 auto 24px !important;
+    overflow: visible !important;
+    background-size: contain !important;
   }
 }
 
@@ -195,5 +192,9 @@
   .landing-v2 .lv2-nav-cta {
     padding-inline: 9px !important;
     font-size: 10px !important;
+  }
+
+  .landing-v2 .lv2-brand-masthead {
+    width: min(250px, calc(100vw - 56px)) !important;
   }
 }
