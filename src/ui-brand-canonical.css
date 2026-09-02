@@ -33,6 +33,7 @@
  * still contains a yellow dot and a text node, so both are force-disabled. */
 html body .landing-v2 header.lv2-nav-wrap nav.lv2-nav > a.lv2-brand {
   display: block !important;
+  justify-self: start !important;
   width: 92px !important;
   height: 35px !important;
   flex: 0 0 92px !important;
@@ -68,7 +69,6 @@ html body .landing-v2 header.lv2-nav-wrap nav.lv2-nav > a.lv2-brand::after {
   content: none !important;
 }
 
-/* Keep a generic fallback for any non-header reuse. */
 .landing-v2 .lv2-brand-dot,
 .landing-v2 .lv2-brand::before,
 .landing-v2 .lv2-brand::after {
@@ -76,9 +76,7 @@ html body .landing-v2 header.lv2-nav-wrap nav.lv2-nav > a.lv2-brand::after {
   content: none !important;
 }
 
-/* Final sign-off: oversized white wordmark anchored to the bottom edge.
- * It intentionally extends past the section boundary so the lower part is
- * cropped/overlapped, matching the original bold landing composition. */
+/* Final sign-off: oversized white wordmark anchored to the bottom edge. */
 .landing-v2 .lv2-brand-band {
   overflow: hidden !important;
   padding-bottom: 0 !important;
@@ -89,9 +87,7 @@ html body .landing-v2 header.lv2-nav-wrap nav.lv2-nav > a.lv2-brand::after {
   overflow: visible !important;
 }
 
-.landing-v2 .lv2-brand-band-copy {
-  margin-bottom: 0 !important;
-}
+.landing-v2 .lv2-brand-band-copy { margin-bottom: 0 !important; }
 
 .landing-v2 .lv2-brand-masthead {
   display: block !important;
@@ -127,7 +123,6 @@ html body .landing-v2 header.lv2-nav-wrap nav.lv2-nav > a.lv2-brand::after {
   content: none !important;
 }
 
-/* Landing V1 rollback keeps its behavior, while inheriting the final identity. */
 .itjima-launch-page .landing-motion-wordmark {
   display: block !important;
   width: 104px !important;
@@ -146,7 +141,6 @@ html body .landing-v2 header.lv2-nav-wrap nav.lv2-nav > a.lv2-brand::after {
   content: none !important;
 }
 
-/* /about still owns its layout, but uses the same approved wordmark. */
 .about-v2 .site-header .brand {
   display: block !important;
   width: 104px !important;
@@ -159,62 +153,69 @@ html body .landing-v2 header.lv2-nav-wrap nav.lv2-nav > a.lv2-brand::after {
 }
 
 .about-v2 .site-header .brand > * { display: none !important; }
-
-.phone-frame [aria-label="Itjima"]::before {
-  display: none !important;
-  content: none !important;
-}
+.phone-frame [aria-label="Itjima"]::before { display: none !important; content: none !important; }
 
 /* Mobile landing guard for 375–430px in-app browser viewports. */
 @media (max-width: 560px) {
+  .landing-v2 .lv2-nav-wrap {
+    padding: 14px 12px 0 !important;
+  }
+
   .landing-v2 .lv2-nav {
+    display: grid !important;
+    width: 100% !important;
     min-height: 52px !important;
-    grid-template-columns: 72px minmax(0, 1fr) !important;
-    gap: 8px !important;
+    grid-template-columns: 68px minmax(0, 1fr) !important;
+    align-items: center !important;
+    gap: 7px !important;
     padding: 6px 7px 6px 12px !important;
+    overflow: hidden !important;
   }
 
   html body .landing-v2 header.lv2-nav-wrap nav.lv2-nav > a.lv2-brand {
-    width: 72px !important;
-    height: 28px !important;
-    flex: 0 0 72px !important;
-    background-size: 72px auto !important;
+    width: 68px !important;
+    height: 26px !important;
+    flex: 0 0 68px !important;
+    background-size: 68px auto !important;
     background-position: left center !important;
   }
 
   .landing-v2 .lv2-nav-actions {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: flex-end !important;
+    justify-self: stretch !important;
     min-width: 0 !important;
     max-width: 100% !important;
-    gap: 6px !important;
-    justify-self: end !important;
+    gap: 4px !important;
+    overflow: hidden !important;
   }
 
-  .landing-v2 .lv2-nav-actions > div { min-width: 0 !important; }
+  .landing-v2 .lv2-nav-actions > div {
+    min-width: 0 !important;
+    flex: 0 1 auto !important;
+  }
 
   .landing-v2 .lv2-nav-actions > div > button {
     min-width: 0 !important;
-    min-height: 38px !important;
-    padding-inline: 8px !important;
-    gap: 3px !important;
-    font-size: 10px !important;
+    min-height: 36px !important;
+    padding-inline: 6px !important;
+    gap: 2px !important;
+    font-size: 9px !important;
     white-space: nowrap !important;
   }
 
   .landing-v2 .lv2-nav-cta {
-    min-height: 38px !important;
-    padding-inline: 11px !important;
-    font-size: 11px !important;
+    flex: 0 0 auto !important;
+    min-width: 0 !important;
+    min-height: 36px !important;
+    padding-inline: 8px !important;
+    font-size: 9px !important;
     white-space: nowrap !important;
   }
 
-  .landing-v2 .lv2-brand-band {
-    overflow: hidden !important;
-    padding-bottom: 0 !important;
-  }
-
-  .landing-v2 .lv2-brand-band-copy {
-    margin-bottom: 0 !important;
-  }
+  .landing-v2 .lv2-brand-band { overflow: hidden !important; padding-bottom: 0 !important; }
+  .landing-v2 .lv2-brand-band-copy { margin-bottom: 0 !important; }
 
   .landing-v2 .lv2-brand-masthead {
     left: 50% !important;
@@ -234,25 +235,26 @@ html body .landing-v2 header.lv2-nav-wrap nav.lv2-nav > a.lv2-brand::after {
 
 @media (max-width: 380px) {
   .landing-v2 .lv2-nav {
-    grid-template-columns: 66px minmax(0, 1fr) !important;
-    gap: 6px !important;
+    grid-template-columns: 62px minmax(0, 1fr) !important;
+    gap: 5px !important;
+    padding-left: 10px !important;
   }
 
   html body .landing-v2 header.lv2-nav-wrap nav.lv2-nav > a.lv2-brand {
-    width: 66px !important;
-    height: 26px !important;
-    flex-basis: 66px !important;
-    background-size: 66px auto !important;
+    width: 62px !important;
+    height: 24px !important;
+    flex-basis: 62px !important;
+    background-size: 62px auto !important;
   }
 
   .landing-v2 .lv2-nav-actions > div > button {
-    padding-inline: 7px !important;
-    font-size: 9px !important;
+    padding-inline: 5px !important;
+    font-size: 8px !important;
   }
 
   .landing-v2 .lv2-nav-cta {
-    padding-inline: 9px !important;
-    font-size: 10px !important;
+    padding-inline: 7px !important;
+    font-size: 8px !important;
   }
 
   .landing-v2 .lv2-brand-masthead {
