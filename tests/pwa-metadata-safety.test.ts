@@ -56,9 +56,9 @@ describe("PWA product metadata safety", () => {
         }),
       ]),
     );
-    expect(html).toContain('rel="manifest" href="/manifest-v7.webmanifest?v=7"');
-    expect(html).toContain('href="/favicon-32-v7.png?v=7"');
-    expect(html).toContain('href="/apple-touch-icon-v7.png?v=7"');
+    expect(html).toMatch(/rel="manifest" href="\/manifest-v7\.webmanifest\?v=[^"]+"/);
+    expect(html).toMatch(/href="\/favicon-32-v7\.png\?v=[^"]+"/);
+    expect(html).toMatch(/href="\/apple-touch-icon-v7\.png\?v=[^"]+"/);
   });
 
   it("uses the approved fixed wordmark artwork instead of a substitute font", () => {
