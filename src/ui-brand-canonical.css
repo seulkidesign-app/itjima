@@ -75,6 +75,15 @@
   color: transparent !important;
 }
 
+/* Old editorial CSS generated a second giant wordmark using ::after.
+ * Once the canonical PNG is present this must never render, especially on
+ * narrow viewports where the two layers visibly collide. */
+.landing-v2 .lv2-brand-masthead::before,
+.landing-v2 .lv2-brand-masthead::after {
+  display: none !important;
+  content: none !important;
+}
+
 /* Landing V1 rollback keeps its behavior, while inheriting the final identity. */
 .itjima-launch-page .landing-motion-wordmark {
   display: block !important;
@@ -115,4 +124,76 @@
 .phone-frame [aria-label="Itjima"]::before {
   display: none !important;
   content: none !important;
+}
+
+/* Mobile landing guard: keep the final wordmark, language selector and CTA in
+ * one stable row inside 375–430px in-app browser viewports. */
+@media (max-width: 560px) {
+  .landing-v2 .lv2-nav {
+    grid-template-columns: 80px minmax(0, 1fr) !important;
+    gap: 8px !important;
+    padding: 7px 7px 7px 11px !important;
+  }
+
+  .landing-v2 .lv2-brand {
+    width: 80px !important;
+    height: 31px !important;
+    flex: 0 0 80px !important;
+  }
+
+  .landing-v2 .lv2-nav-actions {
+    min-width: 0 !important;
+    max-width: 100% !important;
+    gap: 6px !important;
+    justify-self: end !important;
+  }
+
+  .landing-v2 .lv2-nav-actions > div {
+    min-width: 0 !important;
+  }
+
+  .landing-v2 .lv2-nav-actions > div > button {
+    min-width: 0 !important;
+    min-height: 38px !important;
+    padding-inline: 8px !important;
+    gap: 3px !important;
+    font-size: 10px !important;
+    white-space: nowrap !important;
+  }
+
+  .landing-v2 .lv2-nav-cta {
+    min-height: 38px !important;
+    padding-inline: 11px !important;
+    font-size: 11px !important;
+    white-space: nowrap !important;
+  }
+
+  .landing-v2 .lv2-brand-masthead {
+    width: min(220px, calc(100vw - 64px)) !important;
+    max-width: 100% !important;
+    margin: 0 auto 28px !important;
+  }
+}
+
+@media (max-width: 380px) {
+  .landing-v2 .lv2-nav {
+    grid-template-columns: 72px minmax(0, 1fr) !important;
+    gap: 6px !important;
+  }
+
+  .landing-v2 .lv2-brand {
+    width: 72px !important;
+    height: 28px !important;
+    flex-basis: 72px !important;
+  }
+
+  .landing-v2 .lv2-nav-actions > div > button {
+    padding-inline: 7px !important;
+    font-size: 9px !important;
+  }
+
+  .landing-v2 .lv2-nav-cta {
+    padding-inline: 9px !important;
+    font-size: 10px !important;
+  }
 }
