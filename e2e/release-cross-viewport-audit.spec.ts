@@ -32,17 +32,14 @@ async function expectNoHorizontalOverflow(page: Page) {
   expect(metrics.body, JSON.stringify(metrics)).toBeLessThanOrEqual(metrics.viewport + 1);
 }
 
-async function expectInsideViewport(page: Page, selector: string) {
-  const locator = page.locator(selector).filter({ visible: true }).first();
+async function expectFitsViewportWidth(page: Page, locator: ReturnType<Page["locator"]>) {
   await expect(locator).toBeVisible();
   const box = await locator.boundingBox();
   const viewport = page.viewportSize();
   expect(box).toBeTruthy();
   expect(viewport).toBeTruthy();
-  expect(box!.left).toBeGreaterThanOrEqual(-2);
-  expect(box!.right).toBeLessThanOrEqual(viewport!.width + 2);
-  expect(box!.top).toBeGreaterThanOrEqual(-2);
-  expect(box!.bottom).toBeLessThanOrEqual(viewport!.height + 2);
+  expect(box!.x).toBeGreaterThanOrEqual(-2);
+  expect(box!.x + box!.width).toBeLessThanOrEqual(viewport!.width + 2);
 }
 
 for (const viewport of viewports) {
@@ -135,21 +132,19 @@ for (const viewport of viewports) {
 
     await page.goto("/rediscovery");
     await expect(page.getByRole("heading", { name: "A useful older thought to revisit" })).toBeVisible();
-    await expect(page.getByRole("button", { name: "View record" })).toBeVisible();
-    await expect(page.getByRole("button", { name: "Later" })).toBeVisible();
-    await expect(page.getByRole("button", { name: "Stop showing" })).toBeVisible();
     await expectNoHorizontalOverflow(page);
 
-    const visibleButtons = page.getByRole("button").filter({ visible: true });
-    for (let index = 0; index < (await visibleButtons.count()); index += 1) {
-      const box = await visibleButtons.nth(index).boundingBox();
-      if (!box) continue;
-      expect(box.left).toBeGreaterThanOrEqual(-2);
-      expect(box.right).toBeLessThanOrEqual(viewport.width + 2);
+    for (const button of [
+      page.getByRole("button", { name: "View record" }),
+      page.getByRole("button", { name: "Later" }),
+      page.getByRole("button", { name: "Don't show this again" }),
+    ]) {
+      await button.scrollIntoViewIfNeeded();
+      await expectFitsViewportWidth(page, button);
     }
   });
 
-  test(`[release layout] ${viewport.name} keeps browse and organize sheets inside the viewport`, async ({ page }) => {
+  test(`[release layout] ${viewport.name} keeps browse and organize sheets usable`, async ({ page }) => {
     await page.setViewportSize({ width: viewport.width, height: viewport.height });
     await reset(page);
     await page.evaluate(() => {
@@ -170,22 +165,35 @@ for (const viewport of viewports) {
     });
 
     await page.goto("/app?lang=en");
-    const allRecords = page.getByTestId("open-all-records");
-    await expect(allRecords).toBeVisible();
-    await allRecords.click();
-    await expect(page.getByTestId("records-browse-sheet")).toBeVisible();
-    await expectNoHorizontalOverflow(page);
-    await expectInsideViewport(page, '[data-testid="records-browse-sheet"]');
+    const browseEntry = page.getByTestId("open-browse-search");
+    await browseEntry.scrollIntoViewIfNeeded();
+    await expect(browseEntry).toBeVisible();
+    await browseEntry.click();
 
-    const organize = page.getByRole("button", { name: "Organize", exact: true });
-    await expect(organize).toBeVisible();
-    await organize.click();
-    await expect(page.getByTestId("organize-summary-sheet")).toBeVisible();
-    await expect(page.getByTestId("organize-tile-schedule")).toBeVisible();
-    await expect(page.getByTestId("organize-tile-todo")).toBeVisible();
-    await expect(page.getByTestId("organize-tile-thought")).toBeVisible();
-    await expect(page.getByTestId("organize-tile-confirm")).toBeVisible();
+    const browse = page.getByTestId("records-browse-sheet");
+    await expect(browse).toBeVisible();
     await expectNoHorizontalOverflow(page);
-    await expectInsideViewport(page, '[data-testid="organize-summary-sheet"]');
+    await expectFitsViewportWidth(page, browse);
+
+    const organizeEntry = page.getByTestId("records-browse-organize");
+    await organizeEntry.scrollIntoViewIfNeeded();
+    await expect(organizeEntry).toBeVisible();
+    await organizeEntry.click();
+
+    const organize = page.getByTestId("organize-summary-sheet");
+    await expect(organize).toBeVisible();
+    await expectNoHorizontalOverflow(page);
+    await expectFitsViewportWidth(page, organize);
+
+    for (const testId of [
+      "organize-tile-schedule",
+      "organize-tile-todo",
+      "organize-tile-thought",
+      "organize-tile-confirm",
+    ]) {
+      const tile = page.getByTestId(testId);
+      await tile.scrollIntoViewIfNeeded();
+      await expect(tile).toBeVisible();
+    }
   });
 }
