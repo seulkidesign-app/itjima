@@ -2,6 +2,7 @@ import { Link, useRouterState } from "@tanstack/react-router";
 import {
   CalendarDays,
   MessageSquareText,
+  Search,
   Settings,
   User,
 } from "lucide-react";
@@ -32,6 +33,11 @@ export function DesktopAppNav() {
       Icon: CalendarDays,
     },
   ];
+
+  const openBrowse = () => {
+    tap();
+    window.dispatchEvent(new Event("itjima:open-browse"));
+  };
 
   return (
     <>
@@ -72,6 +78,21 @@ export function DesktopAppNav() {
             );
           })}
         </nav>
+
+        <div className="mt-3 px-3">
+          <button
+            type="button"
+            data-testid="open-browse-search"
+            aria-label={t("기록 검색", "Search records")}
+            onClick={openBrowse}
+            className="itjima-desktop-nav-item flex min-h-12 w-full items-center gap-3 rounded-full px-3.5 py-2.5 text-left text-ink-soft transition-colors hover:bg-ink/[0.04] hover:text-ink active:bg-ink/[0.05]"
+          >
+            <Search size={18} strokeWidth={2.1} aria-hidden />
+            <strong className="text-[14px] font-bold tracking-[-0.015em]">
+              {t("기록 검색", "Search records")}
+            </strong>
+          </button>
+        </div>
 
         <div className="mt-auto p-3 pb-4">
           <button
