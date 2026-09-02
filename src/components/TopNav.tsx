@@ -181,7 +181,7 @@ export function TopNav() {
 
         <button
           type="button"
-          data-testid="open-browse-search"
+          data-testid="open-browse-search-tablet"
           aria-label={t("기록 검색", "Search records")}
           onClick={openBrowse}
           className="touch-press grid h-11 w-11 shrink-0 place-items-center rounded-[14px] border border-ink/[0.08] bg-white/84 text-ink-soft shadow-card"
