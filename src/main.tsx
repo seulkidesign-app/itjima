@@ -64,14 +64,17 @@ declare module "@tanstack/react-router" {
 }
 
 if (typeof window !== "undefined") {
-  // iOS can aggressively reuse Add-to-Home-Screen metadata. Use a fresh
-  // manifest identity and let the manifest own the install icon instead of
-  // an apple-touch-icon override.
+  // Keep install metadata on a fresh URL so mobile launchers do not reuse the
+  // previous brand artwork from an aggressively cached manifest.
   document
     .querySelectorAll('link[rel="apple-touch-icon"], link[rel="apple-touch-icon-precomposed"]')
     .forEach((node) => node.remove());
+
   const manifestLink = document.querySelector<HTMLLinkElement>('link[rel="manifest"]');
-  if (manifestLink) manifestLink.href = "/manifest-v4.webmanifest";
+  if (manifestLink) manifestLink.href = "/manifest-v7.webmanifest?v=7";
+
+  const faviconLink = document.querySelector<HTMLLinkElement>('link[rel="icon"]');
+  if (faviconLink) faviconLink.href = "/favicon-32-v7.png?v=7";
 
   if (import.meta.env.DEV && import.meta.env.VITE_E2E !== "true") {
     installAuthDebugInstrumentation(router);

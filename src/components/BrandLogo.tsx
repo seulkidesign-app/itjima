@@ -5,23 +5,28 @@ type BrandLogoProps = {
   className?: string;
 };
 
+const WORDMARK_SRC = "/brand/itjima-wordmark-v7.png";
+
 /**
- * Canonical Itjima lockup.
- * Source of truth: Figma landing node 455:33.
+ * Canonical Itjima wordmark.
+ * Source of truth: final brand artwork approved 2026-09-02.
  *
- * Do not replace the wordmark with a product UI font. Functional screen titles
- * remain Pretendard and must not borrow the yellow brand dot.
+ * Product UI typography remains independent from the logo artwork.
  */
 export function BrandLogo({ size = "app", className = "" }: BrandLogoProps) {
   return (
     <span
       data-testid="brand-logo"
-      data-brand-source="figma-455-33"
+      data-brand-source="final-2026-09-02"
       className={`itjima-brand-logo itjima-brand-logo--${size} ${className}`.trim()}
       aria-hidden="true"
     >
-      <span className="itjima-brand-logo-dot" />
-      <span className="itjima-brand-logo-wordmark">itjima</span>
+      <img
+        className="itjima-brand-logo-wordmark"
+        src={WORDMARK_SRC}
+        alt=""
+        draggable={false}
+      />
     </span>
   );
 }
