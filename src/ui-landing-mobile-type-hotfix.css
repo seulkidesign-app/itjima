@@ -1,0 +1,160 @@
+/* Mobile landing typography correction — 2026-09-03.
+ * Preserve the editorial scale on desktop, but stop Korean words from breaking
+ * syllable-by-syllable and give mobile headings a deliberate line rhythm. */
+@media (max-width: 560px) {
+  .landing-v2 :is(
+    .lv2-hero h1,
+    .lv2-lead,
+    .lv2-centered-head h2,
+    .lv2-centered-head > p,
+    .lv2-trust-copy h2,
+    .lv2-trust-copy > p,
+    .lv2-why-copy h2,
+    .lv2-why-copy > p,
+    .lv2-why-copy blockquote,
+    .lv2-manifesto,
+    .lv2-product-head h2,
+    .lv2-product-head > p,
+    .lv2-collage-title
+  ) {
+    word-break: keep-all !important;
+    overflow-wrap: normal !important;
+    text-wrap: balance;
+  }
+
+  /* Hero: two or three intentional lines instead of giant single-word stacks. */
+  .landing-v2 .lv2-hero-copy {
+    width: min(100%, 350px) !important;
+    margin-inline: auto !important;
+  }
+
+  .landing-v2 .lv2-hero h1 {
+    width: 100% !important;
+    max-width: 350px !important;
+    margin-inline: auto !important;
+    font-size: clamp(34px, 9.2vw, 38px) !important;
+    line-height: 1.14 !important;
+    letter-spacing: -0.045em !important;
+  }
+
+  .landing-v2 .lv2-hero h1 br {
+    display: none !important;
+  }
+
+  .landing-v2 .lv2-lead {
+    width: min(100%, 340px) !important;
+    margin-inline: auto !important;
+    font-size: 15px !important;
+    line-height: 1.72 !important;
+  }
+
+  /* Section headlines: keep the strong editorial voice without 4–5 line towers. */
+  .landing-v2 .lv2-centered-head,
+  .landing-v2 .lv2-trust-copy,
+  .landing-v2 .lv2-why-copy,
+  .landing-v2 .lv2-product-head {
+    width: 100% !important;
+    max-width: none !important;
+    padding-left: 0 !important;
+    padding-right: 0 !important;
+  }
+
+  .landing-v2 :is(
+    .lv2-centered-head h2,
+    .lv2-trust-copy h2,
+    .lv2-why-copy h2,
+    .lv2-product-head h2
+  ) {
+    width: min(100%, 350px) !important;
+    max-width: 350px !important;
+    margin-left: auto !important;
+    margin-right: auto !important;
+    font-size: clamp(32px, 8.7vw, 36px) !important;
+    line-height: 1.16 !important;
+    letter-spacing: -0.045em !important;
+  }
+
+  .landing-v2 .lv2-why-copy h2 {
+    margin-left: 0 !important;
+    margin-right: 0 !important;
+  }
+
+  .landing-v2 :is(
+    .lv2-centered-head > p:not(.lv2-eyebrow),
+    .lv2-trust-copy > p,
+    .lv2-why-copy > p,
+    .lv2-product-head > p
+  ) {
+    font-size: 15px !important;
+    line-height: 1.7 !important;
+  }
+
+  /* Why Itjima quote: keep the quote generous, but readable in one card. */
+  .landing-v2 .lv2-why-copy blockquote {
+    width: 100% !important;
+    margin-top: 34px !important;
+    padding: 26px 24px !important;
+    border-radius: 24px !important;
+    font-size: clamp(22px, 6.1vw, 25px) !important;
+    line-height: 1.48 !important;
+    letter-spacing: -0.035em !important;
+  }
+
+  .landing-v2 .lv2-manifesto {
+    width: 100% !important;
+    margin-top: 24px !important;
+    font-size: clamp(19px, 5.4vw, 22px) !important;
+    line-height: 1.48 !important;
+    letter-spacing: -0.025em !important;
+  }
+
+  /* Final CTA: remove the desktop hard break so Korean can wrap naturally. */
+  .landing-v2 .lv2-final .lv2-centered-head {
+    width: min(100%, 350px) !important;
+    margin-inline: auto !important;
+  }
+
+  .landing-v2 .lv2-final .lv2-centered-head h2 {
+    width: 100% !important;
+    max-width: 350px !important;
+    font-size: clamp(34px, 9.2vw, 38px) !important;
+    line-height: 1.14 !important;
+  }
+
+  .landing-v2 .lv2-final .lv2-centered-head h2 br {
+    display: none !important;
+  }
+
+  .landing-v2 .lv2-final .lv2-centered-head > p:not(.lv2-eyebrow) {
+    width: min(100%, 330px) !important;
+    margin-left: auto !important;
+    margin-right: auto !important;
+    font-size: 15px !important;
+    line-height: 1.72 !important;
+  }
+}
+
+@media (max-width: 380px) {
+  .landing-v2 .lv2-hero h1,
+  .landing-v2 .lv2-final .lv2-centered-head h2 {
+    font-size: 33px !important;
+  }
+
+  .landing-v2 :is(
+    .lv2-centered-head h2,
+    .lv2-trust-copy h2,
+    .lv2-why-copy h2,
+    .lv2-product-head h2
+  ) {
+    font-size: 31px !important;
+  }
+
+  .landing-v2 .lv2-why-copy blockquote {
+    padding: 24px 21px !important;
+    font-size: 22px !important;
+  }
+
+  .landing-v2 .lv2-manifesto {
+    font-size: 19px !important;
+  }
+}
