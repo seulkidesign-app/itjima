@@ -48,6 +48,7 @@ import "./ui-final-surface-guard.css";
 import "./ui-quietly-organized.css";
 import "./ui-post-72-final-polish.css";
 import "./ui-brand-canonical.css";
+import "./ui-capture-mobile-hotfix.css";
 import "./landingHeroMotion";
 
 import { registerServiceWorker } from "@/lib/swReminders";
@@ -64,7 +65,6 @@ declare module "@tanstack/react-router" {
 }
 
 if (typeof window !== "undefined") {
-  // Keep every browser/install surface on the same cache-busted final brand assets.
   const manifestLink = document.querySelector<HTMLLinkElement>('link[rel="manifest"]');
   if (manifestLink) manifestLink.href = "/manifest-v7.webmanifest?v=7";
 
