@@ -5,6 +5,7 @@ import { RouterProvider } from "@tanstack/react-router";
 import { queryClient, router } from "./router";
 import { installAuthDebugInstrumentation } from "@/lib/authDebug";
 import "./pwaLaunchRedirect";
+import "./composerMobileHotfix";
 import "./styles.css";
 import "./ui-polish.css";
 import "./ui-components.css";
@@ -49,6 +50,7 @@ import "./ui-quietly-organized.css";
 import "./ui-post-72-final-polish.css";
 import "./ui-brand-canonical.css";
 import "./ui-capture-mobile-hotfix.css";
+import "./ui-composer-mobile-hotfix.css";
 import "./landingHeroMotion";
 
 import { registerServiceWorker } from "@/lib/swReminders";
