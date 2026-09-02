@@ -65,16 +65,20 @@ declare module "@tanstack/react-router" {
 }
 
 if (typeof window !== "undefined") {
+  const brandCacheKey = "20260903-1";
   const manifestLink = document.querySelector<HTMLLinkElement>('link[rel="manifest"]');
-  if (manifestLink) manifestLink.href = "/manifest-v7.webmanifest?v=7";
+  if (manifestLink) manifestLink.href = `/manifest-v7.webmanifest?v=${brandCacheKey}`;
 
   const faviconLink = document.querySelector<HTMLLinkElement>('link[rel="icon"]');
-  if (faviconLink) faviconLink.href = "/favicon-32-v7.png?v=7";
+  if (faviconLink) faviconLink.href = `/favicon-32-v7.png?v=${brandCacheKey}`;
+
+  const shortcutIconLink = document.querySelector<HTMLLinkElement>('link[rel="shortcut icon"]');
+  if (shortcutIconLink) shortcutIconLink.href = `/favicon-32-v7.png?v=${brandCacheKey}`;
 
   const touchIconLink = document.querySelector<HTMLLinkElement>(
     'link[rel="apple-touch-icon"]',
   );
-  if (touchIconLink) touchIconLink.href = "/apple-touch-icon-v7.png?v=7";
+  if (touchIconLink) touchIconLink.href = `/apple-touch-icon-v7.png?v=${brandCacheKey}`;
 
   if (import.meta.env.DEV && import.meta.env.VITE_E2E !== "true") {
     installAuthDebugInstrumentation(router);
