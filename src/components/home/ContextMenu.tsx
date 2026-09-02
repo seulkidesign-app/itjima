@@ -2,14 +2,12 @@ import {
   Wind,
   Trash2,
   Calendar,
-  Archive as ArchiveIcon,
   Sparkles,
   BookOpen,
 } from "lucide-react";
 import { useEffect, useRef } from "react";
 import { FEATURES } from "@/lib/features";
 import { useT } from "@/lib/i18n";
-import { isStructuredTimedRecord } from "@/lib/recordTemporal";
 import type { InboxItem } from "@/lib/store";
 
 type Props = {
@@ -20,6 +18,7 @@ type Props = {
   onOpenAllRecords: () => void;
   onUnderstandAgain: (item: InboxItem) => void | Promise<void>;
   onOpenHomeSchedule: (item: InboxItem) => void;
+  /** Kept in the contract while archive mutations remain available elsewhere. */
   onMoveToArchive: (item: InboxItem) => void;
   onMoveToDelete: (item: InboxItem) => void;
 };
@@ -60,13 +59,12 @@ export function ContextMenu({
   onOpenAllRecords,
   onUnderstandAgain,
   onOpenHomeSchedule,
-  onMoveToArchive,
+  onMoveToArchive: _onMoveToArchive,
   onMoveToDelete,
 }: Props) {
   const t = useT();
   const panelRef = useRef<HTMLDivElement | null>(null);
   const firstItemRef = useRef<HTMLButtonElement | null>(null);
-  const hasStructuredTime = isStructuredTimedRecord(menuItem);
 
   useEffect(() => {
     const previous =
@@ -164,16 +162,6 @@ export function ContextMenu({
             onOpenHomeSchedule(menuItem);
           }}
         />
-        {!hasStructuredTime && (
-          <MenuItem
-            icon={<ArchiveIcon size={18} aria-hidden />}
-            label={t("보관함에 맡기기", "Save to vault")}
-            onClick={() => {
-              onClose();
-              onMoveToArchive(menuItem);
-            }}
-          />
-        )}
         <MenuItem
           icon={<Trash2 size={18} aria-hidden />}
           label={t("삭제하기", "Delete")}
