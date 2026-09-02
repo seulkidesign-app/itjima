@@ -7,7 +7,7 @@ function read(path: string) {
 }
 
 describe("PWA product metadata safety", () => {
-  const manifestSource = read("public/manifest-v4.webmanifest");
+  const manifestSource = read("public/manifest-v7.webmanifest");
   const manifest = JSON.parse(manifestSource) as {
     name: string;
     description: string;
@@ -20,7 +20,7 @@ describe("PWA product metadata safety", () => {
   const html = read("index.html");
   const brandCss = read("src/ui-brand-canonical.css");
   const shareImage = readFileSync(
-    resolve(process.cwd(), "public/og-itjima-brand-v3.png"),
+    resolve(process.cwd(), "public/og-itjima-brand-v7.png"),
   );
 
   it("describes the released product without adding a new AI promise", () => {
@@ -43,29 +43,28 @@ describe("PWA product metadata safety", () => {
     );
   });
 
-  it("uses the approved ij launcher assets with cache-busted v4 asset URLs", () => {
+  it("uses the approved >ij< launcher assets and cache-busted v7 metadata URLs", () => {
     expect(manifest.icons).toEqual(
       expect.arrayContaining([
         expect.objectContaining({
-          src: "/icons/itjima-192-v4.png?v=6",
+          src: "/icons/itjima-192-v7.png",
           sizes: "192x192",
         }),
         expect.objectContaining({
-          src: "/icons/itjima-512-v4.png?v=6",
+          src: "/icons/itjima-512-v7.png",
           sizes: "512x512",
         }),
       ]),
     );
-    expect(html).toContain('rel="manifest" href="/manifest-v4.webmanifest?v=6"');
-    expect(html).toContain('href="/favicon-32-v4.png?v=6"');
-    expect(html).toContain('href="/apple-touch-icon.png?v=6"');
+    expect(html).toContain('rel="manifest" href="/manifest-v7.webmanifest?v=7"');
+    expect(html).toContain('href="/favicon-32-v7.png?v=7"');
+    expect(html).toContain('href="/apple-touch-icon-v7.png?v=7"');
   });
 
-  it("keeps the lowercase wordmark on Playpen Sans Medium", () => {
-    expect(brandCss).toContain("Playpen+Sans:wght@500");
-    expect(brandCss).toContain('font-family: "Playpen Sans", cursive');
-    expect(brandCss).toContain("font-weight: 500");
-    expect(brandCss).toContain('content: "itjima"');
+  it("uses the approved fixed wordmark artwork instead of a substitute font", () => {
+    expect(brandCss).toContain('--itjima-wordmark-url: url("/brand/itjima-wordmark-v7.png")');
+    expect(brandCss).toContain("background-image: var(--itjima-wordmark-url)");
+    expect(brandCss).not.toContain("Playpen Sans");
   });
 
   it("keeps search and share descriptions aligned with the focused promise", () => {
@@ -73,7 +72,7 @@ describe("PWA product metadata safety", () => {
     expect(html).toContain("날짜와 행동을 읽어 자동으로 구조화");
     expect(html).toContain("알아서 정리되는 메모·일정 앱");
     expect(html).toContain("알아서 정리되는 살아있는 메모");
-    expect(html).toContain("og-itjima-brand-v3.png");
+    expect(html).toContain("og-itjima-brand-v7.png");
     expect(html).toContain('property="og:image:type" content="image/png"');
     expect(html).toContain('property="og:image:width" content="1200"');
     expect(html).toContain('property="og:image:height" content="630"');
