@@ -8,13 +8,19 @@
   "display": "standalone",
   "orientation": "any",
   "lang": "ko-KR",
-  "background_color": "#FFFFFF",
-  "theme_color": "#FFD43B",
+  "background_color": "#FFF986",
+  "theme_color": "#FFF986",
   "categories": ["productivity", "utilities"],
   "prefer_related_applications": false,
   "icons": [
     {
-      "src": "/icons/itjima-512-v3.png",
+      "src": "/icons/itjima-192-v7.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icons/itjima-512-v7.png",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "any maskable"
