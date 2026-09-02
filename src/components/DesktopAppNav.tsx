@@ -82,7 +82,7 @@ export function DesktopAppNav() {
         <div className="mt-3 px-3">
           <button
             type="button"
-            data-testid="open-browse-search"
+            data-testid="open-browse-search-desktop"
             aria-label={t("기록 검색", "Search records")}
             onClick={openBrowse}
             className="itjima-desktop-nav-item flex min-h-12 w-full items-center gap-3 rounded-full px-3.5 py-2.5 text-left text-ink-soft transition-colors hover:bg-ink/[0.04] hover:text-ink active:bg-ink/[0.05]"
