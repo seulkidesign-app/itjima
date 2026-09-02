@@ -38,11 +38,11 @@ describe("service worker (public/sw.js)", () => {
     expect(publicSw).toContain('addEventListener("notificationclick"');
   });
 
-  it("shows notifications with PNG icons and fallback handling", () => {
+  it("shows notifications with the final v7 PNG icon and badge", () => {
     expect(publicSw).toContain("event.waitUntil(showPushNotification");
     expect(publicSw).toContain("self.registration.showNotification");
     expect(publicSw).toContain('icon: NOTIFICATION_ICON');
-    expect(publicSw).toContain('"/icons/itjima-512-v3.png"');
+    expect(publicSw).toContain('"/icons/itjima-512-v7.png"');
     expect(publicSw).toContain('"/icons/badge-72.png"');
     expect(publicSw).toContain("showNotification:fallback_ok");
     expect(publicSw).toContain("sanitizePushLogMessage");
