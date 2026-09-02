@@ -1,15 +1,15 @@
-const CACHE = "itjima-shell-v5";
+const CACHE = "itjima-shell-v7";
 const SHELL = [
   "/index.html",
-  "/manifest.webmanifest",
-  "/favicon.svg",
-  "/icons/itjima-512-v3.png",
+  "/manifest-v7.webmanifest",
+  "/favicon-32-v7.png",
+  "/icons/itjima-512-v7.png",
   "/icons/badge-72.png",
 ];
 const PUSH_LOG = "[itjima:sw:push]";
 const DEFAULT_TITLE = "잊지마";
 const DEFAULT_BODY = "예정된 일정이 있어요.";
-const NOTIFICATION_ICON = "/icons/itjima-512-v3.png";
+const NOTIFICATION_ICON = "/icons/itjima-512-v7.png";
 const NOTIFICATION_BADGE = "/icons/badge-72.png";
 
 self.addEventListener("install", (event) => {
