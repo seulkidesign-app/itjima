@@ -3,6 +3,7 @@ import { MessageSquarePlus } from "lucide-react";
 import { useT } from "@/lib/i18n";
 import { FeedbackSheet } from "./FeedbackSheet";
 import { BottomSheet } from "./BottomSheet";
+import { BrandLogo } from "./BrandLogo";
 
 export function AboutSheet({
   open,
@@ -31,9 +32,10 @@ export function AboutSheet({
           <p className="text-[11px] font-black uppercase tracking-[0.14em] text-ink/38">
             {t("자연어 일정 캡처", "Natural-language scheduling")}
           </p>
-          <h2 className="mt-2 text-[24px] font-black tracking-[-0.035em] text-ink">
-            Itjima <span className="text-ink-soft">잊지마</span>
-          </h2>
+          <div className="mt-3 flex items-center gap-3">
+            <BrandLogo size="native" />
+            <span className="text-[13px] font-bold text-ink-soft">잊지마</span>
+          </div>
           <p className="mt-3 text-[14px] leading-[1.65] text-ink/78">
             {t(
               "말하듯 일정과 할 일을 남기면 확실한 정보는 채우고, 애매한 날짜와 시간만 확인해요.",
