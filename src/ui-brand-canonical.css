@@ -53,8 +53,9 @@
   content: none !important;
 }
 
-/* Final sign-off: oversized white wordmark anchored to the bottom edge,
- * matching the original landing composition without rendering duplicate text. */
+/* Final sign-off: oversized white wordmark anchored to the bottom edge.
+ * It intentionally extends past the section boundary so the lower part is
+ * cropped/overlapped, matching the original bold landing composition. */
 .landing-v2 .lv2-brand-band {
   overflow: hidden !important;
   padding-bottom: 0 !important;
@@ -62,15 +63,22 @@
 
 .landing-v2 .lv2-brand-band-inner {
   width: 100%;
+  overflow: visible !important;
+}
+
+.landing-v2 .lv2-brand-band-copy {
+  margin-bottom: 0 !important;
 }
 
 .landing-v2 .lv2-brand-masthead {
   display: block !important;
-  width: min(980px, 92vw) !important;
+  position: relative;
+  left: 50%;
+  width: min(1220px, 104vw) !important;
   max-width: none !important;
   height: auto !important;
   aspect-ratio: 1625 / 614;
-  margin: 0 auto -0.018em !important;
+  margin: -18px 0 0 !important;
   overflow: visible !important;
   background: #fff !important;
   background-image: none !important;
@@ -82,6 +90,8 @@
   mask-position: center bottom;
   -webkit-mask-size: contain;
   mask-size: contain;
+  transform: translateX(-50%) translateY(15%);
+  transform-origin: center bottom;
   font-size: 0 !important;
   line-height: 0 !important;
   color: transparent !important;
@@ -176,18 +186,23 @@
     padding-bottom: 0 !important;
   }
 
+  .landing-v2 .lv2-brand-band-copy {
+    margin-bottom: 0 !important;
+  }
+
   .landing-v2 .lv2-brand-masthead {
-    width: 108vw !important;
+    left: 50% !important;
+    width: 126vw !important;
     max-width: none !important;
     height: auto !important;
     aspect-ratio: 1625 / 614 !important;
-    margin: 0 0 -0.025em 50% !important;
-    transform: translateX(-50%);
+    margin: -22px 0 0 !important;
     overflow: visible !important;
     -webkit-mask-size: contain !important;
     mask-size: contain !important;
     -webkit-mask-position: center bottom !important;
     mask-position: center bottom !important;
+    transform: translateX(-50%) translateY(20%) !important;
   }
 }
 
@@ -214,6 +229,8 @@
   }
 
   .landing-v2 .lv2-brand-masthead {
-    width: 112vw !important;
+    width: 132vw !important;
+    margin-top: -24px !important;
+    transform: translateX(-50%) translateY(22%) !important;
   }
 }
