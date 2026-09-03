@@ -23,11 +23,11 @@ describe("PWA product metadata safety", () => {
     resolve(process.cwd(), "public/og-itjima-brand-v7.png"),
   );
 
-  it("describes the released product without adding a new AI promise", () => {
-    const publicMetadata = `${manifestSource}\n${html}`;
-    expect(publicMetadata).not.toMatch(/AI\s*(기억|메모|일정|관리)/i);
+  it("keeps the installed PWA promise focused while search metadata identifies the AI product", () => {
     expect(manifest.name).toBe("잊지마");
     expect(manifest.description).toContain("애매한 부분만 확인");
+    expect(html).toContain("잊지마(Itjima)");
+    expect(html).toContain("AI 메모·일정 앱");
   });
 
   it("supports both portrait and landscape without forcing orientation", () => {
@@ -67,11 +67,11 @@ describe("PWA product metadata safety", () => {
     expect(brandCss).not.toContain("Playpen Sans");
   });
 
-  it("keeps search and share descriptions aligned with the focused promise", () => {
-    expect(html).toContain("메모·할 일·일정을 구분하지 말고 한 문장으로 남기세요");
+  it("keeps search and share descriptions aligned with the Itjima AI memo positioning", () => {
+    expect(html).toContain("메모·할 일·일정을 구분하지 않고 자연어 한 문장으로 기록하면");
     expect(html).toContain("날짜와 행동을 읽어 자동으로 구조화");
-    expect(html).toContain("알아서 정리되는 메모·일정 앱");
-    expect(html).toContain("알아서 정리되는 살아있는 메모");
+    expect(html).toContain("잊지마(Itjima) | 자연어 AI 메모·일정 앱");
+    expect(html).toContain("생각나는 대로 남기면 알아서 정리되는 AI 메모");
     expect(html).toContain("og-itjima-brand-v7.png");
     expect(html).toContain('property="og:image:type" content="image/png"');
     expect(html).toContain('property="og:image:width" content="1200"');
