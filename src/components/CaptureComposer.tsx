@@ -425,7 +425,7 @@ export function CaptureComposer({
         </motion.div>
       )}
 
-      <div className={`px-5 ${composer ? "pb-1 pt-1" : hero ? "mt-3" : "mt-2"}`}>
+      <div className={`capture-input-region px-5 ${composer ? "pb-1 pt-1" : hero ? "mt-3" : "mt-2"}`}>
         <motion.div
           layout
           transition={SPRING_MICRO}
@@ -470,7 +470,7 @@ export function CaptureComposer({
         </motion.div>
       </div>
 
-      <div className={`flex min-h-[52px] items-center gap-1 ${composer ? "px-5 pb-2" : "px-5 pb-2 pt-2"}`}>
+      <div className={`capture-action-row flex min-h-[52px] items-center gap-1 ${composer ? "px-5 pb-2" : "px-5 pb-2 pt-2"}`}>
         <div ref={toolsRef} className="relative">
           <motion.button
             type="button"
