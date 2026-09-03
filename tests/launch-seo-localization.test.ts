@@ -11,27 +11,36 @@ function metaContent(selector: string): string | null {
 }
 
 describe("launch SEO localization", () => {
-  it("publishes an English title, description, locale, and homepage canonical", () => {
+  it("publishes an English AI title, description, and dedicated About canonical", () => {
     applyLandingSeo({ locale: "en", canonicalPath: "/about" });
 
     expect(document.documentElement.lang).toBe("en");
-    expect(document.title).toContain("Natural-language notes, tasks, and schedules");
+    expect(document.title).toContain("AI notes, tasks, and schedules");
     expect(metaContent('meta[name="description"]')).toContain(
-      "Capture notes, tasks, and schedules in one natural sentence",
+      "AI note and scheduling app",
     );
     expect(metaContent('meta[property="og:locale"]')).toBe("en_US");
     expect(
       document.querySelector<HTMLLinkElement>('link[rel="canonical"]')?.href,
-    ).toBe("https://itjima.app/");
+    ).toBe("https://itjima.app/about");
+    expect(
+      document.querySelector<HTMLLinkElement>(
+        'link[rel="alternate"][hreflang="ko"]',
+      )?.href,
+    ).toBe("https://itjima.app/about?lang=ko");
   });
 
-  it("publishes Korean metadata when Korean is selected", () => {
+  it("publishes Korean metadata with 잊지마 and Itjima tied to the AI app", () => {
     applyLandingSeo({ locale: "ko", canonicalPath: "/" });
 
     expect(document.documentElement.lang).toBe("ko");
-    expect(document.title).toContain("알아서 정리되는 메모·일정 앱");
+    expect(document.title).toContain("잊지마(Itjima)");
+    expect(document.title).toContain("자연어 AI 메모·일정 앱");
+    expect(metaContent('meta[name="description"]')).toContain(
+      "AI 메모·일정 앱",
+    );
     expect(metaContent('meta[property="og:title"]')).toContain(
-      "살아있는 메모",
+      "잊지마(Itjima)",
     );
     expect(metaContent('meta[property="og:description"]')).toContain(
       "다시 보기 쉽게",
@@ -61,7 +70,7 @@ describe("launch SEO localization", () => {
     ).toBe("https://itjima.app/?lang=en");
   });
 
-  it("describes the English product as a bilingual productivity app", () => {
+  it("describes the product as an AI note-taking application", () => {
     const graph = landingStructuredDataGraph([], "en") as {
       "@graph": Array<Record<string, unknown>>;
     };
@@ -69,15 +78,16 @@ describe("launch SEO localization", () => {
       (node) => node["@type"] === "SoftwareApplication",
     );
 
-    expect(software?.applicationSubCategory).toBe("CalendarApplication");
+    expect(software?.applicationSubCategory).toBe("NoteTakingApplication");
     expect(software?.inLanguage).toEqual(["en-US", "ko-KR"]);
+    expect(String(software?.description)).toContain("AI productivity web app");
     expect(software?.featureList).toContain(
       "Natural-language note, task, and schedule capture",
     );
     expect(software?.featureList).toContain("Schedule and task review");
   });
 
-  it("uses 잊지마 as the preferred homepage site name", () => {
+  it("uses 잊지마 as the preferred site name and associates common brand queries", () => {
     const graph = landingStructuredDataGraph([], "ko") as {
       "@graph": Array<Record<string, unknown>>;
     };
@@ -88,10 +98,12 @@ describe("launch SEO localization", () => {
     expect(website?.name).toBe("잊지마");
     expect(website?.url).toBe("https://itjima.app/");
     expect(website?.alternateName).toContain("Itjima");
+    expect(website?.alternateName).toContain("잊지마 앱");
+    expect(website?.alternateName).toContain("Itjima app");
     expect(website?.alternateName).toContain("itjima.app");
   });
 
-  it("identifies LinkedIn as an official Itjima profile", () => {
+  it("identifies official Itjima profiles and the AI memo topic", () => {
     const graph = landingStructuredDataGraph([], "ko") as {
       "@graph": Array<Record<string, unknown>>;
     };
@@ -102,5 +114,6 @@ describe("launch SEO localization", () => {
     expect(organization?.sameAs).toContain(
       "https://www.linkedin.com/company/itjima",
     );
+    expect(organization?.knowsAbout).toContain("AI 메모");
   });
 });
