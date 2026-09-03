@@ -165,3 +165,55 @@
     padding-inline: 13px !important;
   }
 }
+
+
+/* Real-device iOS geometry guard — 2026-09-04
+ * Keep the composer fully above the persistent bottom navigation, use explicit
+ * DOM hooks instead of :has() for the two composer rows, and keep focus quiet.
+ * This intentionally changes presentation only; capture behavior is untouched. */
+@media (max-width: 639px) {
+  .itjima-app-stage[data-route="home"]
+    .page-shell
+    > div:first-child
+    > div.composer-hero {
+    margin-bottom: calc(78px + env(safe-area-inset-bottom)) !important;
+  }
+
+  .itjima-app-stage[data-route="home"]
+    form.composer-hero
+    > .capture-input-region {
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+
+  .itjima-app-stage[data-route="home"]
+    form.composer-hero
+    > .capture-action-row {
+    position: relative !important;
+    z-index: 3 !important;
+    display: flex !important;
+    min-height: 48px !important;
+    align-items: center !important;
+    gap: 3px !important;
+    margin: -54px 9px 0 !important;
+    padding: 5px 3px 5px 4px !important;
+    overflow: visible !important;
+    border: 0 !important;
+    background: transparent !important;
+    box-shadow: none !important;
+  }
+
+  .itjima-app-stage[data-route="home"]
+    form.composer-hero
+    .input-shell.input-focus-ring,
+  .itjima-app-stage[data-route="home"]
+    form.composer-hero
+    .input-shell:focus-within,
+  .itjima-app-stage[data-route="home"]
+    form.composer-hero
+    .input-shell-focused {
+    outline: none !important;
+    border-color: rgba(60, 60, 67, 0.16) !important;
+    box-shadow: 0 7px 22px rgba(0, 0, 0, 0.035) !important;
+  }
+}
