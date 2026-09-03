@@ -1,0 +1,167 @@
+/* Final mobile capture composer layout — 2026-09-03
+ * One surface, one primary action. Capture remains type-free: users do not
+ * choose memo/task/schedule before writing. Attachment, voice and submit live
+ * inside the same rounded composer instead of floating as separate layers. */
+
+@media (max-width: 639px) {
+  .itjima-app-stage[data-route="home"] form.composer-hero {
+    position: relative !important;
+    padding: 8px 14px max(10px, env(safe-area-inset-bottom)) !important;
+    border-top: 0 !important;
+    background: rgba(255, 255, 255, 0.985) !important;
+    box-shadow: 0 -12px 28px -28px rgba(0, 0, 0, 0.5) !important;
+  }
+
+  /* Text field wrapper: reserve the lower portion for the integrated toolbar. */
+  .itjima-app-stage[data-route="home"]
+    form.composer-hero
+    > div:has(.input-shell) {
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+
+  .itjima-app-stage[data-route="home"] form.composer-hero .input-shell {
+    position: relative !important;
+    min-height: 126px !important;
+    padding: 17px 16px 58px !important;
+    overflow: hidden !important;
+    border: 1px solid rgba(60, 60, 67, 0.12) !important;
+    border-radius: 26px !important;
+    background: rgba(255, 255, 255, 0.98) !important;
+    box-shadow: 0 7px 22px rgba(0, 0, 0, 0.035) !important;
+  }
+
+  .itjima-app-stage[data-route="home"] form.composer-hero .input-shell:focus-within,
+  .itjima-app-stage[data-route="home"] form.composer-hero .input-shell-focused {
+    border-color: rgba(191, 153, 0, 0.28) !important;
+    box-shadow:
+      0 0 0 3px rgba(255, 211, 61, 0.12),
+      0 8px 24px rgba(0, 0, 0, 0.04) !important;
+  }
+
+  .itjima-app-stage[data-route="home"] form.composer-hero #capture-input {
+    min-height: 50px !important;
+    max-height: 124px !important;
+    padding: 0 !important;
+    border: 0 !important;
+    border-radius: 0 !important;
+    background: transparent !important;
+    box-shadow: none !important;
+    outline: none !important;
+    font-size: 16px !important;
+    line-height: 1.55 !important;
+    color: var(--ij-label, #171719) !important;
+  }
+
+  .itjima-app-stage[data-route="home"] form.composer-hero #capture-input::placeholder {
+    color: rgba(60, 60, 67, 0.42) !important;
+    opacity: 1 !important;
+  }
+
+  /* Pull the existing action row into the bottom of the input surface. */
+  .itjima-app-stage[data-route="home"]
+    form.composer-hero
+    > div:has([data-testid="capture-submit"]) {
+    position: relative !important;
+    z-index: 3 !important;
+    display: flex !important;
+    min-height: 48px !important;
+    align-items: center !important;
+    gap: 3px !important;
+    margin: -54px 9px 0 !important;
+    padding: 5px 3px 5px 4px !important;
+    overflow: visible !important;
+    border: 0 !important;
+    background: transparent !important;
+    box-shadow: none !important;
+  }
+
+  /* Hide any legacy mode/type CTA (for example, 일정) that may survive in an
+   * older cached composer build. The product captures first and interprets
+   * structure afterwards. */
+  .itjima-app-stage[data-route="home"]
+    form.composer-hero
+    > div:has([data-testid="capture-submit"])
+    > button:not([aria-pressed]):not([data-testid="capture-submit"]) {
+    display: none !important;
+  }
+
+  /* Attachment and voice are equal secondary tools, visually quiet. */
+  .itjima-app-stage[data-route="home"] form.composer-hero button[aria-haspopup="menu"],
+  .itjima-app-stage[data-route="home"] form.composer-hero button[aria-pressed] {
+    position: static !important;
+    inset: auto !important;
+    display: inline-grid !important;
+    width: 40px !important;
+    min-width: 40px !important;
+    height: 40px !important;
+    min-height: 40px !important;
+    flex: 0 0 40px !important;
+    place-items: center !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    border: 0 !important;
+    border-radius: 999px !important;
+    background: transparent !important;
+    color: rgba(60, 60, 67, 0.66) !important;
+    box-shadow: none !important;
+    translate: none !important;
+  }
+
+  .itjima-app-stage[data-route="home"] form.composer-hero button[aria-pressed="true"] {
+    background: #ef4444 !important;
+    color: #fff !important;
+  }
+
+  /* The only prominent action is Capture. */
+  .itjima-app-stage[data-route="home"]
+    form.composer-hero
+    [data-testid="capture-submit"] {
+    position: static !important;
+    inset: auto !important;
+    min-width: 92px !important;
+    height: 40px !important;
+    min-height: 40px !important;
+    flex: 0 0 auto !important;
+    margin: 0 0 0 auto !important;
+    padding: 0 15px !important;
+    border-radius: 999px !important;
+    background: #ffd83d !important;
+    color: #171719 !important;
+    box-shadow: none !important;
+    font-size: 13px !important;
+    font-weight: 800 !important;
+  }
+
+  .itjima-app-stage[data-route="home"]
+    form.composer-hero
+    [data-testid="capture-submit"]:disabled {
+    background: rgba(118, 118, 128, 0.11) !important;
+    color: rgba(60, 60, 67, 0.38) !important;
+  }
+
+  /* Attachment preview belongs to the composer but stays above its surface. */
+  .itjima-app-stage[data-route="home"] form.composer-hero > div:has(img[alt^="첨부 이미지"]),
+  .itjima-app-stage[data-route="home"] form.composer-hero > div:has(img[alt^="Attached image"]) {
+    padding-inline: 2px !important;
+    padding-bottom: 8px !important;
+  }
+}
+
+@media (max-width: 380px) {
+  .itjima-app-stage[data-route="home"] form.composer-hero {
+    padding-inline: 10px !important;
+  }
+
+  .itjima-app-stage[data-route="home"] form.composer-hero .input-shell {
+    min-height: 118px !important;
+    padding-inline: 14px !important;
+  }
+
+  .itjima-app-stage[data-route="home"]
+    form.composer-hero
+    [data-testid="capture-submit"] {
+    min-width: 84px !important;
+    padding-inline: 13px !important;
+  }
+}
