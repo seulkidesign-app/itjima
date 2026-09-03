@@ -1,57 +1,96 @@
-# SEO Setup — 잊지마 Itjima
+# SEO Setup — 잊지마(Itjima)
 
-Last updated: 2026-07-25
+Last updated: 2026-09-03
 
-## Architecture note
+## Goal
 
-The PWA remains at `https://itjima.app/` to preserve installed-app `start_url` compatibility. Public crawlable content is provided via:
+Build a consistent search entity relationship across the queries **잊지마**, **잊지마 앱**, **Itjima**, and **Itjima app** so search engines can distinguish the product from unrelated uses of “잊지마”.
 
-- `<noscript>` HTML in `index.html` (H1, description, links)
-- `/about` — full marketing landing with FAQ and structured data
-- `public/sitemap.xml`, `public/robots.txt`
+The preferred entity definition is:
 
-A future `/app` split is documented as optional; migrating requires manifest `start_url` update and reinstall guidance.
+> 잊지마(Itjima)는 메모·할 일·일정을 구분하지 않고 자연어 한 문장으로 기록하면 날짜와 행동을 읽어 자동으로 구조화하고 다시 보기 쉽게 정리해주는 AI 메모·일정 앱입니다.
+
+Keep the product name and definition materially consistent across the website and official external profiles. Search ranking and generated AI summaries are ultimately determined by the search engine and cannot be guaranteed by metadata alone.
+
+## Public crawlable surfaces
+
+The product remains available under `https://itjima.app/` and `/app`. Search-facing public content is provided through:
+
+- `index.html` metadata and `<noscript>` fallback content
+- `/` — official landing page with localized runtime SEO and structured data
+- `/about` — dedicated crawlable brand/entity definition page
+- `public/sitemap.xml`
+- `public/robots.txt`
+
+`/about` has its own canonical URL (`https://itjima.app/about`) and Korean/English alternate-language links.
+
+## Structured data
+
+The home page publishes an entity graph containing:
+
+- `Brand` — preferred name **잊지마**, alternate names including **Itjima**, **잊지마 앱**, and **Itjima app**
+- `Organization` — official Itjima profiles and product topic relationships
+- `WebSite` — official website identity
+- `WebPage` — homepage relationship
+- `SoftwareApplication` — AI note/scheduling product definition
+- `FAQPage` — visible landing FAQ content
+
+The `/about` route additionally publishes an `AboutPage` that points to the same brand and software entity IDs.
 
 ## Google Search Console
 
-1. Verify property `https://itjima.app/` (DNS TXT or HTML file).
-2. Submit sitemap: `https://itjima.app/sitemap.xml`
-3. URL Inspection → Request indexing for:
+The HTML verification meta tag is already present in `index.html`.
+
+After each meaningful SEO deploy:
+
+1. Open the `https://itjima.app/` property.
+2. Submit or re-submit `https://itjima.app/sitemap.xml` if necessary.
+3. Use URL Inspection → **Request indexing** for:
    - `https://itjima.app/`
    - `https://itjima.app/about`
-4. Confirm `lang="ko"` and canonical `https://itjima.app/`
+4. Confirm both URLs are indexable and each reports its intended canonical.
+5. Check Performance over time for branded queries:
+   - `잊지마`
+   - `잊지마 앱`
+   - `Itjima`
+   - `Itjima app`
 
 ## Bing Webmaster Tools
 
-1. Add site `https://itjima.app/`
-2. Submit the same sitemap
-3. Run URL inspection after deploy
+1. Add `https://itjima.app/`.
+2. Submit the same sitemap.
+3. Run URL inspection after meaningful deployments.
 
 ## Post-deployment validation
 
-- [ ] `curl -I https://itjima.app/` returns 200
-- [ ] View page source shows H1 text (noscript block)
-- [ ] `robots.txt` accessible
-- [ ] `sitemap.xml` lists only public routes
+- [ ] `https://itjima.app/` returns 200
+- [ ] `https://itjima.app/about` returns 200 without redirecting to `/`
+- [ ] Home source contains the `잊지마(Itjima)` definition in metadata/noscript
+- [ ] `/about` visibly contains the official product definition and name-origin explanation
+- [ ] `robots.txt` is accessible
+- [ ] `sitemap.xml` lists `/` and `/about`
 - [ ] No `noindex` on public pages
-- [ ] Open Graph preview renders (Twitter Card Validator / Meta debugger)
-- [ ] JSON-LD validates (Google Rich Results Test)
+- [ ] Canonical is `/` on home and `/about` on About
+- [ ] Open Graph preview renders
+- [ ] JSON-LD parses successfully
 
 ## Brand consistency
 
-Use **잊지마 Itjima** consistently across:
+Use **잊지마(Itjima)** when first defining the product in Korean. Use **Itjima** as the Roman/English product name. Avoid publishing conflicting definitions such as treating Itjima only as a translation of the Korean phrase.
 
-- Page titles and meta descriptions
-- App store / PWA install name: **잊지마**
-- Roman name in English contexts: **Itjima**
+Recommended external-profile pattern:
 
-See `docs/BRAND_SEO_CHECKLIST.md` for external profile naming.
+> 잊지마(Itjima) — 자연어로 메모·할 일·일정을 남기면 AI가 날짜와 행동을 읽어 자동으로 구조화하고 다시 보기 쉽게 정리하는 메모·일정 앱.
+
+Official profile links used in structured data live in `src/lib/brand.ts`. Keep those URLs accurate and remove any profile that is no longer official.
 
 ## Metadata reference
 
-| Field | Value |
-|-------|-------|
-| Home title | 잊지마 Itjima \| 생각을 던지고 안심하고 잊는 기억 관리 앱 |
-| Meta description | 잊지마 Itjima는 떠오른 생각을 빠르게 기록하고 일정, 할 일, 보관으로 정리해주는 기억 관리 앱입니다. 대충 던지고 안심하고 잊으세요. |
-| Canonical | https://itjima.app/ |
-| SoftwareApplication url | https://itjima.app/ |
+| Field | Preferred value |
+|---|---|
+| Home title | 잊지마(Itjima) \| 자연어 AI 메모·일정 앱 |
+| Korean description | 잊지마(Itjima)는 메모·할 일·일정을 구분하지 않고 자연어 한 문장으로 기록하면 날짜와 행동을 읽어 자동으로 구조화하고 다시 보기 쉽게 정리해주는 AI 메모·일정 앱입니다. |
+| Home canonical | https://itjima.app/ |
+| About canonical | https://itjima.app/about |
+| SoftwareApplication URL | https://itjima.app/ |
+| App entry | https://itjima.app/app |
