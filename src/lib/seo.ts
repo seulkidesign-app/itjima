@@ -9,31 +9,31 @@ const EN_SITE_NAME = "Itjima";
 
 const SEO_BY_LOCALE = {
   ko: {
-    landingTitle: "잊지마 | 자연어로 기록하면 알아서 정리되는 메모·일정 앱",
+    landingTitle: "잊지마(Itjima) | 자연어 AI 메모·일정 앱",
     landingDescription:
-      "메모·할 일·일정을 구분하지 말고 한 문장으로 남기세요. 잊지마가 날짜와 행동을 읽어 자동으로 구조화하고, 필요한 기록을 다시 보기 쉽게 정리해주는 자연어 기록 앱입니다.",
-    ogTitle: "생각나는 대로 남기면, 알아서 정리되는 살아있는 메모 | 잊지마",
+      "잊지마(Itjima)는 메모·할 일·일정을 구분하지 않고 자연어 한 문장으로 기록하면 날짜와 행동을 읽어 자동으로 구조화하고 다시 보기 쉽게 정리해주는 AI 메모·일정 앱입니다.",
+    ogTitle: "잊지마(Itjima) | 생각나는 대로 남기면 알아서 정리되는 AI 메모",
     ogDescription:
-      "자연어로 남긴 메모·할 일·일정을 날짜와 행동에 맞게 구조화해 다시 보기 쉽게 정리해주는 기록 도구.",
+      "메모·할 일·일정을 먼저 나누지 마세요. 잊지마(Itjima)가 자연어 한 문장에서 날짜와 행동을 읽고 자동으로 구조화해 다시 보기 쉽게 정리합니다.",
     appDescription:
-      "잊지마는 자연어로 남긴 메모·할 일·일정에서 날짜와 행동을 읽어 구조화하고 다시 확인하기 쉽게 정리하는 기록 관리 웹앱입니다.",
+      "잊지마(Itjima)는 메모·할 일·일정을 구분하지 않고 자연어 한 문장으로 기록하면 날짜와 행동을 읽어 자동으로 구조화하고 다시 보기 쉽게 정리해주는 AI 메모·일정 웹앱입니다.",
     keywords:
-      "잊지마, 잊지마 앱, Itjima, 자연어 메모, 자연어 기록, 메모 앱, 일정 관리, 일정 관리 앱, 할 일 관리, 캘린더, 리마인더",
+      "잊지마, 잊지마 앱, Itjima, Itjima app, AI 메모, AI 메모 앱, 자연어 메모, 자연어 기록, 메모 앱, 일정 관리, 일정 관리 앱, 할 일 관리, 캘린더, 리마인더",
     locale: "ko_KR",
     language: "ko-KR",
     currency: "KRW",
   },
   en: {
-    landingTitle: "Itjima | Natural-language notes, tasks, and schedules",
+    landingTitle: "Itjima | AI notes, tasks, and schedules in natural language",
     landingDescription:
-      "Capture notes, tasks, and schedules in one natural sentence. Itjima reads dates and actions, structures what you wrote, and keeps it easy to revisit.",
-    ogTitle: "A living inbox for thoughts before they're organized | Itjima",
+      "Itjima is an AI note and scheduling app that reads dates and actions from one natural sentence, structures what you wrote, and keeps it easy to revisit.",
+    ogTitle: "Itjima | AI notes that organize themselves",
     ogDescription:
-      "Capture naturally and let Itjima structure notes, tasks, and schedules so they're easy to revisit.",
+      "Capture notes, tasks, and schedules naturally. Itjima reads dates and actions, structures what you wrote, and keeps it easy to revisit.",
     appDescription:
-      "Itjima is a bilingual productivity web app that structures natural-language notes, tasks, and schedules and keeps them easy to review.",
+      "Itjima is a bilingual AI productivity web app that structures natural-language notes, tasks, and schedules and keeps them easy to review.",
     keywords:
-      "Itjima, natural language notes, task capture, schedule capture, note organizer, calendar, reminders, productivity app",
+      "Itjima, Itjima app, AI notes, natural language notes, task capture, schedule capture, note organizer, calendar, reminders, productivity app",
     locale: "en_US",
     language: "en-US",
     currency: "USD",
@@ -63,12 +63,14 @@ function brandAlternateNames() {
     new Set([
       BRAND.name,
       ...BRAND.alternateNames,
+      "잊지마 앱",
+      "Itjima app",
     ].filter((name) => name !== PRIMARY_SITE_NAME)),
   );
 }
 
 function normalizeCanonicalPath(path?: string) {
-  if (!path || path === "/about") return "/";
+  if (!path) return "/";
   return path.startsWith("/") ? path : `/${path}`;
 }
 
@@ -79,6 +81,8 @@ function brandEntity() {
     name: PRIMARY_SITE_NAME,
     alternateName: brandAlternateNames(),
     url: `${SITE_URL}/`,
+    description:
+      "잊지마(Itjima)는 자연어 한 문장으로 메모·할 일·일정을 남기면 날짜와 행동을 읽어 자동으로 구조화하고 다시 보기 쉽게 정리해주는 AI 기록 브랜드입니다.",
     logo: {
       "@type": "ImageObject" as const,
       url: BRAND.logoUrl,
@@ -203,6 +207,10 @@ export function landingOrganizationLd(locale: Lang = "ko") {
     name: PRIMARY_SITE_NAME,
     alternateName: brandAlternateNames(),
     url: `${SITE_URL}/`,
+    description:
+      locale === "en"
+        ? "Itjima develops an AI note and scheduling app that structures natural-language notes, tasks, and schedules and keeps them easy to revisit."
+        : "잊지마(Itjima)는 자연어로 기록한 메모·할 일·일정을 AI가 날짜와 행동에 맞게 구조화하고 다시 보기 쉽게 정리하는 서비스를 운영합니다.",
     foundingDate: BRAND.foundingDate,
     sameAs: [...BRAND.sameAs],
     brand: { "@id": BRAND_ID },
@@ -213,6 +221,7 @@ export function landingOrganizationLd(locale: Lang = "ko") {
       caption: BRAND.logoAlt,
     },
     knowsAbout: [
+      "AI note taking",
       "natural-language note capture",
       "natural-language scheduling",
       "automatic record organization",
@@ -220,6 +229,7 @@ export function landingOrganizationLd(locale: Lang = "ko") {
       "reminders",
       "productivity software",
       "자연어 기록",
+      "AI 메모",
       "메모 정리",
       "일정 관리",
       "할 일 관리",
@@ -241,8 +251,12 @@ export function landingWebSiteLd(locale: Lang = "ko") {
     "@type": "WebSite",
     "@id": WEBSITE_ID,
     name: PRIMARY_SITE_NAME,
-    alternateName: [EN_SITE_NAME, "ItJima", "itjima.app"],
+    alternateName: [EN_SITE_NAME, "ItJima", "잊지마 앱", "Itjima app", "itjima.app"],
     url: `${SITE_URL}/`,
+    description:
+      locale === "en"
+        ? "The official website for Itjima, an AI note and scheduling app for natural-language capture."
+        : "잊지마(Itjima) 공식 웹사이트 — 자연어 AI 메모, 할 일, 일정 기록과 자동 구조화",
     inLanguage: seo.language,
     publisher: { "@id": ORG_ID },
     about: { "@id": APP_ID },
@@ -293,10 +307,10 @@ export function landingSoftwareApplicationLd(locale: Lang = "ko") {
     name: PRIMARY_SITE_NAME,
     alternateName: brandAlternateNames(),
     applicationCategory: "ProductivityApplication",
-    applicationSubCategory: "CalendarApplication",
+    applicationSubCategory: "NoteTakingApplication",
     operatingSystem: "Web, iOS PWA, Android PWA",
     url: `${SITE_URL}/`,
-    downloadUrl: `${SITE_URL}/`,
+    downloadUrl: `${SITE_URL}/app`,
     softwareVersion: BRAND.softwareVersion,
     inLanguage: ["en-US", "ko-KR"],
     description: seo.appDescription,
@@ -320,7 +334,7 @@ export function landingSoftwareApplicationLd(locale: Lang = "ko") {
           "날짜와 행동을 읽어 자동 구조화",
           "일정과 할 일 다시 확인하기",
           "애매한 일정 정보만 확인",
-          "일정과 할 일 관리",
+          "필요한 기록 다시 보기",
           "기기 간 동기화",
           "푸시 알림",
           "데이터 내려받기와 계정 삭제",
