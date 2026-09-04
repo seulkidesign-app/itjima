@@ -60,3 +60,5 @@ The release build runs schedule parsing, confirmation safety, notification, sync
 ## Current scope
 
 The portfolio MVP focuses on natural-language schedule and task capture. Archive intelligence, rediscovery, AI grouping, and broader memory-lifecycle experiments remain feature-gated until separately validated with users.
+
+<!-- vercel baseline preview check 2026-09-04 -->
