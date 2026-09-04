@@ -482,7 +482,7 @@ export function CaptureComposer({
             aria-label={t("첨부 도구", "Attachment tools")}
             aria-haspopup="menu"
             aria-expanded={toolsOpen}
-            className={`capture-tools-button touch-target rounded-full transition-colors ${
+            className={`touch-target rounded-full transition-colors ${
               toolsOpen ? "bg-ink text-white" : "text-ink-soft hover:bg-ink/[0.055]"
             }`}
           >
@@ -549,7 +549,7 @@ export function CaptureComposer({
           type="button"
           whileTap={{ scale: 0.94 }}
           onClick={onMic}
-          className={`capture-voice-button touch-target rounded-full transition-colors ${
+          className={`touch-target rounded-full transition-colors ${
             listening
               ? "bg-red-500 text-white shadow-float"
               : "text-ink-soft hover:bg-ink/[0.055]"
@@ -581,7 +581,7 @@ export function CaptureComposer({
           aria-label={t("남기기", "Capture")}
         >
           <ArrowUp size={16} strokeWidth={2.8} aria-hidden />
-          <span className="capture-submit-label">{t("남기기", "Capture")}</span>
+          {t("남기기", "Capture")}
         </motion.button>
       </div>
 
