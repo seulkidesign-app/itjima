@@ -1,0 +1,254 @@
+/* Home mobile docked composer — 2026-09-04
+ * Visual-only polish matching the approved compact capture mockup.
+ * Keep capture behavior/type inference untouched while removing the double
+ * bottom reservation that made the composer float in the middle of the screen. */
+
+@media (max-width: 639px) {
+  /* Home owns its own composer/nav geometry. The generic mobile scroll padding
+   * plus the home composer reserve previously stacked and created a large gap. */
+  .itjima-app-stage[data-route="home"] .itjima-app-scroll {
+    padding-bottom: 0 !important;
+  }
+
+  .itjima-app-stage[data-route="home"] .home-chat-lane {
+    padding-bottom: 14px !important;
+    scroll-padding-bottom: 18px !important;
+  }
+
+  .itjima-app-stage[data-route="home"]
+    .page-shell
+    > div:first-child
+    > div.composer-hero {
+    margin-bottom: calc(82px + env(safe-area-inset-bottom)) !important;
+    padding: 0 !important;
+    border-top: 0 !important;
+    background: transparent !important;
+    box-shadow: none !important;
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+  }
+
+  .itjima-app-stage[data-route="home"] form.composer-hero {
+    position: relative !important;
+    overflow: visible !important;
+    padding: 6px 14px 0 !important;
+    border: 0 !important;
+    background: transparent !important;
+    box-shadow: none !important;
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+  }
+
+  .itjima-app-stage[data-route="home"]
+    form.composer-hero
+    > .capture-input-region {
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+
+  .itjima-app-stage[data-route="home"] form.composer-hero .input-shell {
+    display: flex !important;
+    min-height: 60px !important;
+    align-items: center !important;
+    padding: 0 56px 0 88px !important;
+    overflow: hidden !important;
+    border: 1px solid rgba(60, 60, 67, 0.15) !important;
+    border-radius: 999px !important;
+    background: rgba(255, 255, 255, 0.985) !important;
+    box-shadow:
+      0 1px 2px rgba(0, 0, 0, 0.02),
+      0 8px 24px rgba(0, 0, 0, 0.035) !important;
+  }
+
+  .itjima-app-stage[data-route="home"] form.composer-hero .input-shell:focus-within,
+  .itjima-app-stage[data-route="home"] form.composer-hero .input-shell-focused,
+  .itjima-app-stage[data-route="home"] form.composer-hero .input-shell.input-focus-ring {
+    outline: none !important;
+    border-color: rgba(60, 60, 67, 0.18) !important;
+    box-shadow:
+      0 1px 2px rgba(0, 0, 0, 0.02),
+      0 8px 24px rgba(0, 0, 0, 0.035) !important;
+  }
+
+  .itjima-app-stage[data-route="home"] form.composer-hero #capture-input {
+    width: 100% !important;
+    height: 58px !important;
+    min-height: 58px !important;
+    max-height: 96px !important;
+    padding: 16px 0 12px !important;
+    overflow-y: auto !important;
+    border: 0 !important;
+    border-radius: 0 !important;
+    background: transparent !important;
+    box-shadow: none !important;
+    font-size: 16px !important;
+    line-height: 1.5 !important;
+    color: var(--ij-label, #171719) !important;
+  }
+
+  .itjima-app-stage[data-route="home"] form.composer-hero #capture-input::placeholder {
+    color: rgba(60, 60, 67, 0.38) !important;
+    opacity: 1 !important;
+  }
+
+  /* Overlay the existing controls into the same pill. Pointer events stay on
+   * the buttons only so the textarea remains tappable between them. */
+  .itjima-app-stage[data-route="home"]
+    form.composer-hero
+    > .capture-action-row {
+    position: absolute !important;
+    z-index: 4 !important;
+    right: 22px !important;
+    bottom: 0 !important;
+    left: 22px !important;
+    display: flex !important;
+    height: 60px !important;
+    min-height: 60px !important;
+    align-items: center !important;
+    gap: 3px !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    border: 0 !important;
+    background: transparent !important;
+    box-shadow: none !important;
+    pointer-events: none !important;
+  }
+
+  .itjima-app-stage[data-route="home"]
+    form.composer-hero
+    > .capture-action-row
+    button {
+    pointer-events: auto !important;
+  }
+
+  .itjima-app-stage[data-route="home"]
+    form.composer-hero
+    .capture-tools-button,
+  .itjima-app-stage[data-route="home"]
+    form.composer-hero
+    .capture-voice-button {
+    position: static !important;
+    inset: auto !important;
+    display: inline-grid !important;
+    width: 36px !important;
+    min-width: 36px !important;
+    height: 36px !important;
+    min-height: 36px !important;
+    flex: 0 0 36px !important;
+    place-items: center !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    border: 0 !important;
+    border-radius: 999px !important;
+    background: rgba(118, 118, 128, 0.08) !important;
+    color: rgba(60, 60, 67, 0.58) !important;
+    box-shadow: none !important;
+    translate: none !important;
+  }
+
+  .itjima-app-stage[data-route="home"]
+    form.composer-hero
+    .capture-tools-button[aria-expanded="true"] {
+    background: rgba(60, 60, 67, 0.92) !important;
+    color: #fff !important;
+  }
+
+  .itjima-app-stage[data-route="home"]
+    form.composer-hero
+    .capture-voice-button[aria-pressed="true"] {
+    background: #ef4444 !important;
+    color: #fff !important;
+  }
+
+  .itjima-app-stage[data-route="home"]
+    form.composer-hero
+    [data-testid="capture-submit"] {
+    position: static !important;
+    inset: auto !important;
+    display: inline-grid !important;
+    width: 44px !important;
+    min-width: 44px !important;
+    height: 44px !important;
+    min-height: 44px !important;
+    flex: 0 0 44px !important;
+    place-items: center !important;
+    margin: 0 0 0 auto !important;
+    padding: 0 !important;
+    border-radius: 999px !important;
+    background: #ffd83d !important;
+    color: #171719 !important;
+    box-shadow: none !important;
+    font-size: 0 !important;
+  }
+
+  .itjima-app-stage[data-route="home"]
+    form.composer-hero
+    [data-testid="capture-submit"]:disabled {
+    background: rgba(118, 118, 128, 0.1) !important;
+    color: rgba(60, 60, 67, 0.34) !important;
+  }
+
+  .itjima-app-stage[data-route="home"]
+    form.composer-hero
+    .capture-submit-label {
+    display: none !important;
+  }
+
+  /* Compact two-tab dock: navigation supports capture instead of competing
+   * with it. Keep the active Itjima yellow but reduce visual weight. */
+  .mobile-bottom-nav {
+    right: 14px !important;
+    bottom: max(10px, env(safe-area-inset-bottom)) !important;
+    left: 14px !important;
+    min-height: 64px !important;
+    padding: 5px !important;
+    border: 0 !important;
+    border-radius: 30px !important;
+    background: rgba(241, 240, 236, 0.96) !important;
+    box-shadow: 0 8px 28px -22px rgba(0, 0, 0, 0.42) !important;
+  }
+
+  .mobile-bottom-nav-item {
+    min-height: 54px !important;
+    flex-direction: row !important;
+    gap: 8px !important;
+    padding: 0 10px !important;
+    border-radius: 25px !important;
+    font-size: 13px !important;
+    font-weight: 700 !important;
+  }
+
+  .mobile-bottom-nav-item > span[aria-hidden] {
+    inset: 0 !important;
+    border-radius: 25px !important;
+    box-shadow: none !important;
+  }
+
+  .mobile-bottom-nav-item svg {
+    width: 20px !important;
+    height: 20px !important;
+  }
+}
+
+@media (max-width: 380px) {
+  .itjima-app-stage[data-route="home"] form.composer-hero {
+    padding-inline: 10px !important;
+  }
+
+  .itjima-app-stage[data-route="home"] form.composer-hero .input-shell {
+    padding-right: 52px !important;
+    padding-left: 80px !important;
+  }
+
+  .itjima-app-stage[data-route="home"]
+    form.composer-hero
+    > .capture-action-row {
+    right: 18px !important;
+    left: 18px !important;
+  }
+
+  .mobile-bottom-nav {
+    right: 10px !important;
+    left: 10px !important;
+  }
+}
