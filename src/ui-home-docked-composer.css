@@ -123,10 +123,10 @@
 
   .itjima-app-stage[data-route="home"]
     form.composer-hero
-    .capture-tools-button,
+    button[aria-haspopup="menu"],
   .itjima-app-stage[data-route="home"]
     form.composer-hero
-    .capture-voice-button {
+    button[aria-pressed] {
     position: static !important;
     inset: auto !important;
     display: inline-grid !important;
@@ -148,14 +148,14 @@
 
   .itjima-app-stage[data-route="home"]
     form.composer-hero
-    .capture-tools-button[aria-expanded="true"] {
+    button[aria-haspopup="menu"][aria-expanded="true"] {
     background: rgba(60, 60, 67, 0.92) !important;
     color: #fff !important;
   }
 
   .itjima-app-stage[data-route="home"]
     form.composer-hero
-    .capture-voice-button[aria-pressed="true"] {
+    button[aria-pressed][aria-pressed="true"] {
     background: #ef4444 !important;
     color: #fff !important;
   }
@@ -172,6 +172,7 @@
     min-height: 44px !important;
     flex: 0 0 44px !important;
     place-items: center !important;
+    gap: 0 !important;
     margin: 0 0 0 auto !important;
     padding: 0 !important;
     border-radius: 999px !important;
@@ -186,12 +187,6 @@
     [data-testid="capture-submit"]:disabled {
     background: rgba(118, 118, 128, 0.1) !important;
     color: rgba(60, 60, 67, 0.34) !important;
-  }
-
-  .itjima-app-stage[data-route="home"]
-    form.composer-hero
-    .capture-submit-label {
-    display: none !important;
   }
 
   /* Compact two-tab dock: navigation supports capture instead of competing
