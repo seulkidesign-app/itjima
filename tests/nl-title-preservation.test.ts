@@ -1,9 +1,20 @@
-import { describe, expect, it } from "vitest";
+import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import { cleanScheduleTitle } from "@/lib/naturalScheduleDraft";
 
 const expectTitle = (input: string, expected: string) => {
   expect(cleanScheduleTitle(input), input).toBe(expected);
 };
+
+// These fixtures include 2026-09-03 as a supported non-past date. Freeze
+// the clock so the suite does not start failing as wall-clock time moves on.
+beforeAll(() => {
+  vi.useFakeTimers();
+  vi.setSystemTime(new Date("2026-09-03T12:00:00.000Z"));
+});
+
+afterAll(() => {
+  vi.useRealTimers();
+});
 
 describe("NL title preservation P0-B", () => {
   describe("SUPPORTED CLEAN — metadata/clarification-owned temporal spans are removed atomically", () => {
