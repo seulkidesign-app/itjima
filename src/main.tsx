@@ -68,15 +68,15 @@ declare module "@tanstack/react-router" {
 }
 
 if (typeof window !== "undefined") {
-  const brandCacheKey = "20260903-1";
+  const brandCacheKey = "20260906-1";
   const manifestLink = document.querySelector<HTMLLinkElement>('link[rel="manifest"]');
   if (manifestLink) manifestLink.href = `/manifest-v7.webmanifest?v=${brandCacheKey}`;
 
   const faviconLink = document.querySelector<HTMLLinkElement>('link[rel="icon"]');
-  if (faviconLink) faviconLink.href = `/favicon-32-v7.png?v=${brandCacheKey}`;
+  if (faviconLink) faviconLink.href = `/favicon.svg?v=${brandCacheKey}`;
 
   const shortcutIconLink = document.querySelector<HTMLLinkElement>('link[rel="shortcut icon"]');
-  if (shortcutIconLink) shortcutIconLink.href = `/favicon-32-v7.png?v=${brandCacheKey}`;
+  if (shortcutIconLink) shortcutIconLink.href = `/favicon.svg?v=${brandCacheKey}`;
 
   const touchIconLink = document.querySelector<HTMLLinkElement>(
     'link[rel="apple-touch-icon"]',
