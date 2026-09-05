@@ -1,7 +1,7 @@
 import { Link } from "@tanstack/react-router";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { ArrowRight, Check, ChevronDown, Instagram, Linkedin, Sparkles } from "lucide-react";
-import { FormEvent, useEffect, useMemo, useState } from "react";
+import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
 import { BRAND } from "@/lib/brand";
 import { LanguageToggle, useT } from "@/lib/i18n";
 import "@/ui-landing-v2.css";
@@ -62,6 +62,74 @@ function PillLink({
       <span>{children}</span>
       <ArrowRight size={15} strokeWidth={2.2} aria-hidden="true" />
     </Link>
+  );
+}
+
+const butterflySpots = [
+  { x: "0vw", y: "0vw", rotate: -4 },
+  { x: "-11vw", y: "-3.5vw", rotate: 9 },
+  { x: "2.5vw", y: "5.5vw", rotate: -10 },
+  { x: "-16vw", y: "4.5vw", rotate: 7 },
+  { x: "-5vw", y: "-6.5vw", rotate: -6 },
+] as const;
+
+function FlyingIj() {
+  const reduced = useReducedMotion();
+  const [spotIndex, setSpotIndex] = useState(0);
+  const [flying, setFlying] = useState(false);
+  const settleTimerRef = useRef<number | null>(null);
+  const spot = butterflySpots[spotIndex];
+
+  useEffect(() => {
+    return () => {
+      if (settleTimerRef.current !== null) {
+        window.clearTimeout(settleTimerRef.current);
+      }
+    };
+  }, []);
+
+  function flyAway() {
+    if (reduced) return;
+
+    setSpotIndex((current) => {
+      const jump = 1 + Math.floor(Math.random() * (butterflySpots.length - 1));
+      return (current + jump) % butterflySpots.length;
+    });
+    setFlying(true);
+
+    if (settleTimerRef.current !== null) {
+      window.clearTimeout(settleTimerRef.current);
+    }
+    settleTimerRef.current = window.setTimeout(() => {
+      setFlying(false);
+      settleTimerRef.current = null;
+    }, 720);
+  }
+
+  return (
+    <motion.button
+      type="button"
+      className={`lv2-butterfly-ij ${flying ? "is-flying" : ""}`}
+      aria-hidden="true"
+      tabIndex={-1}
+      onMouseEnter={flyAway}
+      onClick={flyAway}
+      animate={
+        reduced
+          ? undefined
+          : {
+              x: spot.x,
+              y: spot.y,
+              rotate: flying
+                ? [spot.rotate - 7, spot.rotate + 10, spot.rotate - 5, spot.rotate]
+                : spot.rotate,
+              scale: flying ? [1, 1.06, 0.98, 1] : 1,
+            }
+      }
+      transition={{ duration: 0.68, ease: sectionEase }}
+    >
+      <span className="lv2-butterfly-ij-inner">{">ij<"}</span>
+    </motion.button>
   );
 }
 
@@ -339,7 +407,10 @@ export function LandingV2() {
           <div className="lv2-hero-glow lv2-glow-b" aria-hidden="true" />
           <Reveal className="lv2-hero-copy">
             <p className="lv2-eyebrow">{t("AI MEMORY INBOX · 살아있는 메모", "AI MEMORY INBOX · LIVING NOTES")}</p>
-            <h1>{t("생각나는 대로 남기면,", "Drop thoughts as they come.")}<br /><span>{t("알아서 정리돼요.", "They organize themselves.")}</span></h1>
+            <div className="lv2-hero-title-wrap">
+              <FlyingIj />
+              <h1>{t("생각나는 대로 남기면,", "Drop thoughts as they come.")}<br /><span>{t("알아서 정리돼요.", "They organize themselves.")}</span></h1>
+            </div>
             <p className="lv2-lead">{t("메모·할 일·일정을 구분하지 말고 한 문장으로 남기세요. 잊지마가 날짜와 행동을 읽어 자동으로 구조화하고, 필요한 기록을 다시 보기 쉽게 정리해요.", "No need to separate notes, tasks, or schedules. Itjima reads dates and actions, structures what you wrote, and keeps it easy to revisit.")}</p>
             <div className="lv2-hero-cta-row">
               <PillLink dark ariaLabel={t("첫 기록 남기기", "Drop your first thought")}>{t("무료로 시작하기", "Start free")}</PillLink>

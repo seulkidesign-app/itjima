@@ -171,6 +171,50 @@
   line-height: 1.16;
   font-weight: 800;
 }
+.lv2-hero-title-wrap {
+  position: relative;
+  isolation: isolate;
+  width: min(1080px, 100%);
+  margin-inline: auto;
+}
+.lv2-hero-title-wrap h1 {
+  position: relative;
+  z-index: 2;
+}
+.lv2-butterfly-ij {
+  position: absolute;
+  z-index: 1;
+  top: 14%;
+  right: 6%;
+  padding: 10px 12px;
+  border: 0;
+  background: transparent;
+  color: rgba(37, 40, 42, .34);
+  font-size: clamp(46px, 5.5vw, 78px);
+  line-height: .9;
+  font-weight: 850;
+  letter-spacing: -.09em;
+  cursor: default;
+  user-select: none;
+  touch-action: manipulation;
+  transform-origin: 50% 50%;
+  will-change: transform;
+}
+.lv2-butterfly-ij-inner {
+  display: block;
+  animation: lv2-butterfly-float 2.8s ease-in-out infinite;
+}
+.lv2-butterfly-ij.is-flying .lv2-butterfly-ij-inner {
+  animation: lv2-butterfly-flutter 140ms ease-in-out 5;
+}
+@keyframes lv2-butterfly-float {
+  0%, 100% { transform: translateY(0) rotate(0deg); }
+  50% { transform: translateY(-5px) rotate(-2deg); }
+}
+@keyframes lv2-butterfly-flutter {
+  0%, 100% { transform: translateY(0) scaleX(1); }
+  50% { transform: translateY(-3px) scaleX(.86); }
+}
 .lv2-hero h1 span { position: relative; }
 .lv2-hero h1 span::after {
   content: "";
@@ -557,6 +601,13 @@
   .lv2-nav-cta { padding: 0 14px; }
   .lv2-hero { padding-inline: 16px; }
   .lv2-hero h1 { font-size: clamp(38px, 11.2vw, 50px); line-height: 1.13; }
+  .lv2-butterfly-ij {
+    top: 18%;
+    right: 0;
+    padding: 8px;
+    color: rgba(37, 40, 42, .24);
+    font-size: clamp(38px, 12vw, 52px);
+  }
   .lv2-hero h1 br { display: none; }
   .lv2-hero h1 span { display: block; margin-top: 7px; }
   .lv2-lead { width: 100%; margin-top: 28px; font-size: 15px; }
@@ -605,6 +656,12 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
+  .lv2-butterfly-ij {
+    pointer-events: none;
+  }
+  .lv2-butterfly-ij-inner {
+    animation: none !important;
+  }
   .landing-v2 *,
   .landing-v2 *::before,
   .landing-v2 *::after {
