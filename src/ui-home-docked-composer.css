@@ -1,13 +1,13 @@
-/* Home mobile docked composer — 2026-09-04
- * Compact mobile capture polish matching the approved layout direction.
- * Keep capture behavior/type inference untouched while removing the double
- * bottom reservation that made the composer float in the middle of the screen. */
+/* Canonical mobile Home geometry — 2026-09-05
+ * This file is loaded after the legacy responsive layers and owns the final
+ * composer + bottom-navigation geometry. Keep capture behavior untouched. */
 
 @media (max-width: 639px) {
   .itjima-app-stage {
     --ij-mobile-nav-bottom: max(10px, env(safe-area-inset-bottom));
     --ij-mobile-nav-height: 64px;
     --ij-composer-nav-gap: 10px;
+    --ij-home-content-gutter: clamp(16px, 5vw, 20px);
   }
 
   /* Home owns its own composer/nav geometry. The generic mobile scroll padding
@@ -17,8 +17,21 @@
   }
 
   .itjima-app-stage[data-route="home"] .home-chat-lane {
+    padding-right: var(--ij-home-content-gutter) !important;
     padding-bottom: 14px !important;
+    padding-left: var(--ij-home-content-gutter) !important;
     scroll-padding-bottom: 18px !important;
+  }
+
+  .itjima-app-stage[data-route="home"]
+    .home-chat-lane:has([data-testid="home-empty-hero"]) {
+    padding-right: var(--ij-home-content-gutter) !important;
+    padding-left: var(--ij-home-content-gutter) !important;
+  }
+
+  .itjima-app-stage[data-route="home"] .itjima-empty-hero {
+    padding-right: 0 !important;
+    padding-left: 0 !important;
   }
 
   .itjima-app-stage[data-route="home"]
@@ -39,6 +52,9 @@
 
   .itjima-app-stage[data-route="home"] form.composer-hero {
     position: relative !important;
+    width: 100% !important;
+    max-width: none !important;
+    margin: 0 !important;
     overflow: visible !important;
     padding: 6px 14px 0 !important;
     border: 0 !important;
@@ -97,6 +113,7 @@
 
   .itjima-app-stage[data-route="home"] form.composer-hero #capture-input::placeholder {
     color: rgba(60, 60, 67, 0.38) !important;
+    font-size: 15px !important;
     opacity: 1 !important;
   }
 
@@ -201,9 +218,9 @@
   /* Compact two-tab dock: navigation supports capture instead of competing
    * with it. Keep the active Itjima yellow but reduce visual weight. */
   .mobile-bottom-nav {
-    right: 14px !important;
+    right: max(14px, env(safe-area-inset-right)) !important;
     bottom: var(--ij-mobile-nav-bottom) !important;
-    left: 14px !important;
+    left: max(14px, env(safe-area-inset-left)) !important;
     height: var(--ij-mobile-nav-height) !important;
     min-height: var(--ij-mobile-nav-height) !important;
     padding: 5px !important;
@@ -253,7 +270,7 @@
   }
 
   .mobile-bottom-nav {
-    right: 10px !important;
-    left: 10px !important;
+    right: max(10px, env(safe-area-inset-right)) !important;
+    left: max(10px, env(safe-area-inset-left)) !important;
   }
 }

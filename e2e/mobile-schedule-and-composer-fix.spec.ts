@@ -91,18 +91,26 @@ test("mobile capture keeps identical dock geometry before and after focus", asyn
     const navBox = await nav.boundingBox();
     if (!shellBox || !navBox) throw new Error("composer geometry unavailable");
     return {
+      shellX: shellBox.x,
+      shellRight: shellBox.x + shellBox.width,
       shellHeight: shellBox.height,
+      navX: navBox.x,
+      navRight: navBox.x + navBox.width,
       gap: navBox.y - (shellBox.y + shellBox.height),
     };
   };
 
   const idle = await geometry();
+  expect(Math.abs(idle.shellX - idle.navX)).toBeLessThanOrEqual(1.5);
+  expect(Math.abs(idle.shellRight - idle.navRight)).toBeLessThanOrEqual(1.5);
   expect(idle.gap).toBeGreaterThanOrEqual(7);
   expect(idle.gap).toBeLessThanOrEqual(14);
 
   await input.focus();
   await expect(input).toBeFocused();
   const focused = await geometry();
+  expect(Math.abs(focused.shellX - idle.shellX)).toBeLessThanOrEqual(1);
+  expect(Math.abs(focused.shellRight - idle.shellRight)).toBeLessThanOrEqual(1);
   expect(Math.abs(focused.shellHeight - idle.shellHeight)).toBeLessThanOrEqual(2);
   expect(Math.abs(focused.gap - idle.gap)).toBeLessThanOrEqual(2);
 
@@ -113,6 +121,46 @@ test("mobile capture keeps identical dock geometry before and after focus", asyn
   expect(keyboardSized.gap).toBeGreaterThanOrEqual(7);
   expect(keyboardSized.gap).toBeLessThanOrEqual(14);
 });
+
+for (const viewport of [
+  { name: "320px", width: 320, height: 568 },
+  { name: "390px", width: 390, height: 844 },
+  { name: "430px", width: 430, height: 932 },
+]) {
+  test(`mobile capture aligns input and navigation at ${viewport.name}`, async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width: viewport.width, height: viewport.height });
+    await resetAppState(page);
+    await page.evaluate(() => localStorage.setItem("itjima_lang", "ko"));
+    await page.reload();
+
+    const frame = phone(page);
+    const shell = frame.locator("form.composer-hero .input-shell");
+    const nav = frame.locator(".mobile-bottom-nav");
+    const input = frame.locator("#capture-input");
+    await expect(shell).toBeVisible();
+    await expect(nav).toBeVisible();
+    await expect(input).toHaveAttribute("placeholder", "생각나는 대로 적어봐요");
+
+    const shellBox = await shell.boundingBox();
+    const navBox = await nav.boundingBox();
+    expect(shellBox).not.toBeNull();
+    expect(navBox).not.toBeNull();
+    expect(Math.abs(shellBox!.x - navBox!.x)).toBeLessThanOrEqual(1.5);
+    expect(
+      Math.abs(
+        shellBox!.x + shellBox!.width - (navBox!.x + navBox!.width),
+      ),
+    ).toBeLessThanOrEqual(1.5);
+
+    const inputMetrics = await input.evaluate((element) => ({
+      clientHeight: element.clientHeight,
+      scrollHeight: element.scrollHeight,
+    }));
+    expect(inputMetrics.scrollHeight - inputMetrics.clientHeight).toBeLessThanOrEqual(2);
+  });
+}
 
 test("capture scheduling always shows start and end dates and time switches reveal time fields", async ({
   page,

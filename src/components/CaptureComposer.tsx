@@ -456,8 +456,8 @@ export function CaptureComposer({
             }}
             rows={composer ? 2 : hero ? 4 : 3}
             placeholder={t(
-              "생각나는 대로 가볍게 적어보세요...",
-              "Write lightly as it comes to mind...",
+              "생각나는 대로 적어봐요",
+              "Write a thought...",
             )}
             className={`block w-full resize-none bg-transparent leading-relaxed text-ink placeholder:text-ink-soft/55 focus:outline-none ${
               composer

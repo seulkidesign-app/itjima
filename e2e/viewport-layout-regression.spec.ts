@@ -82,6 +82,46 @@ test("desktop capture controls finish at the bottom of the workspace", async ({
   await expectNoHorizontalOverflow(page);
 });
 
+test("desktop Home and Schedule share one content rail", async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await resetAppState(page);
+
+  const homeForm = page.locator(
+    ".itjima-desktop-shell[data-route='home'] form.composer-hero",
+  );
+  const homeInput = page.locator(
+    ".itjima-desktop-shell[data-route='home'] form.composer-hero .input-shell",
+  );
+  const homeTitle = page.getByRole("heading", { name: "Leave it. Done." });
+  await expect(homeForm).toBeVisible();
+  await expect(homeInput).toBeVisible();
+  await expect(homeTitle).toBeVisible();
+
+  const formBox = await homeForm.boundingBox();
+  const inputBox = await homeInput.boundingBox();
+  const titleBox = await homeTitle.boundingBox();
+  expect(formBox).not.toBeNull();
+  expect(inputBox).not.toBeNull();
+  expect(titleBox).not.toBeNull();
+  expect(formBox!.width).toBeGreaterThanOrEqual(670);
+  expect(formBox!.width).toBeLessThanOrEqual(690);
+  expect(Math.abs(inputBox!.x - titleBox!.x)).toBeLessThanOrEqual(2);
+
+  await page.goto("/schedule");
+  const scheduleContent = page.getByTestId("schedule-unified-view");
+  await expect(scheduleContent).toBeVisible();
+  const scheduleBox = await scheduleContent.boundingBox();
+  expect(scheduleBox).not.toBeNull();
+  expect(Math.abs(scheduleBox!.width - formBox!.width)).toBeLessThanOrEqual(2);
+  expect(Math.abs(scheduleBox!.x - formBox!.x)).toBeLessThanOrEqual(2);
+
+  const paddingBottom = await scheduleContent.evaluate((element) =>
+    parseFloat(getComputedStyle(element).paddingBottom),
+  );
+  expect(paddingBottom).toBeLessThanOrEqual(48);
+  await expectNoHorizontalOverflow(page);
+});
+
 test("mobile schedule keeps the unified header sticky and content scrollable", async ({
   page,
 }) => {

@@ -11,7 +11,7 @@
   --ij-layout-gutter-tablet: clamp(24px, 4vw, 36px);
   --ij-layout-gutter-desktop: clamp(28px, 3vw, 44px);
   --ij-layout-readable: 700px;
-  --ij-layout-chat: 560px;
+  --ij-layout-chat: 680px;
   --ij-layout-wide: 980px;
   --ij-layout-touch-nav-space: calc(84px + env(safe-area-inset-bottom));
   --ij-layout-sticky-surface: rgba(255, 255, 255, 0.94);
@@ -334,7 +334,25 @@ body,
   .itjima-desktop-shell[data-route="home"]
     :is(form.composer-hero, [data-testid="decision-launcher"]) {
     width: min(100%, var(--ij-layout-chat)) !important;
+    max-width: var(--ij-layout-chat) !important;
     margin-inline: auto !important;
+  }
+
+  /* Home and Schedule share the same 680px content rail on desktop. */
+  .itjima-desktop-shell[data-route="home"] .itjima-empty-hero {
+    padding-right: 0 !important;
+    padding-left: 0 !important;
+  }
+
+  .itjima-desktop-shell[data-route="home"]
+    form.composer-hero
+    > .flex.flex-wrap {
+    display: none !important;
+  }
+
+  .itjima-desktop-shell[data-route="schedule"]
+    [data-testid="schedule-unified-view"] {
+    padding-bottom: 40px !important;
   }
 }
 
