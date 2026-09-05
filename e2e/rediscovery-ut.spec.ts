@@ -21,6 +21,15 @@ test.describe("Rediscovery UT boundary", () => {
   });
 
   test("experimental surface stays locked when REDISCOVERY is off", async ({ page }) => {
+    await page.goto("/");
+    await page.evaluate(() => {
+      localStorage.clear();
+      sessionStorage.clear();
+      localStorage.setItem(
+        "itjima.__feature_overrides__",
+        JSON.stringify({ REDISCOVERY: false }),
+      );
+    });
     await page.goto("/rediscovery");
     await expect(page.getByTestId("rediscovery-locked")).toBeVisible();
     await expect(page.getByRole("button", { name: "기록 보기" })).toHaveCount(0);
