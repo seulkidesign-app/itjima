@@ -10,13 +10,36 @@
     --ij-home-content-gutter: clamp(16px, 5vw, 20px);
   }
 
-  /* Home owns its own composer/nav geometry. The generic mobile scroll padding
-   * plus the home composer reserve previously stacked and created a large gap. */
+  /* Home is a two-region mobile layout: scrollable conversation above one
+   * composer/nav dock. No earlier responsive file owns this geometry. */
   .itjima-app-stage[data-route="home"] .itjima-app-scroll {
+    overflow: hidden !important;
+    padding-bottom: 0 !important;
+  }
+
+  .itjima-app-stage[data-route="home"] .page-shell {
+    height: 100%;
+    min-height: 0 !important;
+    overflow: hidden;
+  }
+
+  .itjima-app-stage[data-route="home"] .page-shell > div:first-child {
+    box-sizing: border-box;
+    display: flex;
+    height: 100%;
+    min-height: 0 !important;
+    flex-direction: column;
+    overflow: hidden;
     padding-bottom: 0 !important;
   }
 
   .itjima-app-stage[data-route="home"] .home-chat-lane {
+    min-height: 0;
+    flex: 1 1 auto;
+    overflow-y: auto;
+    overflow-x: hidden;
+    overscroll-behavior-y: contain;
+    -webkit-overflow-scrolling: touch;
     padding-right: var(--ij-home-content-gutter) !important;
     padding-bottom: 14px !important;
     padding-left: var(--ij-home-content-gutter) !important;
@@ -38,6 +61,13 @@
     .page-shell
     > div:first-child
     > div.composer-hero {
+    position: relative !important;
+    inset: auto !important;
+    bottom: auto !important;
+    z-index: 30;
+    min-width: 0;
+    flex: 0 0 auto;
+    margin-top: 0 !important;
     margin-bottom: calc(
       var(--ij-mobile-nav-height) + var(--ij-mobile-nav-bottom) +
         var(--ij-composer-nav-gap)
@@ -106,6 +136,9 @@
     border-radius: 0 !important;
     background: transparent !important;
     box-shadow: none !important;
+    outline: none !important;
+    -webkit-appearance: none !important;
+    appearance: none !important;
     font-size: 16px !important;
     line-height: 1.5 !important;
     color: var(--ij-label, #171719) !important;
@@ -115,6 +148,18 @@
     color: rgba(60, 60, 67, 0.38) !important;
     font-size: 15px !important;
     opacity: 1 !important;
+  }
+
+  /* Attachment previews stay in the composer but never alter the dock axis. */
+  .itjima-app-stage[data-route="home"]
+    form.composer-hero
+    > div:has(img[alt^="첨부 이미지"]),
+  .itjima-app-stage[data-route="home"]
+    form.composer-hero
+    > div:has(img[alt^="Attached image"]) {
+    padding-right: 2px !important;
+    padding-bottom: 8px !important;
+    padding-left: 2px !important;
   }
 
   /* Overlay the existing controls into the same pill. Pointer events stay on

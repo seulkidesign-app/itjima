@@ -29,7 +29,6 @@ import "./ui-adaptive-navigation.css";
 import "./ui-mobile-light-contract.css";
 import "./ui-layout-viewport-polish.css";
 import "./ui-calendar-experience.css";
-import "./ui-home-fixed-composer.css";
 import "./ui-schedule-final-polish.css";
 import "./ui-landing-scroll-fix.css";
 import "./ui-landing-interactions.css";
@@ -50,9 +49,7 @@ import "./ui-quietly-organized.css";
 import "./ui-post-72-final-polish.css";
 import "./ui-brand-canonical.css";
 import "./ui-capture-mobile-hotfix.css";
-import "./ui-composer-mobile-hotfix.css";
 import "./ui-landing-mobile-type-hotfix.css";
-import "./ui-composer-layout-final.css";
 import "./ui-home-docked-composer.css";
 import "./landingHeroMotion";
 

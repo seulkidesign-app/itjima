@@ -104,7 +104,7 @@ body {
 
 /* Small and standard phones: one-hand reach, full-bleed surface. */
 @media (max-width: 639px) {
-  .itjima-app-stage[data-layout="app"] {
+  .itjima-app-stage[data-layout="touch"] {
     padding: 0 !important;
     align-items: stretch !important;
   }
@@ -267,7 +267,7 @@ body {
 
 /* Portrait tablets: focused centered canvas with generous touch spacing. */
 @media (min-width: 640px) and (max-width: 899px) {
-  .itjima-app-stage[data-layout="app"] {
+  .itjima-app-stage[data-layout="touch"] {
     padding: clamp(12px, 2.2vw, 20px) !important;
     align-items: center !important;
   }
@@ -320,7 +320,7 @@ body {
 
 /* Large / landscape tablets: wider reading rail without becoming a desktop app. */
 @media (min-width: 900px) and (max-width: 1023px) {
-  .itjima-app-stage[data-layout="app"] {
+  .itjima-app-stage[data-layout="touch"] {
     padding: 18px !important;
     align-items: center !important;
   }
@@ -366,7 +366,7 @@ body {
     --ij-desktop-chat: 700px;
   }
 
-  .itjima-app-stage[data-layout="app"] {
+  .itjima-app-stage[data-layout="touch"] {
     padding: 16px !important;
   }
 
@@ -398,7 +398,7 @@ body {
     --ij-desktop-chat: 820px;
   }
 
-  .itjima-app-stage[data-layout="app"] {
+  .itjima-app-stage[data-layout="touch"] {
     padding: clamp(18px, 1.8vw, 28px) !important;
   }
 
@@ -426,7 +426,7 @@ body {
     --ij-desktop-chat: 880px;
   }
 
-  .itjima-app-stage[data-layout="app"] {
+  .itjima-app-stage[data-layout="touch"] {
     padding: 28px !important;
   }
 
@@ -452,7 +452,7 @@ body {
 }
 
 @media (orientation: landscape) and (max-height: 700px) and (max-width: 1023px) {
-  .itjima-app-stage[data-layout="app"] {
+  .itjima-app-stage[data-layout="touch"] {
     padding: 0 !important;
   }
 

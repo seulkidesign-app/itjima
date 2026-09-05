@@ -338,6 +338,11 @@ body,
     margin-inline: auto !important;
   }
 
+  .itjima-desktop-shell[data-route="home"] form.composer-hero {
+    padding-right: 0 !important;
+    padding-left: 0 !important;
+  }
+
   /* Home and Schedule share the same 680px content rail on desktop. */
   .itjima-desktop-shell[data-route="home"] .itjima-empty-hero {
     padding-right: 0 !important;
@@ -348,6 +353,14 @@ body,
     form.composer-hero
     > .flex.flex-wrap {
     display: none !important;
+  }
+
+  .itjima-desktop-shell[data-route="schedule"] header.sticky > div,
+  .itjima-desktop-shell[data-route="schedule"]
+    [data-testid="schedule-unified-view"] {
+    width: 100% !important;
+    max-width: var(--ij-layout-chat) !important;
+    margin-inline: auto !important;
   }
 
   .itjima-desktop-shell[data-route="schedule"]
