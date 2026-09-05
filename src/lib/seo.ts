@@ -186,6 +186,7 @@ export function applyLandingSeo(options: LandingSeoOptions = {}) {
   );
   upsertMeta("og:site_name", siteName(locale), "property");
   upsertMeta("og:image", BRAND.ogImageUrl, "property");
+  upsertMeta("og:image:url", BRAND.ogImageUrl, "property");
   upsertMeta("og:image:secure_url", BRAND.ogImageUrl, "property");
   upsertMeta("og:image:type", "image/png", "property");
   upsertMeta("og:image:width", "1200", "property");
@@ -196,6 +197,7 @@ export function applyLandingSeo(options: LandingSeoOptions = {}) {
   upsertMeta("twitter:title", ogTitle);
   upsertMeta("twitter:description", ogDescription);
   upsertMeta("twitter:image", BRAND.ogImageUrl);
+  upsertMeta("twitter:image:src", BRAND.ogImageUrl);
   upsertMeta("twitter:image:alt", BRAND.ogImageAlt);
 }
 
