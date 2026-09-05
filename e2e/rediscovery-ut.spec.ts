@@ -35,6 +35,81 @@ test.describe("Rediscovery UT boundary", () => {
     await expect(page.getByRole("button", { name: "기록 보기" })).toHaveCount(0);
   });
 
+  test("first rediscovery is eligible after 8 hours, then returns to the 3-day cadence", async ({ page }) => {
+    await enableRediscovery(page);
+    await page.evaluate(() => {
+      localStorage.setItem(
+        "itjima.guest.inbox",
+        JSON.stringify([
+          {
+            id: "ut-first-rediscovery",
+            text: "첫날 다시 보여줄 메모",
+            images: [],
+            status: "active",
+            created_at: new Date(Date.now() - 7 * 60 * 60 * 1000).toISOString(),
+          },
+        ]),
+      );
+      localStorage.setItem("itjima.guest.archive", JSON.stringify([]));
+      localStorage.setItem("itjima.guest.schedules", JSON.stringify([]));
+    });
+
+    await page.goto("/rediscovery");
+    await expect(page.getByText("지금은 다시 볼 기록이 없어요")).toBeVisible();
+
+    await page.evaluate(() => {
+      localStorage.setItem(
+        "itjima.guest.inbox",
+        JSON.stringify([
+          {
+            id: "ut-first-rediscovery",
+            text: "첫날 다시 보여줄 메모",
+            images: [],
+            status: "active",
+            created_at: new Date(Date.now() - 9 * 60 * 60 * 1000).toISOString(),
+          },
+        ]),
+      );
+    });
+    await page.reload();
+    await expect(page.getByRole("heading", { name: "첫날 다시 보여줄 메모" })).toBeVisible();
+
+    await page.evaluate(() => {
+      sessionStorage.clear();
+      localStorage.setItem(
+        "itjima.guest.inbox",
+        JSON.stringify([
+          {
+            id: "ut-second-rediscovery",
+            text: "두 번째 재발견 후보",
+            images: [],
+            status: "active",
+            created_at: new Date(Date.now() - 12 * 60 * 60 * 1000).toISOString(),
+          },
+        ]),
+      );
+    });
+    await page.reload();
+    await expect(page.getByText("지금은 다시 볼 기록이 없어요")).toBeVisible();
+
+    await page.evaluate(() => {
+      localStorage.setItem(
+        "itjima.guest.inbox",
+        JSON.stringify([
+          {
+            id: "ut-second-rediscovery",
+            text: "두 번째 재발견 후보",
+            images: [],
+            status: "active",
+            created_at: new Date(Date.now() - 4 * 86400000).toISOString(),
+          },
+        ]),
+      );
+    });
+    await page.reload();
+    await expect(page.getByRole("heading", { name: "두 번째 재발견 후보" })).toBeVisible();
+  });
+
   test("normal Capture record can resurface without being archived first", async ({ page }) => {
     await enableRediscovery(page);
     await page.evaluate(() => {
