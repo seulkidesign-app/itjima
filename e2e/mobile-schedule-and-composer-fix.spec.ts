@@ -63,6 +63,57 @@ test("mobile capture keeps the composer directly above bottom navigation", async
   expect(geometry!.chatOverflowY).toMatch(/auto|scroll/);
 });
 
+test("mobile capture keeps identical dock geometry before and after focus", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await resetAppState(page);
+  await page.evaluate(() => localStorage.setItem("itjima_lang", "ko"));
+  await page.reload();
+
+  const frame = phone(page);
+  const input = frame.locator("#capture-input");
+  const shell = frame.locator("form.composer-hero .input-shell");
+  const nav = frame.locator(".mobile-bottom-nav");
+  const attachment = frame.getByRole("button", { name: "첨부 도구" });
+  const mic = frame.getByRole("button", { name: "음성 입력" });
+  const submit = frame.getByTestId("capture-submit");
+
+  await expect(input).toBeVisible();
+  await expect(shell).toBeVisible();
+  await expect(nav).toBeVisible();
+  await expect(attachment).toBeVisible();
+  await expect(mic).toBeVisible();
+  await expect(submit).toBeVisible();
+
+  const geometry = async () => {
+    const shellBox = await shell.boundingBox();
+    const navBox = await nav.boundingBox();
+    if (!shellBox || !navBox) throw new Error("composer geometry unavailable");
+    return {
+      shellHeight: shellBox.height,
+      gap: navBox.y - (shellBox.y + shellBox.height),
+    };
+  };
+
+  const idle = await geometry();
+  expect(idle.gap).toBeGreaterThanOrEqual(7);
+  expect(idle.gap).toBeLessThanOrEqual(14);
+
+  await input.focus();
+  await expect(input).toBeFocused();
+  const focused = await geometry();
+  expect(Math.abs(focused.shellHeight - idle.shellHeight)).toBeLessThanOrEqual(2);
+  expect(Math.abs(focused.gap - idle.gap)).toBeLessThanOrEqual(2);
+
+  // Simulate the viewport shrinking when a mobile keyboard opens. The composer
+  // and persistent nav must keep moving as one dock rather than separating.
+  await page.setViewportSize({ width: 390, height: 620 });
+  const keyboardSized = await geometry();
+  expect(keyboardSized.gap).toBeGreaterThanOrEqual(7);
+  expect(keyboardSized.gap).toBeLessThanOrEqual(14);
+});
+
 test("capture scheduling always shows start and end dates and time switches reveal time fields", async ({
   page,
 }) => {

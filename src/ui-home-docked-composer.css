@@ -4,6 +4,12 @@
  * bottom reservation that made the composer float in the middle of the screen. */
 
 @media (max-width: 639px) {
+  .itjima-app-stage {
+    --ij-mobile-nav-bottom: max(10px, env(safe-area-inset-bottom));
+    --ij-mobile-nav-height: 64px;
+    --ij-composer-nav-gap: 10px;
+  }
+
   /* Home owns its own composer/nav geometry. The generic mobile scroll padding
    * plus the home composer reserve previously stacked and created a large gap. */
   .itjima-app-stage[data-route="home"] .itjima-app-scroll {
@@ -19,7 +25,10 @@
     .page-shell
     > div:first-child
     > div.composer-hero {
-    margin-bottom: calc(82px + env(safe-area-inset-bottom)) !important;
+    margin-bottom: calc(
+      var(--ij-mobile-nav-height) + var(--ij-mobile-nav-bottom) +
+        var(--ij-composer-nav-gap)
+    ) !important;
     padding: 0 !important;
     border-top: 0 !important;
     background: transparent !important;
@@ -193,9 +202,10 @@
    * with it. Keep the active Itjima yellow but reduce visual weight. */
   .mobile-bottom-nav {
     right: 14px !important;
-    bottom: max(10px, env(safe-area-inset-bottom)) !important;
+    bottom: var(--ij-mobile-nav-bottom) !important;
     left: 14px !important;
-    min-height: 64px !important;
+    height: var(--ij-mobile-nav-height) !important;
+    min-height: var(--ij-mobile-nav-height) !important;
     padding: 5px !important;
     border: 0 !important;
     border-radius: 30px !important;
