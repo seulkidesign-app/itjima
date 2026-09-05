@@ -158,3 +158,15 @@ html[lang="en"] .landing-v2 .lv2-final-confirm::after {
     padding-right: 16px !important;
   }
 }
+
+
+/* Final brand ghost: keep >ij< behind the headline at exactly half the previous opacity. */
+.landing-v2 .lv2-butterfly-ij {
+  color: rgba(37, 40, 42, 0.0275) !important;
+}
+
+@media (max-width: 560px) {
+  .landing-v2 .lv2-butterfly-ij {
+    color: rgba(37, 40, 42, 0.05) !important;
+  }
+}
