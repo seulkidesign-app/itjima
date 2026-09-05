@@ -170,3 +170,16 @@ html[lang="en"] .landing-v2 .lv2-final-confirm::after {
     color: rgba(37, 40, 42, 0.05) !important;
   }
 }
+
+
+/* Landing canvas: hard-lock the page and hero to pure white without flattening colored feature sections. */
+.itjima-launch-page,
+.landing-v2,
+.landing-v2 main#lv2-main,
+.landing-v2 main#lv2-main section.lv2-hero {
+  background-color: #fff !important;
+}
+
+.landing-v2 main#lv2-main section.lv2-hero {
+  background-image: none !important;
+}
