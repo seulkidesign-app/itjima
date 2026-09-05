@@ -9,7 +9,7 @@ export const BRAND = {
   landingPath: "/",
   landingUrl: "https://itjima.app/",
   logoUrl: "https://itjima.app/icons/itjima-512-v7.png",
-  ogImageUrl: "https://itjima.app/og-itjima-brand-v7.png",
+  ogImageUrl: "https://itjima.app/og-itjima-brand-v7.png?v=20260906-1",
   ogImageAlt: "노란 배경 위의 잊지마 >ij< 심볼과 itjima 워드마크",
   logoAlt: "잊지마(itjima) >ij< 브랜드 아이콘",
   taglineKo: "대충 말해도 일정이 돼요.",
