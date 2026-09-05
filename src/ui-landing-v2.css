@@ -180,6 +180,7 @@
 .lv2-hero-title-wrap h1 {
   position: relative;
   z-index: 2;
+  pointer-events: none;
 }
 .lv2-butterfly-ij {
   position: absolute;
@@ -194,7 +195,8 @@
   line-height: .9;
   font-weight: 850;
   letter-spacing: -.09em;
-  cursor: default;
+  cursor: pointer;
+  pointer-events: auto;
   user-select: none;
   touch-action: manipulation;
   transform-origin: 50% 50%;
