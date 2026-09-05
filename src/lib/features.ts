@@ -1,6 +1,6 @@
 export const FEATURES = {
   BRAIN_MIRROR: false,
-  REDISCOVERY: false,
+  REDISCOVERY: true,
   CLEANUP: false,
   INLINE_PROMISE: true,
   PASTE_SPLIT: false,
