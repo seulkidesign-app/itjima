@@ -106,8 +106,18 @@ test("mobile capture keeps identical dock geometry before and after focus", asyn
   expect(idle.gap).toBeGreaterThanOrEqual(7);
   expect(idle.gap).toBeLessThanOrEqual(14);
 
+  const attachmentBox = await attachment.boundingBox();
+  const micBox = await mic.boundingBox();
+  expect(attachmentBox).not.toBeNull();
+  expect(micBox).not.toBeNull();
+  expect(attachmentBox!.width).toBeGreaterThanOrEqual(44);
+  expect(attachmentBox!.height).toBeGreaterThanOrEqual(44);
+  expect(micBox!.width).toBeGreaterThanOrEqual(44);
+  expect(micBox!.height).toBeGreaterThanOrEqual(44);
+
   await input.focus();
   await expect(input).toBeFocused();
+  await expect(shell).toHaveCSS("border-color", "rgb(255, 224, 51)");
   const focused = await geometry();
   expect(Math.abs(focused.shellX - idle.shellX)).toBeLessThanOrEqual(1);
   expect(Math.abs(focused.shellRight - idle.shellRight)).toBeLessThanOrEqual(1);

@@ -190,7 +190,7 @@
   padding: 10px 12px;
   border: 0;
   background: transparent;
-  color: rgba(37, 40, 42, .14);
+  color: rgba(37, 40, 42, .055);
   font-size: clamp(46px, 5.5vw, 78px);
   line-height: .9;
   font-weight: 850;
