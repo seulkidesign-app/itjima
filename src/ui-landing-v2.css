@@ -190,7 +190,7 @@
   padding: 10px 12px;
   border: 0;
   background: transparent;
-  color: rgba(37, 40, 42, .34);
+  color: rgba(37, 40, 42, .14);
   font-size: clamp(46px, 5.5vw, 78px);
   line-height: .9;
   font-weight: 850;
@@ -607,7 +607,7 @@
     top: 18%;
     right: 0;
     padding: 8px;
-    color: rgba(37, 40, 42, .24);
+    color: rgba(37, 40, 42, .10);
     font-size: clamp(38px, 12vw, 52px);
   }
   .lv2-hero h1 br { display: none; }
