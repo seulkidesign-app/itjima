@@ -27,6 +27,9 @@ export type RediscoveryPick = {
 
 const SESSION_KEY = "itjima.rediscovery.session";
 const SNOOZE_KEY = "itjima.rediscovery.snoozed";
+const EVER_SHOWN_KEY = "itjima.rediscovery.ever_shown";
+const FIRST_REDISCOVERY_AGE_MS = 8 * 60 * 60 * 1000;
+const DEFAULT_REDISCOVERY_AGE_MS = 3 * 86400000;
 const DEFAULT_SNOOZE_MS = 3 * 86400000;
 
 function memoryKey(memory: Pick<ArchiveItem, "id" | "source_id">) {
@@ -50,8 +53,16 @@ export function readRediscoverySessionShown(): boolean {
   return sessionStorage.getItem(SESSION_KEY) !== null;
 }
 
+function hasEverShownRediscovery(): boolean {
+  if (typeof localStorage === "undefined") return false;
+  return localStorage.getItem(EVER_SHOWN_KEY) === "1";
+}
+
 export function markRediscoverySessionShown(memoryId?: string) {
   if (typeof sessionStorage === "undefined") return;
+  if (typeof localStorage !== "undefined") {
+    localStorage.setItem(EVER_SHOWN_KEY, "1");
+  }
   if (!memoryId) {
     sessionStorage.setItem(SESSION_KEY, "1");
     return;
@@ -136,6 +147,9 @@ export function pickRediscoveryCandidate(
   const snoozed = readSnoozed();
   const visits = readArchiveVisits();
   const now = Date.now();
+  const minAgeMs = hasEverShownRediscovery()
+    ? DEFAULT_REDISCOVERY_AGE_MS
+    : FIRST_REDISCOVERY_AGE_MS;
   const activeSchedules = schedules.filter((s) => s.status !== "done");
 
   const candidates = pool
@@ -145,7 +159,7 @@ export function pickRediscoveryCandidate(
       const snoozeUntil = snoozed[key] ?? 0;
       return !Number.isFinite(snoozeUntil) || snoozeUntil <= now;
     })
-    .filter((memory) => now - +new Date(memory.created_at) >= 3 * 86400000)
+    .filter((memory) => now - +new Date(memory.created_at) >= minAgeMs)
     .map((memory) => {
       const key = memoryKey(memory);
       const linked = activeSchedules.find(
