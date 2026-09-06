@@ -45,7 +45,7 @@ test.describe("Portfolio real UI captures", () => {
     await resetKo(page);
     const frame = phone(page);
 
-    // Cover: the real ambiguity-resolution experience.
+    // Cover: real ambiguity-resolution flow.
     await submit(page, "내일 3시 반 치과");
     const ambiguity = frame.getByTestId("inline-promise").last();
     await expect(ambiguity).toBeVisible();
@@ -65,7 +65,7 @@ test.describe("Portfolio real UI captures", () => {
       path: join(OUT_DIR, "02-cover-resolved-schedule.png"),
     });
 
-    // Product Overview / TO-BE: build a believable everyday context through the real composer.
+    // Product Overview: believable everyday records created through the real composer.
     for (const text of [
       "치과 예약금 보내기",
       "엄마 생신 선물 보기",
@@ -80,22 +80,14 @@ test.describe("Portfolio real UI captures", () => {
       path: join(OUT_DIR, "03-overview-contextual-home.png"),
     });
 
-    await frame.getByTestId("open-all-records").click();
-    await expect(frame.getByTestId("records-browse-sheet")).toBeVisible();
-    await page.waitForTimeout(250);
-    await frame.screenshot({
-      path: join(OUT_DIR, "04-overview-all-records.png"),
-    });
-    await page.keyboard.press("Escape");
-    await expect(frame.getByTestId("records-browse-sheet")).toBeHidden();
-
-    // V02 validation: show a realistic natural-language entry before and after interpretation.
+    // V02 validation: clean natural-language input and its actual interpreted result.
+    await resetKo(page);
     const composer = frame.locator("textarea").first();
     await composer.fill("9월 12일 저녁 6시 수진 만나기");
     await composer.focus();
-    await page.waitForTimeout(200);
+    await page.waitForTimeout(250);
     await frame.screenshot({
-      path: join(OUT_DIR, "05-v02-natural-input.png"),
+      path: join(OUT_DIR, "04-v02-natural-input.png"),
     });
 
     await frame
@@ -109,17 +101,35 @@ test.describe("Portfolio real UI captures", () => {
       .waitFor({ state: "visible" });
     await page.waitForTimeout(350);
     await frame.screenshot({
-      path: join(OUT_DIR, "06-v02-interpreted-result.png"),
+      path: join(OUT_DIR, "05-v02-interpreted-result.png"),
     });
 
-    // One denser daily-use state for the V02 validation slide.
-    await submit(page, "다음 주 화요일 오전 10시 포트폴리오 수정");
-    await dismissInlinePromise(page);
-    await submit(page, "러닝화 세탁하기");
-    await dismissInlinePromise(page);
+    // Daily-use state after a few different kinds of records.
+    for (const text of [
+      "치과 예약금 보내기",
+      "엄마 생신 선물 보기",
+      "여행 준비물 정리",
+      "다음 주 화요일 오전 10시 포트폴리오 수정",
+      "러닝화 세탁하기",
+    ]) {
+      await submit(page, text);
+      await dismissInlinePromise(page);
+    }
     await page.waitForTimeout(300);
     await frame.screenshot({
-      path: join(OUT_DIR, "07-v02-daily-use.png"),
+      path: join(OUT_DIR, "06-v02-daily-use.png"),
     });
+
+    // Schedule tab with the exact schedules created above.
+    const scheduleLink = frame
+      .getByRole("link", { name: /일정|Schedule/ })
+      .first();
+    if (await scheduleLink.isVisible().catch(() => false)) {
+      await scheduleLink.click();
+      await page.waitForTimeout(350);
+      await frame.screenshot({
+        path: join(OUT_DIR, "07-v02-schedule.png"),
+      });
+    }
   });
 });
