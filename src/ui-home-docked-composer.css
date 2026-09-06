@@ -3,6 +3,16 @@
  * composer + bottom-navigation geometry. Keep capture behavior untouched. */
 
 @media (max-width: 639px) {
+  /* Framer Motion leaves the route shell as a transform-capable containing
+   * block on real iOS devices. That makes the fixed composer anchor to the
+   * route content while the bottom nav anchors to the visual viewport, creating
+   * the large vertical gap seen on device. Home's dock owns its own motion, so
+   * keep this ancestor non-transforming. */
+  .itjima-app-stage[data-route="home"] .page-shell {
+    transform: none !important;
+    will-change: auto !important;
+  }
+
   .itjima-app-stage {
     --ij-mobile-nav-bottom: max(10px, env(safe-area-inset-bottom));
     --ij-mobile-nav-height: 64px;
