@@ -40,6 +40,11 @@ export function TopNav() {
     return () => element.removeEventListener("scroll", onScroll);
   }, []);
 
+  const openBrowse = () => {
+    tap();
+    window.dispatchEvent(new Event("itjima:open-browse"));
+  };
+
   const openSettings = () => {
     tap();
     setSettingsOpen(true);
@@ -88,10 +93,7 @@ export function TopNav() {
               type="button"
               data-testid="open-browse-search"
               aria-label={t("기록 검색", "Search records")}
-              onClick={() => {
-                tap();
-                window.dispatchEvent(new Event("itjima:open-browse"));
-              }}
+              onClick={openBrowse}
               className="touch-press grid h-11 w-11 place-items-center rounded-full text-ink"
             >
               <Search size={18} strokeWidth={2.2} aria-hidden />
@@ -135,7 +137,7 @@ export function TopNav() {
       </div>
 
       <header
-        className={`tablet-app-nav app-top-nav itjima-glass-chrome relative z-40 hidden shrink-0 items-center gap-4 border-b border-ink/[0.07] px-6 py-3 sm:flex lg:hidden ${
+        className={`tablet-app-nav app-top-nav itjima-glass-chrome relative z-40 hidden shrink-0 items-center gap-3 border-b border-ink/[0.07] px-6 py-3 sm:flex lg:hidden ${
           scrolled ? "shadow-card" : ""
         }`}
       >
@@ -176,6 +178,16 @@ export function TopNav() {
             })}
           </nav>
         </LayoutGroup>
+
+        <button
+          type="button"
+          data-testid="open-browse-search-tablet"
+          aria-label={t("기록 검색", "Search records")}
+          onClick={openBrowse}
+          className="touch-press grid h-11 w-11 shrink-0 place-items-center rounded-[14px] border border-ink/[0.08] bg-white/84 text-ink-soft shadow-card"
+        >
+          <Search size={18} strokeWidth={2.1} aria-hidden />
+        </button>
 
         <button
           ref={tabletSettingsRef}
