@@ -66,27 +66,6 @@ function resetPointerVars(element: HTMLElement) {
   element.style.setProperty("--ij-pointer-py", "50%");
 }
 
-function makeAsciiHeroScene() {
-  const scene = document.createElement("div");
-  scene.className = "ij-ascii-hero";
-  scene.setAttribute("aria-hidden", "true");
-
-  [">_<", "0_0", "**__**"].forEach((text, index) => {
-    const face = document.createElement("span");
-    face.className = "ij-ascii-face";
-    face.dataset.face = String(index + 1);
-    face.textContent = text;
-    scene.append(face);
-  });
-
-  const mark = document.createElement("span");
-  mark.className = "ij-ascii-mark";
-  mark.textContent = ">ij<";
-  scene.append(mark);
-
-  return scene;
-}
-
 function makeAsciiRain() {
   const rain = document.createElement("div");
   rain.className = "ij-ascii-rain";
@@ -135,12 +114,13 @@ function installAsciiSignature(reducedMotion: boolean) {
     if (landing === mountedLanding) return;
     cleanup();
 
-    const hero = landing.querySelector<HTMLElement>(".lv2-hero");
     const brandBand = landing.querySelector<HTMLElement>(".lv2-brand-band");
-    if (!hero || !brandBand) return;
+    if (!brandBand) return;
 
     mountedLanding = landing;
-    hero.append(makeAsciiHeroScene());
+    // The hero keeps only the interactive >ij< rendered by LandingV2.
+    // Remove any legacy auto-generated ASCII scene if one survived HMR/cache.
+    landing.querySelectorAll(".ij-ascii-hero").forEach((node) => node.remove());
 
     if (reducedMotion) return;
 
