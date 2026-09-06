@@ -1,0 +1,79 @@
+name: Portfolio real UI captures
+
+on:
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+env:
+  CI: "true"
+  VITE_E2E: "true"
+  VITE_SUPABASE_URL: "http://127.0.0.1:54321"
+  VITE_SUPABASE_PUBLISHABLE_KEY: "e2e-placeholder"
+
+jobs:
+  current-v02:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout PR
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Clean install
+        run: npm ci
+
+      - name: Install Chromium
+        run: npx playwright install --with-deps chromium
+
+      - name: Capture current V02 portfolio states
+        run: npx playwright test e2e/portfolio-captures.spec.ts --project=mobile-chrome
+
+      - name: Upload current V02 captures
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: portfolio-current-v02
+          path: e2e-screenshots/portfolio/*.png
+          if-no-files-found: error
+          retention-days: 7
+
+  historical-v01:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout V01 snapshot
+        uses: actions/checkout@v4
+        with:
+          ref: cb087dfbbf75104823cc9705ac4d2dd8768afa80
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Clean install
+        run: npm ci
+
+      - name: Install Chromium
+        run: npx playwright install --with-deps chromium
+
+      - name: Capture historical V01 app states
+        run: npx playwright test e2e/chat-home-screenshots.spec.ts --project=mobile-chrome
+
+      - name: Upload historical V01 captures
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: portfolio-historical-v01
+          path: e2e-screenshots/chat-home/*.png
+          if-no-files-found: error
+          retention-days: 7
