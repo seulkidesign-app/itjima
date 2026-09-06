@@ -191,7 +191,7 @@
   border: 0;
   background: transparent;
   color: #25282a;
-  opacity: .04;
+  opacity: 1;
   font-size: clamp(46px, 5.5vw, 78px);
   line-height: .9;
   font-weight: 850;
@@ -609,7 +609,7 @@
     right: 0;
     padding: 8px;
     color: #25282a;
-    opacity: .03;
+    opacity: 1;
     font-size: clamp(38px, 12vw, 52px);
   }
   .lv2-hero h1 br { display: none; }
