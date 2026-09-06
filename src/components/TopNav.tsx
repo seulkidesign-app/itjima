@@ -28,6 +28,7 @@ export function TopNav() {
     },
   ] as const;
 
+  const mobileSettingsRef = useRef<HTMLButtonElement | null>(null);
   const tabletSettingsRef = useRef<HTMLButtonElement | null>(null);
   const [scrolled, setScrolled] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
@@ -48,7 +49,10 @@ export function TopNav() {
   const closeSettings = () => {
     setSettingsOpen(false);
     const restoreFocus = () => {
-      const trigger = tabletSettingsRef.current;
+      const trigger =
+        mobileSettingsRef.current?.getClientRects().length
+          ? mobileSettingsRef.current
+          : tabletSettingsRef.current;
       if (trigger && trigger.getClientRects().length > 0) {
         trigger.focus({ preventScroll: true });
       }
@@ -84,18 +88,36 @@ export function TopNav() {
             {renderBrand(
               "app-brand-trigger rounded-[12px] leading-none text-ink",
             )}
-            <button
-              type="button"
-              data-testid="open-browse-search"
-              aria-label={t("기록 검색", "Search records")}
-              onClick={() => {
-                tap();
-                window.dispatchEvent(new Event("itjima:open-browse"));
-              }}
-              className="touch-press grid h-11 w-11 place-items-center rounded-full text-ink"
-            >
-              <Search size={18} strokeWidth={2.2} aria-hidden />
-            </button>
+            <div className="flex items-center gap-1">
+              <button
+                type="button"
+                data-testid="open-browse-search"
+                aria-label={t("기록 검색", "Search records")}
+                onClick={() => {
+                  tap();
+                  window.dispatchEvent(new Event("itjima:open-browse"));
+                }}
+                className="touch-press grid h-11 w-11 place-items-center rounded-full text-ink"
+              >
+                <Search size={18} strokeWidth={2.2} aria-hidden />
+              </button>
+              <button
+                ref={mobileSettingsRef}
+                type="button"
+                data-testid="open-mobile-settings"
+                aria-label={
+                  userId
+                    ? t("계정과 설정 열기", "Open account & settings")
+                    : t("로그인과 설정 열기", "Open sign in & settings")
+                }
+                aria-haspopup="dialog"
+                aria-expanded={settingsOpen}
+                onClick={openSettings}
+                className="touch-press grid h-11 w-11 place-items-center rounded-full text-ink"
+              >
+                <User size={18} strokeWidth={2.1} aria-hidden />
+              </button>
+            </div>
           </div>
         </header>
 
