@@ -5,6 +5,26 @@ import {
   resetAppState,
 } from "./helpers";
 
+test("mobile header exposes sign-in and settings for guest users", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await resetAppState(page);
+  await page.evaluate(() => localStorage.setItem("itjima_lang", "ko"));
+  await page.reload();
+
+  const frame = phone(page);
+  const settingsButton = frame.getByTestId("open-mobile-settings");
+  await expect(settingsButton).toBeVisible();
+  await expect(settingsButton).toHaveAttribute("aria-label", "로그인과 설정 열기");
+
+  await settingsButton.click();
+
+  const settingsDialog = page.getByRole("dialog", { name: "설정" }).last();
+  await expect(settingsDialog).toBeVisible();
+  await expect(settingsDialog.getByRole("link", { name: "로그인" })).toBeVisible();
+});
+
 test("mobile capture keeps the composer directly above bottom navigation", async ({
   page,
 }) => {
