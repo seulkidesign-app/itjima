@@ -158,6 +158,30 @@ test("mobile home route shell cannot become a fixed-position containing block", 
   await expect(shell).toHaveCSS("transform", "none");
   await expect(shell).toHaveCSS("will-change", "auto");
 
+  const composerHost = frame
+    .locator(".page-shell > div:first-child > div.composer-hero")
+    .first();
+  await expect(composerHost).toHaveCSS("position", "absolute");
+  await expect(nav).toHaveCSS("position", "absolute");
+
+  const sharedContainingBlock = await page.evaluate(() => {
+    const host = document.querySelector<HTMLElement>(
+      ".page-shell > div:first-child > div.composer-hero",
+    );
+    const navEl = document.querySelector<HTMLElement>(".mobile-bottom-nav");
+    const frameEl = document.querySelector<HTMLElement>(
+      ".phone-frame.itjima-responsive-frame",
+    );
+    return Boolean(
+      host &&
+        navEl &&
+        frameEl &&
+        host.offsetParent === frameEl &&
+        navEl.offsetParent === frameEl,
+    );
+  });
+  expect(sharedContainingBlock).toBe(true);
+
   const composerBox = await composer.boundingBox();
   const navBox = await nav.boundingBox();
   if (!composerBox || !navBox) throw new Error("dock geometry unavailable");
