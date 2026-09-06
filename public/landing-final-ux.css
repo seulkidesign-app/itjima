@@ -163,13 +163,13 @@ html[lang="en"] .landing-v2 .lv2-final-confirm::after {
 /* Final brand ghost: keep >ij< behind the headline at exactly half the previous opacity. */
 .landing-v2 .lv2-butterfly-ij {
   color: #25282a !important;
-  opacity: 0.02 !important;
+  opacity: 0.04 !important;
 }
 
 @media (max-width: 560px) {
   .landing-v2 .lv2-butterfly-ij {
     color: #25282a !important;
-    opacity: 0.025 !important;
+    opacity: 0.03 !important;
   }
 }
 
