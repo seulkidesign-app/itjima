@@ -1,0 +1,45 @@
+name: Portfolio screenshots V02
+
+on:
+  push:
+    branches:
+      - portfolio-capture-v02-20260906
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  capture:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      VITE_E2E: "true"
+      VITE_SUPABASE_URL: "http://127.0.0.1:54321"
+      VITE_SUPABASE_PUBLISHABLE_KEY: "e2e-placeholder"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+      - run: npx vite build
+      - name: Start preview
+        run: |
+          npm run preview -- --host 127.0.0.1 --port 4173 > /tmp/itjima-preview.log 2>&1 &
+          echo $! > /tmp/itjima-preview.pid
+          for i in {1..40}; do
+            if curl -fsS http://127.0.0.1:4173/ >/dev/null; then exit 0; fi
+            sleep 1
+          done
+          cat /tmp/itjima-preview.log
+          exit 1
+      - run: node scripts/portfolio-screenshots.mjs
+      - uses: actions/upload-artifact@v4
+        with:
+          name: portfolio-screenshots-v02
+          path: portfolio-screenshots/*.png
+          if-no-files-found: error
+          retention-days: 7
