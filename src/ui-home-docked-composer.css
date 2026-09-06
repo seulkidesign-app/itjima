@@ -21,10 +21,11 @@
     --ij-home-content-gutter: clamp(16px, 5vw, 20px);
   }
 
-  /* The nav and composer are one visual dock. Both are pinned to the visible
-   * viewport so focusing the textarea cannot split them apart on iOS. */
+  /* The nav and composer are one visual dock. Keep both in the same
+   * positioned phone-frame coordinate space instead of using fixed descendants
+   * inside the iOS scroll tree; that avoids the real-device vertical split. */
   .mobile-bottom-nav {
-    position: fixed !important;
+    position: absolute !important;
     z-index: 70;
     right: max(14px, env(safe-area-inset-right)) !important;
     bottom: calc(
@@ -95,7 +96,7 @@
     .page-shell
     > div:first-child
     > div.composer-hero {
-    position: fixed !important;
+    position: absolute !important;
     z-index: 72;
     right: max(14px, env(safe-area-inset-right)) !important;
     bottom: calc(
