@@ -120,6 +120,15 @@
 
   .itjima-app-stage[data-route="home"] form.composer-hero {
     position: relative !important;
+    /* Legacy mobile navigation CSS still gives the inner form its own bottom
+     * offset. Because this form is relatively positioned, that lifts only the
+     * visible input away from the correctly docked wrapper. Reset every inset
+     * here so the form occupies the wrapper at y=0. */
+    inset: auto !important;
+    top: auto !important;
+    right: auto !important;
+    bottom: auto !important;
+    left: auto !important;
     width: 100% !important;
     max-width: none !important;
     height: var(--ij-composer-height) !important;
