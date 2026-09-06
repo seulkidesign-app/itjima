@@ -35,16 +35,17 @@ test.describe("Landing V2 polish", () => {
     expect(widths.scroll).toBeLessThanOrEqual(widths.client + 1);
   });
 
-  test("hero keeps only the interactive fleeing >ij< and never spawns a second mark", async ({ page }) => {
+  test("hero keeps ascii faces, removes the spawned ij, and preserves the fleeing ij", async ({ page }) => {
     await page.setViewportSize({ width: 1440, height: 1000 });
     await page.goto("/?lang=ko");
 
-    await expect(page.locator(".ij-ascii-hero")).toHaveCount(0);
+    await expect(page.locator(".ij-ascii-hero")).toHaveCount(1);
+    await expect(page.locator(".ij-ascii-face")).toHaveCount(3);
     await expect(page.locator(".ij-ascii-mark")).toHaveCount(0);
 
     const butterfly = page.locator(".lv2-butterfly-ij");
     await expect(butterfly).toBeVisible();
-    await expect(butterfly).toHaveCSS("opacity", "0.04");
+    await expect(butterfly).toHaveCSS("opacity", "1");
     await expect(butterfly).toHaveCSS("pointer-events", "auto");
 
     const before = await butterfly.boundingBox();
