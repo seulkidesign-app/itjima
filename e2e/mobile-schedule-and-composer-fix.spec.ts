@@ -132,6 +132,40 @@ test("mobile capture keeps identical dock geometry before and after focus", asyn
   expect(keyboardSized.gap).toBeLessThanOrEqual(14);
 });
 
+
+
+test("mobile home route shell cannot become a fixed-position containing block", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await resetAppState(page);
+  await page.reload();
+
+  const frame = phone(page);
+  const shell = frame.locator(".page-shell").first();
+  const composer = frame.locator("form.composer-hero .input-shell").first();
+  const nav = frame.locator(".mobile-bottom-nav").first();
+
+  await expect(shell).toBeVisible();
+  await expect(composer).toBeVisible();
+  await expect(nav).toBeVisible();
+
+  await shell.evaluate((element) => {
+    element.style.transform = "translate3d(0,0,0)";
+    element.style.willChange = "transform";
+  });
+
+  await expect(shell).toHaveCSS("transform", "none");
+  await expect(shell).toHaveCSS("will-change", "auto");
+
+  const composerBox = await composer.boundingBox();
+  const navBox = await nav.boundingBox();
+  if (!composerBox || !navBox) throw new Error("dock geometry unavailable");
+  const gap = navBox.y - (composerBox.y + composerBox.height);
+  expect(gap).toBeGreaterThanOrEqual(7);
+  expect(gap).toBeLessThanOrEqual(14);
+});
+
 for (const viewport of [
   { name: "320px", width: 320, height: 568 },
   { name: "390px", width: 390, height: 844 },
