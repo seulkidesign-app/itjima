@@ -164,6 +164,17 @@ test("mobile home route shell cannot become a fixed-position containing block", 
   await expect(composerHost).toHaveCSS("position", "absolute");
   await expect(nav).toHaveCSS("position", "absolute");
 
+  const composerForm = frame.locator("form.composer-hero").first();
+  await expect(composerForm).toHaveCSS("position", "relative");
+  await expect(composerForm).toHaveCSS("bottom", "auto");
+
+  const [hostBox, formBox] = await Promise.all([
+    composerHost.boundingBox(),
+    composerForm.boundingBox(),
+  ]);
+  if (!hostBox || !formBox) throw new Error("composer host/form geometry unavailable");
+  expect(Math.abs(formBox.y - hostBox.y)).toBeLessThanOrEqual(1.5);
+
   const sharedContainingBlock = await page.evaluate(() => {
     const host = document.querySelector<HTMLElement>(
       ".page-shell > div:first-child > div.composer-hero",
