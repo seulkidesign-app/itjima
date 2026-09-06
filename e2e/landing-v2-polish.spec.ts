@@ -34,4 +34,28 @@ test.describe("Landing V2 polish", () => {
     }));
     expect(widths.scroll).toBeLessThanOrEqual(widths.client + 1);
   });
+
+  test("hero keeps only the interactive fleeing >ij< and never spawns a second mark", async ({ page }) => {
+    await page.setViewportSize({ width: 1440, height: 1000 });
+    await page.goto("/?lang=ko");
+
+    await expect(page.locator(".ij-ascii-hero")).toHaveCount(0);
+    await expect(page.locator(".ij-ascii-mark")).toHaveCount(0);
+
+    const butterfly = page.locator(".lv2-butterfly-ij");
+    await expect(butterfly).toBeVisible();
+    await expect(butterfly).toHaveCSS("opacity", "0.04");
+    await expect(butterfly).toHaveCSS("pointer-events", "auto");
+
+    const before = await butterfly.boundingBox();
+    if (!before) throw new Error("interactive ij geometry unavailable");
+
+    await butterfly.hover();
+    await page.waitForTimeout(760);
+
+    const after = await butterfly.boundingBox();
+    if (!after) throw new Error("interactive ij geometry unavailable after hover");
+    expect(Math.abs(after.x - before.x) + Math.abs(after.y - before.y)).toBeGreaterThan(8);
+  });
+
 });
