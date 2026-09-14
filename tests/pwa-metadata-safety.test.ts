@@ -68,6 +68,14 @@ describe("PWA product metadata safety", () => {
     expect(brandCss).not.toContain("Playpen Sans");
   });
 
+  it("uses the real 809×347 v8 wordmark ratio without clipping brand surfaces", () => {
+    expect(brandCss).toContain("--itjima-wordmark-aspect: 809 / 347");
+    expect(brandCss).toContain("aspect-ratio: var(--itjima-wordmark-aspect)");
+    expect(brandCss).toContain("background-size: contain !important");
+    expect(brandCss).toContain("max-height: none !important");
+    expect(brandCss).not.toContain("aspect-ratio: 1625 / 614");
+  });
+
   it("keeps search and share descriptions aligned with the Itjima AI memo positioning", () => {
     expect(html).toContain("메모·할 일·일정을 구분하지 않고 자연어 한 문장으로 기록하면");
     expect(html).toContain("날짜와 행동을 읽어 자동으로 구조화");
