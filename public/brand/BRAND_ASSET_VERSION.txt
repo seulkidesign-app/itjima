@@ -1,5 +1,5 @@
 Itjima final brand asset set
-Approved: 2026-09-02
-Version: v7
+Approved: 2026-09-14
+Version: v8
 Icon: >ij< on #FFF986
-Wordmark: itjima final artwork (jsMath-cmr10 source)
+Wordmark: itjima final artwork (Jost source)
