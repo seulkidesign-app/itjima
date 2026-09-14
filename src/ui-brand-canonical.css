@@ -1,8 +1,8 @@
-/* Canonical Itjima brand artwork — final lockup approved 2026-09-02. */
+/* Canonical Itjima brand artwork — Jost-based lockup approved 2026-09-14. */
 :root {
   --itjima-logo-yellow: #fff986;
   --itjima-logo-ink: #000000;
-  --itjima-wordmark-url: url("/brand/itjima-wordmark-v7.png");
+  --itjima-wordmark-url: url("/brand/itjima-wordmark-v8.png");
 }
 
 .itjima-brand-logo {
