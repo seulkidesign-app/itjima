@@ -68,20 +68,20 @@ declare module "@tanstack/react-router" {
 }
 
 if (typeof window !== "undefined") {
-  const brandCacheKey = "20260914-1";
+  const brandCacheKey = "20260914-2";
   const manifestLink = document.querySelector<HTMLLinkElement>('link[rel="manifest"]');
-  if (manifestLink) manifestLink.href = `/manifest-v7.webmanifest?v=${brandCacheKey}`;
+  if (manifestLink) manifestLink.href = `/manifest-v8.webmanifest?v=${brandCacheKey}`;
 
   const faviconLink = document.querySelector<HTMLLinkElement>('link[rel="icon"]');
-  if (faviconLink) faviconLink.href = `/favicon.svg?v=${brandCacheKey}`;
+  if (faviconLink) faviconLink.href = `/favicon-32-v8.png?v=${brandCacheKey}`;
 
   const shortcutIconLink = document.querySelector<HTMLLinkElement>('link[rel="shortcut icon"]');
-  if (shortcutIconLink) shortcutIconLink.href = `/favicon.svg?v=${brandCacheKey}`;
+  if (shortcutIconLink) shortcutIconLink.href = `/favicon-32-v8.png?v=${brandCacheKey}`;
 
   const touchIconLink = document.querySelector<HTMLLinkElement>(
     'link[rel="apple-touch-icon"]',
   );
-  if (touchIconLink) touchIconLink.href = `/apple-touch-icon-v7.png?v=${brandCacheKey}`;
+  if (touchIconLink) touchIconLink.href = `/apple-touch-icon-v8.png?v=${brandCacheKey}`;
 
   if (import.meta.env.DEV && import.meta.env.VITE_E2E !== "true") {
     installAuthDebugInstrumentation(router);
