@@ -1,11 +1,11 @@
 /* v8 wordmark rendering guard.
  * Loaded LAST from main.tsx so retired logo crop/mask rules cannot win.
- * Wordmark canvas is 1192×746 with padding so tittles/descenders never clip.
+ * Prefer the SVG <img> lockup; never clip with fixed heights or masks.
  */
 
 :root {
-  --itjima-v8-wordmark: url("/brand/itjima-wordmark-v8.png");
-  --itjima-v8-wordmark-aspect: 1192 / 746;
+  --itjima-v8-wordmark: url("/brand/itjima-wordmark-v8.svg?v=20260915-2");
+  --itjima-v8-wordmark-aspect: 593 / 307;
 }
 
 /* App / desktop / reusable BrandLogo -------------------------------------- */
@@ -17,9 +17,9 @@
   vertical-align: middle !important;
 }
 
-.itjima-wordmark-v8--app { width: 72px !important; }
-.itjima-wordmark-v8--native { width: 100px !important; }
-.itjima-wordmark-v8--micro { width: 48px !important; }
+.itjima-wordmark-v8--app { width: 88px !important; }
+.itjima-wordmark-v8--native { width: 112px !important; }
+.itjima-wordmark-v8--micro { width: 56px !important; }
 
 .itjima-wordmark-v8-image {
   display: block !important;
@@ -38,66 +38,82 @@
 
 .itjima-desktop-brand,
 .itjima-desktop-nav .itjima-desktop-brand {
-  min-height: 64px !important;
+  min-height: 72px !important;
   overflow: visible !important;
   align-items: center !important;
 }
 
 .itjima-desktop-brand .itjima-wordmark-v8,
 .itjima-desktop-nav .itjima-wordmark-v8 {
-  width: 100px !important;
+  width: 112px !important;
   height: auto !important;
   overflow: visible !important;
 }
 
-/* Landing navigation ------------------------------------------------------- */
+/* Landing navigation: real <img> inside .lv2-brand ---------------------- */
 html body .landing-v2 header.lv2-nav-wrap nav.lv2-nav > a.lv2-brand {
   position: relative !important;
-  display: block !important;
+  display: inline-flex !important;
+  align-items: center !important;
   justify-self: start !important;
-  width: 108px !important;
-  height: 68px !important;
-  min-width: 108px !important;
-  min-height: 68px !important;
-  flex: 0 0 108px !important;
+  width: auto !important;
+  height: auto !important;
+  min-width: 0 !important;
+  min-height: 0 !important;
+  flex: 0 0 auto !important;
   overflow: visible !important;
   background: none !important;
-  color: transparent !important;
+  background-image: none !important;
+  color: inherit !important;
   font-size: 0 !important;
   line-height: 0 !important;
-  text-indent: -9999px !important;
+  text-indent: 0 !important;
 }
 
-html body .landing-v2 header.lv2-nav-wrap nav.lv2-nav > a.lv2-brand::before {
-  content: "" !important;
-  display: block !important;
+html body .landing-v2 header.lv2-nav-wrap nav.lv2-nav > a.lv2-brand::before,
+html body .landing-v2 header.lv2-nav-wrap nav.lv2-nav > a.lv2-brand::after {
+  display: none !important;
+  content: none !important;
+}
+
+html body .landing-v2 header.lv2-nav-wrap nav.lv2-nav > a.lv2-brand > .lv2-brand-dot,
+html body .landing-v2 header.lv2-nav-wrap nav.lv2-nav > a.lv2-brand > .sr-only {
+  position: absolute !important;
+  width: 1px !important;
+  height: 1px !important;
+  padding: 0 !important;
+  margin: -1px !important;
+  overflow: hidden !important;
+  clip: rect(0, 0, 0, 0) !important;
+  white-space: nowrap !important;
+  border: 0 !important;
+}
+
+html body .landing-v2 header.lv2-nav-wrap nav.lv2-nav > a.lv2-brand > .lv2-brand-logo,
+html body .landing-v2 header.lv2-nav-wrap nav.lv2-nav > a.lv2-brand .itjima-wordmark-v8 {
+  display: inline-block !important;
+  width: 112px !important;
+  height: auto !important;
+  overflow: visible !important;
   visibility: visible !important;
   opacity: 1 !important;
-  position: absolute !important;
-  left: 0 !important;
-  top: 50% !important;
-  right: auto !important;
-  bottom: auto !important;
-  width: 108px !important;
-  height: 68px !important;
-  margin: 0 !important;
-  padding: 0 !important;
-  border: 0 !important;
-  background-color: transparent !important;
-  background-image: var(--itjima-v8-wordmark) !important;
-  background-repeat: no-repeat !important;
-  background-position: left center !important;
-  background-size: contain !important;
-  box-shadow: none !important;
-  transform: translateY(-50%) !important;
 }
 
-/* Keep all legacy text/dot fragments out of the final lockup. */
-html body .landing-v2 header.lv2-nav-wrap nav.lv2-nav > a.lv2-brand > * {
-  display: none !important;
+html body .landing-v2 header.lv2-nav-wrap nav.lv2-nav > a.lv2-brand .itjima-wordmark-v8-image {
+  display: block !important;
+  width: 112px !important;
+  height: auto !important;
+  max-height: none !important;
+  object-fit: contain !important;
+  visibility: visible !important;
+  opacity: 1 !important;
 }
 
-/* Landing oversized blue-band wordmark ----------------------------------- */
+/* Landing oversized blue-band wordmark: real <img>, white via filter ----- */
+html body .landing-v2 .lv2-brand-band {
+  overflow: visible !important;
+}
+
 html body .landing-v2 .lv2-brand-band .lv2-brand-masthead {
   display: block !important;
   position: relative !important;
@@ -106,80 +122,46 @@ html body .landing-v2 .lv2-brand-band .lv2-brand-masthead {
   max-width: none !important;
   height: auto !important;
   min-height: 0 !important;
-  aspect-ratio: auto !important;
+  aspect-ratio: var(--itjima-v8-wordmark-aspect) !important;
   margin: 24px auto 0 !important;
   padding: 0 !important;
   overflow: visible !important;
   background: none !important;
+  background-image: none !important;
   color: transparent !important;
   font-size: 0 !important;
   line-height: 0 !important;
-  text-indent: -9999px !important;
+  text-indent: 0 !important;
   transform: none !important;
   -webkit-mask-image: none !important;
   mask-image: none !important;
+  object-fit: contain !important;
+  filter: brightness(0) invert(1) !important;
 }
 
-html body .landing-v2 .lv2-brand-band .lv2-brand-masthead::before {
-  content: "" !important;
-  display: block !important;
-  visibility: visible !important;
-  opacity: 1 !important;
-  width: 100% !important;
-  height: auto !important;
-  aspect-ratio: var(--itjima-v8-wordmark-aspect) !important;
-  margin: 0 !important;
-  padding: 0 !important;
-  border: 0 !important;
-  background: #ffffff !important;
-  -webkit-mask-image: var(--itjima-v8-wordmark) !important;
-  mask-image: var(--itjima-v8-wordmark) !important;
-  -webkit-mask-repeat: no-repeat !important;
-  mask-repeat: no-repeat !important;
-  -webkit-mask-position: center !important;
-  mask-position: center !important;
-  -webkit-mask-size: contain !important;
-  mask-size: contain !important;
-  transform: none !important;
-}
-
+html body .landing-v2 .lv2-brand-band .lv2-brand-masthead::before,
 html body .landing-v2 .lv2-brand-band .lv2-brand-masthead::after {
   display: none !important;
   content: none !important;
 }
 
 @media (max-width: 560px) {
-  html body .landing-v2 header.lv2-nav-wrap nav.lv2-nav > a.lv2-brand {
-    width: 76px !important;
-    height: 48px !important;
-    min-width: 76px !important;
-    min-height: 48px !important;
-    flex-basis: 76px !important;
-  }
-
-  html body .landing-v2 header.lv2-nav-wrap nav.lv2-nav > a.lv2-brand::before {
-    width: 76px !important;
-    height: 48px !important;
+  html body .landing-v2 header.lv2-nav-wrap nav.lv2-nav > a.lv2-brand > .lv2-brand-logo,
+  html body .landing-v2 header.lv2-nav-wrap nav.lv2-nav > a.lv2-brand .itjima-wordmark-v8,
+  html body .landing-v2 header.lv2-nav-wrap nav.lv2-nav > a.lv2-brand .itjima-wordmark-v8-image {
+    width: 84px !important;
   }
 
   html body .landing-v2 .lv2-brand-band .lv2-brand-masthead {
     width: 126vw !important;
     margin-top: 18px !important;
-    transform: none !important;
   }
 }
 
 @media (max-width: 380px) {
-  html body .landing-v2 header.lv2-nav-wrap nav.lv2-nav > a.lv2-brand {
-    width: 68px !important;
-    height: 44px !important;
-    min-width: 68px !important;
-    min-height: 44px !important;
-    flex-basis: 68px !important;
-  }
-
-  html body .landing-v2 header.lv2-nav-wrap nav.lv2-nav > a.lv2-brand::before {
-    width: 68px !important;
-    height: 44px !important;
+  html body .landing-v2 header.lv2-nav-wrap nav.lv2-nav > a.lv2-brand > .lv2-brand-logo,
+  html body .landing-v2 header.lv2-nav-wrap nav.lv2-nav > a.lv2-brand .itjima-wordmark-v8,
+  html body .landing-v2 header.lv2-nav-wrap nav.lv2-nav > a.lv2-brand .itjima-wordmark-v8-image {
+    width: 76px !important;
   }
 }

@@ -62,28 +62,38 @@ describe("PWA product metadata safety", () => {
     expect(html).toMatch(/href="\/apple-touch-icon-v8\.png\?v=[^"]+"/);
   });
 
-  it("ships a valid padded wordmark PNG that matches the CSS aspect ratio", () => {
-    const wordmark = readFileSync(
+  it("ships a valid SVG wordmark and matching PNG fallback", () => {
+    const svg = readFileSync(
+      resolve(process.cwd(), "public/brand/itjima-wordmark-v8.svg"),
+      "utf8",
+    );
+    const png = readFileSync(
       resolve(process.cwd(), "public/brand/itjima-wordmark-v8.png"),
     );
-    expect(wordmark.subarray(1, 4).toString("ascii")).toBe("PNG");
-    expect(wordmark.readUInt32BE(16)).toBe(1192);
-    expect(wordmark.readUInt32BE(20)).toBe(746);
+    expect(svg).toContain("<svg");
+    expect(svg).toContain('viewBox="0 0 593 307"');
+    expect(svg).toContain("<path");
+    expect(png.subarray(1, 4).toString("ascii")).toBe("PNG");
+    expect(png.readUInt32BE(16)).toBe(1186);
+    expect(png.readUInt32BE(20)).toBe(614);
   });
 
-  it("uses the approved fixed wordmark artwork instead of a substitute font", () => {
-    expect(brandCss).toContain('--itjima-wordmark-url: url("/brand/itjima-wordmark-v8.png")');
+  it("points brand CSS at the cache-busted SVG wordmark", () => {
+    expect(brandCss).toContain(
+      '--itjima-wordmark-url: url("/brand/itjima-wordmark-v8.svg?v=20260915-2")',
+    );
     expect(brandCss).toContain("background-image: var(--itjima-wordmark-url)");
     expect(brandCss).not.toContain("Playpen Sans");
   });
 
-  it("uses the padded 1192×746 wordmark ratio without clipping brand surfaces", () => {
-    expect(brandCss).toContain("--itjima-wordmark-aspect: 1192 / 746");
+  it("uses the 593×307 wordmark ratio without clipping brand surfaces", () => {
+    expect(brandCss).toContain("--itjima-wordmark-aspect: 593 / 307");
     expect(brandCss).toContain("aspect-ratio: var(--itjima-wordmark-aspect)");
     expect(brandCss).toContain("background-size: contain !important");
     expect(brandCss).toContain("max-height: none !important");
     expect(brandCss).not.toContain("aspect-ratio: 1625 / 614");
     expect(brandCss).not.toContain("--itjima-wordmark-aspect: 809 / 347");
+    expect(brandCss).not.toContain("--itjima-wordmark-aspect: 1192 / 746");
   });
 
   it("keeps search and share descriptions aligned with the Itjima AI memo positioning", () => {

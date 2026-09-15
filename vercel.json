@@ -105,6 +105,24 @@
       ]
     },
     {
+      "source": "/brand/itjima-wordmark-v8.png",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "no-cache, must-revalidate"
+        }
+      ]
+    },
+    {
+      "source": "/brand/itjima-wordmark-v8.svg",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "no-cache, must-revalidate"
+        }
+      ]
+    },
+    {
       "source": "/icons/itjima-192-v7.png",
       "headers": [
         {

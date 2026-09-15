@@ -5,21 +5,21 @@ type BrandLogoProps = {
   className?: string;
 };
 
-const WORDMARK_SRC = "/brand/itjima-wordmark-v8.png";
-const WORDMARK_WIDTH = 1192;
-const WORDMARK_HEIGHT = 746;
+/** Cache-bust when artwork changes so CDN/PWA never keep a corrupt export. */
+export const WORDMARK_VERSION = "20260915-2";
+export const WORDMARK_SRC = `/brand/itjima-wordmark-v8.svg?v=${WORDMARK_VERSION}`;
+export const WORDMARK_WIDTH = 593;
+export const WORDMARK_HEIGHT = 307;
 
 /**
  * Canonical Itjima wordmark.
- * Source of truth: padded lowercase lockup (repaired 2026-09-15 after corrupt export).
- *
- * Deliberately uses v8-only class names so retired logo CSS cannot crop it.
+ * Uses the SVG lockup so tittles/descenders cannot be cropped by a bad PNG export.
  */
 export function BrandLogo({ size = "app", className = "" }: BrandLogoProps) {
   return (
     <span
       data-testid="brand-logo"
-      data-brand-source="final-2026-09-14-jost"
+      data-brand-source="wordmark-v8-svg"
       data-brand-size={size}
       className={`itjima-wordmark-v8 itjima-wordmark-v8--${size} ${className}`.trim()}
       aria-hidden="true"
