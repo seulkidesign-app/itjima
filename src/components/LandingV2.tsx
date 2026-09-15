@@ -2,6 +2,7 @@ import { Link } from "@tanstack/react-router";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { ArrowRight, Check, ChevronDown, Instagram, Linkedin, Sparkles } from "lucide-react";
 import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
+import { BrandLogo, WORDMARK_HEIGHT, WORDMARK_SRC, WORDMARK_WIDTH } from "@/components/BrandLogo";
 import { BRAND } from "@/lib/brand";
 import { LanguageToggle, useT } from "@/lib/i18n";
 import "@/ui-landing-v2.css";
@@ -388,7 +389,10 @@ export function LandingV2() {
 
       <header className="lv2-nav-wrap">
         <nav className="lv2-nav" aria-label={t("랜딩 페이지", "Landing page")}>
-          <a className="lv2-brand" href="#lv2-main" aria-label={t("잊지마 홈", "Itjima home")}><span className="lv2-brand-dot" />잊지마</a>
+          <a className="lv2-brand" href="#lv2-main" aria-label={t("잊지마 홈", "Itjima home")}>
+            <BrandLogo size="native" className="lv2-brand-logo" />
+            <span className="sr-only">itjima</span>
+          </a>
           <div className="lv2-nav-links">
             <a href="#how">{t("서비스 소개", "How it works")}</a>
             <a href="#trust">{t("작동 방식", "AI behavior")}</a>
@@ -522,7 +526,14 @@ export function LandingV2() {
       <section className="lv2-brand-band" aria-label={t("잊지마 브랜드", "Itjima brand")}>
         <div className="lv2-container lv2-brand-band-inner">
           <p className="lv2-brand-band-kicker">ITJIMA · AI MEMORY INBOX</p>
-          <p className="lv2-brand-masthead">잊지마</p>
+          <img
+            className="lv2-brand-masthead"
+            src={WORDMARK_SRC}
+            width={WORDMARK_WIDTH}
+            height={WORDMARK_HEIGHT}
+            alt="itjima"
+            draggable={false}
+          />
           <p className="lv2-brand-band-copy">
             {t("생각나는 대로 남기면, 알아서 구조화해 다시 보기 쉽게 정리되는 살아있는 메모.", "A living memory inbox that structures rough thoughts and keeps them easy to revisit.")}
           </p>

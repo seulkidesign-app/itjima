@@ -1,23 +1,16 @@
 import { expect, test } from "@playwright/test";
 
 test.describe("Landing V2 editorial system", () => {
-  test("uses lowercase English Playpen Sans wordmarks with generous hero clearance", async ({ page }) => {
+  test("uses lowercase English SVG wordmarks with generous hero clearance", async ({ page }) => {
     await page.goto("/?lang=en");
 
     const navBrand = page.locator(".lv2-brand");
-    const brandDot = page.locator(".lv2-brand-dot");
+    const brandLogo = page.locator(".lv2-brand .itjima-wordmark-v8-image");
     const masthead = page.locator(".lv2-brand-masthead");
 
     await expect(navBrand).toBeVisible();
-    await expect(brandDot).toBeVisible();
-
-    const visualBrand = await navBrand.evaluate((node) => {
-      const style = getComputedStyle(node, "::after");
-      return { content: style.content, family: style.fontFamily, weight: style.fontWeight };
-    });
-    expect(visualBrand.content).toContain("itjima");
-    expect(visualBrand.family).toContain("Playpen Sans");
-    expect(visualBrand.weight).toBe("600");
+    await expect(brandLogo).toBeVisible();
+    await expect(brandLogo).toHaveAttribute("src", /itjima-wordmark-v8\.svg/);
 
     const clearance = await page.evaluate(() => {
       const nav = document.querySelector<HTMLElement>(".lv2-nav")!.getBoundingClientRect();
@@ -27,14 +20,9 @@ test.describe("Landing V2 editorial system", () => {
     expect(clearance).toBeGreaterThanOrEqual(48);
 
     await masthead.scrollIntoViewIfNeeded();
-    const visualMasthead = await masthead.evaluate((node) => {
-      const style = getComputedStyle(node, "::after");
-      return { content: style.content, color: style.color, family: style.fontFamily, weight: style.fontWeight };
-    });
-    expect(visualMasthead.content).toContain("itjima");
-    expect(visualMasthead.color).toBe("rgb(255, 255, 255)");
-    expect(visualMasthead.family).toContain("Playpen Sans");
-    expect(visualMasthead.weight).toBe("600");
+    await expect(masthead).toBeVisible();
+    await expect(masthead).toHaveAttribute("src", /itjima-wordmark-v8\.svg/);
+    await expect(masthead).toHaveAttribute("alt", "itjima");
 
     await expect(page.locator(".lv2-rule-dot").first()).toBeHidden();
     await expect(page.locator(".lv2-hero-glow").first()).toBeHidden();
