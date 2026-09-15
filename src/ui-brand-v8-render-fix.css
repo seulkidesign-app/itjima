@@ -1,11 +1,11 @@
 /* v8 wordmark rendering guard.
  * Loaded LAST from main.tsx so retired logo crop/mask rules cannot win.
- * The approved Jost artwork is 809×347.
+ * Wordmark canvas is 1192×746 with padding so tittles/descenders never clip.
  */
 
 :root {
   --itjima-v8-wordmark: url("/brand/itjima-wordmark-v8.png");
-  --itjima-v8-wordmark-aspect: 809 / 347;
+  --itjima-v8-wordmark-aspect: 1192 / 746;
 }
 
 /* App / desktop / reusable BrandLogo -------------------------------------- */
@@ -56,9 +56,9 @@ html body .landing-v2 header.lv2-nav-wrap nav.lv2-nav > a.lv2-brand {
   display: block !important;
   justify-self: start !important;
   width: 108px !important;
-  height: 48px !important;
+  height: 68px !important;
   min-width: 108px !important;
-  min-height: 48px !important;
+  min-height: 68px !important;
   flex: 0 0 108px !important;
   overflow: visible !important;
   background: none !important;
@@ -79,7 +79,7 @@ html body .landing-v2 header.lv2-nav-wrap nav.lv2-nav > a.lv2-brand::before {
   right: auto !important;
   bottom: auto !important;
   width: 108px !important;
-  height: 46px !important;
+  height: 68px !important;
   margin: 0 !important;
   padding: 0 !important;
   border: 0 !important;
@@ -151,15 +151,15 @@ html body .landing-v2 .lv2-brand-band .lv2-brand-masthead::after {
 @media (max-width: 560px) {
   html body .landing-v2 header.lv2-nav-wrap nav.lv2-nav > a.lv2-brand {
     width: 76px !important;
-    height: 36px !important;
+    height: 48px !important;
     min-width: 76px !important;
-    min-height: 36px !important;
+    min-height: 48px !important;
     flex-basis: 76px !important;
   }
 
   html body .landing-v2 header.lv2-nav-wrap nav.lv2-nav > a.lv2-brand::before {
     width: 76px !important;
-    height: 33px !important;
+    height: 48px !important;
   }
 
   html body .landing-v2 .lv2-brand-band .lv2-brand-masthead {
@@ -172,12 +172,14 @@ html body .landing-v2 .lv2-brand-band .lv2-brand-masthead::after {
 @media (max-width: 380px) {
   html body .landing-v2 header.lv2-nav-wrap nav.lv2-nav > a.lv2-brand {
     width: 68px !important;
+    height: 44px !important;
     min-width: 68px !important;
+    min-height: 44px !important;
     flex-basis: 68px !important;
   }
 
   html body .landing-v2 header.lv2-nav-wrap nav.lv2-nav > a.lv2-brand::before {
     width: 68px !important;
-    height: 30px !important;
+    height: 44px !important;
   }
 }

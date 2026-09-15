@@ -2,4 +2,5 @@ Itjima final brand asset set
 Approved: 2026-09-14
 Version: v8
 Icon: >ij< on #FFF986
-Wordmark: itjima final artwork (Jost source)
+Wordmark: itjima lowercase lockup (1192×746 padded canvas)
+Repaired: 2026-09-15 — replaced corrupt 809×347 export that clipped glyphs

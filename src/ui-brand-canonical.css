@@ -3,7 +3,7 @@
   --itjima-logo-yellow: #fff986;
   --itjima-logo-ink: #000000;
   --itjima-wordmark-url: url("/brand/itjima-wordmark-v8.png");
-  --itjima-wordmark-aspect: 809 / 347;
+  --itjima-wordmark-aspect: 1192 / 746;
 }
 
 .itjima-brand-logo {
@@ -32,7 +32,7 @@
 .itjima-brand-logo--native { width: 100px; }
 .itjima-brand-logo--micro { width: 48px; }
 
-/* The v8 Jost artwork is 809×347 (2.33:1), taller than the retired lockup.
+/* Wordmark canvas is 1192×746 with padding so tittles/descenders never clip.
  * Keep app chrome from inheriting old fixed-height clipping rules. */
 .itjima-desktop-brand .itjima-brand-logo,
 .itjima-desktop-nav .itjima-brand-logo,
@@ -59,9 +59,9 @@
 html body .landing-v2 header.lv2-nav-wrap nav.lv2-nav > a.lv2-brand {
   display: block !important;
   justify-self: start !important;
-  width: 92px !important;
-  height: 40px !important;
-  flex: 0 0 92px !important;
+  width: 108px !important;
+  height: 68px !important;
+  flex: 0 0 108px !important;
   min-width: 0 !important;
   overflow: visible !important;
   background-color: transparent !important;
@@ -104,7 +104,7 @@ html body .landing-v2 header.lv2-nav-wrap nav.lv2-nav > a.lv2-brand::after {
 /* Oversized footer wordmark. Use the real v8 artwork ratio so the mask never
  * slices through the letters when the logo artwork changes. */
 .landing-v2 .lv2-brand-band {
-  overflow: hidden !important;
+  overflow: visible !important;
   padding-bottom: 0 !important;
 }
 
@@ -190,18 +190,18 @@ html body .landing-v2 header.lv2-nav-wrap nav.lv2-nav > a.lv2-brand::after {
   .landing-v2 .lv2-nav {
     display: grid !important;
     width: 100% !important;
-    min-height: 52px !important;
-    grid-template-columns: 68px minmax(0, 1fr) !important;
+    min-height: 56px !important;
+    grid-template-columns: 76px minmax(0, 1fr) !important;
     align-items: center !important;
     gap: 7px !important;
     padding: 6px 7px 6px 12px !important;
-    overflow: hidden !important;
+    overflow: visible !important;
   }
 
   html body .landing-v2 header.lv2-nav-wrap nav.lv2-nav > a.lv2-brand {
-    width: 68px !important;
-    height: 30px !important;
-    flex: 0 0 68px !important;
+    width: 76px !important;
+    height: 48px !important;
+    flex: 0 0 76px !important;
     background-size: contain !important;
     background-position: left center !important;
   }
@@ -240,7 +240,7 @@ html body .landing-v2 header.lv2-nav-wrap nav.lv2-nav > a.lv2-brand::after {
     white-space: nowrap !important;
   }
 
-  .landing-v2 .lv2-brand-band { overflow: hidden !important; padding-bottom: 0 !important; }
+  .landing-v2 .lv2-brand-band { overflow: visible !important; padding-bottom: 0 !important; }
   .landing-v2 .lv2-brand-band-copy { margin-bottom: 0 !important; }
 
   .landing-v2 .lv2-brand-masthead {
@@ -267,9 +267,9 @@ html body .landing-v2 header.lv2-nav-wrap nav.lv2-nav > a.lv2-brand::after {
   }
 
   html body .landing-v2 header.lv2-nav-wrap nav.lv2-nav > a.lv2-brand {
-    width: 62px !important;
-    height: 27px !important;
-    flex-basis: 62px !important;
+    width: 68px !important;
+    height: 44px !important;
+    flex-basis: 68px !important;
     background-size: contain !important;
   }
 

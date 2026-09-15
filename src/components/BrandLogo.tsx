@@ -6,10 +6,12 @@ type BrandLogoProps = {
 };
 
 const WORDMARK_SRC = "/brand/itjima-wordmark-v8.png";
+const WORDMARK_WIDTH = 1192;
+const WORDMARK_HEIGHT = 746;
 
 /**
  * Canonical Itjima wordmark.
- * Source of truth: Jost-based final brand artwork approved 2026-09-14.
+ * Source of truth: padded lowercase lockup (repaired 2026-09-15 after corrupt export).
  *
  * Deliberately uses v8-only class names so retired logo CSS cannot crop it.
  */
@@ -25,8 +27,8 @@ export function BrandLogo({ size = "app", className = "" }: BrandLogoProps) {
       <img
         className="itjima-wordmark-v8-image"
         src={WORDMARK_SRC}
-        width={809}
-        height={347}
+        width={WORDMARK_WIDTH}
+        height={WORDMARK_HEIGHT}
         alt=""
         draggable={false}
       />

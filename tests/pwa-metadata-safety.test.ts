@@ -62,18 +62,28 @@ describe("PWA product metadata safety", () => {
     expect(html).toMatch(/href="\/apple-touch-icon-v8\.png\?v=[^"]+"/);
   });
 
-  it("uses the approved Jost-based fixed wordmark artwork instead of a substitute font", () => {
+  it("ships a valid padded wordmark PNG that matches the CSS aspect ratio", () => {
+    const wordmark = readFileSync(
+      resolve(process.cwd(), "public/brand/itjima-wordmark-v8.png"),
+    );
+    expect(wordmark.subarray(1, 4).toString("ascii")).toBe("PNG");
+    expect(wordmark.readUInt32BE(16)).toBe(1192);
+    expect(wordmark.readUInt32BE(20)).toBe(746);
+  });
+
+  it("uses the approved fixed wordmark artwork instead of a substitute font", () => {
     expect(brandCss).toContain('--itjima-wordmark-url: url("/brand/itjima-wordmark-v8.png")');
     expect(brandCss).toContain("background-image: var(--itjima-wordmark-url)");
     expect(brandCss).not.toContain("Playpen Sans");
   });
 
-  it("uses the real 809×347 v8 wordmark ratio without clipping brand surfaces", () => {
-    expect(brandCss).toContain("--itjima-wordmark-aspect: 809 / 347");
+  it("uses the padded 1192×746 wordmark ratio without clipping brand surfaces", () => {
+    expect(brandCss).toContain("--itjima-wordmark-aspect: 1192 / 746");
     expect(brandCss).toContain("aspect-ratio: var(--itjima-wordmark-aspect)");
     expect(brandCss).toContain("background-size: contain !important");
     expect(brandCss).toContain("max-height: none !important");
     expect(brandCss).not.toContain("aspect-ratio: 1625 / 614");
+    expect(brandCss).not.toContain("--itjima-wordmark-aspect: 809 / 347");
   });
 
   it("keeps search and share descriptions aligned with the Itjima AI memo positioning", () => {

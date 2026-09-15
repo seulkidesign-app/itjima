@@ -45,7 +45,7 @@
 
 .landing-v2 .lv2-nav {
   width: min(1180px, 100%);
-  min-height: 60px;
+  min-height: 72px;
   grid-template-columns: auto minmax(0, 1fr) auto;
   gap: 24px;
   padding: 7px 9px 7px 20px;
@@ -296,7 +296,7 @@
 
 /* The final thing on the page is a huge white Itjima wordmark on sky blue. */
 .landing-v2 .lv2-brand-band {
-  overflow: hidden;
+  overflow: visible;
   padding: clamp(64px, 7vw, 100px) 0 0;
   background: linear-gradient(180deg, #e7f6fb 0%, #d6edf6 100%);
 }
