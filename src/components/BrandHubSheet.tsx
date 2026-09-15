@@ -121,7 +121,7 @@ export function BrandHubSheet({
           <section className="pt-1" aria-labelledby="brand-hub-title">
             <div className="flex items-start gap-3.5 rounded-[22px] border border-ink/[0.07] bg-white/75 p-4 shadow-card backdrop-blur-xl">
               <img
-                src="/icons/itjima-192-v7.png"
+                src="/icons/itjima-192-v8.png"
                 alt=""
                 aria-hidden="true"
                 draggable={false}

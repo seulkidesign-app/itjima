@@ -1,4 +1,4 @@
-const CACHE = "itjima-shell-v8";
+const CACHE = "itjima-shell-v8-icon-20260915";
 const SHELL = [
   "/index.html",
   "/manifest-v8.webmanifest",

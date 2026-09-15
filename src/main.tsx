@@ -69,7 +69,7 @@ declare module "@tanstack/react-router" {
 }
 
 if (typeof window !== "undefined") {
-  const brandCacheKey = "20260915-1";
+  const brandCacheKey = "20260915-3";
   const manifestLink = document.querySelector<HTMLLinkElement>('link[rel="manifest"]');
   if (manifestLink) manifestLink.href = `/manifest-v8.webmanifest?v=${brandCacheKey}`;
 

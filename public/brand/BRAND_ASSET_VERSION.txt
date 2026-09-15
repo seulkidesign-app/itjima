@@ -1,6 +1,7 @@
 Itjima final brand asset set
 Approved: 2026-09-14
 Version: v8
-Icon: >ij< on #FFF986
+Icon: >ij< on #FFF986 (favicon + launcher refreshed 2026-09-15)
 Wordmark: itjima lowercase SVG lockup (593×307) + PNG fallback (1186×614)
 Repaired: 2026-09-15 — replaced corrupt PNG export; ship SVG as primary
+Icons: 2026-09-15 — replace clipped Google/PWA mark with padded >ij< artwork
