@@ -141,5 +141,10 @@
       ]
     }
   ],
-  "rewrites": [{ "source": "/((?!api/).*)", "destination": "/index.html" }]
+  "rewrites": [
+    {
+      "source": "/((?!api/|brand/|icons/|assets/).*)",
+      "destination": "/index.html"
+    }
+  ]
 }
