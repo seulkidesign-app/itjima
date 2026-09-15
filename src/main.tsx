@@ -53,6 +53,7 @@ import "./ui-capture-mobile-hotfix.css";
 import "./ui-landing-mobile-type-hotfix.css";
 import "./ui-home-docked-composer.css";
 import "./landingHeroMotion";
+import "./ui-brand-v8-render-fix.css";
 
 import { registerServiceWorker } from "@/lib/swReminders";
 import { installPushSubscriptionAuthSync } from "@/lib/push/pushAuthSync";
@@ -68,7 +69,7 @@ declare module "@tanstack/react-router" {
 }
 
 if (typeof window !== "undefined") {
-  const brandCacheKey = "20260914-2";
+  const brandCacheKey = "20260915-1";
   const manifestLink = document.querySelector<HTMLLinkElement>('link[rel="manifest"]');
   if (manifestLink) manifestLink.href = `/manifest-v8.webmanifest?v=${brandCacheKey}`;
 
