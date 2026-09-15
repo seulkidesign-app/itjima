@@ -1,0 +1,183 @@
+/* v8 wordmark rendering guard.
+ * Loaded LAST from main.tsx so retired logo crop/mask rules cannot win.
+ * The approved Jost artwork is 809×347.
+ */
+
+:root {
+  --itjima-v8-wordmark: url("/brand/itjima-wordmark-v8.png");
+  --itjima-v8-wordmark-aspect: 809 / 347;
+}
+
+/* App / desktop / reusable BrandLogo -------------------------------------- */
+.itjima-wordmark-v8 {
+  display: inline-block !important;
+  flex: 0 0 auto !important;
+  line-height: 0 !important;
+  overflow: visible !important;
+  vertical-align: middle !important;
+}
+
+.itjima-wordmark-v8--app { width: 72px !important; }
+.itjima-wordmark-v8--native { width: 100px !important; }
+.itjima-wordmark-v8--micro { width: 48px !important; }
+
+.itjima-wordmark-v8-image {
+  display: block !important;
+  width: 100% !important;
+  height: auto !important;
+  max-width: none !important;
+  max-height: none !important;
+  min-height: 0 !important;
+  object-fit: contain !important;
+  object-position: left center !important;
+  overflow: visible !important;
+  clip: auto !important;
+  clip-path: none !important;
+  transform: none !important;
+}
+
+.itjima-desktop-brand,
+.itjima-desktop-nav .itjima-desktop-brand {
+  min-height: 64px !important;
+  overflow: visible !important;
+  align-items: center !important;
+}
+
+.itjima-desktop-brand .itjima-wordmark-v8,
+.itjima-desktop-nav .itjima-wordmark-v8 {
+  width: 100px !important;
+  height: auto !important;
+  overflow: visible !important;
+}
+
+/* Landing navigation ------------------------------------------------------- */
+html body .landing-v2 header.lv2-nav-wrap nav.lv2-nav > a.lv2-brand {
+  position: relative !important;
+  display: block !important;
+  justify-self: start !important;
+  width: 108px !important;
+  height: 48px !important;
+  min-width: 108px !important;
+  min-height: 48px !important;
+  flex: 0 0 108px !important;
+  overflow: visible !important;
+  background: none !important;
+  color: transparent !important;
+  font-size: 0 !important;
+  line-height: 0 !important;
+  text-indent: -9999px !important;
+}
+
+html body .landing-v2 header.lv2-nav-wrap nav.lv2-nav > a.lv2-brand::before {
+  content: "" !important;
+  display: block !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+  position: absolute !important;
+  left: 0 !important;
+  top: 50% !important;
+  right: auto !important;
+  bottom: auto !important;
+  width: 108px !important;
+  height: 46px !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  border: 0 !important;
+  background-color: transparent !important;
+  background-image: var(--itjima-v8-wordmark) !important;
+  background-repeat: no-repeat !important;
+  background-position: left center !important;
+  background-size: contain !important;
+  box-shadow: none !important;
+  transform: translateY(-50%) !important;
+}
+
+/* Keep all legacy text/dot fragments out of the final lockup. */
+html body .landing-v2 header.lv2-nav-wrap nav.lv2-nav > a.lv2-brand > * {
+  display: none !important;
+}
+
+/* Landing oversized blue-band wordmark ----------------------------------- */
+html body .landing-v2 .lv2-brand-band .lv2-brand-masthead {
+  display: block !important;
+  position: relative !important;
+  left: auto !important;
+  width: min(1220px, 104vw) !important;
+  max-width: none !important;
+  height: auto !important;
+  min-height: 0 !important;
+  aspect-ratio: auto !important;
+  margin: 24px auto 0 !important;
+  padding: 0 !important;
+  overflow: visible !important;
+  background: none !important;
+  color: transparent !important;
+  font-size: 0 !important;
+  line-height: 0 !important;
+  text-indent: -9999px !important;
+  transform: none !important;
+  -webkit-mask-image: none !important;
+  mask-image: none !important;
+}
+
+html body .landing-v2 .lv2-brand-band .lv2-brand-masthead::before {
+  content: "" !important;
+  display: block !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+  width: 100% !important;
+  height: auto !important;
+  aspect-ratio: var(--itjima-v8-wordmark-aspect) !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  border: 0 !important;
+  background: #ffffff !important;
+  -webkit-mask-image: var(--itjima-v8-wordmark) !important;
+  mask-image: var(--itjima-v8-wordmark) !important;
+  -webkit-mask-repeat: no-repeat !important;
+  mask-repeat: no-repeat !important;
+  -webkit-mask-position: center !important;
+  mask-position: center !important;
+  -webkit-mask-size: contain !important;
+  mask-size: contain !important;
+  transform: none !important;
+}
+
+html body .landing-v2 .lv2-brand-band .lv2-brand-masthead::after {
+  display: none !important;
+  content: none !important;
+}
+
+@media (max-width: 560px) {
+  html body .landing-v2 header.lv2-nav-wrap nav.lv2-nav > a.lv2-brand {
+    width: 76px !important;
+    height: 36px !important;
+    min-width: 76px !important;
+    min-height: 36px !important;
+    flex-basis: 76px !important;
+  }
+
+  html body .landing-v2 header.lv2-nav-wrap nav.lv2-nav > a.lv2-brand::before {
+    width: 76px !important;
+    height: 33px !important;
+  }
+
+  html body .landing-v2 .lv2-brand-band .lv2-brand-masthead {
+    width: 126vw !important;
+    margin-top: 18px !important;
+    transform: none !important;
+  }
+}
+
+@media (max-width: 380px) {
+  html body .landing-v2 header.lv2-nav-wrap nav.lv2-nav > a.lv2-brand {
+    width: 68px !important;
+    min-width: 68px !important;
+    flex-basis: 68px !important;
+  }
+
+  html body .landing-v2 header.lv2-nav-wrap nav.lv2-nav > a.lv2-brand::before {
+    width: 68px !important;
+    height: 30px !important;
+  }
+}
