@@ -10,14 +10,24 @@ let lastUpdateCheckAt = 0;
 let lastDocumentUpdateCheckAt = 0;
 let lifecycleListenersInstalled = false;
 let documentUpdateDetected = false;
+let pendingUpdateStrategy: AppUpdateStrategy | null = null;
 
 function emitUpdateReady(strategy: AppUpdateStrategy) {
+  pendingUpdateStrategy = strategy;
   if (typeof window === "undefined") return;
   window.dispatchEvent(
     new CustomEvent(APP_UPDATE_READY_EVENT, {
       detail: { strategy },
     }),
   );
+}
+
+export function getPendingAppUpdateStrategy(): AppUpdateStrategy | null {
+  return pendingUpdateStrategy;
+}
+
+export function clearPendingAppUpdateStrategy(): void {
+  pendingUpdateStrategy = null;
 }
 
 function normalizedAssetUrl(value: string, baseUrl: string): string | null {
@@ -211,6 +221,7 @@ export async function unregisterServiceWorkers(): Promise<void> {
   await Promise.all(regs.map((r) => r.unregister()));
   activeRegistration = null;
   registrationPromise = null;
+  pendingUpdateStrategy = null;
 }
 
 export function notificationPermissionState():
