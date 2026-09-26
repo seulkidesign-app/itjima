@@ -3,7 +3,9 @@ export type ScheduleConfirmationReason =
   | "weekend_day"
   | "after_work_time"
   | "assumed_meridiem"
-  | "multiple_clocks";
+  | "multiple_clocks"
+  | "missing_date_and_meridiem"
+  | "ambiguous_weekday";
 
 export type ScheduleConfirmationChoiceId =
   | "tomorrow_same_time"
@@ -13,7 +15,13 @@ export type ScheduleConfirmationChoiceId =
   | "after_work_19"
   | "morning"
   | "afternoon"
-  | "no_time";
+  | "no_time"
+  | "today_morning"
+  | "today_afternoon"
+  | "tomorrow_morning"
+  | "tomorrow_afternoon"
+  | "this_weekday"
+  | "next_weekday";
 
 export type ScheduleConfirmationChoice = {
   id: ScheduleConfirmationChoiceId;
@@ -198,6 +206,26 @@ function replaceAfterWork(text: string, hour: 18 | 19): string {
   return text.replace(/\bafter\s+work\b/i, enTime);
 }
 
+function hasExplicitDateAnchor(text: string): boolean {
+  return /(?:오늘|내일|모레|글피|이번\s*주|다음\s*주|이번\s*달|다음\s*달|\d{1,2}\s*월\s*\d{1,2}\s*일|\d{4}\s*년|(?:일|월|화|수|목|금|토)요일|\b(?:today|tomorrow|monday|tuesday|wednesday|thursday|friday|saturday|sunday|this\s+week|next\s+week)\b)/i.test(text);
+}
+
+function hasUnqualifiedWeekday(text: string): boolean {
+  const hasWeekday = /(?:일|월|화|수|목|금|토)요일|\b(?:monday|tuesday|wednesday|thursday|friday|saturday|sunday)\b/i.test(text);
+  const hasWeekQualifier = /(?:이번|다음)\s*주|\b(?:this|next)\s+week\b/i.test(text);
+  return hasWeekday && !hasWeekQualifier;
+}
+
+function prefixDate(text: string, prefix: "today" | "tomorrow"): string {
+  const label = prefix === "today" ? "오늘" : "내일";
+  return `${label} ${text.trim()}`;
+}
+
+function qualifyWeekday(text: string, which: "this" | "next"): string {
+  const ko = which === "this" ? "이번 주" : "다음 주";
+  return `${ko} ${text.trim()}`;
+}
+
 function replaceBareMeridiem(text: string, period: "am" | "pm"): string {
   const koPeriod = period === "am" ? "오전" : "오후";
   const koResolved = text.replace(
@@ -296,8 +324,17 @@ export function scheduleConfirmationReasons(
     reasons.push("multiple_clocks");
   }
 
-  // Resolve AM/PM before evaluating whether a time has already passed.
-  if (bareMeridiem) reasons.push("assumed_meridiem");
+  // A bare clock without any date has two independent missing fields.
+  // Surface them together instead of silently assuming today.
+  if (bareMeridiem && !hasExplicitDateAnchor(trimmed)) {
+    reasons.push("missing_date_and_meridiem");
+  } else if (bareMeridiem) {
+    reasons.push("assumed_meridiem");
+  }
+
+  // A weekday without this/next-week qualification is not authoritative enough
+  // to auto-commit: ask which occurrence the user means.
+  if (hasUnqualifiedWeekday(trimmed)) reasons.push("ambiguous_weekday");
 
   if (!bareMeridiem && /(오늘|\btoday\b)/i.test(trimmed)) {
     const time = parseMentionedTime(inheritRangeMeridiem(trimmed));
@@ -343,6 +380,24 @@ export function scheduleConfirmationChoices(
 
   // No one-tap merge of multiple timed plans — open the manual sheet instead.
   if (reason === "multiple_clocks") return [];
+
+  if (reason === "missing_date_and_meridiem") {
+    const clock = extractBareClock(text);
+    if (!clock) return [];
+    return [
+      { id: "today_morning", label: lang === "en" ? "Today · AM" : "오늘 · 오전", resolvedText: prefixDate(replaceBareMeridiem(text, "am"), "today") },
+      { id: "today_afternoon", label: lang === "en" ? "Today · PM" : "오늘 · 오후", resolvedText: prefixDate(replaceBareMeridiem(text, "pm"), "today") },
+      { id: "tomorrow_morning", label: lang === "en" ? "Tomorrow · AM" : "내일 · 오전", resolvedText: prefixDate(replaceBareMeridiem(text, "am"), "tomorrow") },
+      { id: "tomorrow_afternoon", label: lang === "en" ? "Tomorrow · PM" : "내일 · 오후", resolvedText: prefixDate(replaceBareMeridiem(text, "pm"), "tomorrow") },
+    ];
+  }
+
+  if (reason === "ambiguous_weekday") {
+    return [
+      { id: "this_weekday", label: lang === "en" ? "This week" : "이번 주", resolvedText: qualifyWeekday(text, "this") },
+      { id: "next_weekday", label: lang === "en" ? "Next week" : "다음 주", resolvedText: qualifyWeekday(text, "next") },
+    ];
+  }
 
   if (reason === "past_today") {
     const resolvedText = replaceTodayWithTomorrow(text);
