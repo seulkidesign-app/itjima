@@ -45,6 +45,8 @@ function confirmationCopy(
     after_work_time: "퇴근 시간을 골라 주세요. 선택한 시간으로 바로 추가해요.",
     assumed_meridiem: assumedMeridiemQuestion(text, "ko"),
     multiple_clocks: "시간이 두 개 있어요",
+    missing_date_and_meridiem: "날짜와 오전·오후를 확인해 주세요.",
+    ambiguous_weekday: "어느 주의 요일인가요?",
   };
   const en: Record<ScheduleConfirmationReason, string> = {
     past_today: "That time has passed today. Move it to the same time tomorrow in one tap.",
@@ -52,6 +54,8 @@ function confirmationCopy(
     after_work_time: "Choose your after-work time and add it right away.",
     assumed_meridiem: assumedMeridiemQuestion(text, "en"),
     multiple_clocks: "There are two times here",
+    missing_date_and_meridiem: "Choose the date and AM/PM.",
+    ambiguous_weekday: "Which week do you mean?",
   };
   return lang === "en" ? en[reason] : ko[reason];
 }
@@ -141,7 +145,12 @@ export function InlinePromise({
     onEditCaptureText?.(item.text);
   };
 
-  if (activeConfirmation === "assumed_meridiem" && confirmationChoices.length > 0) {
+  if (
+    (activeConfirmation === "assumed_meridiem" ||
+      activeConfirmation === "missing_date_and_meridiem" ||
+      activeConfirmation === "ambiguous_weekday") &&
+    confirmationChoices.length > 0
+  ) {
     return (
       <div
         className="w-full rounded-[16px] border border-ink/[0.08] bg-white px-4 py-3.5"
@@ -149,13 +158,13 @@ export function InlinePromise({
         data-intent={card.nlIntent}
         data-confidence={card.confidenceLevel}
         data-needs-confirmation="true"
-        data-confirmation-reason="assumed_meridiem"
+        data-confirmation-reason={activeConfirmation}
       >
         <strong className="block text-[16px] font-semibold leading-snug text-ink">
           {title}
         </strong>
         <p className="mt-2 text-[14px] font-medium leading-snug text-ink">
-          {confirmationCopy("assumed_meridiem", uiLang, confirmationText)}
+          {confirmationCopy(activeConfirmation, uiLang, confirmationText)}
         </p>
         <div
           className={`mt-3 grid gap-2 ${
@@ -170,7 +179,7 @@ export function InlinePromise({
               data-testid={`promise-confirm-${choice.id}`}
               onClick={() => {
                 track("nl_inline_ambiguity_resolved", {
-                  reason: "assumed_meridiem",
+                  reason: activeConfirmation,
                   choice: choice.id,
                 });
                 finish(
