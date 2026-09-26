@@ -190,17 +190,19 @@ export function InlinePromise({
               {choice.label}
             </button>
           ))}
-          <button
-            type="button"
-            data-testid="promise-confirm-other"
-            onClick={() => openManualSchedule("ambiguity")}
-            className="touch-press min-h-11 rounded-[12px] border border-ink/12 bg-ink/[0.03] px-3 py-2.5 text-[13px] font-semibold text-ink active:border-primary active:bg-primary/25"
-          >
-            {activeConfirmation === "ambiguous_weekday"
-              ? t("다른 주", "Another week")
-              : t("다른 날짜", "Another date")}
-          </button>
         </div>
+        <button
+          type="button"
+          data-testid="promise-confirm-other"
+          onClick={() => openManualSchedule("ambiguity")}
+          className="touch-press mt-2 inline-flex min-h-10 items-center px-1 text-[13px] font-medium text-ink-soft underline-offset-2 hover:underline"
+        >
+          {activeConfirmation === "ambiguous_weekday"
+            ? t("다른 날짜 선택", "Choose another date")
+            : /(?:오늘|내일|모레|글피|\btoday\b|\btomorrow\b)/i.test(confirmationText)
+              ? t("다른 시간 선택", "Choose another time")
+              : t("다른 날짜 선택", "Choose another date")}
+        </button>
       </div>
     );
   }
