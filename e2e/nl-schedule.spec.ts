@@ -138,7 +138,7 @@ test.describe("Natural-language scheduling in Korean", () => {
     const promise = phone(page).getByTestId("inline-promise").last();
     await expect(promise).toHaveAttribute(
       "data-confirmation-reason",
-      "missing_date_and_meridiem",
+      "assumed_meridiem",
     );
     await expect(promise.getByRole("button", { name: "오늘 · 오전" })).toBeVisible();
     await expect(promise.getByRole("button", { name: "오늘 · 오후" })).toBeVisible();
