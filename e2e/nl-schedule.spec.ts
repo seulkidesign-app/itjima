@@ -131,6 +131,40 @@ test.describe("Natural-language scheduling in Korean", () => {
     ).toBeVisible();
   });
 
+  test("날짜 없는 시각은 날짜와 오전오후를 함께 확인한다", async ({ page }) => {
+    await submitKo(page, "3시 반 치과");
+    expect((await readGuestList(page, GUEST_SCHEDULE_KEY)).length).toBe(0);
+
+    const promise = phone(page).getByTestId("inline-promise").last();
+    await expect(promise).toHaveAttribute(
+      "data-confirmation-reason",
+      "missing_date_and_meridiem",
+    );
+    await expect(promise.getByRole("button", { name: "오늘 · 오전" })).toBeVisible();
+    await expect(promise.getByRole("button", { name: "오늘 · 오후" })).toBeVisible();
+    await expect(promise.getByRole("button", { name: "내일 · 오전" })).toBeVisible();
+    await expect(promise.getByRole("button", { name: "내일 · 오후" })).toBeVisible();
+
+    await promise.getByRole("button", { name: "오늘 · 오후" }).click();
+    expect((await readGuestList(page, GUEST_SCHEDULE_KEY)).length).toBe(1);
+  });
+
+  test("주차 없는 요일은 이번 주와 다음 주를 확인한다", async ({ page }) => {
+    await submitKo(page, "금요일 PT");
+    expect((await readGuestList(page, GUEST_SCHEDULE_KEY)).length).toBe(0);
+
+    const promise = phone(page).getByTestId("inline-promise").last();
+    await expect(promise).toHaveAttribute(
+      "data-confirmation-reason",
+      "ambiguous_weekday",
+    );
+    await expect(promise.getByRole("button", { name: "이번 주" })).toBeVisible();
+    await expect(promise.getByRole("button", { name: "다음 주" })).toBeVisible();
+
+    await promise.getByRole("button", { name: "다음 주" }).click();
+    expect((await readGuestList(page, GUEST_SCHEDULE_KEY)).length).toBe(1);
+  });
+
   test("시간이 두 개면 일정 생성 없이 입력 수정으로 복원한다", async ({ page }) => {
     await submitKo(page, "오늘 3시 A, 6시 B");
     expect((await readGuestList(page, GUEST_SCHEDULE_KEY)).length).toBe(0);
