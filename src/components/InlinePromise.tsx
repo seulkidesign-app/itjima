@@ -45,7 +45,6 @@ function confirmationCopy(
     after_work_time: "퇴근 시간을 골라 주세요. 선택한 시간으로 바로 추가해요.",
     assumed_meridiem: assumedMeridiemQuestion(text, "ko"),
     multiple_clocks: "시간이 두 개 있어요",
-    missing_date_and_meridiem: "날짜와 오전·오후를 확인해 주세요.",
     ambiguous_weekday: "어느 주의 요일인가요?",
   };
   const en: Record<ScheduleConfirmationReason, string> = {
@@ -54,7 +53,6 @@ function confirmationCopy(
     after_work_time: "Choose your after-work time and add it right away.",
     assumed_meridiem: assumedMeridiemQuestion(text, "en"),
     multiple_clocks: "There are two times here",
-    missing_date_and_meridiem: "Choose the date and AM/PM.",
     ambiguous_weekday: "Which week do you mean?",
   };
   return lang === "en" ? en[reason] : ko[reason];
@@ -147,7 +145,6 @@ export function InlinePromise({
 
   if (
     (activeConfirmation === "assumed_meridiem" ||
-      activeConfirmation === "missing_date_and_meridiem" ||
       activeConfirmation === "ambiguous_weekday") &&
     confirmationChoices.length > 0
   ) {
