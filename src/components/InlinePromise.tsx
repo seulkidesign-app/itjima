@@ -165,7 +165,7 @@ export function InlinePromise({
         </p>
         <div
           className={`mt-3 grid gap-2 ${
-            confirmationChoices.length >= 3 ? "grid-cols-3" : "grid-cols-2"
+            confirmationChoices.length >= 4 ? "grid-cols-2" : confirmationChoices.length === 3 ? "grid-cols-3" : "grid-cols-2"
           }`}
           data-testid="promise-confirmation-choices"
         >
