@@ -15,6 +15,8 @@ export type ScheduleConfirmationChoiceId =
   | "morning"
   | "afternoon"
   | "no_time"
+  | "tomorrow_morning"
+  | "tomorrow_afternoon"
   | "this_weekday"
   | "next_weekday";
 
@@ -433,7 +435,7 @@ export function scheduleConfirmationChoices(
     return [
       { id: "morning", label: lang === "en" ? "Today · AM" : "오늘 · 오전", resolvedText: prefixDate(replaceBareMeridiem(text, "am"), "today") },
       { id: "afternoon", label: lang === "en" ? "Today · PM" : "오늘 · 오후", resolvedText: prefixDate(replaceBareMeridiem(text, "pm"), "today") },
-      { id: "no_time", label: lang === "en" ? "Tomorrow · AM" : "내일 · 오전", resolvedText: prefixDate(replaceBareMeridiem(text, "am"), "tomorrow") },
+      { id: "tomorrow_morning", label: lang === "en" ? "Tomorrow · AM" : "내일 · 오전", resolvedText: prefixDate(replaceBareMeridiem(text, "am"), "tomorrow") },
       { id: "tomorrow_afternoon", label: lang === "en" ? "Tomorrow · PM" : "내일 · 오후", resolvedText: prefixDate(replaceBareMeridiem(text, "pm"), "tomorrow") },
     ];
   }
