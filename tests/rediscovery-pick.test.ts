@@ -1,7 +1,9 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
+  dismissRediscovery,
   markRediscoverySessionShown,
   pickRediscoveryCandidate,
+  snoozeRediscovery,
   type RediscoveryMemory,
 } from "../src/lib/rediscoveryPick";
 
@@ -44,5 +46,35 @@ describe("rediscovery cadence", () => {
 
     const later = pickRediscoveryCandidate([memory("second-ready", 4 * DAY)], []);
     expect(later?.key).toBe("second-ready");
+  });
+
+  it("does not show the same record twice in one session", () => {
+    const candidate = memory("session-record", 9 * HOUR);
+    expect(pickRediscoveryCandidate([candidate], [])?.key).toBe("session-record");
+
+    markRediscoverySessionShown("session-record");
+
+    expect(pickRediscoveryCandidate([candidate], [])).toBeNull();
+  });
+
+  it("respects Later until the snooze expires", () => {
+    const candidate = memory("later-record", 10 * DAY);
+    snoozeRediscovery("later-record", NOW + 3 * DAY);
+
+    expect(pickRediscoveryCandidate([candidate], [])).toBeNull();
+
+    vi.setSystemTime(NOW + 3 * DAY + 1);
+    expect(pickRediscoveryCandidate([candidate], [])?.key).toBe("later-record");
+  });
+
+  it("respects Hide across future sessions", () => {
+    const candidate = memory("hidden-record", 10 * DAY);
+    dismissRediscovery("hidden-record");
+
+    expect(pickRediscoveryCandidate([candidate], [])).toBeNull();
+
+    sessionStorage.clear();
+    vi.setSystemTime(NOW + 30 * DAY);
+    expect(pickRediscoveryCandidate([candidate], [])).toBeNull();
   });
 });
