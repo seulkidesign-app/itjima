@@ -41,6 +41,13 @@ const DEFAULT_REDISCOVERY_AGE_MS = 3 * 86400000;
 const DEFAULT_SNOOZE_MS = 3 * 86400000;
 const CONTEXT_SCORE_BOOST_MS = 30 * 86400000;
 
+const REASON_PRIORITY: Record<RediscoveryReason, number> = {
+  upcoming_schedule: 4,
+  related_capture: 3,
+  long_unvisited: 2,
+  quiet_revisit: 1,
+};
+
 function memoryKey(memory: Pick<ArchiveItem, "id" | "source_id">) {
   return memory.source_id ?? memory.id;
 }
@@ -51,7 +58,9 @@ function readSessionIds(): string[] {
   if (!raw || raw === "1") return [];
   try {
     const parsed = JSON.parse(raw);
-    return Array.isArray(parsed) ? parsed.filter((id): id is string => typeof id === "string") : [];
+    return Array.isArray(parsed)
+      ? parsed.filter((id): id is string => typeof id === "string")
+      : [];
   } catch {
     return [];
   }
@@ -91,7 +100,10 @@ function readSnoozed(): Record<string, number> {
   }
 }
 
-export function snoozeRediscovery(memoryId: string, until = Date.now() + DEFAULT_SNOOZE_MS) {
+export function snoozeRediscovery(
+  memoryId: string,
+  until = Date.now() + DEFAULT_SNOOZE_MS,
+) {
   if (typeof localStorage === "undefined") return;
   const prev = readSnoozed();
   localStorage.setItem(SNOOZE_KEY, JSON.stringify({ ...prev, [memoryId]: until }));
@@ -176,45 +188,52 @@ export function pickRediscoveryCandidate(
 
       const contextMatch = findRecentRediscoveryContext(memory, pool, now);
       const ageMs = now - +new Date(memory.created_at);
-      const visitPenalty = (visits[key] ?? 0) * 86400000;
+      const ageDays = ageMs / 86400000;
+      const visitCount = visits[key] ?? 0;
+      const visitPenalty = visitCount * 86400000;
       const urgencyBoost =
         daysUntil !== undefined && daysUntil <= 7 ? 7 - daysUntil : 0;
       const contextBoost = contextMatch
         ? contextMatch.score * CONTEXT_SCORE_BOOST_MS
         : 0;
+
+      const reason: RediscoveryReason =
+        linked && daysUntil !== undefined && daysUntil <= 7
+          ? "upcoming_schedule"
+          : contextMatch
+            ? "related_capture"
+            : ageDays >= 21 && visitCount <= 1
+              ? "long_unvisited"
+              : "quiet_revisit";
+
       const score =
         ageMs -
         visitPenalty +
         urgencyBoost * 86400000 * 2 +
         contextBoost;
+
       return {
         memory,
         key,
         linked,
         daysUntil,
         contextMatch,
+        reason,
+        priority: REASON_PRIORITY[reason],
         score,
       };
     })
-    .sort((a, b) => b.score - a.score);
+    .sort((a, b) => {
+      if (b.priority !== a.priority) return b.priority - a.priority;
+      return b.score - a.score;
+    });
 
   const top = candidates[0];
   if (!top) return null;
 
-  const { memory, key, linked, daysUntil, contextMatch } = top;
+  const { memory, key, linked, daysUntil, contextMatch, reason } = top;
   const ageKo = formatRevivalAge(memory.created_at, "ko");
   const ageEn = formatRevivalAge(memory.created_at, "en");
-  const visitCount = visits[key] ?? 0;
-  const ageDays = (now - +new Date(memory.created_at)) / 86400000;
-
-  const reason: RediscoveryReason =
-    linked && daysUntil !== undefined && daysUntil <= 7
-      ? "upcoming_schedule"
-      : contextMatch
-        ? "related_capture"
-        : ageDays >= 21 && visitCount <= 1
-          ? "long_unvisited"
-          : "quiet_revisit";
 
   let nudgeKo: string;
   let nudgeEn: string;
@@ -229,8 +248,8 @@ export function pickRediscoveryCandidate(
         ? "That moment is almost here, so this record is back."
         : "That moment is getting closer, so this record is back.";
   } else if (reason === "related_capture") {
-    nudgeKo = "방금 남긴 기록과 같은 맥락이 보여서 다시 꺼냈어요.";
-    nudgeEn = "This connects with something you captured recently.";
+    nudgeKo = "최근 남긴 기록과 겹치는 주제가 있어 다시 꺼냈어요.";
+    nudgeEn = "This may connect with something you captured recently.";
   } else if (reason === "long_unvisited") {
     nudgeKo = "한동안 보지 않았던 기록이에요.";
     nudgeEn = "A record you haven't seen in a while.";
