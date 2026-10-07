@@ -111,17 +111,22 @@ function RediscoveryPage() {
     );
   }
 
-  const { memory, ageKo, ageEn, nudgeKo, nudgeEn, reason } = pick;
+  const { memory, ageKo, ageEn, nudgeKo, nudgeEn, reason, relatedContext } = pick;
   const age = lang === "en" ? ageEn : ageKo;
   const title = rediscoveryDisplayTitle(memory);
   const fullText = memory.raw_text ?? memory.text;
+  const relatedContextTitle = relatedContext
+    ? rediscoveryDisplayTitle(relatedContext)
+    : null;
 
   const reasonLabel =
     reason === "upcoming_schedule"
       ? t("곧 필요한 기록이에요", "You may need this soon")
-      : reason === "long_unvisited"
-        ? t("오래 묻혀 있던 기록이에요", "This has been quiet for a while")
-        : t("오늘 다시 떠올려볼 기록이에요", "Worth bringing back today");
+      : reason === "related_capture"
+        ? t("방금 남긴 생각과 이어져요", "This connects with what you just captured")
+        : reason === "long_unvisited"
+          ? t("오래 묻혀 있던 기록이에요", "This has been quiet for a while")
+          : t("오늘 다시 떠올려볼 기록이에요", "Worth bringing back today");
 
   const reasonText = lang === "en" ? nudgeEn : nudgeKo;
 
@@ -164,6 +169,26 @@ function RediscoveryPage() {
         </p>
       </motion.div>
 
+      {reason === "related_capture" && relatedContextTitle && (
+        <motion.div
+          initial={{ opacity: 0, y: 6 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ ...MOTION_CRAFT, delay: 0.05 }}
+          className="mx-auto mt-5 w-full max-w-[340px] rounded-[18px] border border-ink/[0.06] bg-white/70 px-4 py-3"
+          data-testid="rediscovery-context-bridge"
+        >
+          <p className="text-[11px] font-semibold tracking-[0.02em] text-ink-soft/65">
+            {t("방금 남긴 기록", "RECENT CONTEXT")}
+          </p>
+          <p className="mt-1 line-clamp-2 text-[14px] font-semibold leading-[1.45] text-ink/85">
+            {relatedContextTitle}
+          </p>
+          <p className="mt-1 text-[12px] leading-[1.45] text-ink-soft/75">
+            {t("같은 주제가 보여 예전 기록을 다시 연결했어요.", "A shared topic brought an older record back.")}
+          </p>
+        </motion.div>
+      )}
+
       <motion.div
         initial={{ opacity: 0, y: 14, rotate: -1.4 }}
         animate={{ opacity: 1, y: 0, rotate: -0.4 }}
@@ -199,15 +224,20 @@ function RediscoveryPage() {
                     "연결된 일정이 7일 안으로 다가오고 있어요.",
                     "A connected schedule is within the next 7 days.",
                   )
-                : reason === "long_unvisited"
+                : reason === "related_capture"
                   ? t(
-                      "오랫동안 다시 열어보지 않은 기록이라 조용히 꺼냈어요.",
-                      "You haven't opened this in a while, so it surfaced quietly.",
+                      "최근 남긴 기록과 겹치는 주제가 있어 함께 떠올려볼 수 있게 꺼냈어요.",
+                      "A recent capture shares this topic, so this older record resurfaced with it.",
                     )
-                  : t(
-                      "최근 다시 보지 않은 기록 중 하나를 가볍게 꺼냈어요.",
-                      "This is one of your recent records that hasn't resurfaced yet.",
-                    )}
+                  : reason === "long_unvisited"
+                    ? t(
+                        "오랫동안 다시 열어보지 않은 기록이라 조용히 꺼냈어요.",
+                        "You haven't opened this in a while, so it surfaced quietly.",
+                      )
+                    : t(
+                        "최근 다시 보지 않은 기록 중 하나를 가볍게 꺼냈어요.",
+                        "This is one of your recent records that hasn't resurfaced yet.",
+                      )}
             </p>
           </div>
         )}
