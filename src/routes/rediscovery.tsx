@@ -105,17 +105,29 @@ function RediscoveryPage() {
           to="/"
           className="touch-press mt-6 rounded-full bg-primary px-6 py-3 text-[14px] font-bold text-ink"
         >
-          {t("남기기로 돌아가기", "Back to Capture")}
+          {t("새 기록 남기기", "Capture something new")}
         </Link>
       </div>
     );
   }
 
-  const { memory, ageKo, ageEn, nudgeKo, nudgeEn } = pick;
+  const { memory, ageKo, ageEn, nudgeKo, nudgeEn, relatedSchedule } = pick;
   const age = lang === "en" ? ageEn : ageKo;
-  const nudge = lang === "en" ? nudgeEn : nudgeKo;
   const title = rediscoveryDisplayTitle(memory);
   const fullText = memory.raw_text ?? memory.text;
+
+  const reasonLabel = relatedSchedule
+    ? t("다가오는 일정과 연결된 기록", "Connected to an upcoming schedule")
+    : t("지금 다시 볼 만한 기록", "Worth another look right now");
+
+  const reasonText = relatedSchedule
+    ? t(
+        "관련된 일정이 가까워져서 다시 꺼냈어요.",
+        "A related schedule is getting closer, so this came back.",
+      )
+    : lang === "en"
+      ? nudgeEn
+      : nudgeKo;
 
   const onView = () => {
     if (!expanded) {
@@ -138,50 +150,64 @@ function RediscoveryPage() {
   };
 
   return (
-    <div className="craft-surface-warm flex min-h-full flex-col px-5 pb-[calc(env(safe-area-inset-bottom)+2.5rem)] pt-12">
-      <motion.p
+    <div className="craft-surface-warm flex min-h-full flex-col px-5 pb-[calc(env(safe-area-inset-bottom)+2.5rem)] pt-10">
+      <motion.div
         initial={{ opacity: 0, y: 8 }}
         animate={{ opacity: 1, y: 0 }}
         transition={MOTION_CRAFT}
-        className="page-eyebrow text-center"
+        className="mx-auto w-full max-w-[340px]"
       >
-        {lang === "en" ? `A record from ${age}` : revivalHeaderKo(ageKo)}
-      </motion.p>
+        <p className="text-[12px] font-semibold tracking-[0.04em] text-ink-soft/70">
+          {t("다시 발견", "RESURFACED")}
+        </p>
+        <h1 className="mt-2 text-[25px] font-bold leading-[1.32] tracking-[-0.04em] text-ink">
+          {reasonLabel}
+        </h1>
+        <p className="mt-2 text-[14px] leading-[1.6] text-ink-soft">
+          {reasonText}
+        </p>
+      </motion.div>
 
       <motion.div
-        initial={{ opacity: 0, y: 14 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ ...MOTION_CRAFT, delay: 0.1 }}
-        className="mx-auto mt-10 w-full max-w-[340px] rounded-[30px] bg-white px-7 py-9 shadow-craft ring-1 ring-ink/[0.04]"
+        initial={{ opacity: 0, y: 14, rotate: -1.4 }}
+        animate={{ opacity: 1, y: 0, rotate: -0.4 }}
+        transition={{ ...MOTION_CRAFT, delay: 0.08 }}
+        className="mx-auto mt-8 w-full max-w-[340px] rounded-[26px] bg-[#FFF3A8] px-7 py-8 shadow-craft ring-1 ring-ink/[0.05]"
         data-testid="rediscovery-card"
       >
-        <p className="text-[12px] font-medium tracking-[0.01em] text-ink-soft/80">
-          {new Date(memory.created_at).toLocaleDateString(
-            lang === "en" ? "en-US" : "ko-KR",
-            { month: "long", day: "numeric" },
-          )}
-        </p>
-        <h1 className="mt-2.5 text-[24px] font-bold leading-[1.3] tracking-[-0.03em] text-ink">
+        <div className="flex items-center justify-between gap-3">
+          <p className="text-[12px] font-semibold tracking-[0.01em] text-ink-soft/75">
+            {lang === "en" ? `Saved ${age}` : revivalHeaderKo(ageKo)}
+          </p>
+          <span className="text-[12px] font-bold text-ink/45">&gt;ij&lt;</span>
+        </div>
+
+        <h2 className="mt-5 text-[24px] font-bold leading-[1.3] tracking-[-0.035em] text-ink">
           {title}
-        </h1>
+        </h2>
         <p
           className={`mt-4 text-[15px] leading-[1.68] tracking-[0.005em] text-ink/82 ${expanded ? "whitespace-pre-wrap" : "line-clamp-4"}`}
           data-testid="rediscovery-record-text"
         >
           {fullText}
         </p>
+
+        {expanded && relatedSchedule && (
+          <div className="mt-6 rounded-2xl bg-white/55 px-4 py-3">
+            <p className="text-[12px] font-semibold text-ink-soft/80">
+              {t("왜 지금 보여줬나요?", "Why now?")}
+            </p>
+            <p className="mt-1 text-[13px] leading-[1.55] text-ink/80">
+              {t(
+                "이 기록과 연결된 일정이 가까워지고 있어요.",
+                "A schedule connected to this record is getting closer.",
+              )}
+            </p>
+          </div>
+        )}
       </motion.div>
 
-      <motion.p
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        transition={{ ...MOTION_CRAFT, delay: 0.22 }}
-        className="mx-auto mt-10 max-w-[280px] text-center text-[15px] leading-[1.6] tracking-[0.005em] text-ink-soft/90"
-      >
-        {nudge}
-      </motion.p>
-
-      <div className="mx-auto mt-10 flex w-full max-w-[340px] flex-col gap-3">
+      <div className="mx-auto mt-8 flex w-full max-w-[340px] flex-col gap-3">
         {!expanded && (
           <button
             type="button"
@@ -203,9 +229,16 @@ function RediscoveryPage() {
           onClick={onHide}
           className="touch-press py-2.5 text-[13px] font-medium text-ink-soft/65"
         >
-          {t("그만 보기", "Don't show this again")}
+          {t("이 기록은 이제 그만", "Done with this record")}
         </button>
       </div>
+
+      <Link
+        to="/"
+        className="mx-auto mt-7 text-[13px] font-medium text-ink-soft/60 underline decoration-ink/15 underline-offset-4"
+      >
+        {t("새 기록 남기기", "Capture something new")}
+      </Link>
     </div>
   );
 }
