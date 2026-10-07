@@ -12,10 +12,10 @@ const NOW = Date.parse("2026-09-05T12:00:00.000Z");
 const HOUR = 60 * 60 * 1000;
 const DAY = 24 * HOUR;
 
-function memory(id: string, ageMs: number): RediscoveryMemory {
+function memory(id: string, ageMs: number, text = id): RediscoveryMemory {
   return {
     id,
-    text: id,
+    text,
     images: [],
     created_at: new Date(NOW - ageMs).toISOString(),
     rediscovery_source: "record",
@@ -110,5 +110,41 @@ describe("rediscovery cadence", () => {
   it("marks an old rarely visited record as long unvisited", () => {
     const candidate = memory("old-note", 30 * DAY);
     expect(pickRediscoveryCandidate([candidate], [])?.reason).toBe("long_unvisited");
+  });
+
+  it("prefers an older record that matches a very recent capture", () => {
+    const related = memory(
+      "portfolio-old",
+      10 * DAY,
+      "포트폴리오 첫 장에 결과 화면 먼저 보여주기",
+    );
+    const recentContext = memory(
+      "portfolio-now",
+      2 * HOUR,
+      "포트폴리오 결과 화면 다시 수정하기",
+    );
+    const unrelatedOlder = memory(
+      "groceries-old",
+      25 * DAY,
+      "마트에서 장보기 우유 계란",
+    );
+
+    const pick = pickRediscoveryCandidate(
+      [related, recentContext, unrelatedOlder],
+      [],
+    );
+
+    expect(pick?.key).toBe("portfolio-old");
+    expect(pick?.reason).toBe("related_capture");
+    expect(pick?.relatedContext?.id).toBe("portfolio-now");
+  });
+
+  it("does not invent context from a single weak shared word", () => {
+    const old = memory("weak-old", 10 * DAY, "회사 끝나고 책 읽기");
+    const recent = memory("weak-now", 2 * HOUR, "회사 점심 메뉴 확인");
+
+    const pick = pickRediscoveryCandidate([old, recent], []);
+
+    expect(pick?.reason).not.toBe("related_capture");
   });
 });
