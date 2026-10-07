@@ -3,6 +3,7 @@ import { readArchiveVisits } from "@/lib/archiveMeta";
 import type { RediscoveryPick, RediscoveryReason } from "@/lib/rediscoveryPick";
 
 export type RediscoveryUtEvent = "impression" | "open" | "later" | "hide";
+export type RediscoveryAction = "view_schedule" | "open_record";
 export type RediscoveryAgeBucket =
   | "lt_3d"
   | "3_6d"
@@ -39,7 +40,7 @@ function visitBucket(visits: number): RediscoveryVisitBucket {
 }
 
 /**
- * Privacy boundary for Rediscovery UT analytics.
+ * Privacy boundary for Rediscovery analytics.
  * Deliberately excludes memory id, text/raw_text, title, tags and user-entered content.
  */
 export function buildRediscoveryAnalyticsContext(
@@ -64,4 +65,14 @@ export function trackRediscoveryUt(
   pick: RediscoveryPick,
 ) {
   track(`rediscovery_${event}`, buildRediscoveryAnalyticsContext(pick));
+}
+
+export function trackRediscoveryAction(
+  action: RediscoveryAction,
+  pick: RediscoveryPick,
+) {
+  track("rediscovery_action", {
+    ...buildRediscoveryAnalyticsContext(pick),
+    action,
+  });
 }
