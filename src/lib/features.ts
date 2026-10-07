@@ -1,7 +1,7 @@
 export const FEATURES = {
   BRAIN_MIRROR: false,
-  /** V03 experiment: keep off by default; enable only for controlled UT via local override. */
-  REDISCOVERY: false,
+  /** V03 branch: core resurfacing is the product under test, so keep it enabled here. */
+  REDISCOVERY: true,
   CLEANUP: false,
   INLINE_PROMISE: true,
   PASTE_SPLIT: false,
