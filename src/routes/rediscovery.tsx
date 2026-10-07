@@ -111,23 +111,19 @@ function RediscoveryPage() {
     );
   }
 
-  const { memory, ageKo, ageEn, nudgeKo, nudgeEn, relatedSchedule } = pick;
+  const { memory, ageKo, ageEn, nudgeKo, nudgeEn, reason } = pick;
   const age = lang === "en" ? ageEn : ageKo;
   const title = rediscoveryDisplayTitle(memory);
   const fullText = memory.raw_text ?? memory.text;
 
-  const reasonLabel = relatedSchedule
-    ? t("다가오는 일정과 연결된 기록", "Connected to an upcoming schedule")
-    : t("지금 다시 볼 만한 기록", "Worth another look right now");
+  const reasonLabel =
+    reason === "upcoming_schedule"
+      ? t("곧 필요한 기록이에요", "You may need this soon")
+      : reason === "long_unvisited"
+        ? t("오래 묻혀 있던 기록이에요", "This has been quiet for a while")
+        : t("오늘 다시 떠올려볼 기록이에요", "Worth bringing back today");
 
-  const reasonText = relatedSchedule
-    ? t(
-        "관련된 일정이 가까워져서 다시 꺼냈어요.",
-        "A related schedule is getting closer, so this came back.",
-      )
-    : lang === "en"
-      ? nudgeEn
-      : nudgeKo;
+  const reasonText = lang === "en" ? nudgeEn : nudgeKo;
 
   const onView = () => {
     if (!expanded) {
@@ -192,16 +188,26 @@ function RediscoveryPage() {
           {fullText}
         </p>
 
-        {expanded && relatedSchedule && (
+        {expanded && (
           <div className="mt-6 rounded-2xl bg-white/55 px-4 py-3">
             <p className="text-[12px] font-semibold text-ink-soft/80">
               {t("왜 지금 보여줬나요?", "Why now?")}
             </p>
             <p className="mt-1 text-[13px] leading-[1.55] text-ink/80">
-              {t(
-                "이 기록과 연결된 일정이 가까워지고 있어요.",
-                "A schedule connected to this record is getting closer.",
-              )}
+              {reason === "upcoming_schedule"
+                ? t(
+                    "연결된 일정이 7일 안으로 다가오고 있어요.",
+                    "A connected schedule is within the next 7 days.",
+                  )
+                : reason === "long_unvisited"
+                  ? t(
+                      "오랫동안 다시 열어보지 않은 기록이라 조용히 꺼냈어요.",
+                      "You haven't opened this in a while, so it surfaced quietly.",
+                    )
+                  : t(
+                      "최근 다시 보지 않은 기록 중 하나를 가볍게 꺼냈어요.",
+                      "This is one of your recent records that hasn't resurfaced yet.",
+                    )}
             </p>
           </div>
         )}
@@ -214,15 +220,25 @@ function RediscoveryPage() {
             onClick={onView}
             className="touch-press w-full rounded-full bg-primary py-4 text-[15px] font-bold tracking-[-0.01em] text-ink shadow-craft"
           >
-            {t("기록 보기", "View record")}
+            {t("기록 자세히 보기", "Open this record")}
           </button>
         )}
+
+        {expanded && reason === "upcoming_schedule" && (
+          <Link
+            to="/schedule"
+            className="touch-press w-full rounded-full bg-primary py-4 text-center text-[15px] font-bold tracking-[-0.01em] text-ink shadow-craft"
+          >
+            {t("연결된 일정 보기", "View connected schedule")}
+          </Link>
+        )}
+
         <button
           type="button"
           onClick={onLater}
-          className={`touch-press w-full rounded-full py-4 text-[15px] font-semibold tracking-[-0.01em] text-ink shadow-card ${expanded ? "bg-primary font-bold shadow-craft" : "border border-ink/[0.08] bg-white/90"}`}
+          className="touch-press w-full rounded-full border border-ink/[0.08] bg-white/90 py-4 text-[15px] font-semibold tracking-[-0.01em] text-ink shadow-card"
         >
-          {t("나중에 다시", "Later")}
+          {t("3일 뒤 다시", "Bring it back in 3 days")}
         </button>
         <button
           type="button"
