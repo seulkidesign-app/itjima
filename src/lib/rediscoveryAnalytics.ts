@@ -1,14 +1,14 @@
 import { track } from "@/lib/analytics";
 import { readArchiveVisits } from "@/lib/archiveMeta";
-import type { RediscoveryPick } from "@/lib/rediscoveryPick";
-import { remainingUntil } from "@/lib/scheduleTime";
+import type { RediscoveryPick, RediscoveryReason } from "@/lib/rediscoveryPick";
 
 export type RediscoveryUtEvent = "impression" | "open" | "later" | "hide";
-export type RediscoveryReason =
-  | "upcoming_schedule"
-  | "long_unvisited"
-  | "quiet_revisit";
-export type RediscoveryAgeBucket = "3_6d" | "7_20d" | "21_59d" | "60d_plus";
+export type RediscoveryAgeBucket =
+  | "lt_3d"
+  | "3_6d"
+  | "7_20d"
+  | "21_59d"
+  | "60d_plus";
 export type RediscoveryVisitBucket = "0" | "1" | "2_plus";
 
 export type RediscoveryAnalyticsContext = {
@@ -25,6 +25,7 @@ function ageDays(createdAt: string, nowMs: number) {
 }
 
 function ageBucket(days: number): RediscoveryAgeBucket {
+  if (days < 3) return "lt_3d";
   if (days <= 6) return "3_6d";
   if (days <= 20) return "7_20d";
   if (days <= 59) return "21_59d";
@@ -47,23 +48,12 @@ export function buildRediscoveryAnalyticsContext(
 ): RediscoveryAnalyticsContext {
   const days = ageDays(pick.memory.created_at, nowMs);
   const visits = readArchiveVisits()[pick.key] ?? 0;
-  const linked = pick.relatedSchedule;
-  const upcoming = linked
-    ? remainingUntil(new Date(linked.start_time), new Date(nowMs))
-    : null;
-
-  const reason: RediscoveryReason =
-    linked && upcoming && !upcoming.past && upcoming.days <= 7
-      ? "upcoming_schedule"
-      : days >= 21 && visits <= 1
-        ? "long_unvisited"
-        : "quiet_revisit";
 
   return {
-    reason,
+    reason: pick.reason,
     age_bucket: ageBucket(days),
     visit_bucket: visitBucket(visits),
-    has_related_schedule: Boolean(linked),
+    has_related_schedule: Boolean(pick.relatedSchedule),
     repeat_visit: visits > 0,
     source: pick.memory.rediscovery_source,
   };
