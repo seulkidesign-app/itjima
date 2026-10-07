@@ -43,24 +43,29 @@ The product metaphor is a **living sticky note**: lightweight to create, easy to
 - Show one useful record rather than a feed of old records.
 - Every resurfacing moment must have an explainable reason.
 - V03 reasons are limited to:
-  - `upcoming_schedule`: a linked schedule is approaching.
+  - `upcoming_schedule`: a linked schedule is approaching within 7 days.
+  - `related_capture`: a recent capture shares a strong local topic signal with an older record.
   - `long_unvisited`: an older record has not been revisited.
   - `quiet_revisit`: a lightweight revisit candidate when no stronger signal exists.
+- Reason priority is: upcoming schedule → related recent context → long unvisited → quiet revisit.
+- Recent-context matching is local and deterministic for the first experiment. User-entered text is not sent in Rediscovery analytics.
 - First experimental resurfacing may occur after 8 hours so same-day UT is possible.
 - After the first resurfacing, the default minimum record age is 3 days.
 
 ### Act
 Every surfaced record must give the user control:
-- `기록 보기` — open / expand the record.
-- `나중에 다시` — snooze for 3 days.
-- `그만 보기` — exclude the record from future resurfacing.
+- `기록 자세히 보기` — open / expand the record.
+- `연결된 일정 보기` — available when the resurfacing reason is an upcoming linked schedule.
+- `3일 뒤 다시` — snooze for 3 days.
+- `이 기록은 이제 그만` — exclude the record from future resurfacing.
 
 ## 4. V03 MVP boundaries
 
 ### In scope
 - Existing Capture flow.
 - One-card contextual resurfacing experience.
-- Candidate ranking using record age, visits, and linked upcoming schedule.
+- Candidate ranking using record age, visits, linked upcoming schedule, and strong overlap with recent captures.
+- Explicit “why now?” explanation for every surfaced record.
 - Return-visit trigger for the experiment.
 - Resurfacing analytics that do not send user-entered record content.
 - User control: open, snooze, hide.
@@ -69,6 +74,7 @@ Every surfaced record must give the user control:
 - General-purpose agent actions.
 - Automatic email / reservation / purchase execution.
 - Location tracking for the first V03 experiment.
+- Background location inference.
 - Large AI-generated memory interpretation.
 - AI grouping, thought maps, memory journeys, or cleanup surfaces.
 - A new calendar UI.
@@ -84,6 +90,10 @@ Evaluate four questions:
 2. **Timing** — Did it appear at a reasonable moment?
 3. **Control** — Were Later / Hide sufficient to prevent annoyance?
 4. **Trust** — Did the user understand why this record returned?
+
+For `related_capture`, also ask:
+- Did the connection between the recent and older record feel meaningful rather than coincidental?
+- Did seeing both records together change what the user wanted to do next?
 
 Primary behavioral events:
 - `rediscovery_impression`
