@@ -10,6 +10,10 @@ import type { ArchiveItem, InboxItem, ScheduleItem } from "@/lib/store";
 import { remainingUntil } from "@/lib/scheduleTime";
 
 export type RediscoverySource = "record" | "archive";
+export type RediscoveryReason =
+  | "upcoming_schedule"
+  | "long_unvisited"
+  | "quiet_revisit";
 
 export type RediscoveryMemory = ArchiveItem & {
   rediscovery_source: RediscoverySource;
@@ -22,6 +26,7 @@ export type RediscoveryPick = {
   ageEn: string;
   nudgeKo: string;
   nudgeEn: string;
+  reason: RediscoveryReason;
   relatedSchedule?: ScheduleItem;
 };
 
@@ -93,12 +98,6 @@ export function dismissRediscovery(memoryId: string) {
   writeRediscoveryDismissed([...new Set([...prev, memoryId])].slice(-40));
 }
 
-/**
- * Rediscovery must work from normal Capture behavior. Canonical active records
- * are the primary source; legacy Archive rows are only a compatibility source.
- * If an Archive row points at an active canonical record, keep the canonical
- * version so one user thought cannot become two Rediscovery candidates.
- */
 export function buildRediscoveryPool(
   inbox: InboxItem[],
   archive: ArchiveItem[],
@@ -185,23 +184,29 @@ export function pickRediscoveryCandidate(
   const { memory, key, linked, daysUntil } = top;
   const ageKo = formatRevivalAge(memory.created_at, "ko");
   const ageEn = formatRevivalAge(memory.created_at, "en");
-
   const visitCount = visits[key] ?? 0;
   const ageDays = (now - +new Date(memory.created_at)) / 86400000;
+
+  const reason: RediscoveryReason =
+    linked && daysUntil !== undefined && daysUntil <= 7
+      ? "upcoming_schedule"
+      : ageDays >= 21 && visitCount <= 1
+        ? "long_unvisited"
+        : "quiet_revisit";
 
   let nudgeKo: string;
   let nudgeEn: string;
 
-  if (linked && daysUntil !== undefined && daysUntil <= 7) {
+  if (reason === "upcoming_schedule") {
     nudgeKo =
-      daysUntil <= 1
+      daysUntil !== undefined && daysUntil <= 1
         ? "곧 그때가 와서, 이 기록을 다시 보여드려요."
         : "그때가 다가와서, 이 기록을 다시 보여드려요.";
     nudgeEn =
-      daysUntil <= 1
+      daysUntil !== undefined && daysUntil <= 1
         ? "That moment is almost here, so this record is back."
         : "That moment is getting closer, so this record is back.";
-  } else if (ageDays >= 21 && visitCount <= 1) {
+  } else if (reason === "long_unvisited") {
     nudgeKo = "한동안 보지 않았던 기록이에요.";
     nudgeEn = "A record you haven't seen in a while.";
   } else {
@@ -216,6 +221,7 @@ export function pickRediscoveryCandidate(
     ageEn,
     nudgeKo,
     nudgeEn,
+    reason,
     relatedSchedule: linked,
   };
 }
