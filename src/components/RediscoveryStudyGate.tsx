@@ -1,62 +1,21 @@
-import { useEffect, useMemo, useState } from "react";
-import { useNavigate } from "@tanstack/react-router";
-import { useArchive, useInbox, useSchedules } from "@/lib/store";
+import { useEffect } from "react";
 import { featureEnabled } from "@/lib/features";
-import {
-  buildRediscoveryPool,
-  pickRediscoveryCandidate,
-} from "@/lib/rediscoveryPick";
-import {
-  beginRediscoveryStudyVisit,
-  type RediscoveryStudyVisit,
-} from "@/lib/rediscoveryStudy";
+import { beginRediscoveryStudyVisit } from "@/lib/rediscoveryStudy";
 
+/**
+ * Study visit tracking only.
+ *
+ * V03 must never hijack the user's capture flow by navigating away from Home.
+ * Resurfacing is rendered inline on Home and remains user-initiated.
+ */
 export function RediscoveryStudyGate({ pathname }: { pathname: string }) {
-  const navigate = useNavigate();
-  const inbox = useInbox();
-  const archive = useArchive();
-  const schedules = useSchedules();
   const enabled = featureEnabled("REDISCOVERY");
   const onHome = pathname === "/app";
-  const [visit, setVisit] = useState<RediscoveryStudyVisit | null>(null);
-
-  const pool = useMemo(
-    () =>
-      enabled && onHome
-        ? buildRediscoveryPool(inbox.items, archive.items)
-        : [],
-    [enabled, onHome, inbox.items, archive.items],
-  );
-
-  const candidate = useMemo(
-    () =>
-      enabled && onHome
-        ? pickRediscoveryCandidate(pool, schedules.items)
-        : null,
-    [enabled, onHome, pool, schedules.items],
-  );
 
   useEffect(() => {
-    if (!enabled || !onHome) {
-      setVisit(null);
-      return;
-    }
-    setVisit(beginRediscoveryStudyVisit());
+    if (!enabled || !onHome) return;
+    beginRediscoveryStudyVisit();
   }, [enabled, onHome]);
-
-  useEffect(() => {
-    if (
-      !enabled ||
-      !onHome ||
-      !visit?.newVisit ||
-      !visit.isReturnVisit ||
-      !candidate
-    ) {
-      return;
-    }
-
-    void navigate({ to: "/rediscovery" });
-  }, [enabled, onHome, visit, candidate, navigate]);
 
   return null;
 }
