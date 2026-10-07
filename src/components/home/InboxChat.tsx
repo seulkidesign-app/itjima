@@ -5,6 +5,7 @@ import {
   type SavedScheduleFeedbackModel,
 } from "@/components/home/SavedScheduleFeedback";
 import { LeftItemRow } from "@/components/home/LeftItemRow";
+import { HomeRediscoveryCard } from "@/components/home/HomeRediscoveryCard";
 import { featureEnabled } from "@/lib/features";
 import { useLang, useT } from "@/lib/i18n";
 import { canAutoCommitTimedCapture } from "@/lib/nlAutoCommit";
@@ -98,7 +99,6 @@ export function InboxChat({
   const surfaces: ItemSurface[] = itemsAsc.map((it) => {
     const isNewest = it.id === newestId;
     const timed = isStructuredTimedRecord(it);
-    // Timed projections already resolved — never re-ask NL ambiguity on Home.
     if (timed) {
       return { kind: "quiet" as const, item: it, isNewest };
     }
@@ -140,9 +140,6 @@ export function InboxChat({
     return { kind: "quiet" as const, item: it, isNewest };
   });
 
-  /** Generic notes should stay quiet. Offer “시간 정하기” only when the text
-   * actually contains unresolved temporal intent; detail remains the fallback
-   * place to add a date to any note. */
   const shouldOfferSetTime = (item: InboxItem) => {
     if (item.status === "done" || isStructuredTimedRecord(item)) return false;
     const presentation = getNlClarificationPresentation(
@@ -239,8 +236,6 @@ export function InboxChat({
             </div>
           )}
 
-          {/* Clarification/recovery stays after existing records so a new
-              capture response remains at the bottom of the conversation. */}
           {questionSurfaces.map(({ item: it, isNewest, recovery }) => (
             <div
               key={it.id}
@@ -308,6 +303,8 @@ export function InboxChat({
           ))}
         </>
       )}
+
+      <HomeRediscoveryCard />
 
       {savedFeedback && (
         <div className="home-chat-turn flex flex-col gap-0.5">
