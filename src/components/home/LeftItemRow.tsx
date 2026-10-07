@@ -15,7 +15,7 @@ type Props = {
   metaRight?: string | null;
 };
 
-/** Quiet flat record row — yellow dot + title + temporal typography. */
+/** V03 living-note row — captured records feel held, not like a backlog to manage. */
 export function LeftItemRow({
   item,
   onSetTime,
@@ -53,12 +53,16 @@ export function LeftItemRow({
       data-testid="left-item-row"
       data-chat-turn=""
       data-timed={timed ? "true" : "false"}
-      className="quietly-record-row home-chat-turn flex items-start gap-2 py-3 last:border-b-0"
+      className={`home-chat-turn my-1 flex items-start gap-2 rounded-[20px] px-4 py-4 ring-1 ring-ink/[0.045] transition-colors ${
+        isNewest ? "bg-[#FFF9D9] shadow-card" : "bg-ink/[0.018]"
+      }`}
       data-newest={isNewest ? "true" : "false"}
       data-has-promise="false"
     >
       <span
-        className="quietly-record-dot mt-[6px]"
+        className={`mt-[6px] h-2.5 w-2.5 shrink-0 rounded-full ${
+          done ? "bg-ink/20" : timed ? "bg-primary" : "bg-[#F0C94E]"
+        }`}
         data-done={done ? "true" : "false"}
         aria-hidden
       />
@@ -68,12 +72,12 @@ export function LeftItemRow({
             <button
               type="button"
               data-testid="left-item-open-detail"
-              aria-label={t("생각 열기", "Open thought")}
+              aria-label={t("기록 열기", "Open record")}
               onClick={onOpenDetail}
               className="touch-press min-w-0 flex-1 text-left"
             >
               <p
-                className={`text-[16px] font-semibold leading-snug tracking-[-0.01em] text-ink ${
+                className={`text-[16px] font-semibold leading-snug tracking-[-0.015em] text-ink ${
                   done ? "text-ink-soft" : ""
                 }`}
               >
@@ -94,9 +98,13 @@ export function LeftItemRow({
         {meta ? (
           <p
             data-testid="left-item-meta"
-            className="mt-1 text-[13px] font-medium tabular-nums tracking-[-0.01em] text-primary"
+            className="mt-1.5 text-[13px] font-semibold tabular-nums tracking-[-0.01em] text-primary"
           >
             {meta}
+          </p>
+        ) : !done ? (
+          <p className="mt-1.5 text-[12px] font-medium text-ink-soft/65">
+            {t("조용히 기억 중", "Held quietly")}
           </p>
         ) : null}
         {showSetTime && !done && !timed && (
@@ -104,7 +112,7 @@ export function LeftItemRow({
             type="button"
             data-testid="left-item-set-time"
             onClick={onSetTime}
-            className="touch-press mt-1 min-h-11 -ml-1 px-1 text-left text-[13px] font-medium text-ink-soft underline-offset-2 hover:underline"
+            className="touch-press mt-2 min-h-9 rounded-full bg-white/75 px-3 text-left text-[12px] font-semibold text-ink-soft ring-1 ring-ink/[0.05]"
           >
             {t("시간 정하기", "Set a time")}
           </button>
@@ -115,9 +123,9 @@ export function LeftItemRow({
         data-testid="left-item-more"
         aria-label={t("더보기", "More")}
         onClick={onOpenMenu}
-        className="touch-press grid h-11 w-11 shrink-0 place-items-center rounded-full text-ink-soft"
+        className="touch-press grid h-10 w-10 shrink-0 place-items-center rounded-full text-ink-soft hover:bg-white/60"
       >
-        <MoreHorizontal size={20} aria-hidden />
+        <MoreHorizontal size={19} aria-hidden />
       </button>
     </li>
   );
