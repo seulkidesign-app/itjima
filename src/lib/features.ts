@@ -1,6 +1,7 @@
 export const FEATURES = {
   BRAIN_MIRROR: false,
-  REDISCOVERY: true,
+  /** V03 experiment: keep off by default; enable only for controlled UT via local override. */
+  REDISCOVERY: false,
   CLEANUP: false,
   INLINE_PROMISE: true,
   PASTE_SPLIT: false,
