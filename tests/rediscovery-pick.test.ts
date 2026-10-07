@@ -6,6 +6,7 @@ import {
   snoozeRediscovery,
   type RediscoveryMemory,
 } from "../src/lib/rediscoveryPick";
+import type { ScheduleItem } from "../src/lib/store";
 
 const NOW = Date.parse("2026-09-05T12:00:00.000Z");
 const HOUR = 60 * 60 * 1000;
@@ -19,6 +20,18 @@ function memory(id: string, ageMs: number): RediscoveryMemory {
     created_at: new Date(NOW - ageMs).toISOString(),
     rediscovery_source: "record",
   };
+}
+
+function schedule(sourceId: string, startsInMs: number): ScheduleItem {
+  return {
+    id: `schedule-${sourceId}`,
+    text: sourceId,
+    source_id: sourceId,
+    start_time: new Date(NOW + startsInMs).toISOString(),
+    end_time: new Date(NOW + startsInMs + HOUR).toISOString(),
+    status: "active",
+    alarm: false,
+  } as ScheduleItem;
 }
 
 describe("rediscovery cadence", () => {
@@ -76,5 +89,26 @@ describe("rediscovery cadence", () => {
     sessionStorage.clear();
     vi.setSystemTime(NOW + 30 * DAY);
     expect(pickRediscoveryCandidate([candidate], [])).toBeNull();
+  });
+
+  it("calls a linked schedule upcoming only when it is within 7 days", () => {
+    const candidate = memory("appointment-note", 10 * DAY);
+
+    const near = pickRediscoveryCandidate(
+      [candidate],
+      [schedule("appointment-note", 3 * DAY)],
+    );
+    expect(near?.reason).toBe("upcoming_schedule");
+
+    const far = pickRediscoveryCandidate(
+      [candidate],
+      [schedule("appointment-note", 21 * DAY)],
+    );
+    expect(far?.reason).toBe("quiet_revisit");
+  });
+
+  it("marks an old rarely visited record as long unvisited", () => {
+    const candidate = memory("old-note", 30 * DAY);
+    expect(pickRediscoveryCandidate([candidate], [])?.reason).toBe("long_unvisited");
   });
 });
