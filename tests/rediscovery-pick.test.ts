@@ -12,13 +12,18 @@ const NOW = Date.parse("2026-09-05T12:00:00.000Z");
 const HOUR = 60 * 60 * 1000;
 const DAY = 24 * HOUR;
 
-function memory(id: string, ageMs: number, text = id): RediscoveryMemory {
+function memory(
+  id: string,
+  ageMs: number,
+  text = id,
+  source: "record" | "archive" = "record",
+): RediscoveryMemory {
   return {
     id,
     text,
     images: [],
     created_at: new Date(NOW - ageMs).toISOString(),
-    rediscovery_source: "record",
+    rediscovery_source: source,
   };
 }
 
@@ -107,6 +112,28 @@ describe("rediscovery cadence", () => {
     expect(far?.reason).toBe("quiet_revisit");
   });
 
+  it("always ranks an upcoming linked schedule above contextual similarity", () => {
+    const scheduled = memory("appointment-note", 8 * DAY, "치과 예약 확인하기");
+    const contextual = memory(
+      "portfolio-old",
+      90 * DAY,
+      "포트폴리오 결과 화면 수정하기",
+    );
+    const recent = memory(
+      "portfolio-now",
+      2 * HOUR,
+      "포트폴리오 결과 화면 다시 보기",
+    );
+
+    const pick = pickRediscoveryCandidate(
+      [scheduled, contextual, recent],
+      [schedule("appointment-note", 1 * DAY)],
+    );
+
+    expect(pick?.key).toBe("appointment-note");
+    expect(pick?.reason).toBe("upcoming_schedule");
+  });
+
   it("marks an old rarely visited record as long unvisited", () => {
     const candidate = memory("old-note", 30 * DAY);
     expect(pickRediscoveryCandidate([candidate], [])?.reason).toBe("long_unvisited");
@@ -144,6 +171,24 @@ describe("rediscovery cadence", () => {
     const recent = memory("weak-now", 2 * HOUR, "회사 점심 메뉴 확인");
 
     const pick = pickRediscoveryCandidate([old, recent], []);
+
+    expect(pick?.reason).not.toBe("related_capture");
+  });
+
+  it("does not use a recent archive item as current context", () => {
+    const old = memory(
+      "portfolio-old",
+      10 * DAY,
+      "포트폴리오 결과 화면 수정하기",
+    );
+    const recentArchive = memory(
+      "portfolio-archive",
+      2 * HOUR,
+      "포트폴리오 결과 화면 다시 보기",
+      "archive",
+    );
+
+    const pick = pickRediscoveryCandidate([old, recentArchive], []);
 
     expect(pick?.reason).not.toBe("related_capture");
   });
