@@ -34,6 +34,8 @@ const calmToastOptions = {
   },
 } as const;
 
+const V03_URL = "https://itjima.app";
+
 export const Route = createRootRoute({
   component: RootLayout,
 });
@@ -46,6 +48,24 @@ function AppRuntimeServices() {
       <ScheduleDeepLinkBridge />
       <ScheduleInAppReminderHost />
     </>
+  );
+}
+
+function V03Link({ compact = false }: { compact?: boolean }) {
+  return (
+    <a
+      href={V03_URL}
+      target="_blank"
+      rel="noreferrer"
+      className={
+        compact
+          ? "inline-flex min-h-9 items-center rounded-full border border-ink/10 bg-white/90 px-3 text-[12px] font-semibold text-ink-soft no-underline shadow-sm backdrop-blur transition hover:border-ink/20 hover:text-ink"
+          : "fixed bottom-5 right-5 z-[70] inline-flex min-h-10 items-center rounded-full border border-ink/10 bg-white/92 px-4 text-[13px] font-semibold text-ink no-underline shadow-card backdrop-blur transition hover:-translate-y-0.5 hover:border-ink/20"
+      }
+      aria-label="현재 V03 버전 열기"
+    >
+      현재 V03 보기 ↗
+    </a>
   );
 }
 
@@ -62,6 +82,7 @@ function RootLanding() {
   return (
     <div className="itjima-launch-page" data-landing-release={useLandingV1 ? "v1" : "v2"}>
       {useLandingV1 ? <UsLaunchLanding /> : <LandingV2 />}
+      <V03Link />
     </div>
   );
 }
@@ -109,6 +130,9 @@ function AdaptiveAppShell({ routeKey }: { routeKey: string }) {
         <div className="phone-frame itjima-desktop-style-scope contents">
           <DesktopAppNav />
           <div className="itjima-app-content flex min-h-0 min-w-0 flex-1 flex-col">
+            <div className="flex shrink-0 justify-end px-6 pt-3">
+              <V03Link compact />
+            </div>
             {showInstallBar && <PwaInstallHomeBar />}
             <main
               id="phone-scroll"
@@ -137,6 +161,9 @@ function AdaptiveAppShell({ routeKey }: { routeKey: string }) {
     >
       <div className="phone-frame itjima-responsive-frame itjima-app-workspace flex flex-col">
         <TopNav />
+        <div className="flex shrink-0 justify-end px-5 py-2">
+          <V03Link compact />
+        </div>
         {showInstallBar && <PwaInstallHomeBar />}
         <div className="itjima-app-content flex min-h-0 min-w-0 flex-1 flex-col">
           <main
