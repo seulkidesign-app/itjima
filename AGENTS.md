@@ -11,24 +11,21 @@
 
 <!-- LOVABLE:END -->
 
-# V03 Codex instructions
+# V03 implementation guardrails
 
-When working on branch `codex/v03-creator-workflow`, read `docs/V03_CREATOR_WORKFLOW.md` before changing product behavior.
+Before changing V03 code, read `docs/V03_CREATOR_WORKFLOW.md` and the active V03 issue.
 
-Key constraints:
-- Treat V02 as frozen. The portfolio snapshot is `archive/v02-portfolio-20261010`.
-- V03 is a creator content workflow product, not a generic calendar or full CRM.
-- The primary object is a content item; calendar/event views are secondary.
-- Mobile-first PWA behavior must remain intact.
-- Reuse existing auth, Supabase, PWA, design tokens, and safe natural-language parsing where possible.
-- Do not invent ambiguous dates or collaboration requirements.
-- Keep AI-extracted brief fields reviewable/editable before save.
-- Avoid large rewrites in the first milestone; prefer an incremental end-to-end alpha flow.
-- Do not force-push or rewrite shared Git history.
-
-First milestone:
-1. creator-focused home/work queue;
-2. content item model;
-3. content detail view;
-4. quick add flow;
-5. preserve installability/auth/infrastructure.
+For `codex/v03-creator-workflow`:
+- Never write V03 data into the V02 production Supabase project.
+- Use a separate V03 Supabase environment/project and verify environment variables before preview/test deployment.
+- V02 and V03 user data must not be mixed.
+- Keep `main` and `archive/v02-portfolio-20261010` untouched unless explicitly instructed.
+- Model Collaboration, Content, Task/Deadline, and Source separately; do not collapse the entire workflow into one Content table.
+- Product usage event logging is part of V03 alpha and must include entry source/path where applicable.
+- Follower/content performance analytics remain out of scope.
+- AI-extracted facts must be reviewable, editable, and traceable to source evidence before save.
+- Never fabricate ambiguous dates or requirements.
+- Multi-date natural-language input must create a review step rather than silently auto-saving inferred dates.
+- Alpha brief inputs support pasted text and screenshots/images. Arbitrary external links are references only unless explicitly implemented later.
+- Do not introduce CRM, invoicing, revenue, negotiation, team, or social-publishing features into the alpha.
+- Keep the app mobile-first and preserve PWA installability.
