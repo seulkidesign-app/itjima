@@ -1,0 +1,58 @@
+# Itjima V03 · 독립 협찬 앱
+
+[제품 기준](../../docs/v03/README.md) / [검토 계약](../../docs/v03/DATA_AND_REVIEW_CONTRACT.md).
+
+```bash
+cd apps/v03
+npm ci
+npm run dev
+```
+
+Node 22.12 이상. 개발 5183 / preview 4183. 자체 root/envDir/package-lock을 사용하며 V02 root package·실행·빌드는 변경하지 않는다.
+
+```bash
+npm test
+npm run build
+V03_CHROMIUM_EXECUTABLE=/usr/bin/chromium npm run test:e2e
+V03_CHROMIUM_EXECUTABLE=/usr/bin/chromium npm run test:e2e:storage
+```
+
+일반 환경에서는 `npx playwright install chromium` 후 npm run test:e2e를 사용한다. 테스트는 별도 가짜 설정으로 실행하며 실제 DB에 접근하지 않는다.
+
+## 동작
+
+`#/` → `#/brief/new` → `#/brief/preview` → `#/brief/review`.
+
+텍스트/스크린샷 선택, 원본 미리보기, 일정/할 일/제작 제약조건 mock 검토. 후보는 예시이며 실제 원본 분석이 아니다. 이미지는 압축하지 않고 최대 4장, 각 10MB의 JPG/PNG/WebP를 허용한다. 손상 이미지는 거부한다.
+
+정보 상태와 검토 상태를 별도로 관리한다. 수정하면 미확인으로 돌아가며 명시적으로 후보 확인이 필요하다. 날짜는 각각 연도를 선택하거나 불명확/미기재로 남긴다. 모든 후보와 협찬 이름 확인 전에는 payload를 만들지 않는다.
+
+DB 설정이 없으면 버튼은 로컬 payload만 표시한다. URL/ref/key와 V03 로그인 연결 시 서버 검증 후 실제 저장한다. 저장 시도 후 같은 내용으로 재시도하며 중복 제출을 방지한다. 앱 입력은 메모리만 사용하고 새로고침 시 사라진다. 로그인 세션만 V03 전용 키에 보관한다. 별도 draft 영구 복원은 아직 없다.
+
+## Supabase 설정
+
+`.env.example`을 참고해 앱 `.env.local` 또는 환경 설정에 다음을 입력한다. key는 커밋하지 않는다.
+
+- VITE_V03_SUPABASE_URL=https://zzuytanimpiflygrwqfb.supabase.co
+- VITE_V03_SUPABASE_PROJECT_REF=zzuytanimpiflygrwqfb
+- VITE_V03_SUPABASE_PUBLISHABLE_KEY: 해당 프로젝트 공개 key
+
+V02 변수 fallback, 알려진 V02 ref, service-role/secret key는 차단한다. Site URL/redirect URL은 V03 origin으로 설정한다. 가입 이메일 확인 정책을 따른다. 제한된 cloud egress에는 실제 프로젝트 hostname이 필요하다.
+
+[SQL migration](supabase/migrations/202610140001_v03_initial.sql)은 **준비만 했으며 원격 실행하지 않았다**. 별도 지시 후 검증된 V03 프로젝트 SQL Editor에서 `SET v03.project_ref='zzuytanimpiflygrwqfb';`를 먼저 실행하고 migration을 한 번 적용한다. 공개 key로 DDL을 적용하지 않는다. V02 테이블/ref를 감지하면 migration을 중단한다.
+
+테이블: v03_collaborations / contents / tasks / sources / constraints / reviews / imports. 각 소유자 RLS 및 관계 복합 FK, 클라이언트 직접 쓰기 금지, RPC-only 쓰기. private v03-sources bucket의 경로는 user/import/image ID이며 manifest 밖 접근은 거부한다.
+
+## transaction과 파일 보상
+
+prepare RPC에서 검토 완료 payload 재검증 → private 이미지 staging → commit RPC에서 모든 도메인 행을 단일 트랜잭션으로 생성한다. 중간 실패 시 DB 전체 rollback, 동일 request UUID 재시도는 기존 결과를 반환한다. 서버는 client의 tasks/constraints projection 대신 검토 목록에서 최종 행을 만든다.
+
+이미지 bytes는 DB transaction과 별개다. 실패 시 상태 조회로 이미 성공한 요청인지 확인하고, pending import를 원자적으로 aborted 처리한 뒤 보상 삭제한다. 상태 조회도 실패하면 파일을 삭제하지 않고 같은 UUID로 재시도한다. 파일 정리 실패/브라우저 종료로 임시 파일이 남을 수 있으며 aborted 및 24시간 지난 pending import를 다음 로그인에서 재정리한다. 재로그인하지 않으면 정리가 지연될 수 있고 server cleanup job은 아직 없다. 최종 domain 데이터와 기술적 staging import를 구분한다.
+
+## 미연결 범위
+
+실제 AI/OCR, 협찬 상세·업무 홈·빠른 입력, 알림, resurfacing, V02 자동 일정 저장은 연결하지 않았다. 실제 원격 migration·Auth·Storage 검증은 별도 단계다. PGlite의 실제 PostgreSQL SQL/RLS 테스트와 Supabase 응답 mock을 사용하는 SDK 모바일 테스트를 실제 운영 검증으로 주장하지 않는다.
+
+## 재구성 검증
+
+V03 단위/실제 PostgreSQL SQL·RLS 테스트 41개, 모바일 E2E 8개, SDK 인증·RPC 저장 mock E2E 1개, 타입 검사·빌드·소스 lint 통과. V02 release 705개와 빌드·번들 예산 검사 통과. 실제 원격 Supabase migration이나 실제 Auth/Storage 호출 검증은 수행하지 않았다.
