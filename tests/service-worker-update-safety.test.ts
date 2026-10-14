@@ -10,6 +10,8 @@ function source(path: string) {
 describe("service worker update safety", () => {
   const worker = source("public/sw.js");
   const registration = source("src/lib/swReminders.ts");
+  const updateNotice = source("src/components/AppUpdateNotice.tsx");
+  const appEntry = source("src/main.tsx");
   const vercel = JSON.parse(source("vercel.json")) as {
     headers?: Array<{
       source: string;
@@ -42,6 +44,21 @@ describe("service worker update safety", () => {
     expect(registration).toContain('updateViaCache: "none"');
     expect(registration).toContain("APP_UPDATE_READY_EVENT");
     expect(registration).toContain('waiting.postMessage({ type: "SKIP_WAITING" })');
+  });
+
+  it("does not lose an update event that fires before React mounts", () => {
+    expect(registration).toContain("pendingUpdateStrategy = strategy");
+    expect(registration).toContain("getPendingAppUpdateStrategy");
+    expect(registration).toContain("clearPendingAppUpdateStrategy");
+    expect(updateNotice).toContain("getPendingAppUpdateStrategy()");
+    expect(appEntry).toContain("<AppUpdateNotice />");
+  });
+
+  it("lets the user activate a waiting version instead of forcing a mid-session reload", () => {
+    expect(updateNotice).toContain("APP_UPDATE_READY_EVENT");
+    expect(updateNotice).toContain("activateWaitingServiceWorker");
+    expect(updateNotice).toContain("window.location.reload()");
+    expect(updateNotice).toContain("새 버전이 준비됐어요.");
   });
 
   it("detects regular web deploys when the service worker file is unchanged", () => {
