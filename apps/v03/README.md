@@ -56,3 +56,11 @@ prepare RPC에서 검토 완료 payload 재검증 → private 이미지 staging 
 ## 재구성 검증
 
 V03 단위/실제 PostgreSQL SQL·RLS 테스트 41개, 모바일 E2E 8개, SDK 인증·RPC 저장 mock E2E 1개, 타입 검사·빌드·소스 lint 통과. V02 release 705개와 빌드·번들 예산 검사 통과. 실제 원격 Supabase migration이나 실제 Auth/Storage 호출 검증은 수행하지 않았다.
+
+## 최신 키 기반 서버 검증
+
+Migration은 Management API/PAT를 우선 사용한다. 서버 전용 변수는 `V03_SUPABASE_ACCESS_TOKEN`과 `V03_SUPABASE_SECRET_KEY` (`sb_secret_…`)이며 `V03_SUPABASE_SERVICE_ROLE_KEY` fallback은 없다. Secret key는 브라우저/VITE 변수/.env.example에 넣지 않는다. Auth admin 검증에서는 `apikey`로만 전송하고 JWT/Bearer로 취급하지 않는다. PAT의 Bearer 헤더는 api.supabase.com에만 사용한다.
+
+Node 24.5 이상과 해당 실행 환경의 proxy/CA trust를 유지한 상태에서 `npm run admin:check`로 읽기 검증한다. `npm run admin:apply`는 별도로 승인된 migration 적용용이며 예상 V03 ref와 기존 schema 여부를 확인한 뒤 Management API로 SQL을 전송한다. 이번 변경에서 원격 migration을 실행하지 않았다. `--use-env-proxy`를 사용하며 네트워크 제한을 우회하지 않는다.
+
+필요한 hostname은 `api.supabase.com`, `zzuytanimpiflygrwqfb.supabase.co`다. Cloud draft 저장과 실제 실행 환경 반영을 구분한다. 현재 인스턴스에 변수/네트워크가 없으면 새로 게시된 환경에 연결한 뒤 검증해야 한다. 기존 SERVICE_ROLE_KEY 요구사항이 UI에 남아 있으면 제거하고 SECRET_KEY binding을 사용한다.

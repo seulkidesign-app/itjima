@@ -13,7 +13,9 @@
     "preview": "vite preview --host 127.0.0.1",
     "test": "vitest run",
     "test:e2e": "playwright test",
-    "test:e2e:storage": "playwright test --config=playwright.storage.config.ts"
+    "test:e2e:storage": "playwright test --config=playwright.storage.config.ts",
+    "admin:check": "node --use-env-proxy scripts/supabase-admin.mjs",
+    "admin:apply": "node --use-env-proxy scripts/supabase-admin.mjs --apply"
   },
   "dependencies": {
     "react": "19.2.7",
