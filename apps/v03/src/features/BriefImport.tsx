@@ -8,12 +8,14 @@ import {
 } from "../domain/brief";
 export function BriefImport({
   source,
+  sampleMode = false,
   onText,
   onImages,
   onRemove,
   onPreview,
 }: {
   source: Source;
+  sampleMode?: boolean;
   onText: (text: string) => void;
   onImages: (images: ImageSource[]) => void;
   onRemove: (id: string) => void;
@@ -98,9 +100,9 @@ export function BriefImport({
       <section className="panel">
         <div className="section-heading">
           <label htmlFor="brief-text">브리프 텍스트</label>
-          <button className="text-button" onClick={() => onText(SAMPLE)}>
+          {sampleMode && <button className="text-button" onClick={() => onText(SAMPLE)}>
             예시 넣기
-          </button>
+          </button>}
         </div>
         <textarea
           id="brief-text"
@@ -153,7 +155,7 @@ export function BriefImport({
       </p>
       <button
         className="primary"
-        disabled={!hasSource(source) || busy}
+        disabled={(sampleMode && !hasSource(source)) || busy}
         onClick={onPreview}
       >
         원본 미리보기 →

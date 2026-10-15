@@ -11,7 +11,7 @@ import { StatusEditor, ProgressNotice } from "./ProgressControls";
 import { STATUS_LABELS } from "../domain/brief";
 
 const constraintLabels: Record<string, string> = {
-  thumbnail: "금지 조건", platform: "업로드 플랫폼", retention: "공개 유지", usage_rights: "Usage rights",
+  manual: "제작 조건", thumbnail: "금지 조건", platform: "업로드 플랫폼", retention: "공개 유지", usage_rights: "Usage rights",
 };
 function GuideImage({ image }: { image: SavedSource["images"][number] }) {
   const [attempt, setAttempt] = useState(0);
@@ -118,8 +118,10 @@ export function CollaborationDetail({ id }: { id: string }) {
           <span className="badge">{STATUS_LABELS[detail.status] ?? "상태 확인 필요"}</span>
           <p className="small muted">브랜드 / 캠페인</p>
           <h1>{detail.title}</h1>
+          {detail.notes && <p className="source-text">메모: {detail.notes}</p>}
           <button onClick={() => { const guide = document.getElementById("original-guide"); guide?.scrollIntoView(); guide?.focus({ preventScroll: true }); }}>원본 가이드로 이동 ↓</button>
         </section>
+        {detail.v03_sources.some(source=>source.v03_reviews.some(review=>review.candidate.origin==="manual")) && <aside className="notice">직접 수동 입력한 협찬이에요. 원본 자동 추출이나 후보 확인 결과가 아니에요.</aside>}
         {detail.v03_sources.some((source) => source.v03_reviews.some((review) => review.candidate.origin === "mock")) &&
           <aside className="notice">사용자가 검토한 mock 예시예요. 원본을 자동 분석한 결과가 아니에요.</aside>}
         <StatusEditor detail={detail} disabled={editingBlocked} onSave={(value) => progress.begin({ kind: "status", id: detail.id, revision: detail.revision, value })} />
@@ -154,15 +156,15 @@ export function CollaborationDetail({ id }: { id: string }) {
           {detail.v03_constraints.length ? <dl className="detail-list">{detail.v03_constraints.map((item) => <div key={item.id}>
             <dt>{constraintLabels[item.type] ?? item.type}</dt>
             <dd>{item.information_state === "present" ? item.value ?? "확인 정보 없음" : informationLabel(item.information_state)}</dd>
-          </div>)}</dl> : <p className="muted">확인된 제작 조건이 없어요.</p>}
+          </div>)}</dl> : <p className="muted">등록된 제작 조건이 없어요.</p>}
         </section>
         <section className="panel" id="original-guide" aria-labelledby="guide-title" tabIndex={-1}>
           <h2 id="guide-title">원본 가이드</h2>
-          {detail.v03_sources.length ? detail.v03_sources.map((source, index) => <details key={source.id} open={index === 0}>
+          {detail.v03_sources.some(source => source.raw_text.trim() || source.images.length) ? detail.v03_sources.filter(source => source.raw_text.trim() || source.images.length).map((source, index) => <details key={source.id} open={index === 0}>
             <summary>원본 {index + 1} · 텍스트 / 이미지 {source.images.length}장</summary>
             {source.raw_text ? <p className="source-text">{source.raw_text}</p> : <p className="muted">원본 텍스트 없이 이미지로 가져왔어요.</p>}
             {source.images.map((image) => <GuideImage key={image.path} image={image} />)}
-          </details>) : <p className="muted">접근 가능한 원본이 없어요.</p>}
+          </details>) : <p className="muted">첨부한 원본이 없어요.</p>}
         </section>
       </>}
     </>

@@ -44,8 +44,8 @@ function ScheduleField({ contentId, type, current, disabled, onSave }: {
     <button disabled={!state || problem || unchanged} onClick={() => {
       if (state) onSave({ contentId, type, informationState: state, dueDate: state === "present" ? date : null, revision: current.revision, taskRevision: current.taskRevision });
     }}>{label} 저장</button>
-    <details><summary>{label} 최초 검토 보기</summary>
-      <p className="small">{current.initial?.information_state === "present" ? current.initial.due_date ? dateLabel(current.initial.due_date) : "확정 일정 없음" : informationLabel(current.initial?.information_state)}</p>
+    <details><summary>{label} {current.initial?.origin === "manual" ? "최초 수동 입력 보기" : "최초 검토 보기"}</summary>
+      <p className="small">{current.initial?.input_state === "not_entered" ? "입력하지 않음" : current.initial?.information_state === "present" ? current.initial.due_date ? dateLabel(current.initial.due_date) : "확정 일정 없음" : informationLabel(current.initial?.information_state)}</p>
     </details>
   </fieldset>;
 }

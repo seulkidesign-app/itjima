@@ -13,7 +13,8 @@ export type ScheduleState = { type: "draft_delivery" | "publish"; information_st
 export type SavedReview = {
   candidate: {
     candidate_id: string;
-    information_state: InformationState;
+    information_state?: InformationState;
+    input_state?: "not_entered";
     origin?: string;
     due_date?: string | null;
     value?: string | null;
@@ -44,7 +45,7 @@ export type Collaboration = {
     type: string;
     value: string | null;
     information_state: InformationState;
-    review_state: "confirmed" | "edited";
+    review_state: "confirmed" | "edited" | "manual";
   }[];
   v03_sources: SavedSource[];
 };
@@ -101,7 +102,7 @@ export function scheduleSummary(
   const reviews = detail.v03_sources.flatMap((source) => source.v03_reviews)
     .filter((review) => review.candidate.candidate_id === candidate);
   const fallback = reviews.length ? [...new Set(reviews.map(({ candidate: review }) =>
-    review.information_state === "present" ? "확정 일정 없음" : informationLabel(review.information_state),
+    review.input_state === "not_entered" ? "입력하지 않음" : review.information_state === "present" ? "확정 일정 없음" : informationLabel(review.information_state),
   ))].join(" / ") : "확인 정보 없음";
   const current = detail.v03_contents.flatMap((content) => {
     const state = content.v03_schedule_states?.find((item) => item.type === type);

@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { useState } from "react";
 import {
   buildPayload,
   candidateProblem,
@@ -13,59 +13,31 @@ import {
   type Candidate,
   type CreationPayload,
 } from "../domain/brief";
-import { supabase } from "../integrations/client";
-import { AbortedSaveError, saveReviewed } from "../integrations/save";
 import { SourcePreview } from "./SourcePreview";
 export function BriefReview({
   draft,
   onChange,
   onBack,
-  onSaved,
 }: {
   draft: Draft;
   onChange: (draft: Draft) => void;
   onBack: () => void;
-  onSaved: (id: string) => void;
 }) {
   const [title, setTitle] = useState(""),
     [status, setStatus] = useState<Status>("discussion"),
-    [payload, setPayload] = useState<CreationPayload | null>(null),
-    [attempted, setAttempted] = useState(false),
-    [busy, setBusy] = useState(false),
-    [saved, setSaved] = useState<string | null>(null),
-    [error, setError] = useState("");
-  const requestId = useRef(crypto.randomUUID()),
-    guard = useRef(false);
+    [payload, setPayload] = useState<CreationPayload | null>(null);
+
   const ready = Boolean(title.trim()) && reviewComplete(draft);
   function edit(c: Candidate, patch: Parameters<typeof editCandidate>[2]) {
-    if (attempted) return;
     setPayload(null);
     onChange(editCandidate(draft, c.id, patch));
   }
-  async function save() {
-    if (guard.current) return;
+  function previewSample() {
     const next = buildPayload(draft, title, status);
     setPayload(next);
-    if (!supabase) return;
-    guard.current = true;
-    setAttempted(true);
-    setBusy(true);
-    setError("");
-    try {
-      const id = await saveReviewed(supabase, requestId.current, next, draft.source);
-      setSaved(id);
-      onSaved(id);
-    } catch (problem) {
-      if (problem instanceof AbortedSaveError)
-        requestId.current = crypto.randomUUID();
-      setError(
-        problem instanceof Error ? problem.message : "저장에 실패했어요.",
-      );
-    } finally {
-      guard.current = false;
-      setBusy(false);
-    }
+    // Local only: this component imports no remote save API.
   }
+
   return (
     <>
       <section className="intro">
@@ -89,7 +61,6 @@ export function BriefReview({
           id="collaboration-title"
           maxLength={120}
           value={title}
-          disabled={attempted}
           placeholder="브랜드 / 캠페인 이름"
           onChange={(e) => {
             setPayload(null);
@@ -100,7 +71,6 @@ export function BriefReview({
         <select
           id="collaboration-status"
           value={status}
-          disabled={attempted}
           onChange={(e) => {
             setPayload(null);
             setStatus(e.target.value as Status);
@@ -122,7 +92,7 @@ export function BriefReview({
             </div>
           </details>
         </div>
-        <fieldset disabled={attempted}>
+        <fieldset>
           {(["schedules", "tasks", "constraints"] as const).map((group) => (
             <section
               className="panel"
@@ -235,11 +205,7 @@ export function BriefReview({
       </div>
       <section className="review-footer">
         <p role="status">
-          {saved
-            ? `V03에 저장했어요. 협찬 ID: ${saved}`
-            : payload
-              ? "생성 예정 payload를 구성했어요. 실제 저장은 아직 하지 않았어요."
-              : "협찬과 할 일은 아직 생성되지 않았어요."}
+          {payload ? "샘플 요약을 구성했어요. 원격 저장하지 않아요." : "샘플 체험이며 실제 협찬은 생성되지 않아요."}
         </p>
         <p className="small muted">
           필수 후보{" "}
@@ -249,27 +215,20 @@ export function BriefReview({
           }{" "}
           / {draft.candidates.length} 검토 완료
         </p>
-        <button disabled={attempted} onClick={onBack}>
+        <button onClick={onBack}>
           원본 수정하기
         </button>
         <button
           className="primary"
           disabled={
-            !ready || busy || Boolean(saved) || (!supabase && Boolean(payload))
+            !ready || Boolean(payload)
           }
-          onClick={() => void save()}
+          onClick={previewSample}
         >
-          {busy ? "저장 중…" : "확인하고 저장"}
+          샘플 요약 보기
         </button>
-        {error && (
-          <p role="alert" className="error">
-            {error}
-          </p>
-        )}
         <p className="small muted">
-          {supabase
-            ? "확인한 결과만 V03 전용 DB에 저장해요. 저장 시도 후 같은 요청으로 재시도해요."
-            : "DB 미연결 · 메모리에서 payload만 구성해요."}
+          샘플 체험 · 원격 DB와 Storage에는 저장하지 않아요.
         </p>
       </section>
       {payload && (

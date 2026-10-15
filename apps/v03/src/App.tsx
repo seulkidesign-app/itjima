@@ -1,18 +1,21 @@
 import { useEffect, useRef, useState } from "react";
 import {
   hasSource,
+  SAMPLE,
   mockExtract,
   type Source,
   type ImageSource,
   type Draft,
 } from "./domain/brief";
+import {emptyManual} from "./domain/manual";
+import { ManualRegistration } from "./features/ManualRegistration";
 import { Home } from "./features/Home";
 import { CollaborationDetail } from "./features/CollaborationDetail";
 import { AuthPanel } from "./features/AuthPanel";
 import { BriefImport } from "./features/BriefImport";
 import { BriefReview } from "./features/BriefReview";
 import { SourcePreview } from "./features/SourcePreview";
-const routes = ["/", "/brief/new", "/brief/preview", "/brief/review"] as const;
+const routes = ["/", "/brief/new", "/brief/preview", "/brief/review", "/brief/manual"] as const;
 type Route = (typeof routes)[number] | `/collaborations/${string}`;
 function readRoute(): Route {
   const route = location.hash.slice(1) || "/";
@@ -22,6 +25,8 @@ function navigate(route: Route) {
   location.hash = route;
 }
 export function App() {
+  const [manualForm,setManualForm]=useState(emptyManual);
+  const [experience,setExperience]=useState<"manual"|"sample">("manual");
   const [route, setRoute] = useState<Route>(readRoute),
     [source, setSource] = useState<Source>({ text: "", images: [] }),
     [draft, setDraft] = useState<Draft | null>(null);
@@ -43,11 +48,11 @@ export function App() {
   }, [route]);
   useEffect(() => {
     if (
-      (route === "/brief/preview" && !hasSource(source)) ||
+      (route === "/brief/preview" && experience === "sample" && !hasSource(source)) ||
       (route === "/brief/review" && !draft)
     )
       navigate("/brief/new");
-  }, [route, source, draft]);
+  }, [route, source, draft, experience]);
   function addImages(images: ImageSource[]) {
     images.forEach((image) => urls.current.add(image.url));
     setSource((current) => ({
@@ -68,6 +73,23 @@ export function App() {
     }));
     setDraft(null);
   }
+  function changeExperience(mode: "manual" | "sample") {
+    if (mode === experience) return;
+    urls.current.forEach(url => URL.revokeObjectURL(url));
+    urls.current.clear();
+    setSource({ text: mode === "sample" ? SAMPLE : "", images: [] });
+    setDraft(null);
+    setManualForm(emptyManual());
+    setExperience(mode);
+  }
+  function completeManual(id: string) {
+    navigate(`/collaborations/${id}`);
+    setRoute(readRoute());
+    urls.current.forEach(url => URL.revokeObjectURL(url));
+    urls.current.clear();
+    setSource({ text: "", images: [] });
+    setManualForm(emptyManual());
+  }
   return (
     <div className="app-shell">
       <header>
@@ -87,11 +109,11 @@ export function App() {
             <nav aria-label="브리프 단계">
               <a href="#/">← 홈</a>
               <ol>
-                {["입력", "원본 확인", "결과 검토"].map((label, index) => (
+                {["입력", "원본 확인", experience==="manual"?"직접 입력·요약":"샘플 검토"].map((label, index) => (
                   <li
                     key={label}
                     aria-current={
-                      route === routes[index + 1] ? "step" : undefined
+                      route === routes[index + 1] || (index===2 && route==="/brief/manual") ? "step" : undefined
                     }
                   >
                     {index + 1} {label}
@@ -99,8 +121,16 @@ export function App() {
                 ))}
               </ol>
             </nav>
+            {route === "/brief/new" && <section className="panel" aria-label="등록 방식">
+              <h2>등록 방식</h2>
+              <p>실제 등록은 빈 수동 입력으로 시작해요. 샘플 체험은 저장되지 않아요.</p>
+              {(["manual", "sample"] as const).map(mode => <button key={mode}
+                aria-pressed={experience === mode} onClick={() => changeExperience(mode)}>
+                {mode === "manual" ? "실제 협찬 등록" : "샘플 체험 · 저장 안 됨"}
+              </button>)}
+            </section>}
             {route === "/brief/new" && (
-              <BriefImport
+              <BriefImport sampleMode={experience==="sample"}
                 source={source}
                 onText={(text) => {
                   setSource((current) => ({ ...current, text }));
@@ -111,7 +141,7 @@ export function App() {
                 onPreview={() => navigate("/brief/preview")}
               />
             )}{" "}
-            {route === "/brief/preview" && hasSource(source) && (
+            {route === "/brief/preview" && (experience==="manual" || hasSource(source)) && (
               <>
                 <section className="intro">
                   <p className="eyebrow">ORIGINAL BRIEF</p>
@@ -123,8 +153,7 @@ export function App() {
                 </section>
                 <SourcePreview source={source} />
                 <aside className="notice">
-                  AI 분석 없이 고정된 예시 결과를 보여줘요. 확인 전에는 원본을
-                  저장하지 않아요.
+                  {experience==="sample"?"샘플 체험이에요. 고정 예시를 보여주며 원격 저장하지 않아요.":"자동 분석하지 않아요. 원본을 보며 빈 항목에 직접 입력해주세요."}
                 </aside>
                 <div className="actions">
                   <button onClick={() => navigate("/brief/new")}>
@@ -133,27 +162,22 @@ export function App() {
                   <button
                     className="primary"
                     onClick={() => {
-                      setDraft(mockExtract(source));
-                      navigate("/brief/review");
+                      if(experience==="sample"){setDraft(mockExtract(source));navigate("/brief/review");}else navigate("/brief/manual");
                     }}
                   >
-                    Mock 결과 보기 →
+                    {experience==="sample"?"Mock 결과 보기 →":"직접 입력하기 →"}
                   </button>
                 </div>
               </>
             )}
+            {route === "/brief/manual" && experience === "manual" && <ManualRegistration
+              source={source} form={manualForm} onFormChange={setManualForm}
+              onBack={() => navigate("/brief/new")} onSaved={completeManual} />}
+
             {route === "/brief/review" && draft && (
               <BriefReview
                 draft={draft}
                 onChange={setDraft}
-                onSaved={(id) => {
-                  navigate(`/collaborations/${id}`);
-                  setRoute(readRoute());
-                  urls.current.forEach((url) => URL.revokeObjectURL(url));
-                  urls.current.clear();
-                  setSource({ text: "", images: [] });
-                  setDraft(null);
-                }}
                 onBack={() => {
                   setDraft(null);
                   navigate("/brief/new");

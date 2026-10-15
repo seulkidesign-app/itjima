@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { saveReviewed, AbortedSaveError } from "../src/integrations/save";
+import { saveReviewed, saveManual, AbortedSaveError } from "../src/integrations/save";
 import {
   mockExtract,
   editCandidate,
@@ -20,7 +20,7 @@ function mock(state: "pending" | "committed" | "unknown", fail = false) {
   const calls: string[] = [];
   const rpc = vi.fn(async (name: string) => {
     calls.push(name);
-    if (name === "v03_prepare_import")
+    if (name === "v03_prepare_import" || name === "v03_prepare_manual_import")
       return { data: { state: "pending", collaboration_id: "" }, error: null };
     if (name === "v03_abort_import") return { data: true, error: null };
     return fail
@@ -118,4 +118,24 @@ describe("storage compensation and ambiguous commit", () => {
       "remove",
     ]);
   });
+});
+
+
+it("manual uses distinct RPCs and shares conservative unknown-result recovery",async()=>{
+ const {buildManualPayload,emptyManual}=await import('../src/domain/manual');
+ const p=buildManualPayload({...emptyManual(),title:'manual'},{text:'',images:[]},true);
+ const m=mock('unknown',true);
+ await expect(saveManual(m.client,'same-id',p,{text:'',images:[]})).rejects.toThrow('결과');
+ expect(m.calls).toEqual(['v03_prepare_manual_import','v03_commit_manual_import']);expect(m.remove).not.toHaveBeenCalled();
+});
+it("manual failure aborts before compensating uploaded files",async()=>{
+ const {buildManualPayload,emptyManual}=await import('../src/domain/manual');
+ const source={text:'',images:[{id:'image',name:'qa.png',size:1,type:'image/png',file:new File(['x'],'qa.png',{type:'image/png'}),url:''}]};
+ const p=buildManualPayload({...emptyManual(),title:'manual'},source,true),m=mock('pending',true);
+ await expect(saveManual(m.client,'same-id',p,source)).rejects.toBeInstanceOf(AbortedSaveError);
+ expect(m.calls).toEqual(['v03_prepare_manual_import','v03_commit_manual_import','v03_abort_import','remove']);
+});
+it("manual returns committed receipt without uploading again",async()=>{
+ const {buildManualPayload,emptyManual}=await import('../src/domain/manual');const source={text:'',images:[]};const m=mock('pending');m.rpc.mockResolvedValueOnce({data:{state:'committed',collaboration_id:'existing'},error:null});
+ expect(await saveManual(m.client,'same-id',buildManualPayload({...emptyManual(),title:'manual'},source,true),source)).toBe('existing');expect(m.calls).toHaveLength(0);expect(m.remove).not.toHaveBeenCalled();
 });

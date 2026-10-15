@@ -443,3 +443,8 @@ nav[aria-label="협찬 상세 탐색"] {
 .schedule-content { margin-top: 20px; }
 .schedule-field { margin-top: 18px; padding-top: 14px; border-top: 1px solid #e8e4dd; }
 .schedule-field legend { font-weight: 650; font-size: 15px; padding-right: 12px; }
+
+[aria-label="등록 방식"] button[aria-pressed="true"] { background: #3b6659; color: #fff; border-color: #3b6659; }
+
+.manual-confirm { display: flex; gap: 12px; align-items: flex-start; padding: 12px 0; line-height: 1.6; }
+.manual-confirm input[type="checkbox"] { display: inline-block; width: 24px; height: 24px; min-height: 24px; margin: 0; padding: 0; flex: 0 0 24px; accent-color: #3b6659; }

@@ -69,3 +69,15 @@ RPC는 인증 사용자 소유권, 상태 7종, boolean 완료 값, null/음수 
 `v03_update_schedule`만 현재 일정을 변경할 수 있다. 소유권·허용 역할/정보 상태·실제 YYYY-MM-DD 달력 날짜와 일정/Task 두 revision을 서버에서 검증한다. 협찬 상태 및 기존 Task 완료 값은 쓰지 않는다. 기한 제거 시 기존 Task를 삭제하지 않는다. 날짜 Task가 없는 경우 미확정 상태는 Task를 생성하지 않고, 사용자가 명시한 날짜를 처음 저장할 때 새 미완료 일정 Task를 한 개 만든다.
 
 변경과 receipt는 같은 DB transaction이다. 동일 UUID/동일 입력은 한 번만 적용하며, 응답 재생 후에도 UI는 현재 DB를 재조회한다. 다른 입력의 UUID 재사용과 stale version은 거부한다. 같은 역할 Task가 여러 개면 임의 선택하지 않고 변경을 거부한다. 최초 검토와 현재 일정 비교는 제공하지만 전체 변경 이력 UI는 이번 범위에 포함하지 않는다.
+
+## 실제 수동 등록 계약 · 2026-10-15
+
+후보 검토 계약과 독립된 `mode=manual`, `origin=manual` payload를 사용한다. `confirmed=true`는 저장 전 사용자용 요약에 대한 최종 등록 동의이며 후보의 `confirmed` 검토 상태가 아니다. manual 항목에 AI 근거나 후보 확인 상태를 만들지 않는다.
+
+협찬 이름 필수(1~120자), 플랫폼 선택(120자), 메모 선택(5,000자), 가편/업로드 날짜 선택(실제 YYYY-MM-DD), 자유 할 일/조건 각각 30개 이하(각 1~2,000자). 원본 텍스트/이미지도 선택이며 텍스트 20,000자, 이미지 최대 4장·각 10MB·JPG/PNG/WebP로 제한한다. 비어 있는 날짜/플랫폼/메모는 null이다. 원문 미기재·불명확을 추정하지 않는다.
+
+별도 `v03_validate_manual`이 구조·허용 필드·길이·날짜·항목 UUID 중복·이미지 manifest를 검증한다. 클라이언트 소유자/status/review/evidence 등 미허용 필드 주입은 거부한다. 초기 상태는 제안/협의이며 실제 입력한 날짜 Task와 자유 Task/조건만 만든다. 수동 조건은 `review_state=manual`, 초기 입력 snapshot은 manual 출처로 보존한다. 비어 있는 날짜의 초기 기록은 `input_state=not_entered`이며 정보 상태를 부여하지 않는다.
+
+`v03_prepare_manual_import` / `v03_commit_manual_import`는 기존 소유자 Import·private Storage staging·원자적 commit·동일 UUID retry·abort/보상 삭제 경계를 재사용한다. 다른 사용자의 요청/데이터에 접근할 수 없고 직접 쓰기 차단도 유지한다. Source·입력 snapshot·필드·Task·조건·committed 상태는 한 transaction이다. 결과를 확인하지 못하면 동일 요청을 유지하며 성공 여부를 확인하기 전 파일을 삭제하지 않는다.
+
+샘플 UI에는 원격 저장 호출이 없다. 기존 mock gate의 정의는 유지하며 서버의 mock prepare/commit 실행 권한은 제거한다. 저장된 과거 mock 기록의 조회는 유지한다. 기존 mock 원격 저장 검증 스크립트는 해당 과거 커밋용이며 현재 계약 검증은 `admin:verify:manual`을 사용한다.

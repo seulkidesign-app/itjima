@@ -1,6 +1,7 @@
 import type { Page } from "@playwright/test";
 export async function openReview(page: Page) {
   await page.goto("/#/brief/new");
+  await page.getByRole("button", {name:"샘플 체험 · 저장 안 됨",exact:true}).click();
   await page.getByRole("button", { name: "예시 넣기" }).click();
   await page.getByRole("button", { name: "원본 미리보기" }).click();
   await page.getByRole("button", { name: "Mock 결과 보기" }).click();

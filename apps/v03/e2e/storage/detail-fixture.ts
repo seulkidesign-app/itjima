@@ -46,11 +46,18 @@ export async function backend(
       expect(url.searchParams.get("user_id")).toBe(`eq.${USER}`);
       const result = await (url.searchParams.has("id") ? detail : home)(url); return reply(result.body, result.status);
     }
+    if (path.includes("/storage/v1/object/") && route.request().method() === "POST") return reply({Key:"synthetic/path",Id:"synthetic"});
     if (path.includes("/storage/v1/object/")) {
       return route.fulfill(imageFailure ? { status: 403, contentType: "application/json", body: '{}' } : { status: 200, contentType: "image/png", body: PNG });
     }
     if (path.includes("/rpc/")) {
       calls.push(path.split("/").at(-1)!);
+      if (path.endsWith("/v03_prepare_manual_import")) {
+        expect(route.request().postDataJSON().p_payload.mode).toBe("manual");
+        expect(route.request().postDataJSON().p_payload.confirmed).toBe(true);
+        return reply({state:"pending"});
+      }
+      if (path.endsWith("/v03_commit_manual_import")) return reply(ID);
       if (path.endsWith("/v03_prepare_import")) {
         expect(route.request().postDataJSON().p_payload.review.every((c: { review_state: string }) => c.review_state !== "unreviewed")).toBe(true);
         return reply({ state: "pending" });

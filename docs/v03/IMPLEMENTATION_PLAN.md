@@ -11,7 +11,7 @@ Supabase 변수는 VITE_V03_SUPABASE_URL / VITE_V03_SUPABASE_PROJECT_REF / VITE_
 ## P0 · 브리프 가져오기와 검토
 
 - 텍스트·이미지 입력, 선택 오류 처리, 원본 미리보기.
-- mock 후보를 일정/해야 할 일/제작 제약조건으로 분리.
+- 실제 등록은 빈 수동 입력으로 시작하며 일정/할 일/제작 조건을 직접 입력한다. 샘플 후보 검토는 로컬 체험으로 분리한다.
 - 후보별 정보·검토 상태 및 수정/명시적 확인.
 - 날짜의 독립 검토, 필수 후보 gate, 확인 후 로컬 payload 표시.
 - 원본 대조, 작은 화면, 뒤로가기·취소·새로고침 동작 검증.
@@ -25,12 +25,12 @@ Supabase 변수는 VITE_V03_SUPABASE_URL / VITE_V03_SUPABASE_PROJECT_REF / VITE_
 - Source 원문 및 private Storage manifest.
 - 서버 review gate, RPC 트랜잭션, 요청 UUID 중복 방지.
 - 실패 주입/응답 유실/보상 삭제/미완료 import 정리.
-- 원격 적용은 별도 확인 후만 수행. 현재 작업에서는 SQL 준비·로컬 PostgreSQL 검증만 수행한다.
+- 승인된 V03 프로젝트에 초기·progress·schedule·manual migration 적용 완료. 후속 변경은 승인된 새 migration으로만 추가한다.
 
 ## 후속 제품 순서
 
-1. 실제 V03 프로젝트 migration·Auth·Storage 적용 및 두 사용자 격리 검증.
-2. 브리프 추출 어댑터: 텍스트/이미지에서 근거가 있는 검토 후보. 별도 지시 전 AI/OCR 연결 없음.
+1. 완료: 실제 V03 migration·Auth·Storage 적용 및 사용자 격리 검증.
+2. 완료: AI/OCR 없는 실제 수동 등록. 추출 어댑터는 이후 별도 범위이며 현재 연결하지 않는다.
 3. 협찬 상세: 실제 Notion 필드, 상태/보류, Task, 가이드, 조건, 보조 광고 코드/성과.
 4. 홈: 진행 중 협찬, 다음 할 일, 가편/업로드, 상태, 가이드 접근. 날짜 없는 협찬도 보이게 한다.
 5. 빠른 입력: 기존 협찬에 수정 요청/메모/날짜 후보 추가, 확인 후 연결.
@@ -41,7 +41,7 @@ Supabase 변수는 VITE_V03_SUPABASE_URL / VITE_V03_SUPABASE_PROJECT_REF / VITE_
 
 V03 단위/SQL/RLS·저장 실패·모바일 E2E·타입/빌드를 실행한다. V02 release 테스트와 빌드로 격리 확인한다. 기존 V02 결함은 수정하지 않고 별도로 보고한다.
 
-V03 변경만 codex/v03-influencer-mvp에 commit/push한다. 키, .env.local, node_modules, dist, 테스트 산출물은 제외한다. 원격 migration은 실행하지 않는다.
+V03 변경만 codex/v03-influencer-mvp에 commit/push한다. 키, .env.local, node_modules, dist, 테스트 산출물은 제외한다. 원격 migration은 명시적으로 승인된 새 migration만 적용하며 이미 적용된 파일은 실행하지 않는다.
 
 
 ## 2026-10-15 · 협찬 상세 조회 P0
@@ -61,3 +61,20 @@ V03 변경만 codex/v03-influencer-mvp에 commit/push한다. 키, .env.local, no
 ## 2026-10-15 · 협찬 상태·Task 완료 P0
 
 상세에 상태 변경과 Task 완료/미완료를 추가했다. 상태/Task를 독립적으로 변경하며 저장 후 DB를 재조회한다. 새 progress migration에 per-row revision, 요청 receipt, 소유자/CAS 검증 RPC를 추가했다. 기존 직접 쓰기 차단과 초기 migration은 보존했다. 충돌은 최신 내용을 읽은 뒤 명시적으로 다시 선택한다. [검증 기록](PROGRESS_VALIDATION_20261015.md)을 참고한다.
+
+
+## 2026-10-15 · 실제 수동 등록 P0 완료
+
+실제 등록과 샘플을 분리했다. 실제 등록은 빈 협찬 이름/플랫폼/메모, 선택 날짜, 사용자가 추가·수정·삭제하는 할 일·조건으로 구성한다. 원본 텍스트·이미지를 대조하고 사용자용 요약/명시적 저장 확인 후 저장한다. manual 출처 및 미입력 상태를 보존하며 고정 후보 9개 gate를 사용하지 않는다.
+
+샘플 검토는 기존 gate를 그대로 유지한 로컬 체험이다. 새 migration은 수동 등록 검증/RPC만 추가하고 기존 mock 저장 RPC의 클라이언트 실행 권한을 제거했다. 기존 mock validator와 기존 migration 파일은 변경하지 않았다. 현재 원격 검증 명령은 `admin:verify:manual`이며 이전 mock 저장 검증 문서/스크립트는 당시 커밋의 역사 기록이다.
+
+원격 수동 등록·격리·transaction/보상 삭제 및 실제 브라우저 합성 이미지 선택→미리보기→저장→상세 원본 열람을 완료했다. [검증 기록](MANUAL_REGISTRATION_VALIDATION_20261015.md).
+
+### 다음 알파 잔여 P0
+
+- 저장 후 이름·플랫폼·메모 수정, 기존 원본을 보존한 후속 가이드 추가.
+- 현재 날짜 제거 사유를 사용자 제거/불명확/미기재와 분리하는 후속 계약. 이번에는 기존 날짜 제거 의미를 변경하지 않았다.
+- iOS Safari/Android Chrome 실기기의 날짜 입력·사진 선택 점검. 현재 모바일 Chromium 자동화와 데스크톱 내장 브라우저 검증만 완료했다.
+
+상태·Task 완료·홈·상세·일정 수정 완료 항목은 반복 검증 대상으로 돌리지 않는다. 위 과거 날짜별 구현 기록의 제외 범위는 해당 작업 당시 기준이다.

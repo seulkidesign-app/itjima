@@ -1,6 +1,10 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { CreationPayload, Source } from "../domain/brief";
 export class AbortedSaveError extends Error {}
+export async function saveManual(client: SupabaseClient, id: string, payload: import('../domain/manual').ManualPayload, source: Source) {
+  if (payload.mode !== 'manual' || payload.origin !== 'manual' || payload.confirmed !== true) throw new Error('수동 등록만 저장할 수 있어요.');
+  return saveImport(client,id,payload,source,'v03_prepare_manual_import','v03_commit_manual_import');
+}
 export async function saveReviewed(
   client: SupabaseClient,
   id: string,
@@ -9,17 +13,20 @@ export async function saveReviewed(
 ) {
   if (payload.review.some((c) => c.review_state === "unreviewed"))
     throw new Error("미확인 후보는 저장할 수 없어요.");
+  return saveImport(client,id,payload,source,'v03_prepare_import','v03_commit_import');
+}
+async function saveImport(client: SupabaseClient,id: string,payload: CreationPayload | import('../domain/manual').ManualPayload,source: Source,prepare: string,commit: string) {
   const {
     data: { user },
     error,
   } = await client.auth.getUser();
   if (error || !user) throw new Error("V03 계정으로 로그인해주세요.");
-  const prepared = await client.rpc("v03_prepare_import", {
+  const prepared = await client.rpc(prepare, {
     p_id: id,
     p_payload: payload,
   });
   if (prepared.error)
-    throw new Error("저장 준비에 실패했어요. 설정과 검토 결과를 확인해주세요.");
+    throw new Error("저장 준비에 실패했어요. 설정과 입력 내용을 확인해주세요.");
   if (prepared.data.state === "committed")
     return prepared.data.collaboration_id as string;
   const paths = source.images.map((image) => `${user.id}/${id}/${image.id}`);
@@ -33,7 +40,7 @@ export async function saveReviewed(
         });
       if (uploaded.error) throw uploaded.error;
     }
-    const committed = await client.rpc("v03_commit_import", { p_id: id });
+    const committed = await client.rpc(commit, { p_id: id });
     if (committed.error) throw committed.error;
     return committed.data as string;
   } catch {

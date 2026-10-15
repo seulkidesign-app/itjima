@@ -15,6 +15,7 @@ test("text, original preview and mock groups do not write final data", async ({
   await page.goto("/");
   await page.evaluate(() => localStorage.setItem("v02-sentinel", "unchanged"));
   await page.getByRole("link", { name: "브리프 가져오기" }).click();
+  await page.getByRole("button", {name:"샘플 체험 · 저장 안 됨",exact:true}).click();
   const text = "  브랜드 B\n가편 11월 5일 / 업로드 11월 10일\n영상 필수";
   await page.getByLabel("브리프 텍스트").fill(text);
   await page.getByRole("button", { name: "원본 미리보기" }).click();
@@ -27,7 +28,7 @@ test("text, original preview and mock groups do not write final data", async ({
   await expect(page.getByText("지금은 샘플 결과예요")).toBeVisible();
   await expect(page.getByTestId("creation-payload")).toHaveCount(0);
   await expect(
-    page.getByRole("button", { name: "확인하고 저장", exact: true }),
+    page.getByRole("button", { name: "샘플 요약 보기", exact: true }),
   ).toBeDisabled();
   expect(writes).toEqual([]);
   expect(await page.evaluate(() => ({ ...localStorage }))).toEqual({
@@ -38,6 +39,7 @@ test("text, original preview and mock groups do not write final data", async ({
 });
 test("image-only preview and mock review", async ({ page }) => {
   await page.goto("/#/brief/new");
+  await page.getByRole("button", {name:"샘플 체험 · 저장 안 됨",exact:true}).click();
   await page
     .getByLabel("이미지 선택", { exact: true })
     .setInputFiles({ name: "guide.png", mimeType: "image/png", buffer: png });
@@ -58,6 +60,7 @@ test("image-only preview and mock review", async ({ page }) => {
 });
 test("empty input and removed screenshots cannot proceed", async ({ page }) => {
   await page.goto("/#/brief/new");
+  await page.getByRole("button", {name:"샘플 체험 · 저장 안 됨",exact:true}).click();
   await page.getByLabel("브리프 텍스트").fill("   ");
   await expect(
     page.getByRole("button", { name: "원본 미리보기" }),
@@ -75,6 +78,7 @@ test("empty input and removed screenshots cannot proceed", async ({ page }) => {
 });
 test("corrupted screenshot is rejected", async ({ page }) => {
   await page.goto("/#/brief/new");
+  await page.getByRole("button", {name:"샘플 체험 · 저장 안 됨",exact:true}).click();
   await page
     .getByLabel("이미지 선택", { exact: true })
     .setInputFiles({
@@ -98,6 +102,8 @@ test("browser back and typing preserve source on a narrow screen", async ({
 }) => {
   await page.setViewportSize({ width: 320, height: 720 });
   await page.goto("/#/brief/new");
+  await page.getByRole("button", {name:"샘플 체험 · 저장 안 됨",exact:true}).click();
+  await page.getByLabel("브리프 텍스트").fill("");
   await page
     .getByLabel("브리프 텍스트")
     .pressSequentially("협찬 원본 입력", { delay: 20 });
@@ -117,7 +123,7 @@ test("independent dates and user edits gate explicit local payload creation", as
   await page.setViewportSize({ width: 320, height: 720 });
   await openReview(page);
   await expect(
-    page.getByRole("button", { name: "확인하고 저장", exact: true }),
+    page.getByRole("button", { name: "샘플 요약 보기", exact: true }),
   ).toBeDisabled();
   const first = page.getByTestId("candidate-draft_due");
   await expect(
@@ -146,7 +152,7 @@ test("independent dates and user edits gate explicit local payload creation", as
   ).toBeVisible();
   await expect(page.getByTestId("creation-payload")).toHaveCount(0);
   await page
-    .getByRole("button", { name: "확인하고 저장", exact: true })
+    .getByRole("button", { name: "샘플 요약 보기", exact: true })
     .click();
   const payload = JSON.parse(
     await page.getByTestId("creation-payload").innerText(),
@@ -168,7 +174,7 @@ test("independent dates and user edits gate explicit local payload creation", as
   await expect(film.getByText("미확인", { exact: true })).toBeVisible();
   await expect(page.getByTestId("creation-payload")).toHaveCount(0);
   await expect(
-    page.getByRole("button", { name: "확인하고 저장", exact: true }),
+    page.getByRole("button", { name: "샘플 요약 보기", exact: true }),
   ).toBeDisabled();
   expect(
     await page.evaluate(
@@ -185,7 +191,7 @@ test("uncertain date does not generate an exact scheduled task", async ({
   await card.getByLabel("정보 상태").selectOption("uncertain");
   await card.getByRole("button", { name: "이 후보 확인" }).click();
   await page
-    .getByRole("button", { name: "확인하고 저장", exact: true })
+    .getByRole("button", { name: "샘플 요약 보기", exact: true })
     .click();
   const p = JSON.parse(await page.getByTestId("creation-payload").innerText());
   expect(

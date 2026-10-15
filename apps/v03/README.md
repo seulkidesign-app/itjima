@@ -121,3 +121,24 @@ npx playwright test --config=playwright.storage.config.ts e2e/storage/schedule.s
 ```
 
 새 환경에 한해 승인된 범위에서 `npm run admin:apply:schedule -- --apply`로 `202610150002_v03_schedule.sql`만 적용한다. 전체 스키마가 있으면 재실행하지 않고 부분 적용 상태면 중단한다. [일정 수정 검증 기록](../../docs/v03/SCHEDULE_VALIDATION_20261015.md)을 참고한다.
+
+## 실제 수동 등록 P0 · 현재 등록 경로
+
+현재 실제 등록은 빈 수동 입력으로 시작한다. 샘플 체험은 원격 저장하지 않는다. 위 과거 검증/구현 기록은 당시 범위이며, 현재 원격 저장 검증은 `npm run admin:verify:manual`을 사용한다.
+
+홈 → 브리프 가져오기 → 기본 선택 `실제 협찬 등록` → 원본 텍스트/이미지(선택) → 미리보기 → 직접 입력 → 요약 → 명시적 확인 → 실제 등록 → 상세. 이름은 필수이며 플랫폼·메모·두 날짜는 선택이다. 할 일·조건은 빈 목록에서 사용자가 추가/수정/삭제한다. 입력하지 않은 정보는 원문 미기재로 해석하지 않는다.
+
+샘플 체험을 선택하면 기존 mock 후보 검토를 로컬에서만 경험한다. 실제 로그인 여부와 무관하게 원격 저장 함수가 없으며 서버도 기존 mock 저장 RPC 실행을 거부한다. 기존 mock validator는 느슨하게 변경하지 않았다.
+
+수동 전용 새 migration은 `202610150003_v03_manual.sql`이다. 승인된 V03 ref 확인 및 스키마 존재 검사 후 새 파일만 적용했다. 이미 적용된 migration은 재실행하지 않았다. 앱/서버는 manual 출처, 최초 입력 snapshot, notes와 private 이미지 원본을 보존한다.
+
+```bash
+# 적용 없이 현재 스키마 존재 여부 조회
+npm run admin:apply:manual
+# 실제 수동 등록 합성 계정·이미지 검증 후 정리
+npm run admin:verify:manual
+# 수동 등록/샘플 저장 차단 모바일 테스트
+npx playwright test --config=playwright.storage.config.ts e2e/storage/manual.spec.ts e2e/storage/save.spec.ts
+```
+
+기존 `admin:verify`, `admin:verify:progress`, `admin:verify:schedule`의 mock 기반 생성 단계는 과거 커밋의 검증 기록이다. 현재 서버에서 샘플 쓰기가 거부되므로 이 명령으로 과거 기능을 재검증하지 않는다. [수동 등록 검증](../../docs/v03/MANUAL_REGISTRATION_VALIDATION_20261015.md)에 현재 결과와 한계를 기록했다.
