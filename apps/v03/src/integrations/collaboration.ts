@@ -9,11 +9,14 @@ export type SavedTask = {
   completed_at: string | null;
   revision: number;
 };
+export type ScheduleState = { type: "draft_delivery" | "publish"; information_state: InformationState; revision: number };
 export type SavedReview = {
   candidate: {
     candidate_id: string;
     information_state: InformationState;
     origin?: string;
+    due_date?: string | null;
+    value?: string | null;
   };
 };
 export type SavedSource = {
@@ -34,6 +37,7 @@ export type Collaboration = {
     title: string;
     platform: string | null;
     v03_tasks: SavedTask[];
+    v03_schedule_states?: ScheduleState[];
   }[];
   v03_constraints: {
     id: string;
@@ -62,7 +66,7 @@ export async function loadCollaboration(
   let query = client
     .from("v03_collaborations")
     .select(`id,title,status,revision,contact_date,notes,
-      v03_contents(id,title,platform,v03_tasks(id,type,title,due_date,completed_at,revision)),
+      v03_contents(id,title,platform,v03_tasks(id,type,title,due_date,completed_at,revision),v03_schedule_states(type,information_state,revision)),
       v03_constraints(id,type,value,information_state,review_state),
       v03_sources(id,raw_text,images,v03_reviews(candidate))`)
     .eq("id", id)
@@ -90,18 +94,20 @@ export function dateLabel(date: string) {
 }
 // A confirmed Task is the date source. Review explains why no Task exists.
 export function scheduleSummary(
-  detail: { v03_contents: { v03_tasks: SavedTask[] }[]; v03_sources: { v03_reviews: SavedReview[] }[] },
+  detail: { v03_contents: { v03_tasks: SavedTask[]; v03_schedule_states?: ScheduleState[] }[]; v03_sources: { v03_reviews: SavedReview[] }[] },
   type: string,
   candidate: string,
 ) {
-  const tasks = detail.v03_contents.flatMap((content) =>
-    content.v03_tasks.filter((task) => task.type === type && task.due_date),
-  );
-  if (tasks.length) return tasks.map((task) => dateLabel(task.due_date!)).join(" / ");
   const reviews = detail.v03_sources.flatMap((source) => source.v03_reviews)
     .filter((review) => review.candidate.candidate_id === candidate);
-  if (!reviews.length) return "확인 정보 없음";
-  return [...new Set(reviews.map(({ candidate: review }) =>
+  const fallback = reviews.length ? [...new Set(reviews.map(({ candidate: review }) =>
     review.information_state === "present" ? "확정 일정 없음" : informationLabel(review.information_state),
-  ))].join(" / ");
+  ))].join(" / ") : "확인 정보 없음";
+  const current = detail.v03_contents.flatMap((content) => {
+    const state = content.v03_schedule_states?.find((item) => item.type === type);
+    if (state && state.information_state !== "present") return [state.information_state === "not_mentioned" ? "현재 일정 미기재" : "현재 일정 불명확"];
+    const dates = content.v03_tasks.filter((task) => task.type === type && task.due_date).map((task) => dateLabel(task.due_date!));
+    return dates.length ? dates : [state ? "확정 일정 없음" : fallback];
+  });
+  return current.length ? current.join(" / ") : fallback;
 }

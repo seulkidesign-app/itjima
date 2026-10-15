@@ -1,12 +1,12 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Status } from "../domain/brief";
-import { DetailError, type SavedReview, type SavedTask } from "./collaboration";
+import { DetailError, type SavedReview, type SavedTask, type ScheduleState } from "./collaboration";
 
 export type HomeCollaboration = {
   id: string;
   title: string;
   status: Status;
-  v03_contents: { id: string; title: string; v03_tasks: SavedTask[] }[];
+  v03_contents: { id: string; title: string; v03_tasks: SavedTask[]; v03_schedule_states?: ScheduleState[] }[];
   v03_sources: { v03_reviews: SavedReview[] }[];
 };
 export type HomeTask = SavedTask & {
@@ -27,7 +27,7 @@ export async function loadHome(
   for (;;) {
     let query = client.from("v03_collaborations")
       .select(`id,title,status,
-        v03_contents(id,title,v03_tasks(id,type,title,due_date,completed_at,revision)),
+        v03_contents(id,title,v03_tasks(id,type,title,due_date,completed_at,revision),v03_schedule_states(type,information_state,revision)),
         v03_sources(v03_reviews(candidate))`)
       .eq("user_id", userId)
       .order("id", { ascending: true })

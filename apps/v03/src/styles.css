@@ -440,3 +440,6 @@ nav[aria-label="협찬 상세 탐색"] {
 .home-shortcuts { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; padding: 0; }
 .home-shortcuts button { margin: 0 0 16px; }
 #active-title, #next-tasks-title { scroll-margin-top: 16px; }
+.schedule-content { margin-top: 20px; }
+.schedule-field { margin-top: 18px; padding-top: 14px; border-top: 1px solid #e8e4dd; }
+.schedule-field legend { font-weight: 650; font-size: 15px; padding-right: 12px; }

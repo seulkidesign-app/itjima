@@ -37,3 +37,4 @@
 - [실행 계획](IMPLEMENTATION_PLAN.md)
 - [실제 사용 검증](ALPHA_VALIDATION.md)
 - [앱 실행 및 Supabase 적용 안내](../../apps/v03/README.md)
+- [가편 전달일·업로드 예정일 수정 검증](SCHEDULE_VALIDATION_20261015.md)

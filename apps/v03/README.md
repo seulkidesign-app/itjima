@@ -102,3 +102,22 @@ npm run admin:verify:progress
 ```
 
 관리자 명령은 Git 제외 환경 파일만 읽으며 브라우저에 관리자 키를 전달하지 않는다. 적용되지 않은 환경에 새 migration을 적용할 때만 별도 승인 범위에서 `npm run admin:apply:progress -- --apply`를 사용한다. 이미 존재하면 재실행하지 않으며 부분 스키마는 중단한다. 상세 내용은 [상태·할 일 변경 검증](../../docs/v03/PROGRESS_VALIDATION_20261015.md)을 참고한다.
+
+## 가편 전달일·업로드 예정일 수정 P0
+
+상세의 `일정 수정`에서 제작물별 현재 가편 전달일과 업로드 예정일을 각각 저장한다. 연도를 포함한 날짜를 지정하거나 `현재 일정 미기재` / `현재 일정 불명확`으로 기한을 비울 수 있다. 원본 Source, 최초 Review, Import payload는 보존하며 최초 검토 날짜를 펼쳐 비교할 수 있다. 날짜 변경은 협찬 상태와 Task 완료 여부를 자동 변경하지 않는다.
+
+현재 날짜의 단일 저장 위치는 기존 Task의 `due_date`다. 새 `v03_schedule_states`는 수동 정보 상태와 revision만 관리한다. 기존 Task의 날짜를 비워도 Task와 완료 값은 유지한다. 최초 검토가 미확정이어서 날짜 Task가 없으면 미기재/불명확만으로 Task를 만들지 않으며, 사용자가 날짜를 명시할 때 새 일정 Task 한 개를 미완료로 만든다.
+
+일정 RPC는 소유권, 허용 역할/정보 상태, 실제 달력 날짜, 일정 및 Task revision을 검증한다. 직접 쓰기는 계속 차단한다. 충돌 시 최신 내용을 다시 불러와 명시적으로 선택하고, 결과 미확인 시 같은 요청 UUID로 재시도한다. 동일 종류 Task가 여러 개면 임의 선택하지 않고 수정을 막는다. 저장 후 상세를 재조회하고 홈 복귀/새로고침에도 DB 현재 일정이 반영된다.
+
+```bash
+# 상태 조회만 수행하며 기존 migration은 재실행하지 않음
+npm run admin:apply:schedule
+# 일정 수정 전용 실제 원격 검증, 합성 계정/데이터 생성 후 정리
+npm run admin:verify:schedule
+# 새 일정 UI만 검증
+npx playwright test --config=playwright.storage.config.ts e2e/storage/schedule.spec.ts
+```
+
+새 환경에 한해 승인된 범위에서 `npm run admin:apply:schedule -- --apply`로 `202610150002_v03_schedule.sql`만 적용한다. 전체 스키마가 있으면 재실행하지 않고 부분 적용 상태면 중단한다. [일정 수정 검증 기록](../../docs/v03/SCHEDULE_VALIDATION_20261015.md)을 참고한다.
