@@ -87,7 +87,11 @@ export function dateLabel(date: string) {
   return `${year}. ${month}. ${day}.`;
 }
 // A confirmed Task is the date source. Review explains why no Task exists.
-export function scheduleSummary(detail: Collaboration, type: string, candidate: string) {
+export function scheduleSummary(
+  detail: { v03_contents: { v03_tasks: SavedTask[] }[]; v03_sources: { v03_reviews: SavedReview[] }[] },
+  type: string,
+  candidate: string,
+) {
   const tasks = detail.v03_contents.flatMap((content) =>
     content.v03_tasks.filter((task) => task.type === type && task.due_date),
   );

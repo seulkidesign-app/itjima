@@ -22,7 +22,12 @@ export function fixture(): Collaboration {
     ] }],
   };
 }
-export async function backend(page: Page, detail = async () => ({ status: 200, body: [fixture()] as unknown })) {
+type Reply = { status: number; body: unknown };
+export async function backend(
+  page: Page,
+  detail: (url: URL) => Promise<Reply> = async () => ({ status: 200, body: [fixture()] }),
+  home = detail,
+) {
   const user = { id: USER, email: "creator@example.test", aud: "authenticated", role: "authenticated" };
   const token = `${Buffer.from(JSON.stringify({ alg: "HS256", typ: "JWT" })).toString("base64url")}.${Buffer.from(JSON.stringify({ sub: USER, role: "authenticated", exp: Math.floor(Date.now()/1000)+3600 })).toString("base64url")}.test-signature`;
   const calls: string[] = [];
@@ -38,7 +43,7 @@ export async function backend(page: Page, detail = async () => ({ status: 200, b
     if (path.endsWith("/v03_collaborations")) {
       reads++;
       expect(url.searchParams.get("user_id")).toBe(`eq.${USER}`);
-      const result = await detail(); return reply(result.body, result.status);
+      const result = await (url.searchParams.has("id") ? detail : home)(url); return reply(result.body, result.status);
     }
     if (path.includes("/storage/v1/object/")) {
       return route.fulfill(imageFailure ? { status: 403, contentType: "application/json", body: '{}' } : { status: 200, contentType: "image/png", body: PNG });

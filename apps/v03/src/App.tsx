@@ -6,6 +6,7 @@ import {
   type ImageSource,
   type Draft,
 } from "./domain/brief";
+import { Home } from "./features/Home";
 import { CollaborationDetail } from "./features/CollaborationDetail";
 import { AuthPanel } from "./features/AuthPanel";
 import { BriefImport } from "./features/BriefImport";
@@ -80,28 +81,7 @@ export function App() {
         {route.startsWith("/collaborations/") ? (
           <CollaborationDetail key={route} id={route.slice("/collaborations/".length)} />
         ) : route === "/" ? (
-          <>
-            <section className="intro">
-              <p className="eyebrow">YOUR NEXT COLLABORATION</p>
-              <h1>
-                협찬의 다음 단계,
-                <br />
-                한곳에서.
-              </h1>
-              <p>
-                브리프를 가져와 일정과 제작 조건을
-                <br />
-                먼저 확인해 보세요.
-              </p>
-            </section>
-            <section className="panel">
-              <h2>브리프부터 시작해요</h2>
-              <p>텍스트나 스크린샷으로 검토 흐름을 살펴보세요.</p>
-              <a className="button primary" href="#/brief/new">
-                브리프 가져오기 ＋
-              </a>
-            </section>
-          </>
+          <Home />
         ) : (
           <>
             <nav aria-label="브리프 단계">

@@ -417,3 +417,26 @@ nav[aria-label="협찬 상세 탐색"] {
 #original-guide summary { padding-left: 0; }
 .guide-image { padding-top: 12px; border-top: 1px solid #e8e4dd; }
 @media (min-width: 480px) { .detail-dates { grid-template-columns: 1fr 1fr; } }
+
+.home-intro { padding-bottom: 8px; }
+.home-intro .primary { margin-top: 24px; }
+.home-cards { display: grid; gap: 14px; }
+.home-collaboration { border: 1px solid #e8e4dd; border-radius: 18px; background: #fffefa; overflow: hidden; }
+.home-card-link { display: block; padding: 18px; overflow-wrap: anywhere; }
+.home-card-link > .section-heading { align-items: flex-start; }
+.home-card-link strong { font-size: 18px; flex: 1; min-width: 0; }
+.home-dates { display: grid; gap: 12px; margin: 16px 0; }
+.home-dates dt { font-size: 12px; color: #746e64; }
+.home-dates dd { margin: 4px 0 0; font-size: 14px; line-height: 1.6; }
+.home-task-link { display: flex; flex-direction: column; gap: 6px; padding: 16px 0; overflow-wrap: anywhere; }
+.home-tasks > li + li { border-top: 1px solid #e8e4dd; }
+.home-task-link strong { line-height: 1.6; }
+.overdue { color: #a53129; font-weight: 650; }
+.archived-tasks { padding: 0 18px 8px; border-top: 1px solid #e8e4dd; }
+.archived-tasks > p { margin-top: 14px; }
+.home-archive { margin-top: 28px; }
+.home-empty { padding: 18px 0; }
+@media (min-width: 480px) { .home-dates { grid-template-columns: 1fr 1fr; } }
+.home-shortcuts { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; padding: 0; }
+.home-shortcuts button { margin: 0 0 16px; }
+#active-title, #next-tasks-title { scroll-margin-top: 16px; }
