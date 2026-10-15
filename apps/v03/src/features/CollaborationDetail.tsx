@@ -4,6 +4,8 @@ import {
   loadCollaboration, isCollaborationId, DetailError, informationLabel,
   dateLabel, scheduleSummary, type Collaboration, type SavedSource,
 } from "../integrations/collaboration";
+import {BasicInfoEditor} from "./BasicInfoEditor";
+import {useBasicMutation} from "../hooks/useBasicMutation";
 import { ScheduleEditor } from "./ScheduleEditor";
 import { useScheduleMutation } from "../hooks/useScheduleMutation";
 import { useProgressMutation } from "../hooks/useProgressMutation";
@@ -11,7 +13,7 @@ import { StatusEditor, ProgressNotice } from "./ProgressControls";
 import { STATUS_LABELS } from "../domain/brief";
 
 const constraintLabels: Record<string, string> = {
-  manual: "제작 조건", thumbnail: "금지 조건", platform: "업로드 플랫폼", retention: "공개 유지", usage_rights: "Usage rights",
+  manual: "제작 조건", thumbnail: "금지 조건", platform: "최초 검토 플랫폼 · 참고", retention: "공개 유지", usage_rights: "Usage rights",
 };
 function GuideImage({ image }: { image: SavedSource["images"][number] }) {
   const [attempt, setAttempt] = useState(0);
@@ -91,7 +93,8 @@ export function CollaborationDetail({ id }: { id: string }) {
   }, [id, identity, attempt, authEpoch]);
   const progress = useProgressMutation(`${id}:${identity ?? "signed-out"}:${authEpoch}`, () => setAttempt((value) => value + 1));
   const schedule = useScheduleMutation(`${id}:${identity ?? "signed-out"}:${authEpoch}`, () => setAttempt((value) => value + 1));
-  const editingBlocked = progress.blocked || schedule.blocked;
+  const basic = useBasicMutation(`${id}:${identity ?? "signed-out"}:${authEpoch}`, () => setAttempt(value => value + 1));
+  const editingBlocked = progress.blocked || schedule.blocked || basic.blocked;
   const current = result?.id === id && result.user === identity ? result : null;
   let message: string | null = null;
   let retry = false;
@@ -107,6 +110,7 @@ export function CollaborationDetail({ id }: { id: string }) {
       <nav aria-label="협찬 상세 탐색"><a href="#/">← 홈</a><a href="#/brief/new">새 브리프 가져오기</a></nav>
       {identity && !message && <ProgressNotice {...progress} onRetry={progress.retry} onRefresh={progress.refresh} />}
       {identity && !message && <ProgressNotice {...schedule} onRetry={schedule.retry} onRefresh={schedule.refresh} />}
+      {identity && !message && <ProgressNotice {...basic} onRetry={basic.retry} onRefresh={basic.refresh} />}
       {message ? <section className="panel detail-state" role="alert">
         <h1>협찬을 확인해주세요</h1><p>{message}</p>
         {retry && <button onClick={() => setAttempt((value) => value + 1)}>다시 시도</button>}
@@ -124,6 +128,7 @@ export function CollaborationDetail({ id }: { id: string }) {
         {detail.v03_sources.some(source=>source.v03_reviews.some(review=>review.candidate.origin==="manual")) && <aside className="notice">직접 수동 입력한 협찬이에요. 원본 자동 추출이나 후보 확인 결과가 아니에요.</aside>}
         {detail.v03_sources.some((source) => source.v03_reviews.some((review) => review.candidate.origin === "mock")) &&
           <aside className="notice">사용자가 검토한 mock 예시예요. 원본을 자동 분석한 결과가 아니에요.</aside>}
+        <BasicInfoEditor key={`${detail.id}:${detail.revision}:${detail.v03_contents.map(c=>`${c.id}:${c.revision??0}`).join()}`} detail={detail} disabled={editingBlocked} onSave={basic.begin} />
         <StatusEditor detail={detail} disabled={editingBlocked} onSave={(value) => progress.begin({ kind: "status", id: detail.id, revision: detail.revision, value })} />
         <section className="panel" aria-labelledby="dates-title">
           <h2 id="dates-title">주요 일정</h2>

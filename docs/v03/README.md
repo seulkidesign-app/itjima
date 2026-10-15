@@ -42,3 +42,4 @@
 - [가편 전달일·업로드 예정일 수정 검증](SCHEDULE_VALIDATION_20261015.md)
 
 - [실제 수동 등록 검증](MANUAL_REGISTRATION_VALIDATION_20261015.md)
+- [저장된 협찬 기본 정보 수정 검증](BASIC_INFO_VALIDATION_20261016.md)

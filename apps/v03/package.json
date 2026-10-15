@@ -22,7 +22,9 @@
     "admin:apply:schedule": "node --env-file=.env.local --env-file=scripts/.env.admin.local --use-env-proxy scripts/apply-schedule-migration.mjs",
     "admin:verify:schedule": "node --env-file=.env.local --env-file=scripts/.env.admin.local --use-env-proxy scripts/verify-schedule.mjs",
     "admin:apply:manual": "node --env-file=.env.local --env-file=scripts/.env.admin.local --use-env-proxy scripts/apply-manual-migration.mjs",
-    "admin:verify:manual": "node --env-file=.env.local --env-file=scripts/.env.admin.local --use-env-proxy scripts/verify-manual.mjs"
+    "admin:verify:manual": "node --env-file=.env.local --env-file=scripts/.env.admin.local --use-env-proxy scripts/verify-manual.mjs",
+    "admin:apply:basic": "node --env-file=.env.local --env-file=scripts/.env.admin.local --use-env-proxy scripts/apply-basic-migration.mjs",
+    "admin:verify:basic": "node --env-file=.env.local --env-file=scripts/.env.admin.local --use-env-proxy scripts/verify-basic.mjs"
   },
   "dependencies": {
     "react": "19.2.7",

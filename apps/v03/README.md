@@ -142,3 +142,17 @@ npx playwright test --config=playwright.storage.config.ts e2e/storage/manual.spe
 ```
 
 기존 `admin:verify`, `admin:verify:progress`, `admin:verify:schedule`의 mock 기반 생성 단계는 과거 커밋의 검증 기록이다. 현재 서버에서 샘플 쓰기가 거부되므로 이 명령으로 과거 기능을 재검증하지 않는다. [수동 등록 검증](../../docs/v03/MANUAL_REGISTRATION_VALIDATION_20261015.md)에 현재 결과와 한계를 기록했다.
+
+## 저장된 협찬 기본 정보 수정 P0
+
+상세의 현재 운영 정보에서 이름·메모와 선택한 콘텐츠의 플랫폼을 수정/취소한다. 최초 원본/manual 입력 snapshot/검토 기록은 변경하지 않는다. 여러 콘텐츠가 있으면 플랫폼 수정 대상은 기본적으로 비어 있으며 명시적 선택을 요구한다. 대상 없는 저장은 협찬 이름/메모만 변경한다. 이름은 필수이며 빈 메모/플랫폼은 null이다. 공백·길이·소유권·협찬-콘텐츠 관계·기대 버전을 서버에서도 검증한다.
+
+새 migration `202610160001_v03_basic_info.sql`과 `202610160002_v03_basic_whitespace.sql`을 적용했다. 기존 4개 및 이미 적용된 첫 basic migration은 재실행하지 않았다. Collaboration과 선택 Content 버전을 비교하고 receipt와 함께 원자적으로 저장한다. 상태·일정·완료 값과 다른 콘텐츠는 변경하지 않는다.
+
+```bash
+npm run admin:apply:basic  # 상태 조회만, 이미 존재하면 재실행하지 않음
+npm run admin:verify:basic  # 실제 합성 계정/데이터 검증 후 정리
+npx playwright test --config=playwright.storage.config.ts e2e/storage/basic.spec.ts
+```
+
+[기본 정보 검증 기록](../../docs/v03/BASIC_INFO_VALIDATION_20261016.md)에 실제 원격 SDK/브라우저/mock E2E 결과를 구분했다. 후속 가이드와 날짜 제거 의미 변경은 포함하지 않는다.

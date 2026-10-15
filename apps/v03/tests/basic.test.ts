@@ -1,0 +1,10 @@
+import {it,expect,vi} from 'vitest';
+import type {SupabaseClient} from '@supabase/supabase-js';
+import {basicProblem,saveBasic,type BasicOperation} from '../src/integrations/basic';
+const id='11111111-1111-4111-8111-111111111111',content='22222222-2222-4222-8222-222222222222',request='33333333-3333-4333-8333-333333333333';
+const op:BasicOperation={id,contentId:content,requestId:request,title:'new',notes:null,platform:'YouTube',revision:0,contentRevision:0};
+function mock(response:unknown){const query={abortSignal:vi.fn().mockReturnThis(),retry:vi.fn().mockResolvedValue(response)};const rpc=vi.fn().mockReturnValue(query);return{rpc,client:{rpc} as unknown as SupabaseClient};}
+it('validates required name and optional lengths',()=>{expect(basicProblem('  ','','')).toBeTruthy();expect(basicProblem('valid','','')).toBeNull();expect(basicProblem('valid','x'.repeat(5001),'')).toBeTruthy();});
+it('sends stable request UUID, parent version and explicit content version',async()=>{const m=mock({data:{id,revision:1,content_id:content,content_revision:1},error:null});await saveBasic(m.client,op,new AbortController().signal);await saveBasic(m.client,op,new AbortController().signal);expect(m.rpc.mock.calls[0]).toEqual(m.rpc.mock.calls[1]);expect(m.rpc.mock.calls[0][1]).toMatchObject({p_content_id:content,p_expected_content_revision:0,p_request_id:request});});
+it.each(['conflict','unavailable','invalid','invalid_retry','auth_required'])('maps server %s to safe errors',async kind=>{const m=mock({error:{message:'v03_basic_'+kind},status:400});await expect(saveBasic(m.client,op,new AbortController().signal)).rejects.toMatchObject({kind:kind==='auth_required'?'signin':kind==='invalid_retry'?'invalid':kind});});
+it('blocks invalid input locally and treats malformed receipts as unknown',async()=>{const m=mock({data:{id,revision:1,content_id:'wrong'},error:null});await expect(saveBasic(m.client,{...op,title:''},new AbortController().signal)).rejects.toMatchObject({kind:'invalid'});expect(m.rpc).not.toHaveBeenCalled();await expect(saveBasic(m.client,op,new AbortController().signal)).rejects.toMatchObject({kind:'unknown'});});

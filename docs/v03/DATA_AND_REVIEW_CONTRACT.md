@@ -81,3 +81,11 @@ RPC는 인증 사용자 소유권, 상태 7종, boolean 완료 값, null/음수 
 `v03_prepare_manual_import` / `v03_commit_manual_import`는 기존 소유자 Import·private Storage staging·원자적 commit·동일 UUID retry·abort/보상 삭제 경계를 재사용한다. 다른 사용자의 요청/데이터에 접근할 수 없고 직접 쓰기 차단도 유지한다. Source·입력 snapshot·필드·Task·조건·committed 상태는 한 transaction이다. 결과를 확인하지 못하면 동일 요청을 유지하며 성공 여부를 확인하기 전 파일을 삭제하지 않는다.
 
 샘플 UI에는 원격 저장 호출이 없다. 기존 mock gate의 정의는 유지하며 서버의 mock prepare/commit 실행 권한은 제거한다. 저장된 과거 mock 기록의 조회는 유지한다. 기존 mock 원격 저장 검증 스크립트는 해당 과거 커밋용이며 현재 계약 검증은 `admin:verify:manual`을 사용한다.
+
+## 저장 후 현재 기본 정보 수정 · 2026-10-16
+
+현재 Collaboration.title/notes와 명시한 Content.platform만 변경한다. 플랫폼 대상이 null이면 이름/메모만 저장한다. 다른 Content.title/platform은 일괄 변경하지 않는다. Source·Review·Import payload/manual snapshot과 상태·일정·Task 완료는 보존한다.
+
+이름 필수/120자, 메모 선택/5,000자, 플랫폼 선택/120자를 서버에서도 검증한다. 공백·탭·줄바꿈·유니코드 공백을 정규화하며 선택 항목의 빈 값은 null이다. 최초 정보가 없는 경우 현재 값에서 최초값을 추정하지 않는다.
+
+`v03_update_basic_info`는 기존 Collaboration revision 및 새 Content revision을 비교하고 소유자/협찬-콘텐츠 소속을 검증한다. 현재 필드/두 버전/receipt는 하나의 transaction이며 동일 요청 재시도는 기존 결과를 반환한다. 직접 쓰기를 허용하지 않는다. 현재 운영 플랫폼과 최초 검토 플랫폼/등록 당시 기본 제작물 플랫폼은 화면에서도 구분한다.

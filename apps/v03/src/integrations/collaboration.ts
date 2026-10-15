@@ -16,6 +16,7 @@ export type SavedReview = {
     information_state?: InformationState;
     input_state?: "not_entered";
     origin?: string;
+    entry?: {collaboration?: {title?: string;notes?: string|null};content?: {platform?: string|null}};
     due_date?: string | null;
     value?: string | null;
   };
@@ -37,6 +38,7 @@ export type Collaboration = {
     id: string;
     title: string;
     platform: string | null;
+    revision?: number;
     v03_tasks: SavedTask[];
     v03_schedule_states?: ScheduleState[];
   }[];
@@ -67,7 +69,7 @@ export async function loadCollaboration(
   let query = client
     .from("v03_collaborations")
     .select(`id,title,status,revision,contact_date,notes,
-      v03_contents(id,title,platform,v03_tasks(id,type,title,due_date,completed_at,revision),v03_schedule_states(type,information_state,revision)),
+      v03_contents(id,title,platform,revision,v03_tasks(id,type,title,due_date,completed_at,revision),v03_schedule_states(type,information_state,revision)),
       v03_constraints(id,type,value,information_state,review_state),
       v03_sources(id,raw_text,images,v03_reviews(candidate))`)
     .eq("id", id)
