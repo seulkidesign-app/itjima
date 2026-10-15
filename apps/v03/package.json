@@ -16,6 +16,8 @@
     "test:e2e:storage": "playwright test --config=playwright.storage.config.ts",
     "admin:check": "node --env-file=.env.local --env-file=scripts/.env.admin.local --use-env-proxy scripts/supabase-admin.mjs",
     "admin:verify": "node --env-file=.env.local --env-file=scripts/.env.admin.local --use-env-proxy scripts/verify-remote.mjs",
+    "admin:verify:progress": "node --env-file=.env.local --env-file=scripts/.env.admin.local --use-env-proxy scripts/verify-progress.mjs",
+    "admin:apply:progress": "node --env-file=.env.local --env-file=scripts/.env.admin.local --use-env-proxy scripts/apply-progress-migration.mjs",
     "admin:apply": "node --use-env-proxy scripts/supabase-admin.mjs --apply"
   },
   "dependencies": {

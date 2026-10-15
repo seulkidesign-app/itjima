@@ -7,6 +7,7 @@ export type SavedTask = {
   title: string;
   due_date: string | null;
   completed_at: string | null;
+  revision: number;
 };
 export type SavedReview = {
   candidate: {
@@ -25,6 +26,7 @@ export type Collaboration = {
   id: string;
   title: string;
   status: Status;
+  revision: number;
   contact_date: string | null;
   notes: string | null;
   v03_contents: {
@@ -59,8 +61,8 @@ export async function loadCollaboration(
   if (!isCollaborationId(id)) return null;
   let query = client
     .from("v03_collaborations")
-    .select(`id,title,status,contact_date,notes,
-      v03_contents(id,title,platform,v03_tasks(id,type,title,due_date,completed_at)),
+    .select(`id,title,status,revision,contact_date,notes,
+      v03_contents(id,title,platform,v03_tasks(id,type,title,due_date,completed_at,revision)),
       v03_constraints(id,type,value,information_state,review_state),
       v03_sources(id,raw_text,images,v03_reviews(candidate))`)
     .eq("id", id)

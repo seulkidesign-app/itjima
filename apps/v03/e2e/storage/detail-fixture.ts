@@ -1,15 +1,16 @@
 import { expect, type Page } from "@playwright/test";
 import type { Collaboration } from "../../src/integrations/collaboration";
 export const ID = "77777777-7777-4777-8777-777777777777";
+export const TASK = "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb";
 export const USER = "11111111-1111-4111-8111-111111111111";
 export const PNG = Buffer.from("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+j0ioAAAAASUVORK5CYII=", "base64");
 export function fixture(): Collaboration {
   return {
-    id: ID, title: "브랜드 A 캠페인", status: "producing", contact_date: null, notes: null,
+    id: ID, title: "브랜드 A 캠페인", status: "producing", revision: 0, contact_date: null, notes: null,
     v03_contents: [{ id: "content", title: "릴스 제작", platform: "Instagram", v03_tasks: [
-      { id: "draft", type: "draft_delivery", title: "가편 전달", due_date: "2026-10-20", completed_at: null },
-      { id: "publish", type: "publish", title: "업로드", due_date: "2026-10-23", completed_at: null },
-      { id: "film", type: "custom", title: "영상 제작", due_date: null, completed_at: null },
+      { id: TASK, type: "draft_delivery", title: "가편 전달", due_date: "2026-10-20", revision: 0, completed_at: null },
+      { id: "cccccccc-cccc-4ccc-8ccc-cccccccccccc", type: "publish", title: "업로드", due_date: "2026-10-23", revision: 0, completed_at: null },
+      { id: "dddddddd-dddd-4ddd-8ddd-dddddddddddd", type: "custom", title: "영상 제작", due_date: null, revision: 0, completed_at: null },
     ] }],
     v03_constraints: [
       { id: "thumbnail", type: "thumbnail", value: "썸네일 가격 표시 금지", information_state: "present", review_state: "confirmed" },

@@ -4,6 +4,8 @@ import {
   loadCollaboration, isCollaborationId, DetailError, informationLabel,
   dateLabel, scheduleSummary, type Collaboration, type SavedSource,
 } from "../integrations/collaboration";
+import { useProgressMutation } from "../hooks/useProgressMutation";
+import { StatusEditor, ProgressNotice } from "./ProgressControls";
 import { STATUS_LABELS } from "../domain/brief";
 
 const constraintLabels: Record<string, string> = {
@@ -85,6 +87,7 @@ export function CollaborationDetail({ id }: { id: string }) {
       });
     return () => { window.clearTimeout(timeout); controller.abort(); };
   }, [id, identity, attempt, authEpoch]);
+  const progress = useProgressMutation(`${id}:${identity ?? "signed-out"}:${authEpoch}`, () => setAttempt((value) => value + 1));
   const current = result?.id === id && result.user === identity ? result : null;
   let message: string | null = null;
   let retry = false;
@@ -98,6 +101,7 @@ export function CollaborationDetail({ id }: { id: string }) {
   return (
     <>
       <nav aria-label="협찬 상세 탐색"><a href="#/">← 홈</a><a href="#/brief/new">새 브리프 가져오기</a></nav>
+      {identity && !message && <ProgressNotice {...progress} onRetry={progress.retry} onRefresh={progress.refresh} />}
       {message ? <section className="panel detail-state" role="alert">
         <h1>협찬을 확인해주세요</h1><p>{message}</p>
         {retry && <button onClick={() => setAttempt((value) => value + 1)}>다시 시도</button>}
@@ -113,6 +117,7 @@ export function CollaborationDetail({ id }: { id: string }) {
         </section>
         {detail.v03_sources.some((source) => source.v03_reviews.some((review) => review.candidate.origin === "mock")) &&
           <aside className="notice">사용자가 검토한 mock 예시예요. 원본을 자동 분석한 결과가 아니에요.</aside>}
+        <StatusEditor detail={detail} disabled={progress.blocked} onSave={(value) => progress.begin({ kind: "status", id: detail.id, revision: detail.revision, value })} />
         <section className="panel" aria-labelledby="dates-title">
           <h2 id="dates-title">주요 일정</h2>
           <dl className="detail-dates"><div><dt>가편 전달일</dt><dd>{scheduleSummary(detail, "draft_delivery", "draft_due")}</dd></div>
@@ -125,7 +130,11 @@ export function CollaborationDetail({ id }: { id: string }) {
             <h3>{content.title}</h3>
             {content.platform && <p className="small muted">{content.platform}</p>}
             {content.v03_tasks.length ? <ul className="detail-list">{content.v03_tasks.map((task) => <li key={task.id}>
-              <p>{task.title}</p><p className="small muted">{task.completed_at ? "완료" : "할 일"}{task.due_date ? ` · ${dateLabel(task.due_date)}` : " · 기한 없음"}</p>
+              <p>{task.title}</p>
+              <button disabled={progress.blocked} onClick={() => progress.begin({ kind: "task", id: task.id, revision: task.revision, value: !task.completed_at })}
+                aria-label={`${task.title} ${task.completed_at ? "미완료로 되돌리기" : "완료로 표시"}`}>
+                {task.completed_at ? "미완료로 되돌리기" : "완료로 표시"}
+              </button><p className="small muted">{task.completed_at ? "완료" : "할 일"}{task.due_date ? ` · ${dateLabel(task.due_date)}` : " · 기한 없음"}</p>
             </li>)}</ul> : <p className="muted">등록된 할 일이 없어요.</p>}
           </section>)}
           {detail.v03_sources.flatMap((source) => source.v03_reviews).filter(({ candidate }) =>

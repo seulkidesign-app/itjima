@@ -27,7 +27,7 @@ export async function loadHome(
   for (;;) {
     let query = client.from("v03_collaborations")
       .select(`id,title,status,
-        v03_contents(id,title,v03_tasks(id,type,title,due_date,completed_at)),
+        v03_contents(id,title,v03_tasks(id,type,title,due_date,completed_at,revision)),
         v03_sources(v03_reviews(candidate))`)
       .eq("user_id", userId)
       .order("id", { ascending: true })

@@ -3,15 +3,15 @@ import { backend, fixture, ID } from "./detail-fixture";
 function homeFixture() {
   const active = fixture();
   active.v03_contents[0].v03_tasks[0].due_date = "2026-10-10";
-  active.v03_contents[0].v03_tasks.push({ id: "done", title: "완료한 작업", type: "custom", due_date: "2026-10-01", completed_at: "2026-10-02T00:00:00Z" });
+  active.v03_contents[0].v03_tasks.push({ id: "done", title: "완료한 작업", type: "custom", due_date: "2026-10-01", revision: 0, completed_at: "2026-10-02T00:00:00Z" });
   const undated = fixture(); undated.id = "88888888-8888-4888-8888-888888888888"; undated.title = "날짜 없는 협찬";
   undated.v03_contents[0].v03_tasks = [];
   undated.v03_sources[0].v03_reviews[0].candidate.information_state = "not_mentioned";
   undated.v03_sources[0].v03_reviews[1].candidate.information_state = "uncertain";
   const held = fixture(); held.id = "99999999-9999-4999-8999-999999999999"; held.title = "보류 캠페인"; held.status = "on_hold";
-  held.v03_contents[0].v03_tasks = [{ id: "held-task", title: "보류 중 남은 작업", type: "custom", due_date: "2026-10-09", completed_at: null }];
+  held.v03_contents[0].v03_tasks = [{ id: "held-task", title: "보류 중 남은 작업", type: "custom", due_date: "2026-10-09", revision: 0, completed_at: null }];
   const done = fixture(); done.id = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa"; done.title = "완료 캠페인"; done.status = "completed";
-  done.v03_contents[0].v03_tasks = [{ id: "completed-task", title: "완료 상태의 미완료 작업", type: "custom", due_date: null, completed_at: null }];
+  done.v03_contents[0].v03_tasks = [{ id: "completed-task", title: "완료 상태의 미완료 작업", type: "custom", due_date: null, revision: 0, completed_at: null }];
   return [active, undated, held, done];
 }
 test("signed-out home does not read user data and retains brief entry", async ({ page }) => {

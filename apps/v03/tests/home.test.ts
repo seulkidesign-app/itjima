@@ -4,10 +4,10 @@ import { dueState, isActive, loadHome, localDate, pendingTasks, type HomeCollabo
 import { DetailError, scheduleSummary } from "../src/integrations/collaboration";
 function item(id = "a"): HomeCollaboration {
   return { id, title: "협찬", status: "producing", v03_contents: [{ id: "content", title: "제작물", v03_tasks: [
-    { id: "undated", title: "기한 없음", type: "custom", due_date: null, completed_at: null },
-    { id: "late", title: "지난 기한", type: "draft_delivery", due_date: "2026-10-10", completed_at: null },
-    { id: "future", title: "예정", type: "publish", due_date: "2026-10-20", completed_at: null },
-    { id: "done", title: "완료", type: "custom", due_date: "2026-10-01", completed_at: "2026-10-02T00:00:00Z" },
+    { id: "undated", title: "기한 없음", type: "custom", due_date: null, revision: 0, completed_at: null },
+    { id: "late", title: "지난 기한", type: "draft_delivery", due_date: "2026-10-10", revision: 0, completed_at: null },
+    { id: "future", title: "예정", type: "publish", due_date: "2026-10-20", revision: 0, completed_at: null },
+    { id: "done", title: "완료", type: "custom", due_date: "2026-10-01", revision: 0, completed_at: "2026-10-02T00:00:00Z" },
   ] }], v03_sources: [] };
 }
 function backend(pages: { data: unknown; status?: number; error?: unknown }[]) {

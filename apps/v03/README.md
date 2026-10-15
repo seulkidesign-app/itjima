@@ -39,7 +39,7 @@ DB 설정이 없으면 버튼은 로컬 payload만 표시한다. URL/ref/key와 
 
 V02 변수 fallback, 알려진 V02 ref, service-role/secret key는 차단한다. Site URL/redirect URL은 V03 origin으로 설정한다. 가입 이메일 확인 정책을 따른다. 제한된 cloud egress에는 실제 프로젝트 hostname이 필요하다.
 
-[SQL migration](supabase/migrations/202610140001_v03_initial.sql)은 **준비만 했으며 원격 실행하지 않았다**. 별도 지시 후 검증된 V03 프로젝트 SQL Editor에서 `SET v03.project_ref='zzuytanimpiflygrwqfb';`를 먼저 실행하고 migration을 한 번 적용한다. 공개 key로 DDL을 적용하지 않는다. V02 테이블/ref를 감지하면 migration을 중단한다.
+[초기 SQL migration](supabase/migrations/202610140001_v03_initial.sql)은 V03 프로젝트에 이미 적용했다. [원격 적용 기록](../../docs/v03/REMOTE_VALIDATION_20261015.md)을 참고하며 재실행하지 않는다. DB 변경은 별도 migration으로 추가한다. 공개 key로 DDL을 적용하지 않으며 V02 테이블/ref가 감지되면 중단한다.
 
 테이블: v03_collaborations / contents / tasks / sources / constraints / reviews / imports. 각 소유자 RLS 및 관계 복합 FK, 클라이언트 직접 쓰기 금지, RPC-only 쓰기. private v03-sources bucket의 경로는 user/import/image ID이며 manifest 밖 접근은 거부한다.
 
@@ -70,7 +70,7 @@ Node 24.5 이상과 해당 실행 환경의 proxy/CA trust를 유지한 상태�
 
 저장 성공 시 `#/collaborations/<UUID>`로 이동한다. 같은 URL을 새로고침하거나 직접 열어도 V03 로그인 세션으로 Supabase를 다시 조회한다. 로그인하지 않았다면 URL을 유지하고 로그인 안내를 표시한다. RLS로 숨겨진 협찬과 없는 협찬은 같은 접근 불가 안내를 사용한다.
 
-브랜드/캠페인 이름, 사용자가 저장한 상태, 가편/업로드 날짜, 할 일, 제작 조건, 원본 텍스트와 private 이미지를 조회한다. 날짜는 Task에서 읽고, 날짜/값이 없는 이유는 Review의 미기재·불명확 상태를 보존한다. 원본 이미지는 버튼을 눌렀을 때 인증된 Storage download를 사용하며 메모리 blob URL은 화면을 떠날 때 폐기한다. 편집·자동 상태 전이·알림은 추가하지 않았다.
+브랜드/캠페인 이름, 사용자가 저장한 상태, 가편/업로드 날짜, 할 일, 제작 조건, 원본 텍스트와 private 이미지를 조회한다. 날짜는 Task에서 읽고, 날짜/값이 없는 이유는 Review의 미기재·불명확 상태를 보존한다. 원본 이미지는 버튼을 눌렀을 때 인증된 Storage download를 사용하며 메모리 blob URL은 화면을 떠날 때 폐기한다. 상태/할 일 외의 편집·자동 상태 전이·알림은 추가하지 않았다.
 
 상세 조회는 내부 자동 재시도 없이 오류를 표시하며 15초 후 연결 오류로 전환한다. 재시도 버튼을 제공한다. 로그아웃하면 상세와 원본을 숨긴다. 기존 migration 변경·재실행은 없다.
 
@@ -84,3 +84,21 @@ Node 24.5 이상과 해당 실행 환경의 proxy/CA trust를 유지한 상태�
 다음 해야 할 일은 진행 중 협찬의 미완료 Task를 기한 오름차순(지난 기한 포함), 기한 없는 항목 순으로 모두 표시한다. 보류·완료 협찬의 남은 미완료 Task는 해당 목록 안에 계속 표시한다. 날짜가 불명확/미기재인 경우 Task나 날짜를 새로 만들지 않으며 가편/업로드 표시에는 기존 Review 상태를 보존한다. 날짜 기준은 브라우저 기기의 달력 날짜이며 상태 자동 전이는 없다.
 
 조회는 소유자 조건과 RLS를 사용하고 ID cursor로 100개씩 순회한다. 원본 텍스트·이미지·성과·광고 코드는 홈 조회에 요청하지 않는다. 로그인 필요, 로딩, 빈 목록, 오류/재시도, 15초 제한과 로그아웃 후 정보 제거를 처리한다. [홈 검증 기록](../../docs/v03/HOME_VALIDATION_20261015.md)을 참고한다.
+
+
+## 협찬 상태·할 일 완료 변경
+
+상세에서 상태 7종을 자유롭게 건너뛰거나 되돌릴 수 있고, 할 일은 독립적으로 완료/미완료로 바꾼다. 상태 완료가 Task를 완료하거나 모든 Task 완료가 상태를 바꾸는 동작은 없다. 저장 성공 후 실제 DB를 재조회하며 홈 복귀·새로고침에도 반영된다.
+
+새 migration `202610150001_v03_progress.sql`은 각 행의 revision과 요청 receipts, 소유권/허용 값/CAS 검증 RPC를 추가한다. 기존 직접 쓰기 차단은 유지한다. 이번 V03 프로젝트에는 이 새 migration만 추가 적용했으며 초기 migration은 재실행하지 않았다.
+
+저장 중에는 모든 변경 버튼을 잠근다. 연결 오류/응답 유실은 같은 UUID 요청으로 재시도할 수 있고, 충돌은 최신 내용 재조회 후 다시 선택해야 한다. 로그아웃/화면 이탈 이후 응답은 UI에 반영하지 않는다. 요청 취소가 이미 시작된 DB transaction을 취소했다는 뜻은 아니므로 결과가 모호하면 재조회해야 한다.
+
+```bash
+# 새 migration 상태 조회만 수행 (적용 없음)
+npm run admin:apply:progress
+# 적용된 스키마에 대한 실제 원격 검증; 임시 계정/데이터 생성 후 정리
+npm run admin:verify:progress
+```
+
+관리자 명령은 Git 제외 환경 파일만 읽으며 브라우저에 관리자 키를 전달하지 않는다. 적용되지 않은 환경에 새 migration을 적용할 때만 별도 승인 범위에서 `npm run admin:apply:progress -- --apply`를 사용한다. 이미 존재하면 재실행하지 않으며 부분 스키마는 중단한다. 상세 내용은 [상태·할 일 변경 검증](../../docs/v03/PROGRESS_VALIDATION_20261015.md)을 참고한다.
