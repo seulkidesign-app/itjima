@@ -42,3 +42,10 @@ Supabase 변수는 VITE_V03_SUPABASE_URL / VITE_V03_SUPABASE_PROJECT_REF / VITE_
 V03 단위/SQL/RLS·저장 실패·모바일 E2E·타입/빌드를 실행한다. V02 release 테스트와 빌드로 격리 확인한다. 기존 V02 결함은 수정하지 않고 별도로 보고한다.
 
 V03 변경만 codex/v03-influencer-mvp에 commit/push한다. 키, .env.local, node_modules, dist, 테스트 산출물은 제외한다. 원격 migration은 실행하지 않는다.
+
+
+## 2026-10-15 · 협찬 상세 조회 P0
+
+저장 성공 후 `#/collaborations/<UUID>`로 이동하며, URL에서 식별자를 읽어 새로고침 시 실제 Supabase를 재조회한다. 협찬·콘텐츠/Task·조건·원본/Review를 한 관계 조회로 읽고 소유자 RLS를 따른다. 미기재와 불명확 정보는 Review에서 구분한다. 모바일 로딩·연결 오류/재시도·로그인 필요·접근 불가 상태, 비공개 이미지 원본 보기를 제공한다.
+
+이번 범위는 조회만 지원한다. 상세 편집, 홈 목록, 빠른 입력, AI/OCR, 알림 및 기존 migration 재실행은 포함하지 않는다. [구현 검증 기록](COLLABORATION_DETAIL_VALIDATION_20261015.md)을 참고한다.

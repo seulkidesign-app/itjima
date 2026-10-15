@@ -6,15 +6,16 @@ import {
   type ImageSource,
   type Draft,
 } from "./domain/brief";
+import { CollaborationDetail } from "./features/CollaborationDetail";
 import { AuthPanel } from "./features/AuthPanel";
 import { BriefImport } from "./features/BriefImport";
 import { BriefReview } from "./features/BriefReview";
 import { SourcePreview } from "./features/SourcePreview";
 const routes = ["/", "/brief/new", "/brief/preview", "/brief/review"] as const;
-type Route = (typeof routes)[number];
+type Route = (typeof routes)[number] | `/collaborations/${string}`;
 function readRoute(): Route {
   const route = location.hash.slice(1) || "/";
-  return routes.includes(route as Route) ? (route as Route) : "/";
+  return route.startsWith("/collaborations/") || routes.some((known) => known === route) ? (route as Route) : "/";
 }
 function navigate(route: Route) {
   location.hash = route;
@@ -76,7 +77,9 @@ export function App() {
       </header>
       <main ref={heading} tabIndex={-1}>
         <AuthPanel />
-        {route === "/" ? (
+        {route.startsWith("/collaborations/") ? (
+          <CollaborationDetail key={route} id={route.slice("/collaborations/".length)} />
+        ) : route === "/" ? (
           <>
             <section className="intro">
               <p className="eyebrow">YOUR NEXT COLLABORATION</p>
@@ -163,6 +166,14 @@ export function App() {
               <BriefReview
                 draft={draft}
                 onChange={setDraft}
+                onSaved={(id) => {
+                  navigate(`/collaborations/${id}`);
+                  setRoute(readRoute());
+                  urls.current.forEach((url) => URL.revokeObjectURL(url));
+                  urls.current.clear();
+                  setSource({ text: "", images: [] });
+                  setDraft(null);
+                }}
                 onBack={() => {
                   setDraft(null);
                   navigate("/brief/new");

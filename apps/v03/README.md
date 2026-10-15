@@ -51,7 +51,7 @@ prepare RPC에서 검토 완료 payload 재검증 → private 이미지 staging 
 
 ## 미연결 범위
 
-실제 AI/OCR, 협찬 상세·업무 홈·빠른 입력, 알림, resurfacing, V02 자동 일정 저장은 연결하지 않았다. 실제 원격 migration·Auth·Storage 검증은 별도 단계다. PGlite의 실제 PostgreSQL SQL/RLS 테스트와 Supabase 응답 mock을 사용하는 SDK 모바일 테스트를 실제 운영 검증으로 주장하지 않는다.
+실제 AI/OCR, 업무 홈·빠른 입력, 알림, resurfacing, V02 자동 일정 저장은 연결하지 않았다. 실제 원격 migration·Auth·Storage 검증은 별도 단계다. PGlite의 실제 PostgreSQL SQL/RLS 테스트와 Supabase 응답 mock을 사용하는 SDK 모바일 테스트를 실제 운영 검증으로 주장하지 않는다.
 
 ## 재구성 검증
 
@@ -64,3 +64,14 @@ Migration은 Management API/PAT를 우선 사용한다. 서버 전용 변수는 
 Node 24.5 이상과 해당 실행 환경의 proxy/CA trust를 유지한 상태에서 `npm run admin:check`로 읽기 검증한다. `npm run admin:apply`는 별도로 승인된 migration 적용용이며 예상 V03 ref와 기존 schema 여부를 확인한 뒤 Management API로 SQL을 전송한다. 이번 변경에서 원격 migration을 실행하지 않았다. `--use-env-proxy`를 사용하며 네트워크 제한을 우회하지 않는다.
 
 필요한 hostname은 `api.supabase.com`, `zzuytanimpiflygrwqfb.supabase.co`다. Cloud draft 저장과 실제 실행 환경 반영을 구분한다. 현재 인스턴스에 변수/네트워크가 없으면 새로 게시된 환경에 연결한 뒤 검증해야 한다. 기존 SERVICE_ROLE_KEY 요구사항이 UI에 남아 있으면 제거하고 SECRET_KEY binding을 사용한다.
+
+
+## 협찬 상세 · 조회 P0
+
+저장 성공 시 `#/collaborations/<UUID>`로 이동한다. 같은 URL을 새로고침하거나 직접 열어도 V03 로그인 세션으로 Supabase를 다시 조회한다. 로그인하지 않았다면 URL을 유지하고 로그인 안내를 표시한다. RLS로 숨겨진 협찬과 없는 협찬은 같은 접근 불가 안내를 사용한다.
+
+브랜드/캠페인 이름, 사용자가 저장한 상태, 가편/업로드 날짜, 할 일, 제작 조건, 원본 텍스트와 private 이미지를 조회한다. 날짜는 Task에서 읽고, 날짜/값이 없는 이유는 Review의 미기재·불명확 상태를 보존한다. 원본 이미지는 버튼을 눌렀을 때 인증된 Storage download를 사용하며 메모리 blob URL은 화면을 떠날 때 폐기한다. 편집·자동 상태 전이·알림은 추가하지 않았다.
+
+상세 조회는 내부 자동 재시도 없이 오류를 표시하며 15초 후 연결 오류로 전환한다. 재시도 버튼을 제공한다. 로그아웃하면 상세와 원본을 숨긴다. 기존 migration 변경·재실행은 없다.
+
+단위/SQL 테스트 53개, 기존 모바일 브리프 E2E 8개, 상세·저장 mock E2E 10개 및 타입 검사·빌드를 확인했다. 실제 로컬 브라우저 + 원격 Supabase 검증 결과는 [상세 P0 검증](../../docs/v03/COLLABORATION_DETAIL_VALIDATION_20261015.md)을 참고한다.

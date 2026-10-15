@@ -20,10 +20,12 @@ export function BriefReview({
   draft,
   onChange,
   onBack,
+  onSaved,
 }: {
   draft: Draft;
   onChange: (draft: Draft) => void;
   onBack: () => void;
+  onSaved: (id: string) => void;
 }) {
   const [title, setTitle] = useState(""),
     [status, setStatus] = useState<Status>("discussion"),
@@ -50,9 +52,9 @@ export function BriefReview({
     setBusy(true);
     setError("");
     try {
-      setSaved(
-        await saveReviewed(supabase, requestId.current, next, draft.source),
-      );
+      const id = await saveReviewed(supabase, requestId.current, next, draft.source);
+      setSaved(id);
+      onSaved(id);
     } catch (problem) {
       if (problem instanceof AbortedSaveError)
         requestId.current = crypto.randomUUID();

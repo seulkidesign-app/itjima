@@ -394,3 +394,26 @@ footer {
     scroll-behavior: auto !important;
   }
 }
+
+/* Read-only collaboration detail, sized for small screens first. */
+nav[aria-label="협찬 상세 탐색"] {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.detail-intro h1 { overflow-wrap: anywhere; margin-top: 8px; }
+.detail-intro > .small { margin-top: 20px; }
+.detail-state h1 { font-size: 24px; margin-bottom: 12px; }
+.detail-dates { display: grid; gap: 18px; margin: 20px 0 0; }
+.detail-dates dt, .detail-list dt { font-size: 13px; color: #746e64; }
+.detail-dates dd { margin: 6px 0 0; font-size: 19px; font-weight: 650; overflow-wrap: anywhere; }
+.detail-list > li, .detail-list > div { padding: 14px 0; border-bottom: 1px solid #e8e4dd; }
+.detail-list > :last-child { border-bottom: 0; }
+.detail-list dd { margin: 6px 0 0; line-height: 1.7; overflow-wrap: anywhere; }
+.content-tasks { margin-top: 20px; }
+#original-guide { scroll-margin-top: 16px; }
+#original-guide details { margin-top: 14px; }
+#original-guide summary { padding-left: 0; }
+.guide-image { padding-top: 12px; border-top: 1px solid #e8e4dd; }
+@media (min-width: 480px) { .detail-dates { grid-template-columns: 1fr 1fr; } }
