@@ -156,3 +156,17 @@ npx playwright test --config=playwright.storage.config.ts e2e/storage/basic.spec
 ```
 
 [기본 정보 검증 기록](../../docs/v03/BASIC_INFO_VALIDATION_20261016.md)에 실제 원격 SDK/브라우저/mock E2E 결과를 구분했다. 후속 가이드와 날짜 제거 의미 변경은 포함하지 않는다.
+
+## 날짜 사용자 제거 의미 분리
+
+원문 미기재 / 불명확·판독 불가 / 수동 등록 시 입력하지 않음 / 사용자가 날짜 제거함을 구분한다. 일정 화면에서 날짜가 있을 때만 제거→확인을 제공한다. 기존 Task ID·완료 값·다른 일정·협찬 상태·원본/최초 기록은 보존한다. 날짜 지정/복원은 같은 Task를 재사용한다.
+
+새 `202610160003_v03_schedule_removal.sql`만 적용했다. 기존 행의 제거 여부를 추정하는 backfill은 없으며 기존 metadata/receipt fingerprint가 유지되는지 적용 시 확인한다. 새 date_state marker가 없는 과거 값은 기존 의미로 표시한다.
+
+```bash
+npm run admin:apply:removal  # 상태 조회만, 이미 적용됐으면 재실행하지 않음
+npm run admin:verify:removal  # 실제 합성 계정 검증 후 정리
+npx playwright test --config=playwright.storage.config.ts e2e/storage/removal.spec.ts e2e/storage/schedule.spec.ts
+```
+
+[날짜 제거 검증 기록](../../docs/v03/SCHEDULE_REMOVAL_VALIDATION_20261016.md)을 참고한다. 후속 가이드·AI/OCR·알림은 추가하지 않았다.

@@ -147,7 +147,7 @@ export function CollaborationDetail({ id }: { id: string }) {
               <button disabled={editingBlocked} onClick={() => progress.begin({ kind: "task", id: task.id, revision: task.revision, value: !task.completed_at })}
                 aria-label={`${task.title} ${task.completed_at ? "미완료로 되돌리기" : "완료로 표시"}`}>
                 {task.completed_at ? "미완료로 되돌리기" : "완료로 표시"}
-              </button><p className="small muted">{task.completed_at ? "완료" : "할 일"}{task.due_date ? ` · ${dateLabel(task.due_date)}` : " · 기한 없음"}</p>
+              </button><p className="small muted">{task.completed_at ? "완료" : "할 일"}{task.due_date ? ` · ${dateLabel(task.due_date)}` : content.v03_schedule_states?.some(s=>s.type===task.type && s.date_state==="removed") ? " · 사용자가 날짜 제거함" : " · 기한 없음"}</p>
             </li>)}</ul> : <p className="muted">등록된 할 일이 없어요.</p>}
           </section>)}
           {detail.v03_sources.flatMap((source) => source.v03_reviews).filter(({ candidate }) =>

@@ -9,7 +9,7 @@ export type SavedTask = {
   completed_at: string | null;
   revision: number;
 };
-export type ScheduleState = { type: "draft_delivery" | "publish"; information_state: InformationState; revision: number };
+export type ScheduleState = { type: "draft_delivery" | "publish"; information_state: InformationState | null; date_state?: "removed" | null; revision: number };
 export type SavedReview = {
   candidate: {
     candidate_id: string;
@@ -69,7 +69,7 @@ export async function loadCollaboration(
   let query = client
     .from("v03_collaborations")
     .select(`id,title,status,revision,contact_date,notes,
-      v03_contents(id,title,platform,revision,v03_tasks(id,type,title,due_date,completed_at,revision),v03_schedule_states(type,information_state,revision)),
+      v03_contents(id,title,platform,revision,v03_tasks(id,type,title,due_date,completed_at,revision),v03_schedule_states(type,information_state,date_state,revision)),
       v03_constraints(id,type,value,information_state,review_state),
       v03_sources(id,raw_text,images,v03_reviews(candidate))`)
     .eq("id", id)
@@ -95,7 +95,7 @@ export function dateLabel(date: string) {
   const [year, month, day] = date.split("-");
   return `${year}. ${month}. ${day}.`;
 }
-// A confirmed Task is the date source. Review explains why no Task exists.
+// Task holds current dates, metadata records explicit removal, Review preserves initial context.
 export function scheduleSummary(
   detail: { v03_contents: { v03_tasks: SavedTask[]; v03_schedule_states?: ScheduleState[] }[]; v03_sources: { v03_reviews: SavedReview[] }[] },
   type: string,
@@ -104,10 +104,11 @@ export function scheduleSummary(
   const reviews = detail.v03_sources.flatMap((source) => source.v03_reviews)
     .filter((review) => review.candidate.candidate_id === candidate);
   const fallback = reviews.length ? [...new Set(reviews.map(({ candidate: review }) =>
-    review.input_state === "not_entered" ? "입력하지 않음" : review.information_state === "present" ? "확정 일정 없음" : informationLabel(review.information_state),
+    review.input_state === "not_entered" ? "수동 등록 시 입력하지 않음" : review.information_state === "present" ? "확정 일정 없음" : informationLabel(review.information_state),
   ))].join(" / ") : "확인 정보 없음";
   const current = detail.v03_contents.flatMap((content) => {
     const state = content.v03_schedule_states?.find((item) => item.type === type);
+    if (state?.date_state === "removed") return ["사용자가 날짜 제거함"];
     if (state && state.information_state !== "present") return [state.information_state === "not_mentioned" ? "현재 일정 미기재" : "현재 일정 불명확"];
     const dates = content.v03_tasks.filter((task) => task.type === type && task.due_date).map((task) => dateLabel(task.due_date!));
     return dates.length ? dates : [state ? "확정 일정 없음" : fallback];

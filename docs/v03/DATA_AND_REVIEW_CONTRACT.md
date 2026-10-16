@@ -89,3 +89,11 @@ RPC는 인증 사용자 소유권, 상태 7종, boolean 완료 값, null/음수 
 이름 필수/120자, 메모 선택/5,000자, 플랫폼 선택/120자를 서버에서도 검증한다. 공백·탭·줄바꿈·유니코드 공백을 정규화하며 선택 항목의 빈 값은 null이다. 최초 정보가 없는 경우 현재 값에서 최초값을 추정하지 않는다.
 
 `v03_update_basic_info`는 기존 Collaboration revision 및 새 Content revision을 비교하고 소유자/협찬-콘텐츠 소속을 검증한다. 현재 필드/두 버전/receipt는 하나의 transaction이며 동일 요청 재시도는 기존 결과를 반환한다. 직접 쓰기를 허용하지 않는다. 현재 운영 플랫폼과 최초 검토 플랫폼/등록 당시 기본 제작물 플랫폼은 화면에서도 구분한다.
+
+## 날짜의 사용자 제거 의미 · 2026-10-16
+
+원문 미기재/불명확은 최초 Review, 수동 미입력은 최초 manual `input_state=not_entered`로 보존한다. 현재 날짜의 명시적 제거는 별도 `v03_schedule_states.date_state=removed`와 information_state=null로 기록한다. 기존 metadata나 null Task 날짜에서 제거를 추정하지 않으며 기존 정보 상태와 receipt를 일괄 변환하지 않는다.
+
+`v03_update_schedule`의 역사적 파라미터 p_information_state에 `removed` command를 추가한다. 날짜가 있는 단일 소유 Task에서만 허용하고 due_date=null이어야 한다. 기존 ID/completed_at은 보존하며 다른 일정/협찬 상태/초기 기록은 변경하지 않는다. 같은 UUID retry는 기존 receipt를 반환한다. 복원은 기존 present command로 같은 Task 날짜를 저장하고 제거 marker를 해제한다. 일정/Task 두 버전과 rollback 계약은 유지한다.
+
+UI의 원문/기존 정보 상태는 읽기 전용이며 날짜 input을 단순히 비우는 것은 제거 요청이 아니다. 제거 확인을 명시적으로 거친다. 홈·상세의 주요 날짜와 해당 Task에 제거 의미를 표시하며 미완료 Task는 홈에서 숨기지 않는다.

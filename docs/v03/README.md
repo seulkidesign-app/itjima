@@ -43,3 +43,5 @@
 
 - [실제 수동 등록 검증](MANUAL_REGISTRATION_VALIDATION_20261015.md)
 - [저장된 협찬 기본 정보 수정 검증](BASIC_INFO_VALIDATION_20261016.md)
+
+- [날짜 사용자 제거 의미 검증](SCHEDULE_REMOVAL_VALIDATION_20261016.md)

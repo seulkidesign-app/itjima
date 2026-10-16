@@ -24,7 +24,9 @@
     "admin:apply:manual": "node --env-file=.env.local --env-file=scripts/.env.admin.local --use-env-proxy scripts/apply-manual-migration.mjs",
     "admin:verify:manual": "node --env-file=.env.local --env-file=scripts/.env.admin.local --use-env-proxy scripts/verify-manual.mjs",
     "admin:apply:basic": "node --env-file=.env.local --env-file=scripts/.env.admin.local --use-env-proxy scripts/apply-basic-migration.mjs",
-    "admin:verify:basic": "node --env-file=.env.local --env-file=scripts/.env.admin.local --use-env-proxy scripts/verify-basic.mjs"
+    "admin:verify:basic": "node --env-file=.env.local --env-file=scripts/.env.admin.local --use-env-proxy scripts/verify-basic.mjs",
+    "admin:apply:removal": "node --env-file=.env.local --env-file=scripts/.env.admin.local --use-env-proxy scripts/apply-removal-migration.mjs",
+    "admin:verify:removal": "node --env-file=.env.local --env-file=scripts/.env.admin.local --use-env-proxy scripts/verify-removal.mjs"
   },
   "dependencies": {
     "react": "19.2.7",

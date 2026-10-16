@@ -14,6 +14,7 @@ export type HomeTask = SavedTask & {
   collaborationTitle: string;
   collaborationStatus: Status;
   contentTitle: string;
+  dateRemoved?: boolean;
 };
 
 // Explicit pages avoid Supabase's default top-level row limit. Never filter by due date.
@@ -27,7 +28,7 @@ export async function loadHome(
   for (;;) {
     let query = client.from("v03_collaborations")
       .select(`id,title,status,
-        v03_contents(id,title,v03_tasks(id,type,title,due_date,completed_at,revision),v03_schedule_states(type,information_state,revision)),
+        v03_contents(id,title,v03_tasks(id,type,title,due_date,completed_at,revision),v03_schedule_states(type,information_state,date_state,revision)),
         v03_sources(v03_reviews(candidate))`)
       .eq("user_id", userId)
       .order("id", { ascending: true })
@@ -58,6 +59,7 @@ export function pendingTasks(items: HomeCollaboration[]): HomeTask[] {
       collaborationTitle: item.title,
       collaborationStatus: item.status,
       contentTitle: content.title,
+      dateRemoved: content.v03_schedule_states?.some(s=>s.type===task.type && s.date_state==="removed") ?? false,
     })),
   )).sort((a, b) => {
     if (a.due_date !== b.due_date) {

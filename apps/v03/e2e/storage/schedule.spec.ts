@@ -48,17 +48,10 @@ test('mobile current dates persist to detail, home and reload while original rev
  await page.screenshot({path:'test-results/schedule-mobile.png'});
  expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
 });
-test('uncertain and missing clear only the current date and invalid date cannot save',async({page})=>{
- const m=await setup(page);
- await page.getByLabel('가편 전달일 (연도 포함)',{exact:true}).fill('');
+test('blank date cannot save and explicit removal can be cancelled without a write',async({page})=>{
+ const m=await setup(page);await page.getByLabel('가편 전달일 (연도 포함)',{exact:true}).fill('');
  await expect(page.getByRole('button',{name:'가편 전달일 저장',exact:true})).toBeDisabled();
- for(const value of ['uncertain','not_mentioned']){
-  await page.getByLabel('가편 전달일 정보 상태',{exact:true}).selectOption(value);
-  await page.getByRole('button',{name:'가편 전달일 저장',exact:true}).click();
-  await expect(page.getByText('변경을 저장했어요. 최신 DB 내용을 확인해요.')).toBeVisible();
-  await expect(page.getByLabel('가편 전달일 정보 상태',{exact:true})).toHaveValue(value);
- }
- expect(m.content.v03_tasks[0].due_date).toBeNull();expect(m.content.v03_tasks[0].completed_at).toBeTruthy();expect(m.content.v03_tasks[1].due_date).toBe('2026-10-23');
+ await page.getByRole('button',{name:'가편 전달일 제거',exact:true}).click();await page.getByRole('button',{name:'제거 취소',exact:true}).click();expect(m.requests).toHaveLength(0);expect(m.content.v03_tasks[0].due_date).toBe('2026-10-20');
 });
 test('stale schedule conflict requires refresh and explicit choice',async({page})=>{
  const m=await setup(page);await page.getByLabel('가편 전달일 (연도 포함)',{exact:true}).fill('2026-10-28');

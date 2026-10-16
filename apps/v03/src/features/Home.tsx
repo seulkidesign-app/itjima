@@ -11,7 +11,7 @@ function TaskList({ tasks, today }: { tasks: HomeTask[]; today: string }) {
       <strong>{task.title}</strong>
       <span className={`small ${task.due_date && task.due_date < today ? "overdue" : "muted"}`}>
         {task.due_date && <time dateTime={task.due_date}>{dateLabel(task.due_date)} · </time>}
-        {dueState(task.due_date, today)}
+        {!task.due_date && task.dateRemoved ? "사용자가 날짜 제거함 · 기한 없음" : dueState(task.due_date, today)}
       </span>
     </a>
   </li>)}</ul>;
