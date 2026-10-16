@@ -4,6 +4,7 @@ import {
   loadCollaboration, isCollaborationId, DetailError, informationLabel,
   dateLabel, scheduleSummary, type Collaboration, type SavedSource,
 } from "../integrations/collaboration";
+import {FollowupGuide} from "./FollowupGuide";
 import {BasicInfoEditor} from "./BasicInfoEditor";
 import {useBasicMutation} from "../hooks/useBasicMutation";
 import { ScheduleEditor } from "./ScheduleEditor";
@@ -165,12 +166,15 @@ export function CollaborationDetail({ id }: { id: string }) {
         </section>
         <section className="panel" id="original-guide" aria-labelledby="guide-title" tabIndex={-1}>
           <h2 id="guide-title">원본 가이드</h2>
-          {detail.v03_sources.some(source => source.raw_text.trim() || source.images.length) ? detail.v03_sources.filter(source => source.raw_text.trim() || source.images.length).map((source, index) => <details key={source.id} open={index === 0}>
-            <summary>원본 {index + 1} · 텍스트 / 이미지 {source.images.length}장</summary>
-            {source.raw_text ? <p className="source-text">{source.raw_text}</p> : <p className="muted">원본 텍스트 없이 이미지로 가져왔어요.</p>}
+          <p className="small muted">등록 순서로 표시해요. 등록 일시는 브랜드 컨택 일자가 아니에요.</p>
+          {detail.v03_sources.length ? [...detail.v03_sources].sort((a,b)=>(a.guide_order??0)-(b.guide_order??0)||a.id.localeCompare(b.id)).map((source, index) => <details key={source.id} open={index === 0}>
+            <summary>{source.import_id ? `후속 가이드 ${source.guide_order}` : "최초 가이드"} · 원본 {index + 1} · 이미지 {source.images.length}장</summary>
+            <p className="small muted">{source.registered_at ? <>등록 일시: <time dateTime={source.registered_at}>{new Intl.DateTimeFormat("ko-KR",{dateStyle:"medium",timeStyle:"short",timeZone:"Asia/Seoul"}).format(new Date(source.registered_at))}</time> (한국 시간)</> : "등록 일시 기록 없음 · 과거 시각을 추정하지 않아요."}</p>
+            {source.raw_text ? <p className="source-text">{source.raw_text}</p> : <p className="muted">{source.images.length ? "원본 텍스트 없이 이미지로 가져왔어요." : "최초 등록에 첨부한 원본이 없어요."}</p>}
             {source.images.map((image) => <GuideImage key={image.path} image={image} />)}
           </details>) : <p className="muted">첨부한 원본이 없어요.</p>}
         </section>
+        <FollowupGuide key={`${id}:${identity}:${authEpoch}`} id={id} disabled={editingBlocked} onSaved={()=>setAttempt(value=>value+1)}/>
       </>}
     </>
   );

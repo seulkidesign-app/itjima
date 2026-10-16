@@ -45,3 +45,5 @@
 - [저장된 협찬 기본 정보 수정 검증](BASIC_INFO_VALIDATION_20261016.md)
 
 - [날짜 사용자 제거 의미 검증](SCHEDULE_REMOVAL_VALIDATION_20261016.md)
+
+- [후속 가이드 추가 검증](FOLLOWUP_GUIDE_VALIDATION_20261016.md)

@@ -22,6 +22,9 @@ export type SavedReview = {
   };
 };
 export type SavedSource = {
+  import_id?: string | null;
+  registered_at?: string | null;
+  guide_order?: number | null;
   id: string;
   raw_text: string;
   images: { path: string; name: string; type: string; size: number }[];
@@ -71,7 +74,7 @@ export async function loadCollaboration(
     .select(`id,title,status,revision,contact_date,notes,
       v03_contents(id,title,platform,revision,v03_tasks(id,type,title,due_date,completed_at,revision),v03_schedule_states(type,information_state,date_state,revision)),
       v03_constraints(id,type,value,information_state,review_state),
-      v03_sources(id,raw_text,images,v03_reviews(candidate))`)
+      v03_sources(id,raw_text,images,import_id,registered_at,guide_order,v03_reviews(candidate))`)
     .eq("id", id)
     .eq("user_id", userId)
     .retry(false);

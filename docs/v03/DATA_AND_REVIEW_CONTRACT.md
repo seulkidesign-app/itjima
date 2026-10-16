@@ -97,3 +97,15 @@ RPC는 인증 사용자 소유권, 상태 7종, boolean 완료 값, null/음수 
 `v03_update_schedule`의 역사적 파라미터 p_information_state에 `removed` command를 추가한다. 날짜가 있는 단일 소유 Task에서만 허용하고 due_date=null이어야 한다. 기존 ID/completed_at은 보존하며 다른 일정/협찬 상태/초기 기록은 변경하지 않는다. 같은 UUID retry는 기존 receipt를 반환한다. 복원은 기존 present command로 같은 Task 날짜를 저장하고 제거 marker를 해제한다. 일정/Task 두 버전과 rollback 계약은 유지한다.
 
 UI의 원문/기존 정보 상태는 읽기 전용이며 날짜 input을 단순히 비우는 것은 제거 요청이 아니다. 제거 확인을 명시적으로 거친다. 홈·상세의 주요 날짜와 해당 Task에 제거 의미를 표시하며 미완료 Task는 홈에서 숨기지 않는다.
+
+## 후속 가이드 추가 · 2026-10-16
+
+기존 협찬에 Source만 추가한다. `mode=followup_guide`, 대상 collaboration_id, source, confirmed=true만 허용하며 text(20,000자 이하) 또는 이미지(4장 이하·각 10MB·JPG/PNG/WebP) 중 하나 이상이 필요하다. 공백만 있는 텍스트는 입력으로 보지 않는다. 원본 미리보기와 명시적 확인을 거친다. 원본 자동 추출·후속 후보 Review는 만들지 않는다.
+
+별도 `v03_prepare_guide_import` / `v03_commit_guide_import`가 auth.uid() 소유권과 manifest를 검증한다. 기존 초기 등록 RPC·검토 gate는 변경하지 않는다. commit은 Import와 대상 협찬을 lock하고 Source와 Import 완료를 한 transaction에 기록한다. 협찬 lock으로 동시 추가의 guide_order를 직렬화한다. 기존 Collaboration/Content·일정/Task·조건·상태/버전·원본/snapshot/Review는 쓰지 않는다. 협찬의 운영 revision은 증가시키지 않는다.
+
+Source의 import_id는 후속 요청의 유일한 receipt 연결이며 같은 UUID/동일 payload 재시도는 같은 Source ID를 반환한다. 다른 payload/소유자 재사용은 거부한다. Source 직접 쓰기는 계속 차단한다. 이미지는 기존 private staging/abort/로그인 시 임시 정리를 재사용한다. 확정 실패만 원자적으로 abort한 뒤 보상 삭제한다. commit·조회·abort의 결과가 불명확하면 파일을 보존하고 동일 요청으로 확인한다. 실패한 abort와 동시 commit 경합에서도 임의 삭제하지 않는다.
+
+최초 가이드와 후속 가이드는 구분한다. 새 Source의 registered_at은 서버 등록 일시이며 브랜드 컨택 일자가 아니다. 후속 guide_order는 1부터 시작하며 첫 가이드 뒤에 추가 순서로 표시한다. 과거 Source의 등록 일시/순서는 소급 추정하지 않는다(기존 null은 기록 없음). 새 최초 등록 Source는 서버 기본값으로 등록 시각이 기록된다. 원본 텍스트·이미지·Review의 기존 내용과 최초 Import payload는 변환하지 않는다.
+
+입력/재시도 UUID는 브라우저 메모리에 있다. 새로고침·종료로 미저장 입력과 요청 식별자가 사라질 수 있다. 성공한 가이드는 상세 재조회로 열람하고, 미완료 Import의 파일은 기존 24시간 기준 로그인 정리 경로를 따른다. 전체 이미지 이력 편집/삭제·후속 가이드 자동 반영은 이번 범위 밖이다.

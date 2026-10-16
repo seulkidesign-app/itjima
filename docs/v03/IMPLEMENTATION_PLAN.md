@@ -73,7 +73,7 @@ V03 변경만 codex/v03-influencer-mvp에 commit/push한다. 키, .env.local, no
 
 ### 다음 알파 잔여 P0
 
-- 완료(2026-10-16): 저장 후 이름·플랫폼·메모 수정. 기존 원본을 보존한 후속 가이드 추가는 잔여 P0.
+- 완료(2026-10-16): 저장 후 이름·플랫폼·메모 수정. 기존 원본을 보존한 후속 가이드 추가도 아래 후속 작업에서 완료했다.
 - 완료(2026-10-16): 사용자 날짜 제거를 원문 상태/수동 미입력과 분리. 기존 값은 추정 변환하지 않았다.
 - iOS Safari/Android Chrome 실기기의 날짜 입력·사진 선택 점검. 현재 모바일 Chromium 자동화와 데스크톱 내장 브라우저 검증만 완료했다.
 
@@ -94,3 +94,11 @@ V03 변경만 codex/v03-influencer-mvp에 commit/push한다. 키, .env.local, no
 새 제거 marker와 명시적 확인/복원을 제공한다. 최초 원문·manual snapshot·Review와 기존 데이터 의미를 보존하며 Task ID/완료·다른 일정·상태는 변경하지 않는다. 홈/상세에서 4가지 의미를 구분한다. 기존 metadata/receipt의 적용 전후 fingerprint 보존, 실제 원격 검증·브라우저 제거/복원 및 데이터 정리를 완료했다. [검증 기록](SCHEDULE_REMOVAL_VALIDATION_20261016.md).
 
 다음 잔여 P0는 후속 가이드 추가와 iOS/Android 실기기 점검이다. 이번 범위에 포함하지 않았다.
+
+## 2026-10-16 · 후속 가이드 추가 P0 완료
+
+`59978d0c`에서 Source/Import 구조를 확인하고, 기존 협찬 상세에서 텍스트·이미지 입력→원본 미리보기→명시적 확인→Source 추가를 구현했다. 최초 가이드와 후속 가이드의 순서/등록 일시를 구분하고 private 이미지를 새로고침 후에도 열람한다. 원본·최초 snapshot·Review 및 운영 데이터는 보존한다. 초기 등록 RPC는 변경하지 않았다.
+
+후속 저장 전용 RPC, transaction/동시 순서 lock, 동일 요청 retry, 확정 실패 보상 삭제·불명확 결과 이미지 보존을 검증했다. 새 migration 202610160004/202610160005만 적용했으며 기존 migration은 변경·재실행하지 않았다. [검증 기록](FOLLOWUP_GUIDE_VALIDATION_20261016.md).
+
+현재 알파 잔여 P0는 iOS Safari/Android Chrome 실기기의 사진 선택·메모리/이탈·날짜 입력 점검이다. 후속 가이드의 일정/조건 자동 반영, AI/OCR, 알림은 확장 범위이며 연결하지 않았다.

@@ -9,6 +9,7 @@ import {
 export function BriefImport({
   source,
   sampleMode = false,
+  followup = false,
   onText,
   onImages,
   onRemove,
@@ -16,6 +17,7 @@ export function BriefImport({
 }: {
   source: Source;
   sampleMode?: boolean;
+  followup?: boolean;
   onText: (text: string) => void;
   onImages: (images: ImageSource[]) => void;
   onRemove: (id: string) => void;
@@ -86,15 +88,9 @@ export function BriefImport({
     <>
       <section className="intro">
         <p className="eyebrow">BRIEF IMPORT</p>
-        <h1>
-          브리프를 그대로
-          <br />
-          가져오세요.
-        </h1>
+        <h1>{followup ? "후속 가이드 추가" : <>브리프를 그대로<br />가져오세요.</>}</h1>
         <p>
-          일정과 할 일, 지켜야 할 제작 조건을
-          <br />
-          한곳에서 확인하는 첫 단계예요.
+          {followup ? "원본만 추가해요. 일정·할 일·조건·상태는 자동 변경하지 않아요." : <>일정과 할 일, 지켜야 할 제작 조건을<br />한곳에서 확인하는 첫 단계예요.</>}
         </p>
       </section>
       <section className="panel">
@@ -155,7 +151,7 @@ export function BriefImport({
       </p>
       <button
         className="primary"
-        disabled={(sampleMode && !hasSource(source)) || busy}
+        disabled={((sampleMode || followup) && !hasSource(source)) || busy}
         onClick={onPreview}
       >
         원본 미리보기 →

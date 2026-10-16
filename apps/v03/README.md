@@ -170,3 +170,18 @@ npx playwright test --config=playwright.storage.config.ts e2e/storage/removal.sp
 ```
 
 [날짜 제거 검증 기록](../../docs/v03/SCHEDULE_REMOVAL_VALIDATION_20261016.md)을 참고한다. 후속 가이드·AI/OCR·알림은 추가하지 않았다.
+
+
+## 후속 가이드 추가 검증
+
+상세의 후속 가이드 추가는 원본만 별도 Source로 보관한다. 초기 등록·일정/할 일/조건/상태는 자동 변경하지 않는다.
+
+```sh
+npm test -- guide-schema guide-save save.test manual-schema
+npm run test:e2e:storage -- guide.spec.ts
+npm run build
+npm run admin:apply:guide       # 프로젝트·적용 상태 확인만; 기존 migration 재실행 없음
+npm run admin:verify:guide      # 합성 계정/이미지 생성 후 finally 정리·잔여 검사
+```
+
+새 DB에 적용할 때만 `npm run admin:apply:guide -- --apply`를 사용한다. 실제 프로젝트에는 202610160004와 202610160005가 이미 적용되어 있으므로 다시 실행할 필요가 없다. 관리자 환경 파일은 기존 Git 제외 scripts/.env.admin.local을 사용한다. 키·원문·사용자 데이터를 출력하지 않는다. [원격 SDK / 실제 브라우저 검증 기록](../../docs/v03/FOLLOWUP_GUIDE_VALIDATION_20261016.md).
