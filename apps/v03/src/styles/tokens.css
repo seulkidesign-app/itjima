@@ -1,0 +1,44 @@
+/* Independent V03 copy of selected V02 rules. Sources: src/styles.css,
+   ui-layout-system.css, ui-controls-system.css, ui-fields-and-states.css.
+   --v03-* names and role mapping are new V03 choices, not original V02 tokens. */
+@font-face {
+  font-family: "Pretendard Variable";
+  src: url("/fonts/PretendardVariable.woff2") format("woff2");
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
+:root {
+  --v03-font: "Pretendard Variable", Pretendard, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --v03-canvas: #faf8f5;
+  --v03-surface: #ffffff;
+  --v03-ink: #1a1a1f;
+  --v03-border: #e8e8e5;
+  --v03-subtle: #f5f5f2;
+  --v03-yellow: #ffe033;
+  --v03-yellow-soft: #fff8dc;
+  --v03-action: #ffd33d;
+  --v03-action-pressed: #f2c52e;
+  --v03-radius-card: 24px;
+  --v03-radius-compact: 20px;
+  --v03-radius-field: 14px;
+  --v03-radius-pill: 999px;
+  --v03-shadow-card: 0 10px 13px rgba(26, 26, 31, 0.06);
+  --v03-shadow-control: 0 1px 2px rgba(0,0,0,.025), 0 8px 22px -18px rgba(0,0,0,.3);
+  --v03-space-1: 4px;
+  --v03-space-2: 8px;
+  --v03-space-3: 12px;
+  --v03-space-4: 16px;
+  --v03-space-5: 20px;
+  --v03-space-6: 24px;
+  --v03-space-8: 32px;
+  --v03-space-10: 40px;
+  --v03-space-12: 48px;
+  /* V03 accessibility adaptations: stronger secondary text/field boundary than
+     V02's #8a8a94 and alpha .14 border. Existing readable V03 error retained. */
+  --v03-muted: #62626b;
+  --v03-field-border: #85858b;
+  --v03-danger: #a53129;
+  --v03-focus: #1a1a1f;
+  color-scheme: light;
+}

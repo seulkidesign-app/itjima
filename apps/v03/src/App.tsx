@@ -9,6 +9,7 @@ import {
 } from "./domain/brief";
 import {emptyManual} from "./domain/manual";
 import { ManualRegistration } from "./features/ManualRegistration";
+import { BrandLogo } from "./components/BrandLogo";
 import { Home } from "./features/Home";
 import { CollaborationDetail } from "./features/CollaborationDetail";
 import { AuthPanel } from "./features/AuthPanel";
@@ -94,7 +95,7 @@ export function App() {
     <div className="app-shell">
       <header>
         <a className="wordmark" href="#/" aria-label="잊지마 V03 홈">
-          itjima<span>.</span>
+          <BrandLogo />
         </a>
         <span className="small muted">V03 · 협찬 관리</span>
       </header>
