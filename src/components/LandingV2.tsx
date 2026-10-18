@@ -416,12 +416,10 @@ export function LandingV2() {
               <h1>{t("생각나는 대로 남기면,", "Drop thoughts as they come.")}<br /><span>{t("알아서 정리돼요.", "They organize themselves.")}</span></h1>
             </div>
             <p className="lv2-lead">{t("메모·할 일·일정을 구분하지 말고 한 문장으로 남기세요. 잊지마가 날짜와 행동을 읽어 자동으로 구조화하고, 필요한 기록을 다시 보기 쉽게 정리해요.", "No need to separate notes, tasks, or schedules. Itjima reads dates and actions, structures what you wrote, and keeps it easy to revisit.")}</p>
-            <div className="lv2-hero-cta-row">
+            <div className="lv2-hero-cta-row" style={{flexDirection:"column",gap:8}}>
               <PillLink dark ariaLabel={t("첫 기록 남기기", "Drop your first thought")}>{t("무료로 시작하기", "Start free")}</PillLink>
-
+              <a href="https://v03.itjima.app" style={{display:"inline-flex",alignItems:"center",minHeight:44,margin:0,fontSize:13,fontWeight:600,color:"#777a80",textDecoration:"underline",textUnderlineOffset:4}}>크리에이터 일정 관리 잊지마 →</a>
             </div>
-            <p className="lv2-no-setup"><a href="https://v03.itjima.app" style={{display:"inline-flex",alignItems:"center",minHeight:44,textDecoration:"underline",textUnderlineOffset:4}}>크리에이터 일정 관리 잊지마 →</a></p>
-            <p className="lv2-no-setup">{t("자연어 기록 · 자동 구조화 · 다시 보기", "Natural capture · Auto-organize · Revisit")}</p>
           </Reveal>
           <Reveal className="lv2-hero-demo-wrap" delay={0.12}>
             <div id="demo"><HeroDemo demos={demos} /></div>
