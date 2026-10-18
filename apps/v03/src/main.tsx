@@ -8,3 +8,7 @@ createRoot(document.getElementById("root")!).render(
     <App />
   </StrictMode>,
 );
+// Independently copied V02 landing CSS; order matches V02 base → polish.
+import "./styles/landing-v2-base.css";
+import "./styles/landing-v2-polish.css";
+import "./styles/landing-adapter.css";

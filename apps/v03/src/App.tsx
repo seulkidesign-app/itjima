@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, lazy, Suspense } from "react";
 import {
   hasSource,
   SAMPLE,
@@ -10,13 +10,13 @@ import {
 import {emptyManual} from "./domain/manual";
 import { ManualRegistration } from "./features/ManualRegistration";
 import { BrandLogo } from "./components/BrandLogo";
-import { Landing } from "./features/Landing";
 import { Home } from "./features/Home";
 import { CollaborationDetail } from "./features/CollaborationDetail";
 import { AuthPanel } from "./features/AuthPanel";
 import { BriefImport } from "./features/BriefImport";
 import { BriefReview } from "./features/BriefReview";
 import { SourcePreview } from "./features/SourcePreview";
+const Landing = lazy(() => import("./features/Landing").then(module => ({default:module.Landing})));
 const routes = ["/landing", "/", "/brief/new", "/brief/preview", "/brief/review", "/brief/manual"] as const;
 type Route = (typeof routes)[number] | `/collaborations/${string}`;
 function readRoute(): Route {
@@ -93,15 +93,18 @@ export function App() {
     setManualForm(emptyManual());
   }
   return (
-    <div className="app-shell">
-      <header>
-        <a className="wordmark" href="#/" aria-label="잊지마 V03 홈">
+    <div className={route === "/landing" ? "app-shell landing-v2 v03-public-landing" : "app-shell"}>
+      <header className={route === "/landing" ? "lv2-nav-wrap" : undefined}>
+        <div className={route === "/landing" ? "lv2-nav" : "app-header-inner"}>
+        <a className="wordmark" href="#/landing" aria-label="잊지마 V03 랜딩">
           <BrandLogo />
         </a>
+        {route === "/landing" && <div className="lv2-nav-links"><a href="#/landing" onClick={e=>{e.preventDefault();document.getElementById("landing-value-title")?.scrollIntoView({behavior:matchMedia("(prefers-reduced-motion: reduce)").matches?"auto":"smooth"});}}>서비스 소개</a><a href="#/landing" onClick={e=>{e.preventDefault();document.getElementById("landing-process-title")?.scrollIntoView({behavior:matchMedia("(prefers-reduced-motion: reduce)").matches?"auto":"smooth"});}}>등록 방법</a></div>}
         <nav className="header-navigation" aria-label="서비스 탐색"><a href={route === "/landing" ? "#/" : "#/landing"}>{route === "/landing" ? "내 협찬" : "서비스 소개"}</a><AuthPanel /></nav>
+        </div>
       </header>
       <main ref={heading} tabIndex={-1}>
-        {route === "/landing" ? <Landing /> : route.startsWith("/collaborations/") ? (
+        {route === "/landing" ? <Suspense fallback={<p role="status">소개 불러오는 중…</p>}><Landing /></Suspense> : route.startsWith("/collaborations/") ? (
           <CollaborationDetail key={route} id={route.slice("/collaborations/".length)} />
         ) : route === "/" ? (
           <Home />
@@ -114,7 +117,7 @@ export function App() {
                   <li
                     key={label}
                     aria-current={
-                      route === routes[index + 1] || (index===2 && route==="/brief/manual") ? "step" : undefined
+                      route === ["/brief/new", "/brief/preview", "/brief/review"][index] || (index===2 && route==="/brief/manual") ? "step" : undefined
                     }
                   >
                     {index + 1} {label}

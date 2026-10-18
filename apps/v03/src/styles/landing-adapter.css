@@ -1,0 +1,32 @@
+/* V03 isolation/accessibility adapters. Layout and motion sources are V02
+   ui-landing-v2.css, ui-landing-v2-polish.css and LandingV2.tsx. */
+.app-header-inner {display:flex;align-items:center;justify-content:space-between;width:100%;gap:12px}
+.app-shell.v03-public-landing {max-width:none;padding:0;margin:0;font-family:var(--v03-font)}
+.v03-public-landing > header.lv2-nav-wrap {display:block;min-height:0;border:0;margin:0}
+.v03-public-landing .lv2-nav {margin-block:0}
+.v03-public-landing > main {width:100%;margin:0;padding:0}
+.v03-public-landing > footer {background:#d6edf6;margin:0;padding:16px}
+.v03-public-landing .lv2-nav .wordmark {padding:0;min-height:48px}
+.v03-public-landing .lv2-nav .brand-logo {width:112px}
+.v03-public-landing .header-navigation {margin:0;justify-self:end}
+.v03-public-landing .lv2-nav-links {justify-content:center}
+.v03-public-landing .lv2-nav-links a {display:inline-flex;align-items:center;min-height:44px}
+.v03-public-landing .lv2-hero h1 {font-weight:800}
+.v03-public-landing .lv2-demo-main .lv2-parsed {padding-right:27px}
+.v03-public-landing .lv2-demo-main .lv2-parsed span {overflow-wrap:anywhere}
+.v03-demo-disclaimer {font-size:12px;color:var(--lv2-muted)}
+.v03-demo-controls {display:flex;flex-wrap:wrap;gap:6px;margin:16px 0}
+.v03-demo-controls button {width:auto;min-height:44px;margin:0;padding:8px 12px;font-size:12px;box-shadow:none;border-radius:999px}
+.v03-demo-controls button[aria-pressed="true"] {background:var(--lv2-ink);color:white}
+.v03-demo-screen {min-height:280px}
+.v03-manual-steps {display:grid;gap:12px;max-width:620px;margin:32px auto;padding-left:28px;list-style:decimal;text-align:left;line-height:1.7}
+.v03-brand-signoff {width:min(900px,85%);margin:0 auto;line-height:0}
+.v03-brand-signoff .brand-logo {width:100%}
+.v03-brand-signoff img {filter:brightness(0) invert(1)}
+.v03-public-landing .lv2-pill,.v03-public-landing .lv2-nav a {min-height:48px}
+.v03-public-landing a:focus-visible,.v03-public-landing button:focus-visible {outline:3px solid var(--v03-ink);outline-offset:4px}
+@media(max-width:820px){.v03-public-landing .lv2-nav .brand-logo{width:70.4px}.v03-public-landing .lv2-nav-links{display:none}}
+@media(prefers-reduced-motion:reduce){.v03-public-landing *{scroll-behavior:auto!important;transition-duration:.01ms!important}}
+.v03-public-landing .header-navigation {padding-top:0}
+.v03-public-landing .lv2-pill > span:last-child {transition:transform 180ms ease}
+.v03-public-landing .lv2-pill:hover > span:last-child {transform:translateX(3px)}

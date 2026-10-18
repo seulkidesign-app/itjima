@@ -14,3 +14,11 @@ test('signed-in landing, home, detail reload and original import URLs remain com
  await page.goto(`/#/collaborations/${ID}`);await expect(page.getByRole('heading',{name:data.title,exact:true})).toBeVisible();await page.reload();await expect(page.getByRole('heading',{name:data.title,exact:true})).toBeVisible();await page.getByRole('link',{name:'← 홈',exact:true}).click();await expect(page).toHaveURL(/#\/$/);
  await page.goto('/#/brief/new');await expect(page.getByLabel('브리프 텍스트')).toBeVisible();
 });
+
+test('all app logos return to the landing and V02 demo motion respects user controls',async({page})=>{
+ const api=await backend(page);await page.goto('/#/');await page.getByRole('link',{name:'잊지마 V03 랜딩',exact:true}).click();await expect(page).toHaveURL(/#\/landing$/);
+ await page.emulateMedia({reducedMotion:'reduce'});await page.reload();await expect(page.getByRole('button',{name:'자동 전환 일시정지',exact:true})).toHaveCount(0);
+ await page.getByRole('button',{name:'할 일 예시',exact:true}).click();await expect(page.getByText('제품과 함께하는 아침 장면 촬영',{exact:true})).toBeVisible();await expect(page.getByRole('button',{name:'할 일 예시',exact:true})).toHaveAttribute('aria-pressed','true');
+ await page.getByRole('button',{name:'원본 가이드 예시',exact:true}).click();await expect(page.getByText('썸네일에 제품 가격 표시 금지',{exact:true})).toBeVisible();expect(api.reads).toBe(0);expect(api.calls).toEqual([]);
+ await page.emulateMedia({reducedMotion:'no-preference'});await page.reload();await page.getByRole('button',{name:'자동 전환 일시정지',exact:true}).click();await expect(page.getByRole('button',{name:'자동 전환 재생',exact:true})).toBeVisible();
+});
