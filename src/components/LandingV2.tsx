@@ -1,6 +1,6 @@
 import { Link } from "@tanstack/react-router";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
-import { ArrowRight, Check, ChevronDown, Instagram, Linkedin, Sparkles } from "lucide-react";
+import { ArrowRight, Check, Instagram, Linkedin, Sparkles } from "lucide-react";
 import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
 import { BrandLogo, WORDMARK_HEIGHT, WORDMARK_SRC, WORDMARK_WIDTH } from "@/components/BrandLogo";
 import { BRAND } from "@/lib/brand";
@@ -418,8 +418,9 @@ export function LandingV2() {
             <p className="lv2-lead">{t("메모·할 일·일정을 구분하지 말고 한 문장으로 남기세요. 잊지마가 날짜와 행동을 읽어 자동으로 구조화하고, 필요한 기록을 다시 보기 쉽게 정리해요.", "No need to separate notes, tasks, or schedules. Itjima reads dates and actions, structures what you wrote, and keeps it easy to revisit.")}</p>
             <div className="lv2-hero-cta-row">
               <PillLink dark ariaLabel={t("첫 기록 남기기", "Drop your first thought")}>{t("무료로 시작하기", "Start free")}</PillLink>
-              <a className="lv2-secondary-pill" href="#how">{t("10초 데모 보기", "See the 10-second flow")} <ChevronDown size={15} aria-hidden="true" /></a>
+
             </div>
+            <p className="lv2-no-setup"><a href="https://v03.itjima.app" style={{display:"inline-flex",alignItems:"center",minHeight:44,textDecoration:"underline",textUnderlineOffset:4}}>크리에이터 일정 관리 잊지마 →</a></p>
             <p className="lv2-no-setup">{t("자연어 기록 · 자동 구조화 · 다시 보기", "Natural capture · Auto-organize · Revisit")}</p>
           </Reveal>
           <Reveal className="lv2-hero-demo-wrap" delay={0.12}>
@@ -548,7 +549,7 @@ export function LandingV2() {
             <div className="lv2-footer-links">
               <a href="#how">{t("서비스 소개", "How it works")}</a>
               <a href="#product">{t("주요 기능", "Product")}</a>
-              <a href="https://v03.itjima.app">크리에이터 협찬 관리 잊지마 →</a>
+              <a href="https://v03.itjima.app">크리에이터 일정 관리 잊지마 →</a>
               <a href={BRAND.privacyUrl}>{t("개인정보", "Privacy")}</a>
               <a href={BRAND.termsUrl}>{t("약관", "Terms")}</a>
               <div className="lv2-social-links" aria-label={t("소셜 링크", "Social links")}>
