@@ -97,10 +97,9 @@ export function App() {
         <a className="wordmark" href="#/" aria-label="잊지마 V03 홈">
           <BrandLogo />
         </a>
-        <span className="small muted">V03 · 협찬 관리</span>
+        <AuthPanel />
       </header>
       <main ref={heading} tabIndex={-1}>
-        <AuthPanel />
         {route.startsWith("/collaborations/") ? (
           <CollaborationDetail key={route} id={route.slice("/collaborations/".length)} />
         ) : route === "/" ? (

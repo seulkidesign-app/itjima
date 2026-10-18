@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useId, type ReactNode } from "react";
 import { supabase, configError } from "../integrations/client";
 import {
   loadCollaboration, isCollaborationId, DetailError, informationLabel,
@@ -126,17 +126,15 @@ export function CollaborationDetail({ id }: { id: string }) {
           {detail.notes && <p className="source-text">메모: {detail.notes}</p>}
           <button onClick={() => { const guide = document.getElementById("original-guide"); guide?.scrollIntoView(); guide?.focus({ preventScroll: true }); }}>원본 가이드로 이동 ↓</button>
         </section>
-        {detail.v03_sources.some(source=>source.v03_reviews.some(review=>review.candidate.origin==="manual")) && <aside className="notice">직접 수동 입력한 협찬이에요. 원본 자동 추출이나 후보 확인 결과가 아니에요.</aside>}
+        {detail.v03_sources.some(source=>source.v03_reviews.some(review=>review.candidate.origin==="manual")) && <aside className="notice">직접 입력한 협찬이에요.</aside>}
         {detail.v03_sources.some((source) => source.v03_reviews.some((review) => review.candidate.origin === "mock")) &&
           <aside className="notice">사용자가 검토한 mock 예시예요. 원본을 자동 분석한 결과가 아니에요.</aside>}
-        <BasicInfoEditor key={`${detail.id}:${detail.revision}:${detail.v03_contents.map(c=>`${c.id}:${c.revision??0}`).join()}`} detail={detail} disabled={editingBlocked} onSave={basic.begin} />
-        <StatusEditor detail={detail} disabled={editingBlocked} onSave={(value) => progress.begin({ kind: "status", id: detail.id, revision: detail.revision, value })} />
         <section className="panel" aria-labelledby="dates-title">
           <h2 id="dates-title">주요 일정</h2>
           <dl className="detail-dates"><div><dt>가편 전달일</dt><dd>{scheduleSummary(detail, "draft_delivery", "draft_due")}</dd></div>
             <div><dt>업로드일</dt><dd>{scheduleSummary(detail, "publish", "publish_due")}</dd></div></dl>
         </section>
-        <ScheduleEditor detail={detail} disabled={editingBlocked} onSave={schedule.begin} />
+
         <section className="panel" aria-labelledby="tasks-title">
           <h2 id="tasks-title">해야 할 일</h2>
           {detail.v03_contents.length === 0 && <p className="muted">등록된 제작물이 없어요.</p>}
@@ -158,7 +156,7 @@ export function CollaborationDetail({ id }: { id: string }) {
           </p>)}
         </section>
         <section className="panel" aria-labelledby="constraints-title">
-          <h2 id="constraints-title">제작 제약조건</h2>
+          <h2 id="constraints-title">제작 조건</h2>
           {detail.v03_constraints.length ? <dl className="detail-list">{detail.v03_constraints.map((item) => <div key={item.id}>
             <dt>{constraintLabels[item.type] ?? item.type}</dt>
             <dd>{item.information_state === "present" ? item.value ?? "확인 정보 없음" : informationLabel(item.information_state)}</dd>
@@ -174,8 +172,21 @@ export function CollaborationDetail({ id }: { id: string }) {
             {source.images.map((image) => <GuideImage key={image.path} image={image} />)}
           </details>) : <p className="muted">첨부한 원본이 없어요.</p>}
         </section>
+        <BasicInfoEditor key={`${detail.id}:${detail.revision}:${detail.v03_contents.map(c=>`${c.id}:${c.revision??0}`).join()}`} detail={detail} disabled={editingBlocked} onSave={basic.begin} />
+        <EditSection label="상태 수정" disabled={editingBlocked}><StatusEditor detail={detail} disabled={editingBlocked} onSave={(value) => progress.begin({ kind: "status", id: detail.id, revision: detail.revision, value })} /></EditSection>
+
+        <EditSection label="일정 수정" disabled={editingBlocked}><ScheduleEditor detail={detail} disabled={editingBlocked} onSave={schedule.begin} /></EditSection>
         <FollowupGuide key={`${id}:${identity}:${authEpoch}`} id={id} disabled={editingBlocked} onSaved={()=>setAttempt(value=>value+1)}/>
       </>}
     </>
   );
+}
+
+function EditSection({label,disabled,children}:{label:string;disabled:boolean;children:ReactNode}){
+ const [open,setOpen]=useState(false);
+ const sectionId=useId();
+ return <section className="edit-section">
+  <button aria-expanded={open} aria-controls={sectionId} disabled={disabled} onClick={()=>setOpen(v=>!v)}>{open?`${label} 취소`:label}</button>
+  <div id={sectionId}>{open&&children}</div>
+ </section>;
 }

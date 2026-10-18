@@ -22,18 +22,20 @@ async function setup(page:Page,mode:"normal"|"lost"|"pending"="normal") {
  });
  await page.goto(`/#/collaborations/${ID}`);await api.login();
  await expect(page.getByRole('heading',{name:data.title,exact:true})).toBeVisible();
+ await page.getByRole('button',{name:'상태 수정',exact:true}).click();
  return {data,requests,release};
 }
 test('status skips, reversals and every allowed value are reflected without completing tasks',async({page})=>{
  const m=await setup(page);
  for(const [value,label] of [['completed','완료'],['discussion','제안/협의'],['on_hold','보류'],['scheduled','업로드 예정'],['in_review','컨펌 중'],['draft_sent','가편 전달'],['producing','제작 중']]){
+  if(await page.getByLabel('협찬 상태 변경').count()===0)await page.getByRole('button',{name:'상태 수정',exact:true}).click();
   await page.getByLabel('협찬 상태 변경',{exact:true}).selectOption(value);
   await page.getByRole('button',{name:'상태 저장',exact:true}).click();
   await expect(page.locator('.detail-intro .badge')).toHaveText(label);
  }
  expect(m.data.v03_contents[0].v03_tasks.every(t=>t.completed_at===null)).toBe(true);
  await page.getByText('V03 계정 · 로그인됨',{exact:true}).click();
- await page.getByRole('region',{name:'협찬 상태',exact:true}).scrollIntoViewIfNeeded();
+ await page.locator('.detail-intro').scrollIntoViewIfNeeded();
  await page.screenshot({path:'test-results/progress-mobile.png'});
  await page.reload();await expect(page.locator('.detail-intro .badge')).toHaveText('제작 중');
 });
@@ -52,22 +54,25 @@ test('task completion and undo never change status, and home reads the saved res
 });
 test('conflict blocks edits until fresh data is loaded and user chooses again',async({page})=>{
  const m=await setup(page);
- await page.getByLabel('협찬 상태 변경').selectOption('completed');
+ if(await page.getByLabel('협찬 상태 변경').count()===0)await page.getByRole('button',{name:'상태 수정',exact:true}).click();
+  await page.getByLabel('협찬 상태 변경').selectOption('completed');
  m.data.status='on_hold';m.data.revision=1;
  await page.getByRole('button',{name:'상태 저장',exact:true}).click();
  await expect(page.getByRole('alert')).toContainText('다른 변경이 먼저 저장됐어요.');
  await expect(page.getByLabel('협찬 상태 변경')).toBeDisabled();
  expect(m.data.status).toBe('on_hold');
  await page.getByRole('button',{name:'최신 내용 불러오기',exact:true}).click();
- await expect(page.getByLabel('협찬 상태 변경')).toHaveValue('on_hold');
- await page.getByLabel('협찬 상태 변경').selectOption('discussion');
+ await page.getByRole('button',{name:'상태 수정',exact:true}).click();await expect(page.getByLabel('협찬 상태 변경')).toHaveValue('on_hold');
+ if(await page.getByLabel('협찬 상태 변경').count()===0)await page.getByRole('button',{name:'상태 수정',exact:true}).click();
+  await page.getByLabel('협찬 상태 변경').selectOption('discussion');
  await page.getByRole('button',{name:'상태 저장',exact:true}).click();
  await expect(page.locator('.detail-intro .badge')).toHaveText('제안/협의');
  expect(m.requests[1].p_expected_revision).toBe(1);
 });
 test('lost response retries the identical request and refetches current DB values',async({page})=>{
  const m=await setup(page,'lost');
- await page.getByLabel('협찬 상태 변경').selectOption('completed');
+ if(await page.getByLabel('협찬 상태 변경').count()===0)await page.getByRole('button',{name:'상태 수정',exact:true}).click();
+  await page.getByLabel('협찬 상태 변경').selectOption('completed');
  await page.getByRole('button',{name:'상태 저장',exact:true}).click();
  await expect(page.getByRole('alert')).toContainText('저장 결과를 확인하지 못했어요.');
  await expect(page.getByRole('button',{name:'가편 전달 완료로 표시',exact:true})).toBeDisabled();
@@ -80,7 +85,8 @@ test('lost response retries the identical request and refetches current DB value
 });
 test('saving prevents double actions and ignores a reply after logout',async({page})=>{
  const m=await setup(page,'pending');
- await page.getByLabel('협찬 상태 변경').selectOption('completed');
+ if(await page.getByLabel('협찬 상태 변경').count()===0)await page.getByRole('button',{name:'상태 수정',exact:true}).click();
+  await page.getByLabel('협찬 상태 변경').selectOption('completed');
  await page.getByRole('button',{name:'상태 저장',exact:true}).dblclick();
  await expect(page.getByText('저장 중이에요. 다른 변경은 잠시 기다려주세요.')).toBeVisible();
  expect(m.requests).toHaveLength(1);

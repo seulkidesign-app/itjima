@@ -1,5 +1,6 @@
 import {expect,test,type Page} from '@playwright/test';
 import {backend,fixture,ID} from './detail-fixture';
+async function openSchedule(page:Page){await page.getByRole('button',{name:'일정 수정',exact:true}).click();}
 const CONTENT='aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
 async function setup(page:Page,mode:'normal'|'lost'|'pending'='normal'){
  const data=fixture(),content=data.v03_contents[0];content.id=CONTENT;content.v03_schedule_states=[];
@@ -23,14 +24,14 @@ async function setup(page:Page,mode:'normal'|'lost'|'pending'='normal'){
   if(mode==='lost'&&requests.length===1)return reply({message:'private diagnostic'},503);
   return reply(result);
  });
- await page.goto(`/#/collaborations/${ID}`);await api.login();
+ await page.goto(`/#/collaborations/${ID}`);await api.login();await page.getByRole('button',{name:'일정 수정',exact:true}).click();
  await expect(page.getByRole('region',{name:'일정 수정'})).toBeVisible();return{data,content,requests,release};
 }
 test('mobile current dates persist to detail, home and reload while original review stays fixed',async({page})=>{
  const m=await setup(page);
  await page.getByLabel('가편 전달일 (연도 포함)',{exact:true}).fill('2026-10-28');
  await page.getByRole('button',{name:'가편 전달일 저장',exact:true}).click();
- await expect(page.getByLabel('가편 전달일 (연도 포함)',{exact:true})).toHaveValue('2026-10-28');
+ await openSchedule(page);await expect(page.getByLabel('가편 전달일 (연도 포함)',{exact:true})).toHaveValue('2026-10-28');
  await expect(page.getByText('변경을 저장했어요. 최신 DB 내용을 확인해요.')).toBeVisible();
  await page.getByText('가편 전달일 최초 검토 보기',{exact:true}).click();
  await expect(page.getByRole('region',{name:'일정 수정'})).toContainText('2026. 10. 20.');
@@ -39,12 +40,12 @@ test('mobile current dates persist to detail, home and reload while original rev
  await expect(page.getByRole('link',{name:'브랜드 A 캠페인 상세 보기',exact:true})).toContainText('2026. 10. 28.');
  await page.reload();await expect(page.getByRole('link',{name:'브랜드 A 캠페인 상세 보기',exact:true})).toContainText('2026. 10. 28.');
  await page.getByRole('link',{name:'브랜드 A 캠페인 상세 보기',exact:true}).click();
- await page.getByLabel('업로드 예정일 (연도 포함)',{exact:true}).fill('2026-11-02');
+ await openSchedule(page);await page.getByLabel('업로드 예정일 (연도 포함)',{exact:true}).fill('2026-11-02');
  await page.getByRole('button',{name:'업로드 예정일 저장',exact:true}).click();
  await expect(page.getByText('변경을 저장했어요. 최신 DB 내용을 확인해요.')).toBeVisible();
  expect(m.content.v03_tasks[0].due_date).toBe('2026-10-28');
  await page.getByText('V03 계정 · 로그인됨',{exact:true}).click();
- await page.getByRole('region',{name:'일정 수정'}).scrollIntoViewIfNeeded();
+ await page.getByRole('region',{name:'주요 일정'}).scrollIntoViewIfNeeded();
  await page.screenshot({path:'test-results/schedule-mobile.png'});
  expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
 });
@@ -60,7 +61,7 @@ test('stale schedule conflict requires refresh and explicit choice',async({page}
  await page.getByRole('button',{name:'가편 전달일 저장',exact:true}).click();
  await expect(page.getByRole('alert')).toContainText('다른 변경이 먼저 저장됐어요.');
  await expect(page.getByLabel('가편 전달일 정보 상태')).toBeDisabled();
- await page.getByRole('button',{name:'최신 내용 불러오기',exact:true}).click();
+ await page.getByRole('button',{name:'최신 내용 불러오기',exact:true}).click();await openSchedule(page);
  await expect(page.getByLabel('가편 전달일 (연도 포함)',{exact:true})).toHaveValue('2026-10-27');
  await expect(page.getByRole('button',{name:'가편 전달일 저장',exact:true})).toBeDisabled();
 });
@@ -70,7 +71,7 @@ test('lost response retries identical UUID and reads newer schedule',async({page
  await expect(page.getByRole('alert')).toContainText('저장 결과를 확인하지 못했어요.');
  m.content.v03_tasks[0].due_date='2026-10-29';m.content.v03_tasks[0].revision=2;m.content.v03_schedule_states![0].revision=2;
  await page.getByRole('button',{name:'같은 요청 다시 시도',exact:true}).click();
- await expect(page.getByLabel('가편 전달일 (연도 포함)',{exact:true})).toHaveValue('2026-10-29');
+ await openSchedule(page);await expect(page.getByLabel('가편 전달일 (연도 포함)',{exact:true})).toHaveValue('2026-10-29');
  expect(m.requests[0]).toEqual(m.requests[1]);await expect(page.getByText('private diagnostic')).toHaveCount(0);
 });
 test('saving blocks duplicate actions and ignores late response after logout',async({page})=>{

@@ -7,7 +7,7 @@ export function ScheduleEditor({ detail, disabled, onSave }: {
   const reviews = detail.v03_sources.flatMap((source) => source.v03_reviews);
   return <section className="panel" aria-labelledby="schedule-editor-title">
     <h2 id="schedule-editor-title">일정 수정</h2>
-    <p className="small muted">원본과 최초 검토는 보존해요. 현재 일정만 바꾸며 협찬 상태·할 일 완료 여부는 바꾸지 않아요.</p>
+    <p className="small muted">수정할 날짜를 선택해주세요. 상태와 할 일 완료 여부는 바뀌지 않아요.</p>
     {detail.v03_contents.map((content) => <section key={content.id} className="schedule-content">
       <h3>{content.title}</h3>
       {(["draft_delivery", "publish"] as const).map((type) => {

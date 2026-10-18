@@ -16,8 +16,8 @@ test("mobile detail displays dates, tasks, unresolved constraints and private or
   await expect(page.getByRole("heading", { name: "브랜드 A 캠페인", exact: true })).toBeVisible();
   const dates = page.getByRole("region", { name: "주요 일정" });
   await expect(dates).toContainText("2026. 10. 20."); await expect(dates).toContainText("2026. 10. 23.");
-  await expect(page.getByRole("region", { name: "제작 제약조건" })).toContainText("원문에 미기재");
-  await expect(page.getByRole("region", { name: "제작 제약조건" })).toContainText("불명확 · 판독 불가");
+  await expect(page.getByRole("region", { name: "제작 조건" })).toContainText("원문에 미기재");
+  await expect(page.getByRole("region", { name: "제작 조건" })).toContainText("불명확 · 판독 불가");
   await page.getByText("V03 계정 · 로그인됨", { exact: true }).click();
   await page.screenshot({ path: "test-results/collaboration-detail-mobile.png" });
   await page.getByRole("button", { name: "원본 가이드로 이동 ↓" }).click();

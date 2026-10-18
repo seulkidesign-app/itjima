@@ -58,8 +58,9 @@ export function AuthPanel() {
     }
   }
   return (
-    <details className="panel">
+    <details className="account-menu" onBlur={e=>{if(e.relatedTarget instanceof Node && !e.currentTarget.contains(e.relatedTarget))e.currentTarget.open=false;}} onKeyDown={e=>{if(e.key==="Escape"){e.currentTarget.open=false;e.currentTarget.querySelector("summary")?.focus();}}}>
       <summary>V03 계정 · {user ? "로그인됨" : "로그인 필요"}</summary>
+      <div className="account-popover">
       {user ? (
         <>
           <p>{user}</p>
@@ -114,6 +115,7 @@ export function AuthPanel() {
         </form>
       )}
       <p role="status">{message}</p>
+      </div>
     </details>
   );
 }
