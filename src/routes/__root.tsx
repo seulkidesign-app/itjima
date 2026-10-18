@@ -115,6 +115,7 @@ function AdaptiveAppShell({ routeKey }: { routeKey: string }) {
               className="itjima-app-scroll min-h-0 min-w-0 flex-1 overflow-y-auto overflow-x-hidden"
             >
               <AppRouteOutlet routeKey={routeKey} />
+              {routeKey === "home" && <div className="px-5 py-3 text-right"><a href="https://v03.itjima.app" className="inline-flex min-h-11 items-center text-xs text-ink-soft underline underline-offset-4">크리에이터 협찬 관리 잊지마 →</a></div>}
             </main>
           </div>
           <AppBrowseHost />
@@ -144,6 +145,7 @@ function AdaptiveAppShell({ routeKey }: { routeKey: string }) {
             className="itjima-app-scroll min-h-0 min-w-0 flex-1 overflow-y-auto overflow-x-hidden"
           >
             <AppRouteOutlet routeKey={routeKey} />
+              {routeKey === "home" && <div className="px-5 py-3 text-right"><a href="https://v03.itjima.app" className="inline-flex min-h-11 items-center text-xs text-ink-soft underline underline-offset-4">크리에이터 협찬 관리 잊지마 →</a></div>}
           </main>
         </div>
         <AppBrowseHost />
