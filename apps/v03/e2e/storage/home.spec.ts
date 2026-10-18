@@ -16,7 +16,7 @@ function homeFixture() {
 }
 test("signed-out home does not read user data and retains brief entry", async ({ page }) => {
   const api = await backend(page);
-  await page.goto("/");
+  await page.goto("/#/");
   await expect(page.getByText("위의 V03 계정에서 로그인하면 내 협찬과 할 일을 볼 수 있어요.")).toBeVisible();
   expect(api.reads).toBe(0);
   await page.getByRole("link", { name: "브리프 가져오기 ＋", exact: true }).click();
@@ -26,7 +26,7 @@ test("mobile home separates statuses and keeps overdue, uncertain and undated it
   await page.clock.install({ time: new Date("2026-10-15T03:00:00Z") });
   const api = await backend(page, async () => ({ status: 200, body: [fixture()] }), async () => ({ status: 200, body: homeFixture() }));
   await page.setViewportSize({ width: 320, height: 720 });
-  await page.goto("/"); await api.login();
+  await page.goto("/#/"); await api.login();
   const active = page.getByRole("region", { name: "진행 중인 협찬" });
   await expect(active).toContainText("브랜드 A 캠페인"); await expect(active).toContainText("날짜 없는 협찬");
   await expect(active).toContainText("원문에 미기재"); await expect(active).toContainText("불명확 · 판독 불가");
@@ -56,13 +56,13 @@ test("mobile home separates statuses and keeps overdue, uncertain and undated it
 });
 test("empty owner list offers a first brief without inventing sample campaigns", async ({ page }) => {
   const api = await backend(page, async () => ({ status: 200, body: [] }));
-  await page.goto("/"); await api.login();
+  await page.goto("/#/"); await api.login();
   await expect(page.getByRole("heading", { name: "아직 등록된 협찬이 없어요" })).toBeVisible();
   await expect(page.getByRole("link", { name: "브리프 가져오기 ＋", exact: true })).toBeVisible();
 });
 test("only held or completed collaborations do not appear active or become an empty database", async ({ page }) => {
   const api = await backend(page, async () => ({ status: 200, body: homeFixture().slice(2) }));
-  await page.goto("/"); await api.login();
+  await page.goto("/#/"); await api.login();
   await expect(page.getByRole("region", { name: "진행 중인 협찬" })).toContainText("진행 중인 협찬이 없어요.");
   await expect(page.getByRole("region", { name: "완료한 협찬" })).toContainText("완료 캠페인");
   await expect(page.getByRole("heading", { name: "아직 등록된 협찬이 없어요" })).toHaveCount(0);
@@ -70,7 +70,7 @@ test("only held or completed collaborations do not appear active or become an em
 test("home error can retry without showing private backend diagnostics", async ({ page }) => {
   let fail = true;
   const api = await backend(page, async () => fail ? { status: 503, body: { message: "private diagnostic" } } : { status: 200, body: homeFixture() });
-  await page.goto("/"); await api.login();
+  await page.goto("/#/"); await api.login();
   await expect(page.getByRole("alert")).toContainText("협찬 목록을 불러오지 못했어요.");
   await expect(page.getByText("private diagnostic")).toHaveCount(0);
   fail = false; await page.getByRole("button", { name: "다시 시도", exact: true }).click();
@@ -78,7 +78,7 @@ test("home error can retry without showing private backend diagnostics", async (
 });
 test("logout removes fetched home data", async ({ page }) => {
   const api = await backend(page, async () => ({ status: 200, body: homeFixture() }));
-  await page.goto("/"); await api.login();
+  await page.goto("/#/"); await api.login();
   await expect(page.getByRole("region", { name: "진행 중인 협찬" })).toBeVisible();
   await page.getByRole("button", { name: "로그아웃", exact: true }).click();
   await expect(page.getByText("위의 V03 계정에서 로그인하면 내 협찬과 할 일을 볼 수 있어요.")).toBeVisible();
@@ -88,7 +88,7 @@ test("loading home times out instead of becoming a misleading empty list", async
   await page.clock.install();
   let release!: () => void; const pending = new Promise<void>((resolve) => { release = resolve; });
   const api = await backend(page, async () => { await pending; return { status: 200, body: homeFixture() }; });
-  await page.goto("/"); await api.login();
+  await page.goto("/#/"); await api.login();
   await expect(page.getByRole("heading", { name: "협찬 불러오는 중" })).toBeVisible();
   await page.clock.fastForward(15001);
   await expect(page.getByRole("alert")).toContainText("협찬 목록을 불러오지 못했어요.");
@@ -98,7 +98,7 @@ test("loading home times out instead of becoming a misleading empty list", async
 test("a response arriving after signout cannot restore private home data", async ({ page }) => {
   let release!: () => void; const pending = new Promise<void>((resolve) => { release = resolve; });
   const api = await backend(page, async () => { await pending; return { status: 200, body: homeFixture() }; });
-  await page.goto("/"); await api.login();
+  await page.goto("/#/"); await api.login();
   await expect(page.getByRole("heading", { name: "협찬 불러오는 중" })).toBeVisible();
   await page.getByRole("button", { name: "로그아웃", exact: true }).click(); release();
   await expect(page.getByText("위의 V03 계정에서 로그인하면 내 협찬과 할 일을 볼 수 있어요.")).toBeVisible();

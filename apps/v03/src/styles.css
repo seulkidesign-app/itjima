@@ -476,3 +476,20 @@ nav a { gap: 8px; }
 .account-popover p:empty {display:none}
 .edit-section {margin:16px 0}
 .edit-section > button {margin-bottom:8px}
+
+.header-navigation {display:flex;align-items:center;gap:8px;margin-left:auto}
+.header-navigation > a {font-size:12px;display:flex;align-items:center;min-height:48px;padding:0 4px;white-space:nowrap}
+.landing-hero {padding:32px 0 16px}
+.landing-hero h1 {font-size:clamp(36px,9vw,56px);line-height:1.12}
+.landing-lead {line-height:1.75;margin:24px 0}
+.landing-product {margin:32px 0 48px}
+.landing-product .section-heading {gap:8px;align-items:center}
+.landing-product .section-heading h2 {font-size:18px}
+.landing-product .home-collaboration {margin-top:20px;box-shadow:none}
+.landing-example {border-top:1px solid var(--v03-border);padding-top:16px;margin-top:16px}
+.landing-example p {margin:8px 0}
+.landing-values .panel {margin:16px 0}
+.landing-process {margin-top:32px}
+.landing-process ol {padding-left:24px;line-height:2}
+.landing-footer {padding:24px 0;font-size:13px;text-align:center}
+@media(max-width:360px){.account-menu > summary{padding:0 8px;font-size:11px}.header-navigation{gap:4px}.header-navigation > a{font-size:11px}}

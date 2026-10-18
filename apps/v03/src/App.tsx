@@ -10,16 +10,17 @@ import {
 import {emptyManual} from "./domain/manual";
 import { ManualRegistration } from "./features/ManualRegistration";
 import { BrandLogo } from "./components/BrandLogo";
+import { Landing } from "./features/Landing";
 import { Home } from "./features/Home";
 import { CollaborationDetail } from "./features/CollaborationDetail";
 import { AuthPanel } from "./features/AuthPanel";
 import { BriefImport } from "./features/BriefImport";
 import { BriefReview } from "./features/BriefReview";
 import { SourcePreview } from "./features/SourcePreview";
-const routes = ["/", "/brief/new", "/brief/preview", "/brief/review", "/brief/manual"] as const;
+const routes = ["/landing", "/", "/brief/new", "/brief/preview", "/brief/review", "/brief/manual"] as const;
 type Route = (typeof routes)[number] | `/collaborations/${string}`;
 function readRoute(): Route {
-  const route = location.hash.slice(1) || "/";
+  const route = location.hash.slice(1) || "/landing";
   return route.startsWith("/collaborations/") || routes.some((known) => known === route) ? (route as Route) : "/";
 }
 function navigate(route: Route) {
@@ -97,10 +98,10 @@ export function App() {
         <a className="wordmark" href="#/" aria-label="잊지마 V03 홈">
           <BrandLogo />
         </a>
-        <AuthPanel />
+        <nav className="header-navigation" aria-label="서비스 탐색"><a href={route === "/landing" ? "#/" : "#/landing"}>{route === "/landing" ? "내 협찬" : "서비스 소개"}</a><AuthPanel /></nav>
       </header>
       <main ref={heading} tabIndex={-1}>
-        {route.startsWith("/collaborations/") ? (
+        {route === "/landing" ? <Landing /> : route.startsWith("/collaborations/") ? (
           <CollaborationDetail key={route} id={route.slice("/collaborations/".length)} />
         ) : route === "/" ? (
           <Home />

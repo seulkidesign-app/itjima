@@ -4,7 +4,7 @@ import { backend, ID } from "./detail-fixture";
 
 test("manual save navigates to a reloadable detail and preserves V02 session", async ({ page }) => {
   const api = await backend(page);
-  await page.goto("/");
+  await page.goto("/#/");
   await page.evaluate(() => localStorage.setItem("v02-auth-sentinel", "unchanged"));
   await api.login();
   await page.goto('/#/brief/new');

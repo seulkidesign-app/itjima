@@ -1,7 +1,7 @@
 import {test,expect} from '@playwright/test';
 import {backend,ID} from './detail-fixture';
 test('compact account menu supports keyboard dismissal and contains authentication outside main',async({page})=>{
- const api=await backend(page);await page.goto('/');
+ const api=await backend(page);await page.goto('/#/');
  await expect(page.locator('header .account-menu')).toBeVisible();await expect(page.locator('main .account-menu')).toHaveCount(0);
  await page.getByText('V03 계정 · 로그인 필요',{exact:true}).click();await page.getByLabel('이메일',{exact:true}).focus();await page.keyboard.press('Escape');await expect(page.getByLabel('이메일',{exact:true})).toBeHidden();
  await api.login();await page.getByText('V03 계정 · 로그인됨',{exact:true}).click();

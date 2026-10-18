@@ -13,6 +13,7 @@ test("text, original preview and mock groups do not write final data", async ({
       writes.push(r.url());
   });
   await page.goto("/");
+  await page.getByRole("link", {name:"협찬 관리 시작하기",exact:true}).first().click();
   await page.evaluate(() => localStorage.setItem("v02-sentinel", "unchanged"));
   await page.getByRole("link", { name: "브리프 가져오기" }).click();
   await page.getByRole("button", {name:"샘플 체험 · 저장 안 됨",exact:true}).click();

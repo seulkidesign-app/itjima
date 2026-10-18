@@ -548,6 +548,7 @@ export function LandingV2() {
             <div className="lv2-footer-links">
               <a href="#how">{t("서비스 소개", "How it works")}</a>
               <a href="#product">{t("주요 기능", "Product")}</a>
+              <a href="https://v03.itjima.app">크리에이터 협찬 관리 잊지마 →</a>
               <a href={BRAND.privacyUrl}>{t("개인정보", "Privacy")}</a>
               <a href={BRAND.termsUrl}>{t("약관", "Terms")}</a>
               <div className="lv2-social-links" aria-label={t("소셜 링크", "Social links")}>

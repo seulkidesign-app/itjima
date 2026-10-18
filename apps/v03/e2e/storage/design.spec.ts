@@ -15,7 +15,7 @@ test('V02 design inheritance: mobile home, registration, preview, summary and de
  mkdirSync(shots,{recursive:true});await page.setViewportSize({width:390,height:844});const data=portfolio();
  const second=portfolio();second.id='88888888-8888-4888-8888-888888888888';second.title='데일리룸 · 주말의 기록';second.status='in_review';second.v03_contents[0].v03_tasks=[];
  const api=await backend(page,async()=>({status:200,body:[data]}),async()=>({status:200,body:[data,second]}));
- await page.goto('/');await page.getByText('V03 계정 · 로그인 필요',{exact:true}).click();await capture(page,'login-mobile');await page.getByText('V03 계정 · 로그인 필요',{exact:true}).click();await api.login();await page.getByText('V03 계정 · 로그인됨',{exact:true}).click();
+ await page.goto('/#/');await page.getByText('V03 계정 · 로그인 필요',{exact:true}).click();await capture(page,'login-mobile');await page.getByText('V03 계정 · 로그인 필요',{exact:true}).click();await api.login();await page.getByText('V03 계정 · 로그인됨',{exact:true}).click();
  await expect(page.getByRole('region',{name:'진행 중인 협찬'})).toContainText(data.title);
  const logo=page.locator('.brand-logo img');await expect(logo).toHaveAttribute('src','/brand/itjima-wordmark-v8.svg');expect(await logo.evaluate(el=>(el as HTMLImageElement).naturalWidth)).toBe(593);
  await capture(page,'home-mobile');
